@@ -1,0 +1,9 @@
+ghc Main.hs -prof -auto-all --make -fglasgow-exts -id:/work/sheard/lib/Parser -package lang -id:/work/sheard/lib -fallow-undecidable-instances
+
+mv a.out omega.exe
+
+
+ghc Main.hs -O -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/lib/Parser -package lang -id:/work/sheard/lib -fallow-undecidable-instances
+
+
+./omega.exe -prim "D:/work/papers/OmegaManual/kinds.tex" "D:/work/papers/OmegaManual/infix.tex" 
