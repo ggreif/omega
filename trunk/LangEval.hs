@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 module LangEval where
 
@@ -14,15 +14,16 @@ import Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,readln,HasNext(..),HasOutput(..))
 import Value
-import RankN(Sigma,runType,liftType, sigma4Eq,sigma4Hide,toEnv0)
-import Char(chr,ord,isAlpha)
+import RankN --(Sigma,runType,liftType, sigma4Eq,sigma4Hide,ToEnv,
+             -- star,star_star,poly,intT)
+import Char(chr,ord)
 
 import ParserDef(pe)
-import IO (openFile,hClose,IOMode(..),hPutStr)
 import IOExts
 import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
+
   
 type Level = Int
 
@@ -93,7 +94,7 @@ maybeMonad = unsafePerformIO (runFIO action (\ dis loc n s -> error s)) where
 
 ------------------------------------------------------------------------
 
-getFree bound term = free(vars bound term emptyF)
+getFreeTermVars bound term = free(vars bound term emptyF)
 {-
 filter p (expFV bound term)
   where -- The dependency checker introduces names with prefixes '%' and '::' which
@@ -126,6 +127,7 @@ evalZ env (Prod x y) =
     do { a <- eval env x; b <- eval env y; return(Vprod a b) }
 evalZ env (CheckT x) = eval env x
 evalZ env (Lazy x) = vlazy (eval env x)
+evalZ env (Exists x) = eval env x
 evalZ env (Under p x) = eval env x
 evalZ env exp@(App f x) =
   do { g <- eval env f
@@ -163,9 +165,17 @@ evalZ env (Bracket e) =
      ; e3 <- rebuild 1 env e2
      ; return (Vcode e3 empty) }
 evalZ env (Escape e) = fail ("Escape not allowed at level 0" ++ (show (Escape e))) --evalZ env e
+evalZ env (Run e) = 
+  do { x <- eval env e
+     ; case x of
+        Vcode c env2 -> eval env2 c
+        v -> fail ("Run expression:\n  "++show (Run e)++
+                   "\nDoes not evaluate to code:\n   "++show v)
+     }
+     
 evalZ env (Reify s v) = return(push env v)
 evalZ env (Ann x t) = eval env x
-evalZ env e = fail ("No such exp yet: "++show e)
+evalZ env e = fail ("\n\nNo such exp yet: "++show e)
 
 
 -- "rebuild" is an almost generic walk over a term. We build a (Par m)
@@ -279,7 +289,7 @@ mPatStrict prefix es p v = analyzeWith (mf p) v
         mf (Pprod x y) (Vprod u v) = m2PatStrict prefix es x y u v
         mf (Psum i x) (Vsum j y) =
            if i==j then mPatStrict prefix es x y else return Nothing
-           
+        mf (Pexists p) v = mf p v
         {-  -- ** Begin Special Case for Strings **
         mf (Pcon (Global ":") [p,ps]) (VChrSeq (v:vs)) = 
             m2PatStrict prefix es p ps (Vlit (Char v)) (VChrSeq vs)
@@ -290,8 +300,8 @@ mPatStrict prefix es p v = analyzeWith (mf p) v
         mf (Pcon n ps) (Vcon c vs) =
            if n==c then mStrictPats prefix ps vs es else return Nothing
         mf p v = return Nothing
-        mf p v = fail ("At end of matchStrict: "++ show p++
-                       " does not match "++show v)
+        --mf p v = fail ("At end of matchStrict: "++ show p++
+        --               " does not match "++show v)
 
 m2PatStrict prefix es p ps v vs =
  do { z <- mPatStrict prefix es p v
@@ -325,6 +335,7 @@ mStrictPats prefix _ _ es = return Nothing
 
 matchPatLazy :: Pat -> V -> FIO (V,EnvFrag)
 matchPatLazy (Pann p typ) v = matchPatLazy p v
+matchPatLazy (Pexists p) v = matchPatLazy p v
 matchPatLazy (Pvar s) v = return(v,[(s,v)])
 matchPatLazy (Paspat s p) v = do { (v2,xs) <- matchPatLazy p v; return(v2,(s,v):xs)}
 matchPatLazy Pwild v = return(v,[])
@@ -394,6 +405,7 @@ mapPat env (Plit c) = Plit c
 mapPat env (Pvar c) = Pvar c
 mapPat env (Pprod x y) = Pprod (env x) (env y)
 mapPat env (Psum x y) = Psum x (env y)
+mapPat env (Pexists y) = Pexists (env y)
 mapPat env (Paspat x p) = Paspat x (env p)
 mapPat env Pwild = Pwild
 mapPat env (Pcon n ps) = Pcon n (map env ps)
@@ -446,9 +458,9 @@ elab prefix magic init (Fun loc nm _ cs) =
            patterns = (map Pvar newNames)
            caseExp = Case tuple (map tupleUpPats cs)
            u = makeLam patterns caseExp [] [] magic
-           free = getFree newNames caseExp
+           free = getFreeTermVars newNames caseExp
      ; return (extendV [(nm,u)] init) }       
-elab prefix magic init (Data loc strata nm sig args constrs derivs) =
+elab prefix magic init (Data loc b strata nm sig args constrs derivs) =
   return(extendV xs init)
  where xs = map f constrs
        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon cname) (length args) []))
@@ -464,7 +476,7 @@ elab prefix magic init (Reject s ds) =
                 ; env2 <-  elaborate Tick ds magic
                 ; error ("Reject test: "++s++" did not fail.")})
             (\ dis s -> return init)
-elab prefix magic init (TypeSyn loc nm t) = return init
+elab prefix magic init (TypeSyn loc nm args t) = return init
 elab prefix magic init (TypeFun loc nm k ms) = return init
 elab prefix magic init d = fail ("Unknown type of declaration:\n"++(show d))
 
@@ -738,7 +750,7 @@ vals =
  -}
 
  ,("$",(dollar,gen(typeOf(undefined :: (A -> B) -> A -> B))))
- ,(".",(compose,gen(typeOf(undefined :: (A -> B) -> (C -> A) -> (C -> B)))))
+ ,(".",(composeV,gen(typeOf(undefined :: (A -> B) -> (C -> A) -> (C -> B)))))
  ]
 
 
@@ -869,7 +881,7 @@ dollar = Vprimfun "($)" f
                
 
 -- (f . g) = \ v -> f (g v)
-compose = Vprimfun "(.)" f
+composeV = Vprimfun "(.)" f
   where f v1 = return(Vprimfun (nam1 "." v1) h)
           where h v2 = return(Vprimfun (nam2 "." v1 v2) g)
                   where g x = do { g2 <- applyV "(.)" v2 x
@@ -989,59 +1001,3 @@ primitives = map f xs where
 
 
 
--------------------------------------------------------------------
--- Printing out tables for the manual
-
-infixOperators = (concat (map f metaHaskellOps))
-  where f x = case lookup x vals of
-                 Nothing -> []
-                 Just (_,y) -> [(x,show y)]
-  
-
-show_init_vals :: String -> String -> IO()
-show_init_vals kindfile prefixfile = go
-  where f ("unsafeCast",_) = ""
-        f ("undefined",_) = ""
-        f (x,(y,z)) = (g x ++ " :: " ++ show z ++ "\n")
-        hf (x,y,z) = (g x ++ " :: " ++ show z ++ "\n")
-        hg (x,y) = "("++x++") :: " ++ show y ++ "\n"
-        g [] = []
-        g "[]" = "[]"
-        g (s@(c:cs)) | isAlpha c = s         -- normal names
-                     | c == '(' = s
-                     | True = "("++s++")"    -- infix operators
-        go = do { h <- openFile kindfile WriteMode
-        
-                ; hPutStr h "\\begin{figure}[t]\n"
-	        ; hPutStr h "\\begin{multicols}{2}\n"
-	        ; hPutStr h "{\\small\n\\begin{verbatim}\nType :: Kind \n\n"
-	        ; hPutStr h (concat (map hf toEnv0))
-                ; hPutStr h "\\end{verbatim}}\n"
-	        ; hPutStr h "\\end{multicols}\n"
-	        ; hPutStr h "\\caption{Predefined types and their kinds.}\\label{types}\n"
-	        ; hPutStr h "\\hrule\n"
-         
-	        ; hPutStr h "\\begin{multicols}{2}\n"
-                ; hPutStr h "{\\small\n\\begin{verbatim}\nValue :: Type \n\n"
-                ; hPutStr h (concat (map f vals))
-                ; hPutStr h "\\end{verbatim}}\n"
-                ; hPutStr h "\\end{multicols}\n"
-                ; hPutStr h "\\caption{Predefined functions and values.}\\label{values}\n"
-		; hPutStr h "\\hrule\n"
-                ; hPutStr h "\\end{figure}\n"
-                ; hClose h
-                
-                
-                ; h <- openFile prefixfile WriteMode
-	        ; hPutStr h "\\begin{figure}[t]\n"
-	        ; hPutStr h "\\begin{multicols}{2}\n"
-	        ; hPutStr h "{\\small\n\\begin{verbatim}\nOperator :: Type \n\n"
-	        ; hPutStr h (concat (map hg infixOperators))
-		; hPutStr h "\\end{verbatim}}\n"
-		; hPutStr h "\\end{multicols}\n"
-		; hPutStr h "\\caption{The fixed set of infix operators and their types.}\\label{infix}\n"
-	        ; hPutStr h "\\hrule\n"
-	        ; hPutStr h "\\end{figure}\n"
-                ; hClose h
-                
-                }

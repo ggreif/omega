@@ -2,14 +2,14 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 module Bind(Fresh(..),Freshen(..),Swap(..),Name,Perm
            ,Bind,bind
            ,swapM, swapsM, swapsMf
            ,M,runM
-           ,unsafeUnBind,reset,name1,name2,name3,name2Int) where
+           ,unsafeUnBind,reset,name1,name2,name3,name2Int,integer2Name) where
 
 import IOExts
 import Monads
@@ -77,6 +77,7 @@ instance HasNext m => Fresh m where
   fresh = do { n <- nextInteger; return (Nm n) }
 
 name2Int (Nm x) = x
+integer2Name = Nm
 
 ----------------------------------------------
 data (Freshen a,Swap b) => Bind a b = B a b

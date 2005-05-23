@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 module RankN where
 
@@ -11,24 +11,26 @@ import Bind
 import IOExts
 import Monads
 import Monad(when,foldM)
-import List((\\),nub,union,sortBy,groupBy)
+import List((\\),nub,union,unionBy,sortBy,groupBy,partition)
 import Auxillary(Loc(..),plist,plistf,extendM,foldrM,makeNames
                 ,DispInfo(..),Display(..),useDisplay,initDI
-                ,disp2,disp3,disp4,disp5,dispL)
+                ,disp2,disp3,disp4,disp5,dispL,DispElem(..),displays,
+                )
 import ParserAll  -- This for defining the parser for types
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
+import Char(isLower)
 
 --------------------------------------------------------------------
 type Uniq = Integer
 type TRef = IORef (Maybe Tau)
-data Eqn = Equality Tau Tau
+data Pred = Equality Tau Tau | Rel String Tau
 
 data PolyKind = K Sigma -- some Type Constrs have polymorphic kinds!
 data Kind = MK Tau
 
 data L x = Nil x | Cons (Kind,Quant) (Bind Name (L x))
-data Sigma = Forall (L ([Eqn],Rho))
+data Sigma = Forall (L ([Pred],Rho))
 
 data Rho
   = Rarrow Sigma Rho
@@ -44,6 +46,8 @@ data Tau
   | Karr Tau Tau
   | TyFun String PolyKind [Tau]
   | TcTv TcTv
+  | TySyn String Int [(Name,Kind)] [Tau] Tau
+  | TyEx (L ([Pred],Tau))  -- anonymous existential types
      
 data Flavor = Flexi TRef | Rigid Quant Loc String | Skol String
 
@@ -51,7 +55,7 @@ data TcTv = Tv Uniq Flavor Kind
 
 data Expected a = Infer (IORef a) | Check a
 
-data Quant = Ex | All deriving Show
+data Quant = Ex | All deriving (Show,Eq)
 
 instance Eq TcTv where (Tv i _ _) == (Tv j _ _) = i==j
 
@@ -62,17 +66,20 @@ type MGU = [(TcTv,Tau)]
 ---------------------------------------------------------------
 -- Class definitions
 
-class (HasIORef m,Fresh m,HasNext m,Accumulates m Eqn
+class (HasIORef m,Fresh m,HasNext m,Accumulates m Pred
       ,TracksLoc m,HasOutput m) => TyCh m where
-  envTvs :: m [(String,Sigma,[TcTv])] -- extract free type vars 
+  envTvs :: m [TcTv]   -- extract free type vars from typing environment
   handleM :: Int -> m a -> (DispInfo -> String -> m a) -> m a
-  assume :: MGU -> m a -> m a
-  getAssume :: m MGU
+  assume :: [Pred] -> MGU -> m a -> m a
+  getBindings :: m MGU
   getDisplay :: m DispInfo
-  normform :: Tau -> m Tau
+  lookupTyFun :: String -> m(Maybe([Tau]-> m Tau))
+  solve :: [Pred] -> [Pred] -> m[Pred]
+  
 
 -- A type is TypeLike if it supports a few primitive operations
--- substitution, zonking, and finding the free type variables.
+-- substitution, zonking, putting terms in normal form, and 
+-- finding the free type variables.
 
 type ForAllArgs = [(Name,Kind,Quant)]
 
@@ -80,9 +87,11 @@ class TyCh m => TypeLike m t where
   sub :: ([(Name,Tau)],[(TcTv,Tau)],[(String,Tau)]) -> t -> m t
   zonk :: t -> m t
   get_tvs :: t -> m [ TcTv ]
-  for_all :: ForAllArgs -> t -> m Sigma
   nf :: t -> m t
 
+class TyCh m => Quantify m t where 
+  for_all :: ForAllArgs -> t -> m Sigma
+  
 subst env t = sub (env,[],[]) t
 
 
@@ -174,15 +183,24 @@ rhoStar n = Rtau(Star n)
 star = MK(Star 0)
 starR = Rtau(Star 0)
 karr (MK x) (MK y) = MK(Karr x y) 
+kapp (MK x) (MK y) = MK(TyApp x y)
 
 star_star = star `karr` star
 star1 = MK(Star 1)
 poly :: Kind -> PolyKind
 poly (MK t) = K(simpleSigma t)
 
+notEq x y = TyApp (TyApp (TyCon "(!=)" (poly (karr star star_star))) x) y
+
+poly1 :: Kind -> (Kind -> Kind) -> PolyKind
+poly1 k f = K(Forall (Cons (k,All) (bind name1 (Nil([],Rtau term)))))
+   where MK term = (f (MK(TyVar name1 k)))
+
+
 unpoly :: PolyKind -> Kind
 unpoly (K (Forall (Nil([],Rtau tau)))) = MK tau
 unpoly x = error ("Can't turn the polykind "++show x++" into a normal kind.")
+
 
 intT =    TyCon "Int" (poly star)
 charT =   TyCon "Char" (poly star)
@@ -206,39 +224,34 @@ chrSeqT = TyCon "ChrSeq" (poly star)
 floatT = TyCon "Float" (poly star)
 bindT =   TyCon "Bind" (poly (karr star (star_star)))
 stringT = TyApp listT charT
+propT = TyCon "Prop" (poly star1)
+natT = TyCon "Nat" (poly star1)
+notEqT = TyCon "(!=)" notEqKind
 
-type ToEnv = [(String,Tau,PolyKind)]
+declare (x@(TyCon name poly)) = (name,x,poly)
 
-toEnv0 :: ToEnv
-toEnv0 = 
-  [( "Int"    , intT, poly star)
-  ,( "Char"   , charT, poly star)
-  ,( "Float"  , floatT, poly star)
-  ,( "ChrSeq" , chrSeqT, poly star)
-  ,( "Bool"   , boolT, poly star)
-  ,( "Maybe"  , maybeT, poly star_star)
-  ,( "Monad"  , monadT, poly (karr (star_star) star))
-  ,( "[]"     , listT,poly star_star)
-  ,( "Parser" , parserT,poly star_star)
-  ,( "(,)"    , pairT, poly (karr star (star_star)))
-  ,( "()"     , unitT, poly star)
-  ,( "(->)"   , arrowT, poly (karr star (star_star)))
-  ,( "Symbol" , symbolT, poly star)
-  ,( "Atom"   , atomT, kind4Atom)
-  ,( "(+)" , sumT, poly (karr star (star_star)))
-  ,( "Code" , codeT, poly star_star)
-  ,( "IO" , ioT, poly star_star)
-  ,( "Ptr" , ptrT,poly star_star)
-  ,( "Equal" , eqT, kind4Eq)
-  ,( "Hidden" , hiddenT, kind4Hidden)
-  ,( "Bind", bindT,(poly (karr star (star_star))))
-  ,( "String",stringT,poly star)
-  --,( "plus",TyCon "plus" (poly star), poly star)
-  ]
+-- kind Tag = %name | %age | ... | for all legal symbols
+-- data Label t = %name where t=%name | %age where t = %age | ...
+tagT    = TyCon "Tag" (poly star1)
+labelT  = TyCon "Label" (poly (karr (MK tagT) star))
+tagKind = (K(simpleSigma tagT))
 
-trans0 s = (readName "In trans0: ") toEnv0 s   
- 
-readName mess [] s = fail (mess++" unknown type: "++s)
+-- kind HasType = Has Tag *0
+hasTypeT = TyCon "HasType" (poly star1)
+hasT     = TyCon "Has" (poly ((MK tagT) `karr` (star `karr` (MK hasTypeT))))
+
+-- Row :: *1 ~> *1
+-- kind Row x = RCons x (Row x) | RNil
+rowT     = TyCon "Row" (poly (karr star1 star1))
+
+-- RCons :: (forall (k:*1) . k ~> (Row k) ~> Row k)  = RCons
+rConsT   = TyCon "RCons" (poly1 star1 f)
+           where f k = k `karr` (trow k `karr` trow k)
+-- RNil :: (forall (k:*1) . Row k)
+rNilT    = TyCon "RNil" (poly1 star1 (\ k -> trow k))
+
+
+readName mess [] s = failD 1 [Ds (mess++" unknown type: "++s)]
 readName mess ((x,tau,k):xs) s = if s==x then return tau else readName mess xs s
  
 kind4Hidden :: PolyKind -- Hidden :: (forall (k:*1) . (k -> *0) -> *0)
@@ -250,6 +263,8 @@ kind4Eq :: PolyKind -- Eq :: (forall (k:*1) . k -> k -> *0)
 kind4Eq = K(Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
    where k = TyVar name1 star1
          ty = Rtau(k `Karr` (k `Karr` (Star 0)))
+
+notEqKind = kind4Eq
 
 kind4Atom :: PolyKind -- Atom :: forall k: *1) . k -> *
 kind4Atom = K(Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
@@ -278,6 +293,9 @@ tio x = TyApp ioT x
 tptr x = TyApp ptrT x
 teq x y = TyApp (TyApp eqT x) y
 thidden x = TyApp hiddenT x
+tlabel x = TyApp labelT x
+ttag s = tlabel (TyCon ('`':s) tagKind)
+trow (MK x) = MK(TyApp rowT x)
 
 
 tprods [t] = t
@@ -301,8 +319,8 @@ bindtype m =
                           ((a `tarr` (TyApp m b)) `tarr`
                            (TyApp m b)))))))))) }
 -- simpler but probably much slower
-bindtype m = toSigma env (pt "forall a b . m a -> (a -> m b) -> m b")
-  where env = [("m",m,poly star_star)]
+-- bindtype m = toSigma env (pt "forall a b . m a -> (a -> m b) -> m b")
+--   where env = [("m",m,poly star_star)]
 
 failtype :: TyCh m => Tau -> m Sigma
 failtype m =
@@ -365,6 +383,9 @@ instance Swap Tau where
   swaps cs (TcTv (Tv unq ref k)) = TcTv(Tv unq ref (swaps cs k))
       -- invariant, no type variable will ever bind to something with a TyVar
       -- otherwise we'd have to know how to swap over an IORef
+  swaps cs (TySyn nm n fs as t) = TySyn nm n (swaps cs fs) (swaps cs as) (swaps cs t)
+  swaps cs (TyEx x) = TyEx (swaps cs x)
+             
 
 instance Swap PolyKind where
   swaps [] x = x
@@ -385,9 +406,10 @@ instance Swap Rho where
   swaps cs (Rsum x y) = rsum (swaps cs x) (swaps cs y)
   swaps cs (Rtau x) = Rtau (swaps cs x)
 
-instance Swap Eqn where
+instance Swap Pred where
   swaps [] x = x
   swaps cs (Equality x y) = Equality (swaps cs x) (swaps cs y)
+  swaps cs (Rel nm ts) = Rel nm (swaps cs ts)
 
 -------------------------------------------------------------
 -- Typelike instances
@@ -410,7 +432,16 @@ instance TyCh m => TypeLike m Tau where
           f (Star n) = return(Star n)
           f (Karr x y) =  binaryLift Karr (sub env x) (sub env y)
           f (TyFun nm k x) = do { y <- sub env x; k' <- sub env k; return(TyFun nm k' y) }
-          f (TcTv x) = return(fromMaybe (TcTv x) (lookup x vs))
+          f (TcTv (x@(Tv uniq flav k))) = 
+             case lookup x vs of
+              Just tau -> return tau
+              Nothing -> do { k2 <- sub env k; return(TcTv(Tv uniq flav k2))}
+          f (TySyn nm n fs as t) =
+             do { as2 <- sub env as; t2 <- sub env t; 
+                ; fs2 <- mapM g fs; return(TySyn nm n fs2 as2 t2)}
+           where g (nm,k) = do { k2 <- sub env k; return(nm,k2)}
+          f (TyEx x) = do { w <- sub env x; return(TyEx w)}
+  
   zonk x = do { y <- prune x; f y}
     where f (TyVar nm k) = do { k2 <- zonk k; return(TyVar nm k2)}
           f (TyApp x y) =  binaryLift TyApp (zonk x) (zonk y)
@@ -419,6 +450,12 @@ instance TyCh m => TypeLike m Tau where
           f (Karr x y) =  binaryLift Karr (zonk x) (zonk y)
           f (TyFun nm k x) =  do { y <- zonk x; k' <- zonk k; return(TyFun nm k' y) }
           f (typ @(TcTv x)) = return typ
+          f (TySyn nm n fs as t) =
+             do { as2 <- zonk as; t2 <- zonk t
+                ; fs2 <- mapM g fs; return(TySyn nm n fs2 as2 t2)}
+             where g (nm,k) = do { k2 <- zonk k; return(nm,k2)}
+          f (TyEx x) = do { w <- zonk x; return(TyEx w)}
+  
   get_tvs x = do { y <- prune x; f y}
     where f (TcTv (x@(Tv unq _ k))) = binaryLift union (get_tvs k) (return [x])
           f (TyApp x y) = binaryLift (union) (get_tvs x) (get_tvs y)
@@ -427,8 +464,11 @@ instance TyCh m => TypeLike m Tau where
           f (Star _) = return []
           f (TyCon s k) = get_tvs k
           f (TyVar nm k) = get_tvs k
+          f (TySyn nm n fs as t) = binaryLift union (get_tvs as) 
+                                   (binaryLift union (get_tvs (map snd fs)) (get_tvs t))
+          f (TyEx x) = get_tvs x
+                                     
   nf x = nfTau x                                          
-  for_all xs r = return(Forall(windup xs ([],Rtau r)))
 
 -- TypeLike Rho
 instance TyCh m => TypeLike m Rho where
@@ -446,15 +486,13 @@ instance TyCh m => TypeLike m Rho where
   get_tvs (Rsum x y) = binaryLift (union) (get_tvs x) (get_tvs y)
   get_tvs (Rpair x y) = binaryLift (union) (get_tvs x) (get_tvs y)
   get_tvs (Rtau x) = get_tvs x
-  for_all xs t = return(Forall(windup xs ([],t)))  
   nf x = nfRho x
-  
+
 -- TypeLike Sigma
 instance  TyCh m => TypeLike m Sigma where
   sub env (Forall xs) = do { w <- sub env xs; return(Forall w)}
   zonk (Forall b) = do { w <- zonk b; return(Forall w)}
   get_tvs (Forall b) = get_tvs b
-  for_all xs (Forall ys)  = return(Forall (addToL xs ys))
   nf x = nfSigma x
   
 -- TypeLike PolyKind
@@ -462,7 +500,6 @@ instance  TyCh m => TypeLike m PolyKind where
   sub env (K r) = do { r' <- sub env r; return(K r')}
   zonk (K r) = do { r' <- zonk r; return(K r')}
   get_tvs (K r) = get_tvs r
-  for_all xs (K s) = for_all xs s
   nf (K x) = do { z <- nfSigma x; return(K z) }
   
 -- TypeLike Kind
@@ -470,8 +507,19 @@ instance  TyCh m => TypeLike m Kind where
   sub env (MK r) = do { r' <- sub env r; return(MK r')}
   zonk (MK r) = do { r' <- zonk r; return(MK r')}
   get_tvs (MK r) = get_tvs r
-  for_all xs (MK r) = for_all xs r
   nf (MK x) = do { z <- nfTau x; return(MK z) }
+  
+-- TypeLike Equations
+instance TyCh m => TypeLike m Pred where
+  sub env (Equality x y) = do { a <- sub env x; b <- sub env y; return(Equality a b)}
+  sub env (Rel nm ts) = do {ys <- sub env ts; return(Rel nm ys)}
+  zonk (Equality x y) = do { a <- zonk x; b <- zonk y; return(Equality a b)}
+  zonk (Rel nm ts) = do {ys <- zonk ts; return(Rel nm ys)}
+  get_tvs (Equality x y) = binaryLift union (get_tvs x) (get_tvs y)
+  get_tvs (Rel nm ts) = (get_tvs ts)
+  nf (Equality x y) = binaryLift Equality (nfTau x) (nfTau y) 
+  nf (Rel nm ts) = do { ys <- nf ts; return(Rel nm ys)}
+  
 
 --- Helper functions for unwinding the (L Rho) objects in Forall
 
@@ -490,8 +538,7 @@ windup ((x,k,q):xs) t = Cons (k,q) (bind x (windup xs t))
 addToL :: Swap (L a) => ForAllArgs -> L a -> L a
 addToL [] ys = ys
 addToL ((nm,k,q):xs) ys = Cons (k,q) (bind nm (addToL xs ys))
-
-
+ 
 -----------------------------------------------
 -- structures of TypeLike things are TypeLike
 
@@ -513,65 +560,83 @@ instance (Swap r,TypeLike m r,TyCh m) => TypeLike m (L r) where
   get_tvs (Nil b) =  get_tvs b
   get_tvs (Cons (k,q) b) =
       do { (nm,r) <- unbind b; binaryLift union (get_tvs k) (get_tvs r) }
-  for_all xs l = fail "Can't apply for_all to an L list"
-
+  nf xs = error "No Normal form for (TypeLike m (L r)) instance"
+  
 -- TypeLike []  i.e. Lists
 instance TypeLike m t => TypeLike m [t] where
   sub env ts = mapM (sub env) ts
   zonk ts = mapM zonk ts
   get_tvs ts = do { vss <- mapM get_tvs ts; return(nub(concat vss)) }
-  for_all xs r = fail "Can't Abstract over a list."
   nf x = mapM nf x
 
-
-instance TyCh m => TypeLike m ([Eqn],Rho) where
-  sub env (zs,r) = do { zs' <- mapM f zs; a <- sub env r; return(zs',a)}
-          where f (Equality x y) = do { m <- sub env x; n <- sub env y; return(Equality m n)}
-  zonk (zs,r) = do { zs' <- mapM f zs; a <- zonk r; return(zs',a)}
-          where f (Equality x y) = do { m <- zonk x; n <- zonk y; return(Equality m n)}
-  get_tvs (zs,r) = binaryLift union (get_tvs r) (foldrM f [] zs)
-          where f (Equality x y) vs = do { as <- get_tvs x; bs <- get_tvs y; return(union as (union bs vs))}
-  for_all xs r = return(Forall (windup xs r))
-  nf (x,y) = binaryLift (,) (nfEqns x) (nfRho y)
-
-instance TyCh m => TypeLike m (Tau,Tau) where
+-- TypeLike (,)  i.e. Pairs
+instance (TypeLike m a,TypeLike m b) => TypeLike m (a,b) where
   sub env (x,y) = do { a <- sub env x; b <- sub env y; return(a,b)}
   zonk (x,y) = do { a <- zonk x; b <- zonk y; return(a,b)}
   get_tvs (x,y) = binaryLift union (get_tvs x) (get_tvs y)
-  for_all xs r = fail "Can't Abstract over a pair of Tau"
-  nf (x,y) = binaryLift (,) (nfTau x) (nfTau y)
+  nf (x,y) = binaryLift (,) (nf x) (nf y)
   
-instance TyCh m => TypeLike m Eqn where
-  sub env (Equality x y) = do { a <- sub env x; b <- sub env y; return(Equality a b)}
-  zonk (Equality x y) = do { a <- zonk x; b <- zonk y; return(Equality a b)}
-  get_tvs (Equality x y) = binaryLift union (get_tvs x) (get_tvs y)
-  for_all xs r = fail "Can't Abstract over a pair of Tau"
-  nf (Equality x y) = binaryLift Equality (nfTau x) (nfTau y)  
+instance TyCh m => TypeLike m TcTv where
+  sub env x = return x
+  zonk x = return x
+  get_tvs x = return[]
+  nf x = return x
   
-instance TyCh m => TypeLike m (TcTv,Tau) where
-  sub env (x,y) = do { a <- sub env y; return(x,a)}
-  zonk (x,y) = do { b <- zonk y; return(x,b)}
-  get_tvs (x,y) = (get_tvs y)
-  for_all xs r = fail "Can't Abstract over a pair of (TcTv,Tau)"
-  nf (x,y) = do { w <- nfTau y; return(x,w) }
+instance TyCh m => TypeLike m Char where
+  sub env ts = return ts
+  zonk ts = return ts
+  get_tvs ts = return []
+  nf x = return x
+  
+-----------------------------------------------
+-- Quantify instances
 
+instance TyCh m => Quantify m Tau where
+  for_all xs r = return(Forall(windup xs ([],Rtau r)))  
 
+instance TyCh m => Quantify m Rho where
+  for_all xs t = return(Forall(windup xs ([],t)))  
+
+instance TyCh m => Quantify m Sigma where
+  for_all xs (Forall ys)  = return(Forall (addToL xs ys))  
+  
+instance TyCh m => Quantify m Kind where
+  for_all xs (MK r) = for_all xs r
+
+instance TyCh m => Quantify m PolyKind where  
+  for_all xs (K s) = for_all xs s
+
+instance TyCh m => Quantify m ([Pred],Sigma) where
+  for_all xs (eqn,Forall ys) = 
+    do { (zs,(eqn2,rho)) <- unwind ys
+       ; return(Forall (windup (xs++zs) (eqn++eqn2,rho)))}
+
+instance TyCh m => Quantify m ([Pred],Rho) where
+  for_all xs r = return(Forall (windup xs r))
+
+instance TyCh m => Quantify m ([Pred],Tau) where
+  for_all xs (eqs,tau) = return(Forall (windup xs (eqs,Rtau tau)))
+  
+ 
 ---------------------------------------------------------------------
 -- unify tries to unify to Tau types, This enforces that you can't
 -- unify embedded Foralls, or TyVars which only occur inside Foralls
 
 prune :: TyCh m => Tau -> m Tau
-prune (typ @ (TcTv (v @ (Tv uniq (Rigid _ _ _) k)))) = 
-  do { theta <- getAssume
-     ; case lookup v theta of
-         Just new -> prune new
-         Nothing -> return typ }
+prune (typ @ (TcTv (v @ (Tv uniq (Rigid _ _ _) k)))) = pruneV typ v
+prune (typ @ (TcTv (v @ (Tv uniq (Skol _) k)))) = pruneV typ v
 prune (typ @ (TcTv (Tv uniq (Flexi ref) k))) =
   do { maybet <- readRef ref
      ; case maybet of
          Nothing -> return typ
          Just t -> do{t2 <- prune t; writeRef ref (Just t2); return t2}}
 prune t = return t
+
+pruneV typ v =
+  do { theta <- getBindings
+     ; case lookup v theta of
+         Just new -> prune new
+         Nothing -> return typ }
 
 
 unify :: TyCh m => Tau -> Tau -> m ()
@@ -590,13 +655,32 @@ unify x y =
         f (x@(Star n)) (y@(Star m)) = 
            if n==m then return () else matchErr "different level" x y  
         f (Karr x y) (Karr a b) = do { unify x a; unify y b }
+        f (TySyn nm1 n1 f1 a1 t1) t2 = unify t1 t2
+        f t1 (TySyn nm2 n2 f2 a2 t2) = unify t1 t2
         f (TcTv x) t = unifyVar x t
         f t (TcTv x) = unifyVar x t 
         f (x@(TyFun nm k _)) y = emit x y
 	f y (x@(TyFun nm k _)) = emit x y
+	f (TyEx x) (TyEx y) = unifyEx x y
         f s t = matchErr "different types" s t
 
 emit x y = do { a <- zonk x; b <- zonk y; injectAccum [Equality a b]}
+
+unifyEx x y = 
+ do { (tripsX,(eqn1,x1)) <- unwind x
+    ; (tripsY,(eqn2,y1)) <- unwind y
+    ; let pair (nm1,k1,q1) (nm2,k2,q2) = (nm1,nm2)
+          cs = zipWith pair tripsX tripsY
+          new (nm1,k1,q1) = do { x <- newSkolTyVar (show nm1) k1; return(nm1,TcTv x)}
+    --- WHAT DO I DO WITH THE equations????
+    ; when (not(null eqn1)) (failD 1 [Ds "Exist types cannot have equations: ",Dd eqn1])
+    ; when (not(null eqn2)) (failD 1 [Ds "Exist types cannot have equations: ",Dd eqn1])
+    ; sub <- mapM new tripsX
+    ; x2 <- subst sub x1
+    ; y2 <- subst sub (swaps cs y1)
+    ; unify x2 y2
+    }
+  	
 
 unifyVar (x@(Tv u1 r1 k1)) (t@(TcTv (Tv u2 r2 k2))) | u1==u2 = return ()
 unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
@@ -613,12 +697,13 @@ unifyVar v (x@(TyFun nm k _)) = emit (TcTv v) x
 unifyVar v t = matchErr "(V) different types" (TcTv v) t
      
        
-matchErr s t1 t2 = failP 0 d1 (s++"\n   "++dt1++" =/= "++dt2++"\n"++show(t1,t2))
- where (d1,dt1,dt2) = disp2 initDI (t1,t2)
+matchErr s t1 t2 = failD 0
+   [Ds (s++"\n   "),Dd t1,Ds "   !=   ",Dd t2,Ds "\n",Ds (show(t1,t2))]
 
 kinderr t k u1 d1 s = 
-   failP 0 d2 ("Type: "++ts++"\ndoes not have kind: "++ks ++s++"\n var = "++us)
- where (d2,ts,ks,us) = disp3 d1 (t,k,u1)                            
+   failDd 0 d1 
+    [Ds "Type: ",Dd t,Ds "\ndoes not have kind: ",Dd k,Ds (s++"\n var = "),Dd u1]
+                             
 
 -----------------------------------------
 -- Force a Rho type to have an Rarrow shape, a Pair shape, a Sum shape
@@ -634,7 +719,7 @@ unifyFun (Rtau x) =
       ; a1 <- zonk a
       ; b1 <- zonk b
       ; return (simpleSigma a1,Rtau b1) }
-unifyFun x = fail ("Expected an function type: "++show x)      
+unifyFun x = failD 0 [Ds "Expected an function type: ",Dd x]
 
 
 unifyCode :: TyCh a => Expected Rho -> a Rho
@@ -642,35 +727,28 @@ unifyCode (Check (Rtau (TyApp (TyCon "Code" k) a))) = return (Rtau a)
 unifyCode expected =
   do { a <- newRho star; zap a (tcode a) expected }
 
+sigmaTwo :: TyCh m => (Tau -> Tau -> Tau) -> Sigma -> m(Sigma,Sigma)
+sigmaTwo mkTwo (Forall xs) = 
+   do { (tvs,eqs,b) <- unBindWithL newflexi xs
+      ; (p1,p2) <- case b of
+          Rpair x y -> return(x,y)
+          Rtau x -> do { a <- newTau star; b <- newTau star
+                       ; unify x (mkTwo a b); 
+                       ; z1 <- zonk a; z2 <- zonk b
+                       ; return(simpleSigma z1,simpleSigma z2) }
+      ; (mapping,newbinders1,body1) <- subFreshNames tvs [] (eqs,p1)
+      ; (_,newbinders2,body2) <- subFreshNames tvs mapping (eqs,p2)
+      ; sigma1 <- for_all newbinders1 body1
+      ; sigma2 <- for_all newbinders2 body2
+      ; return(sigma1,sigma2) }
 
 sigmaPair :: TyCh m => Sigma -> m (Sigma,Sigma)
 sigmaPair (Forall (Nil ([],Rpair x y))) = return (x,x)
-sigmaPair (Forall (Nil (eqs,Rpair x y))) = return (x,x)
-sigmaPair (Forall (Nil (eqs,Rtau x))) =
-   do { a <- newTau star; b <- newTau star
-      ; unify x (tpair a b); 
-      ; z1 <- zonk a; z2 <- zonk b
-      ; return(mediumSigma eqs z1, mediumSigma eqs z2)}
-sigmaPair (Forall (Cons (k,q) b)) =
-   do { (nm,l) <- unbind b
-      ; outputString ("name = "++show nm++" l = "++show (Forall l))
-      ; (Forall a,Forall b) <- sigmaPair (Forall l)
-      ; outputString ("A = "++show(Forall a)++" B = "++show (Forall b))
-      ; return(Forall (Cons (k,q) (bind nm a))
-              ,Forall (Cons (k,q) (bind nm b)))
-      }
+sigmaPair x = sigmaTwo tpair x
 
 sigmaSum :: TyCh m => Sigma -> m (Sigma,Sigma)
-sigmaSum (Forall (Nil (_,Rsum x y))) = return (x,x)
-sigmaSum (Forall (Nil (_,Rtau x))) =
-   do { a <- newTau star; b <- newTau star
-      ; unify x (tsum a b); return(simpleSigma a, simpleSigma b)}
-sigmaSum (Forall (Cons (k,q) b)) =
-   do { (nm,l) <- unbind b
-      ; (Forall a,Forall b) <- sigmaSum (Forall l)
-      ; return(Forall (Cons (k,q) (bind nm a))
-              ,Forall (Cons (k,q) (bind nm b)))
-      }
+sigmaSum (Forall (Nil ([],Rsum x y))) = return (x,x)
+sigmaSum x = sigmaTwo tsum x
 
 expecting :: 
   TyCh m => String -> (Tau -> Tau -> Tau) -> Expected Rho -> m (Rho,Rho)
@@ -679,7 +757,7 @@ expecting shape f expect =
      ; case expect of
          Check (Rtau p) -> unify p (f a b)
          Infer ref -> writeRef ref (Rtau (f a b))
-         Check other -> fail ("Expecting a "++shape++": "++show other)
+         Check other -> failD 0 [Ds "Expecting a ",Dd shape,Ds ": ",Dd other]
      ; return(Rtau a,Rtau b) }
 
 ---------------------------------------------------------------------
@@ -711,39 +789,60 @@ mediumSigma eqs tau = Forall (Nil (eqs,Rtau tau))
 -- Instantiation. Turn a Sigma into a Rho by instantiating its vars,
 
 -- every var a Rigid var
-skolTy :: TyCh m => Sigma -> m ([TcTv],[Eqn],Rho)
-skolTy sigma = unBindWith new sigma
-   where new nam quant k = do {v <- newSkolTyVar (show nam) k; return(TcTv v)}
+skolTy :: TyCh m => Sigma -> m ([TcTv],[Pred],Rho)
+skolTy sigma = unBindWith newSkolem sigma
 
 -- every var a Flexi var, and apply the substitution implied by the equations
-instanTy :: TyCh m => Sigma -> m(Rho)
-instanTy s = 
-  do { let new nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
-     ; (env,eqns,r) <- unBindWith new s
-     ; unifier <- mguM eqns
-     ; return (subRho unifier r) }
-    
+instanTy :: TyCh m => Sigma -> m([Pred],Rho)
+instanTy (Forall s) = instanL s
+
+instanL :: (TypeLike m b, Swap b) => L ([Pred],b) -> m ([Pred],b)
+instanL s = 
+  do { (env,eqns,r) <- unBindWithL newflexi s
+     ; (preds,unifier) <- mguM eqns
+     ; r2 <- sub ([],unifier,[]) r
+     ; return(preds,r2) }
+
+
 
 -- each var according to its Quant, either Rigid or Flexi
---instanPatConstr :: TyCh a => String -> Sigma -> a ([TcTv],[Eqn],Rho)
-instanPatConstr q loc s ty = unBindWith new ty
-   where new nam Ex k = do { v <- newRigidTyVar q loc s k; return(TcTv v) }
-         new nam All k = do { v <- newFlexiTyVar k; return(TcTv v) }
+instanPatConstr :: TyCh a => Quant -> Loc -> [Char] -> Sigma -> a ([TcTv],[Pred],Rho)
+instanPatConstr q loc s ty = 
+   do { (vs,eqs,r) <- unBindWith new ty; return(filter p vs,eqs,r) }
+   where new nam Ex k = newRigid loc s nam Ex k
+         new nam All k = newflexi nam All k
+         p (Tv  uniq (Flexi _) k) = False
+         p _ = True
+         
+unBindWith :: (TyCh m) => (Name -> Quant -> Kind -> m Tau) -> Sigma -> m ([TcTv],[Pred],Rho)
+unBindWith new (Forall b) = unBindWithL new b
 
-unBindWith :: TyCh m => (Name -> Quant -> Kind -> m Tau) -> Sigma -> m ([TcTv],[Eqn],Rho)
-unBindWith new (Forall b) = f b []
- where unTcTv (name,TcTv (v@(Tv _ (Rigid _ _ _) _))) xs = (v:xs)
-       unTcTv (name,TcTv (v@(Tv _ (Flexi _) _))) xs = xs
-       unTcTv (name,TcTv (v@(Tv _ (Skol _) _))) xs = v:xs
+unBindWithL:: (TypeLike m c, Swap c) => (Name -> Quant -> Kind -> m Tau) -> L ([Pred],c) -> m ([TcTv],[Pred],c)
+unBindWithL new b = f b []
+ where unTcTv (name,TcTv v) = v
        f (Nil (zs,r)) env = 
           do { r' <- subst env r
              ; zs2 <- subst env zs
-             ; return(foldr unTcTv [] env,zs2,r')}
+             ; return(map unTcTv env,zs2,r')}
        f (Cons (k,quant) b) env =
           do { (n,xs) <- unbind b
              ; k2 <- subst env k
              ; var <- new n quant k2
              ; f xs ((n,var):env) }
+
+-- "new" from "unBindWithL" will be one of these three functions
+newflexi       nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
+newSkolem      nam quant k = do { v <- newSkolTyVar (show nam) k; return(TcTv v)}
+newRigid loc s nam quant k = do { v <- newRigidTyVar quant loc s k; return(TcTv v) }
+
+
+--------------------------------
+
+instanExPat:: TyCh m => Loc -> [Char] -> L ([Pred],Tau) -> m ([TcTv],[Pred],Tau)
+instanExPat loc s ty = unBindWithL (newRigid loc s) ty
+
+
+        
 
 ----------------------------------------------------------------------------
 -- The opposite of instantiation (Sigma -> Rho) is quantification
@@ -753,85 +852,93 @@ unBindWith new (Forall b) = f b []
 -- in data defs. Eg.     data Dyn = exists t . Dyn (Rep t) t
 -- so quantify  will never produce one.
 
-quantify :: (TypeLike m t,Display t) => [TcTv] -> t -> m Sigma
+quantify :: (TypeLike m t,Quantify m t,Display t) => [TcTv] -> t -> m Sigma
 quantify tvs ty =
-  do { (newbinders,ty2) <- subFreshNames tvs [] ty
+  do { (_,newbinders,ty2) <- subFreshNames tvs [] ty
      ; for_all newbinders ty2
      }
 
-
-
 subFreshNames :: (TyCh m,TypeLike m t,Display t)
-  => [TcTv] -> [(TcTv,Tau)] -> t -> m([(Name,Kind,Quant)],t)
-subFreshNames [] env ty = do { w <- sub ([],env,[]) ty; return([],w) }
+  => [TcTv] -> [(TcTv,Tau)] -> t -> m( [(TcTv,Tau)],[(Name,Kind,Quant)],t)
+subFreshNames [] env ty = do { w <- sub ([],env,[]) ty; return(env,[],w) }
 subFreshNames (v@(Tv unq (Flexi ref) k):xs) env ty =
    do { name <- fresh
       ; k2 <- sub ([],env,[]) k
-      ; (ys,w) <- subFreshNames xs ((v,TyVar name k2):env) ty
-      ; return((name,k2,All):ys,w)
+      ; (env2,ys,w) <- subFreshNames xs ((v,TyVar name k2):env) ty
+      ; return(env2,(name,k2,All):ys,w)
       }
 subFreshNames (v:xs) env ty = subFreshNames xs env ty -- ignore non-flexi vars      
-subFreshNames (v:xs) env ty = 
-   failP 0 disp ("\nWhile quantifying over "++t1++"\nwe encountered the non flexi var: "++v1)
-      where (disp,t1,v1) = disp2 initDI (ty,v)
-      
-
-generalize :: (TypeLike m t,Display t) => t -> m Sigma
+     
+generalize :: (TypeLike m t,Quantify m t,Display t) => t -> m Sigma
 generalize rho =
-  do { triples <- envTvs
-     ; let evars =  varsFromTriples triples
-     ; rvars <- get_tvs rho
-     --; outputString ("The rho vars are: "++show rvars)
+  do { rvars <- get_tvs rho
+     ; evars <- envTvs
+     --; let evars =  varsFromTriples triples
      ; let generic = filter (not . (`elem` evars)) rvars
      ; rho2 <- nf rho
      ; sig <- quantify generic rho2
      ; zonk sig
      }
 
-varsFromTriples triples = foldr acc [] triples
-  where acc (name,sigma,vs) vss = vs ++ vss
-
 
 -------------------------------------------------------------
 -- Typable instances
 
 ---------------------------------------------------------------------
--- Tell how if a term is Typable as a Rho,
+-- If a term is Typable as a Rho,
 -- one can derive Typabilty as a Sigma for Free!
+-- Typability for Tau and Rho depends on the semantics of Term
+-- so it is usually defined in the file that defines terms.
 
 polyP (Forall (Cons _ _)) = True
 polyP (Forall (Nil _)) = False
+-- polyP x = False
 
-instance (Show term,Typable m term Rho) => Typable m term Sigma where
+-- ##### Working here
+
+split :: [Pred] -> ([Pred],[(Tau,Tau)])
+split [] = ([],[])
+split ((Equality x y):zs) = (ps,(x,y):bs) where (ps,bs) = split zs
+split ((p@(Rel _  _)):zs) = (p:ps,bs) where (ps,bs) = split zs
+
+
+   
+-- Typable Sigma
+instance (Show term, Exhibit DispInfo term,Typable m term Rho
+         ,Accumulates m Pred) => Typable m term Sigma where
   check expr exp_ty
     = do { (skol_tvs, assump, rho) <- skolTy exp_ty
          ; info <- getDisplay
-         ; let (info2,orig,skol) = disp2 info (exp_ty,rho)
-         ; --when (polyP exp_ty)
-                --(outputString ("\nThe type is "++orig++
-                --               "\n  skolem is "++skol++
-                --               "\n assump = "++show assump++
-                --               "\n the term is "++show expr))
-         ; s <- (check expr rho)
-         --; when (not(null need))
-         --       (escapes2 need)
-         ; trips <- envTvs
-         ; let env_tvs = varsFromTriples trips
-         ; tvs2    <- get_tvs exp_ty
+         ; d1 <- whenD False -- (polyP exp_ty)
+                  [Ds "\nThe type is: ",Dd exp_ty
+                  ,Ds "\nskolem is: ",Dd rho
+                  ,Ds "\nassump: = ",Dd assump,Ds (show assump)
+                  ,Ds ("\nthe term is: "++ show expr)
+                  ,Ds "\nSkolem vars are: ",Dl skol_tvs ","] 
+         ; let (preds,bindings) = split assump
+         ; unifier <- mguWithFail bindings
+         ; (s,need::[Pred]) <-  extractAccum (assume preds unifier (check expr rho))
+         ; whenDd False -- (not (null need)) 
+              d1 [Ds "\nNeed is: ",Dl need ", ",Ds (show need)]
+         ; passOn <- solve assump need
+         ; tvs2 <- get_tvs exp_ty
+         ; env_tvs <- envTvs
+         --; let env_tvs = varsFromTriples trips
          ; let esc_tvs = env_tvs ++ tvs2
                bad_tvs = filter (`elem` esc_tvs) skol_tvs
          ; case bad_tvs of
               [] -> return ()
-              zs -> failP 1 info2 ("Type not polymorphic enough" ++ show zs)
-         ; return s }
+              zs -> failDd 1 info [Ds "Type not polymorphic enough",Dl zs ", "]
+         ; injectAccum passOn
+         ; return s }   
 
   -- We're defining, infer :: Typable a Sigma => a -> Tc Sigma
   -- inside we use,  infer :: Typable a Rho => a -> Tc Rho
   infer e           
    = do { (exp_ty::Rho,s) <- infer e
         ; res_tvs <- get_tvs exp_ty
-        ; trips <- envTvs
-        ; let env_tvs = varsFromTriples trips   -- Guaranteed zonked
+        ; env_tvs <- envTvs
+        --; let env_tvs = varsFromTriples trips   -- Guaranteed zonked
         ; let forall_tvs = res_tvs \\ env_tvs
         ; t <- quantify forall_tvs exp_ty
         ; return(t,s) }
@@ -843,17 +950,13 @@ instance (Show term,Typable m term Rho) => Typable m term Sigma where
 
 getTy (Check s) = return s
 getTy (Infer ref) = readRef ref
-   
+
+
+-- Typable Tau   
 -- first show that each can be infered to have a Tau type.
 instance TyCh m => Typable m Tau Tau where
-  tc tau expect = do { r <- prune tau
-                     ; w <- zonk r
-                     --; outputString ("Checking "++show tau++" :: "++show expect)
-                     ; ans <- f r expect
-                     --; k <- getTy expect
-                     --; outputString ("Returning "++show tau++" :: "++show k)
-                     ; return ans
-                     } where                
+  tc tau expect = do { r <- prune tau;  f r expect }
+   where                
     f t@(TcTv (Tv u r (MK rho))) expect = mustBe ("type","kind") t rho expect
     f t@(TyCon s k) expect = zapPoly t k expect
     f t@(Star n) expect = mustBe ("kind","sort") t (Star (n+1)) expect
@@ -862,31 +965,41 @@ instance TyCh m => Typable m Tau Tau where
          ; y1 <- tc y expect
          ; return(Karr x1 y1) }
     f t@(TyVar n (MK k)) expect = zap t k expect 
-    f t@(TyFun nm k xs) expect = 
-      do { ys <- checkTyFun nm (unpoly k) xs expect; return(TyFun nm k ys)}
+    f t@(TyFun nm (k@(K sig)) xs) expect = 
+      do { (preds,rho) <- instanTy sig  
+         ; when (not(null preds)) (failD 0 [Ds "Type functions can't have constrained kinds: ",Dd sig])
+         ; ys <- checkTyFun nm rho xs expect
+         ; return(TyFun nm k ys)}
     f t@(TyApp ff x) expect =
       do { (fk,a) <- infer ff
          ; fk2 <- zonk fk
          ; (arg_ty,res_ty) <- unifyKindFun ff fk2
-         ; let err disp mess = failP 2 disp2
-                 ("\nwhile checking the kind of "++show dt++" we expected "++show dx
-                  ++" to have kind "++show darg++" because "++show df++
-                  " has kind "++show dfk2++
-                  " but "++mess)
-                  where (disp2,dt,dx,darg,df,dfk2) = disp5 disp (t,x,arg_ty,ff,fk2)
+         ; let err disp mess = failDd 2 disp
+                [Ds "\nwhile checking the kind of "
+                ,Dd t, Ds " we expected ",Dd x
+                ,Ds " to have kind ",Dd arg_ty,Ds " because ",Dd ff
+                ,Ds " has kind ",Dd fk2,Ds (" but "++mess)]
          ; b <- handleM 2 (check x arg_ty) err
          ; morepoly res_ty expect
          ; return (TyApp a b)}
-
-checkTyFun :: TyCh m => String -> Kind -> [Tau] -> Expected Tau -> m [Tau]
-checkTyFun nm (MK k) [] (Infer ref) = do { writeRef ref k; return[] }
-checkTyFun nm (MK k) [] (Check m) = do { morepoly k m; return [] }
-checkTyFun nm (MK k) (t:ts) expect = 
+    f t@(TySyn nm n fs as b) expect = 
+      do { let g (nm,MK k) t = check t k
+         ; sequence (zipWith g fs as)
+         ; f b expect }
+    f (TyEx xs) expect = do { ys <- tc xs expect; return(TyEx ys) }
+  
+  
+  
+checkTyFun :: TyCh m => String -> Rho -> [Tau] -> Expected Tau -> m [Tau]
+checkTyFun nm (Rtau k) [] (Infer ref) = do { writeRef ref k; return[] }
+checkTyFun nm (Rtau k) [] (Check m) = do { morepoly k m; return [] }
+checkTyFun nm (Rtau k) (t:ts) expect = 
   do { (dom,rng) <- unifyKindFun t k
      ; t2 <- check t dom
-     ; ts2 <- checkTyFun nm (MK rng) ts expect
+     ; ts2 <- checkTyFun nm (Rtau rng) ts expect
      ; return(t2:ts2)
      }
+checkTyFun nm rho ts expect = failD 0 [Ds ("Type fun "++nm++" has rho type: "),Dd rho]
 
 
 
@@ -894,6 +1007,7 @@ checkTyFun nm (MK k) (t:ts) expect =
 -- Helper functions for kind inference
            
 unifyKindFun :: TyCh m => Tau -> Tau -> m (Tau,Tau)
+unifyKindFun term (TySyn nm n fs as t) = unifyKindFun term t
 unifyKindFun term (Karr x y) = return (x,y)
 unifyKindFun term x@(TcTv (Tv unq _ k)) = 
    do { a <- newTau k
@@ -903,11 +1017,10 @@ unifyKindFun term x@(TcTv (Tv unq _ k)) =
       ; b1 <- zonk b
       --; outputString "IN UNifyKindFun"
       ; return (a1,b1) }
-unifyKindFun term x = failP 1 disp
-         ("\nWhile infering the kind of the type\n   "++ dterm ++
-          "\nWe expected a kind arrow (_ ~> _),\n but inferred: "++
-          dx++" instead")
-   where (disp,dterm,dx) = disp2 initDI (term,x)
+unifyKindFun term x = failD 1
+         [Ds "\nWhile infering the kind of the type\n   ",Dd term
+         ,Ds "\nWe expected a kind arrow (_ ~> _),\n but inferred: "
+         ,Dd x,Ds " instead"]
 
 zap :: Subsumption m b b => c -> b -> Expected b -> m c
 zap term rho (Check r) = do { morepoly rho r; return term }
@@ -915,13 +1028,13 @@ zap term rho (Infer r) = writeRef r rho >> return term
 
 zapPoly :: TyCh m => Tau -> PolyKind -> Expected Tau -> m Tau
 zapPoly (term@(TyCon s k)) (K sig) expect = 
-    do { rho <- instanTy sig
+    do { (preds,rho) <- instanTy sig -- ## WHAT DO WE DO WITH THE PREDS?
        ; sig2 <- zonk sig
-       ; rho2 <- instanTy sig2           
+       ; (preds2,rho2) <- instanTy sig2  -- ## WHAT DO WE DO WITH THE PREDS?
        ; case rho of
             Rtau w -> mustBe ("Constructor","type") term w expect
-            rho -> fail ("An unexpected Rho appeared while kind checking "++
-                         show term ++ " :: "++show rho)
+            rho -> failD 0 [Ds "An unexpected Rho appeared while kind checking "
+                           ,Dd term,Ds " :: ",Dd rho]
        }
 
 
@@ -936,10 +1049,11 @@ mustBe (term,qual) t comput expect = handleM 1 (zap t comput expect) (errZap exp
          do { tz <- zonk t
             ; rz <- zonk r
             ; computz <- zonk comput
-            ; let (disp,dtz,dcomputz,drz) = disp3 dispIn (tz,computz,rz)
-            ; failP 1 disp ("\nWe computed the "++term++" "++dtz++
-                            " to have "++qual++" "++dcomputz++
-                  "\nWe expected it to be "++drz++"\n"++message)
+            ; failDd 1 dispIn
+               [Ds ("\nWe computed the "++term++" ")
+               ,Dd tz,Ds (" to have "++qual++" ")
+               ,Dd computz,Ds "\nWe expected it to be "
+               ,Dd rz,Ds ("\n"++message)]
             }
 
          
@@ -956,61 +1070,70 @@ instance TyCh m => Typable m Rho Tau where
      do { a <- tc x expect; b <- tc y expect; return(Rsum a b)}
 
 instance TyCh m => Typable m Sigma Tau where
-  tc sigma expect = 
-     do { let new nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
-        ; (env,eqs,b) <- unBindWith new sigma
-        ; b2 <- tc b expect
-        ; eqs2 <- mapM sameEqPair eqs
-        ; return(sigma)}  -- WE DON't RETURN THE REBUILT TERM HERE,
-                          -- DOES THIS MATTER?
-
+  tc (sigma@(Forall xs)) expect = do { ys <- tc xs expect; return(Forall ys)}
  
+instance TyCh m => Typable m (L([Pred],Rho)) Tau where
+  tc xs expect = 
+    do { (tvs,eqs,b) <- unBindWithL newflexi xs
+       ; b2 <- tc b expect
+       ; eqs2 <- mapM kindPred eqs
+       ; (mapping,newbinders,body) <- subFreshNames tvs [] (eqs2,b2)
+       ; return(windup newbinders body)
+       }
 
+instance TyCh m => Typable m (L([Pred],Tau)) Tau where
+  tc xs expect = 
+    do { (tvs,eqs,b) <- unBindWithL newflexi xs
+       ; b2 <- tc b expect
+       ; eqs2 <- mapM kindPred eqs
+       ; (mapping,newbinders,body) <- subFreshNames tvs [] (eqs2,b2)
+       ; return(windup newbinders body)
+       }
 
 hasKind :: TyCh m => String -> Sigma -> Kind -> m ()
 hasKind name sigma (MK kind) =
   do { let new nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
      ; (env,eqs,rho) <- unBindWith new sigma
-     ; let err disp1 message = failP 3 dsp3 string
-            where string = ("\nWhile checking the kind of constructor\n   "++
-                           name++" :: "++(constr eqs)++dtyp++message++"\n"++show dsp3)
-                  (dsp3,dtyp,deqs) = disp2 disp1 (rho,eqs)  
-                  constr [] = ""
-                  constr (_:_) = deqs
+     ; let err disp1 message = failDd 3 disp1
+               [Ds ("\nWhile checking the kind of constructor\n   "++name++" :: ")
+               ,Dl eqs ", ",Dd rho, Ds message]
            err2 disp mess = err disp ("$$$ While checking Constraints "++mess)
                   
      ; handleM 3 (check rho kind) err
-     ; handleM 3 (mapM sameEqPair eqs) err2
+     ; handleM 3 (mapM kindPred eqs) err2
      ; return ()
      }
 
  
-
-sameEqPair :: TyCh m => Eqn -> m Eqn
-sameEqPair(Equality a b) = 
+--kindPred :: TyCh m => Pred -> m Pred
+kindPred(Equality a b) = 
   handleM 1 (do{(k1::Tau,t1) <- infer a; t2 <- check b k1; return(Equality t1 t2)})
-    (\ dis s -> fail ("While checking equality constraint: "++
-                  show a ++" = "++ show b++"\nkinds do not match"++s))
-
-
+    (\ dis s -> failD 0 [Ds "While checking equality constraint: "
+                        ,Dd a,Ds " = ",Dd b,Ds ("\nkinds do not match"++s)])
+kindPred (x@(Rel nm ts)) =
+  do { ts2 <- check ts (Star 0)
+     ; return(Rel nm ts2)}
+     
 -----------------------------------------------------
 -- A helper function for reporting errors when "morepoly" fails.
 
 escapes2 [] = return ()
-escapes2 bad = failP 0 initDI (concat (map f bad))
-  where f (v@(Tv _ (Rigid All loc s) k),t) =
-           "The explict typing: "++s++
-           "\nAt "++show loc++" is too polymorphic."++
-           "\nThe variable "++show v++" must be instantiated to "++show t
-        f (Tv _ (Rigid Ex loc s) k,t) =
-           "An existential type var, arising from the pattern: "++ s ++
-           " at "++show loc++ " cannot be equal to "++show t
+escapes2 bad = failD 0 [Dlf f bad "\n"] 
+  where f d (v@(Tv _ (Rigid All loc s) k),t) = displays d
+           [Ds ("The explict typing: "++s)
+           ,Ds ("\nAt "++show loc++" is too polymorphic.")
+           ,Ds "\nThe variable ",Dd v
+           ,Ds " must be instantiated to ",Dd t]
+        f d (Tv _ (Rigid Ex loc s) k,t) = displays d
+           [Ds ("An existential type var, arising from the pattern: "++ s)
+           ,Ds (" at "++show loc++ " cannot be equal to "),Dd t]
 
 
 captured sig1 sig2 rho dispInfo mess =
-  failP 0 dispInfo (show sig1++" is not more polymorphic than\n"++show sig2 ++"\n"++
-        "Because the skolemized version of the second type: "++show rho++
-        "\nhas the following problem: "++mess)
+  failDd 0 dispInfo 
+    [Dd sig1,Ds " is not more polymorphic than\n"
+    ,Dd sig2,Ds ("\n"++"Because the skolemized version of the second type: ")
+    ,Dd rho,Ds ("\nhas the following problem: "++mess)]
 
 
 ----------------------------------------------------------------
@@ -1029,9 +1152,9 @@ instance TyCh m => Subsumption m PolyKind PolyKind where
 instance TyCh m => Subsumption m Sigma Sigma where
   morepoly sigma1 sigma2 =
      do { (skol_tvs,assump,rho) <- skolTy sigma2
-        ; unifier <- return []  -- mguM assump
-        ; (_,residual::[Eqn]) <- 
-             extractAccum (handleM 1 (assume unifier (morepoly sigma1 rho))
+        ; (preds,unifier) <- mguM assump
+        ; (_,residual::[Pred]) <- 
+             extractAccum (handleM 1 (assume preds unifier (morepoly sigma1 rho))
                                      (captured sigma1 sigma2 rho))
         ; tv1 <- get_tvs sigma1
         ; tv2 <- get_tvs sigma2
@@ -1040,61 +1163,72 @@ instance TyCh m => Subsumption m Sigma Sigma where
               bad_tvs = filter (`elem` esc_tvs) skol_tvs
         ; case bad_tvs of
             [] -> injectAccum residual
-            zs -> failP 0 initDI ("Not more poly"++show zs)
+            zs -> failD 0 [Ds "Not more poly",Dl zs ", "]
         }
 
 instance TyCh m => Subsumption m Sigma (Expected Rho) where
    morepoly s1 (Check e2) = morepoly s1 e2
    morepoly s1 (Infer ref) =
-      do { rho1 <- instanTy s1;
+      do { (preds,rho1) <- instanTy s1; 
+         ; injectAccum preds -- ## DO THIS WITH THE PREDS?
          ; writeRef ref rho1
-         --; assumptions <- getAssume
+         --; assumptions <- getBindings
          --; outputString "In morepoly Sigma (Expected Rho)"
          --; handleM 1 (solve2 oblig1) -- (solve False "morePoly Sigma Rho Infer" assumptions oblig1)
          --    (no_solution s1 rho1 rho1)
          }
 
-norm (Equality x y) = 
-  do { -- outputString ("Normalizing "++show x++" and "++show y++"\n");
-       a <- normform x
-     ; b <- normform y
-     ; ((),oblig2) <- extract(unify a b)
-     ; return oblig2}
-
-solve2 :: TyCh m => [Eqn] -> m ()
-solve2 [] = return ()
-solve2 eqns = 
-  do { eqns2 <- zonk eqns      
-     ; eqns3 <- mapM norm eqns2
-     ; let eqns4 = concat eqns3
-     ; let residual = filter (\(Equality x y) -> not(x==y)) eqns4
-     --; outputString ("eqn = "++show eqns2++"\neqns3 = "++show eqns4)
-     ; case residual of
-         [] -> return ()
-         zs -> let (d1,obl,r1) = disp2 initDI (eqns2,zs)
-               in failP 0 d1 ("While trying to solve "++obl++
-                              " we get the residual "++r1++gg zs)
-     }
-
-gg xs = plistf f " " xs "," "\n"
-  where f (Equality x y) = "("++sht x++" , "++sht y++")"
-         
 instance TyCh m => Subsumption m Sigma Rho where
   morepoly sigma1 rho2 =
-     do { --outputString ("\nIn morepoly Sigma Rho\nSigma = "++show sigma1++"\nRho = "++show rho2);
-          rho1 <- instanTy sigma1
-        --; outputString ("rho1 = "++show rho1++" rho2 = "++show rr)
+     do { -- outputString ("\nIn morepoly Sigma Rho\nSigma = "++show sigma1++"\nRho = "++show rho2);
+          (preds,rho1) <- instanTy sigma1 
+        ; injectAccum preds -- ## DO THIS WITH THE PREDS?
+        -- ; outputString ("rho1 = "++show rho1++" rho2 = "++show rho2)
         ; ((),oblig2) <- extract(morepoly rho1 rho2)
-        ; handleM 1 (solve2 (oblig2))  
-                    (no_solution sigma1 rho2 rho1)
+        ; (preds2,_) <- handleM 1 (mguM oblig2)  
+                                  (no_solution sigma1 rho2 rho1)
+        ; injectAccum preds2                      
         }
 
-no_solution sigma rho skoRho info s = failP 1 info2 message
-  where (info2,ss,rs,skrs) = disp3 info (sigma,rho,skoRho)
-        message = "while checking that\n   "++ss++
-                   "\nwas more polymorphic than\n   "++rs++
-                   "\nwe skolemized the second to get\n   "++skrs++
-                   "\nbut, "++s
+norm :: TyCh a => Pred -> a [Pred]
+norm (Equality x y) = 
+  do { -- outputString ("Normalizing "++show x++" and "++show y++"\n");
+       a <- nfTau x
+     ; b <- nfTau y
+     ; ((),oblig2) <- extract(unify a b)
+     ; return oblig2}
+norm (Rel nm ts) =
+  do { ts2 <- nfTau ts; return[Rel nm ts2] }
+
+{-
+solve3 :: TyCh m => [Pred] -> m [Pred]
+solve3 [] = return []
+solve3 preds = 
+  do { preds1 <- zonk preds
+     ; let (ps,eqns) = split preds1     
+     ; eqns3 <- mapM nfTauPair eqns
+     
+     ; outputString ("eqn = "++show preds++"\nequalities = "++show eqns3++"\npredicates = "++show ps)
+     ; case mgu eqns3 of
+        Left sub -> do { mutVarSolve sub; return ps}
+        Right (mess,t1,t2) -> 
+            let f d (x,y) = (d,"("++sht x++" , "++sht y++")")
+            in failD 0
+              [Ds "While trying to solve ",Dd preds1
+              ,Ds " we get the residual "
+              ,Dd eqns3,Ds "\n",Dlf f eqns3 ", "]
+     }
+-}
+
+
+no_solution sigma rho skoRho info s = failDd 1 info
+     [Ds "while checking that\n   ", Dd sigma
+     ,Ds "\nwas more polymorphic than\n   ",Dd rho
+     ,Ds "\nwe skolemized the second to get\n   ", Dd skoRho
+     ,Ds ("\nbut, "++s)]
+                   
+ 
+
 
 instance TyCh m => Subsumption m Rho Rho where
  morepoly x y = f x y where
@@ -1106,14 +1240,8 @@ instance TyCh m => Subsumption m Rho Rho where
   f (Rsum m n) (Rsum a b) = do{ morepoly m a; morepoly n b }
   f (Rsum m n) x = do{(a,b) <- checkSum x; morepoly m a; morepoly n b}
   f x (Rsum a b) = do{(m,n) <- checkSum x; morepoly m a; morepoly n b}
-  f (Rtau x) (Rtau y) = 
-     do { --outputString ("Enter unify "++show x++" =? "++show y)
-        ; w <- unify x y
-        --; outputString "Exit unify"
-        ; return w
-        }
-  f x y = fail ("Bad subsumption. "++show x++
-                " is not more polymorphic than "++show y)
+  f (Rtau x) (Rtau y) = unify x y
+ 
 
 
 checkPair :: TyCh m => Rho -> m (Sigma,Sigma)
@@ -1122,7 +1250,7 @@ checkPair (Rtau x) =
       ; b <- newTau star
       ; unify x (tpair a b)
       ; return (simpleSigma a,simpleSigma b) }
-checkPair x = fail ("Expecting a pair type: "++show x)
+checkPair x = failD 0 [Ds "Expecting a pair type: ",Dd x]
 
 checkSum :: TyCh m => Rho -> m (Sigma,Sigma)
 checkSum (Rtau x) =
@@ -1130,158 +1258,26 @@ checkSum (Rtau x) =
       ; b <- newTau star
       ; unify x (tsum a b)
       ; return (simpleSigma a,simpleSigma b) }
-checkSum x = fail ("Expecting a sum type: "++show x)
-
-{- ===================================================
----------------------------------------------------------------------------
---- Solving Equational Constraints
-
--- The skCount of a term is the number of distinct skolem variables
-skCount :: TyCh m => Tau -> m Int
-skCount tau = do { vs <- get_tvs tau; return(length(filter isSkol vs))}
-  where isSkol (Tv uniq (Skol _) k) = True
-        isSkol _ = False
-
--- The unique representative of an equivalence class 
--- [(s1=ta),(s1=tb),(s1=tc)] is (s1,ti) where ti has the lowest skCount. 
--- If ta and tb tie, with the same count, then choose one arbitrarily.
-
-equivClassRep :: TyCh m => [(TcTv,Tau)] -> m ((TcTv,Tau),[(Int,TcTv,Tau)])
-equivClassRep xs = do { ys <-  mapM f xs; return(head (sortBy less ys)) }
-  where f (x,t) = do { n <- skCount t; return (n,x,t) }
-        less (n,_,_) (m,_,_) = compare n m
-        head ((count,var,term):xs) = ((var,term),xs)
-
--- To simplify an equivalence class, choose a rep (var,typ) and unify 
--- all the types of the other members of the class with "typ". Return 
--- the representative pair, and all the additional Eqn's generated by 
--- the unification.
-
-simpEquivClass :: TyCh m => [(TcTv,Tau)] -> m ((TcTv,Tau),[(TcTv,Tau)])
-simpEquivClass [x] = return (x,[])
-simpEquivClass xs =
-  do { ((skolVar,tau),others) <- equivClassRep xs
-     ; (_,oblig) <- extractAccum(mapM (\(cnt,v,t) -> unify tau t) others)
-     ; t2 <- zonk tau
-     ; return((skolVar,t2),map fixEqn oblig) }
-
--- To simplify a list of equivalence classes, repeatedly simplify each
--- class until a pass is obtained that never adds any additional new 
--- Eqn's. When that happens return the list of representative pairs, 
--- which is itself an [Eqn]
-
-simpClasses :: TyCh m => [[(TcTv,Tau)]] -> m [(TcTv,Tau)]
-simpClasses classes =  
-   do { ans <- mapM simpEquivClass classes
-      ; if finished ans then return(map fst ans) else step ans}
-  where finished xs = all (\ (x,new) -> null new) xs
-        step xs = simpClasses(mkEquivClass new)
-           where new = foldr acc [] xs
-                 acc (x,new) more = x : (new ++ more)
-
-mkEquivClass :: [(TcTv,Tau)] -> [[(TcTv,Tau)]]
-mkEquivClass zs = (groupBy eq (sortBy less zs))
-  where eq (x,t1) (y,t2) = x==y
-        less (x,t1) (y,t2) = compare x y
-
--- The Eqn extracted from accumulating unification should have a special
--- form. The LHS of the equation should always be a TcTv Skol var.
-fixEqn (TcTv v,tau) = (v,tau)
-fixEqn (tau,TcTv v) = (v,tau)
-fixEqn (x,tau) = error ("Non Var as lhs of Eqn after unify: "++show x++" = "++show tau)
+checkSum x = failD 0 [Ds "Expecting a sum type: ",Dd x]
 
 
-solve :: TyCh m => Bool -> String -> [Eqn] -> [Eqn] -> m ()
-solve verbose s assumptions [] = return ()
-solve verbose s assumptions obligations =
-  do { a1 <- zonk assumptions; o1 <- zonk obligations
-     ; when (verbose && consp assumptions && consp obligations) $
-            outputString ("\nSolve: "++s++showEqn a1++" ==> "++showEqn o1)
-     --; outputString "\nTurning EQN into Theta in Solve\n"
-     ; (_,true_pairs::[Eqn]) <- 
-             handleM 1
-             (extractAccum(mapM (uncurry unify) a1)) 
-             (unsat a1)
-     ; (_,test_pairs::[Eqn]) <- extractAccum(mapM (uncurry unify) o1)
-     --; outputString ("Test pairs = "++showEqn test_pairs++show o1)
-     --; outputString ("True pairs = "++showEqn true_pairs)
-     ; truths <- simpClasses(mkEquivClass(map fixEqn true_pairs))
-     ; residual <- checkEach (matches 5) truths (map fixEqn test_pairs)
-     ; let f (x,y) = (TcTv x,y)
-     ; injectAccum ((map f residual)::[Eqn])
-     }
-
-unsat :: TyCh m => [Eqn] -> DispInfo -> String -> m a
-unsat assump dispIn s = 
-  do { let (dispOut,truths) = disp dispIn assump
-     ; failP 0 dispOut ("The assumptions "++truths++
-                        "\nare unsatisfiable, because "++s)
-     }
-
-consp (x:xs) = True
-consp [] = False
-
-------------------------------------------------------
--- lookupEquality (v,t) {(v1,t1),(v2,t2),(v3,v4)} =
--- case (v,t) of
---   (v1,X)  -> Just (v1,X,t1)
---   (v1,v4) -> Just (v3,v4,v1) -- we might find LHS in the list of truths
---
--- if it returns (x,y,z) we know x is bound in the truths,
---                               and y and z should be unified
-
-lookUpEquality (v,t1) truths =
-  case lookup v truths of
-    Nothing ->
-      case t1 of
-        TcTv u ->
-          case lookup u truths of
-            Nothing -> Nothing
-            Just t2 -> Just(u,TcTv v,t2)
-        other -> Nothing
-    Just t2 -> Just(v,t1,t2)
-
---checkEach :: TyCh m => [(TcTv,Tau)] -> [(TcTv,Tau)] -> m [(TcTv,Tau)]
-checkEach matchFun truths [] = return []
-checkEach matchFun truths ((v,t1):more) =
-  case lookUpEquality (v,t1) truths of
-    Just(v,t1,t2) -> do { xs <- matchFun truths t1 t2
-                        ; ys <- checkEach matchFun truths more
-                        ; return(xs ++ys) }
-    Nothing -> (checkFail 2 truths v t1)
-
-checkFail n truths v t =
-  do { info <- getDisplay
-     ; let (info2,eqns,vs,ts) = disp3 info (truths,v,t)
-     ; failP 0 info2 ("\n"++show n ++ " Under "++eqns++"\nThe equation: "++vs++" = "++ts++ " cannot be solved\n")
-     }
-     
-matches :: TyCh m => Int -> [(TcTv,Tau)] -> Tau -> Tau -> m [(TcTv,Tau)]
-matches 0 truths (TcTv v) (TcTv u) | v==u = return []
-matches 0 truths v t = (checkFail 1 truths v t)
-matches n truths x y =
-  do {(_,extra::[Eqn]) <- extractAccum(unify x y)
-     ; checkEach (matches (n-1)) truths (map fixEqn extra)   
-     }
-     
-
-
-======================================================== -}
-
-showEqn xs = plistf g "{" xs ", " "}"
+showPred xs = plistf g "{" xs ", " "}"
   where g (Equality x y) = show x ++ " = " ++ show y
+        g (Rel nm ts) = show ts
   
 
 showPairs xs = plistf g "{" xs ", " "}"
   where g (x,y) = show x ++ " = " ++ show y
   
-extract :: TyCh m => m a -> m (a,[Eqn])
+extract :: TyCh m => m a -> m (a,[Pred])
 extract comp = do { (a,eqs) <- extractAccum comp
                    ; eqs2 <- zonk eqs; return(a,eqs2) }
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 -- Parsing types. Note that we parse type PT, and then translate
+
+data PPred = Equality' PT PT | Rel' String PT
 
 data PT
   = TyVar' String
@@ -1291,7 +1287,7 @@ data PT
   | TyFun' [PT]
   | TyCon' String
   | Star' Int
-  | Forallx [(String,PT,Quant)] [(PT,PT)] PT
+  | Forallx Quant [(String,PT,Quant)] [PPred] PT
   | Tlamx String PT
   | AnyTyp Int -- Gen up a new var with kind (Star Int)
 
@@ -1307,37 +1303,51 @@ getFree :: [String] -> PT -> [String]
 getFree bnd (TyVar' s) = if elem s bnd then [] else [s]
 getFree bnd (Rarrow' x y) = union (getFree bnd x) (getFree bnd y)
 getFree bnd (Karrow' x y) = union (getFree bnd x) (getFree bnd y)
-getFree bnd (TyFun' x) = foldr g [] x 
+getFree bnd (TyFun' (x:xs)) = foldr g [] xs 
     where g t free = union (getFree bnd t) free
+    -- Note that the object in function position (x) is like a TyCon
 getFree bnd (TyApp' x y) = (getFree bnd x) `union` (getFree bnd y)
 getFree bnd (TyCon' s) = []
 getFree bnd (Star' n) = []
 getFree bnd (Tlamx n t) = getFree (n:bnd) t
 getFree bnd (AnyTyp n) = []
-getFree bnd (Forallx xs eqs t) = f bnd xs t `union` g bnd eqs
+getFree bnd (Forallx q xs eqs t) = f bnd xs t `union` g bnd xs eqs
   where f bnd [] t = getFree bnd t
         f bnd ((s,a,q):xs) t = (getFree bnd a) `union` (f (s:bnd) xs t)
-        g bnd [] = []
-        g bnd ((a,b):xs) = (getFree bnd a) `union` (getFree bnd b) `union` g bnd xs
+      
+        g bnd ((s,a,q):xs) ys = g (s:bnd) xs ys
+        g bnd [] ((Equality' a b):xs) = (getFree bnd a) `union` (getFree bnd b) `union` g bnd [] xs 
+        g bnd [] ((Rel' nm ts):xs) = (getFree bnd ts)  `union` (g bnd [] xs) 
+        g bnd _ [] = []
+         
+        h bnd t free = union (getFree bnd t) free
 
+getFreePred bnd (Equality' x y) = getFree bnd x `union` getFree bnd y
+getFreePred bnd (Rel' nm ts) =  getFree bnd ts 
+    
 
 -- Get all the variables appearing in the type, both free and bound
-getAll :: PT -> [String]
-getAll (TyVar' s) = [s]
-getAll (Rarrow' x y) = union (getAll x) (getAll y)
-getAll (Karrow' x y) = union (getAll x) (getAll y)
-getAll (TyFun' x) = foldr g [] x 
-    where g t free = union (getAll t) free
-getAll (TyApp' x y) = (getAll x) `union` (getAll y)
-getAll (TyCon' s) = []
-getAll (Star' n) = []
-getAll (Tlamx n t) = getAll t
-getAll (AnyTyp n) = []
-getAll (Forallx xs eqs t) = f xs t `union` g eqs
-  where f [] t = getAll t
-        f ((s,a,q):xs) t = (getAll a) `union` (f xs t)
+getF :: ([String]->[String]->[String]) -> PT -> [String]
+getF union (TyVar' s) = [s]
+getF union (Rarrow' x y) = union (getF union x) (getF union y)
+getF union (Karrow' x y) = union (getF union x) (getF union y)
+getF union (TyFun' x) = foldr g [] x 
+    where g t free = union (getF union t) free
+getF union (TyApp' x y) = (getF union x) `union` (getF union y)
+getF union (TyCon' s) = []
+getF union (Star' n) = []
+getF union (Tlamx n t) = getF union t
+getF union (AnyTyp n) = []
+getF union (Forallx q xs eqs t) = f xs t `union` g eqs
+  where f [] t = getF union t
+        f ((s,a,q):xs) t = (getF union a) `union` (f xs t)
         g [] = []
-        g ((a,b):xs) = (getAll a) `union` (getAll b) `union` g xs
+        g ((Equality' a b):xs) = (getF union a) `union` (getF union b) `union` g xs
+        g ((Rel' nm ts):xs) =(getF union ts) `union` (g xs)
+        
+        
+getAll = getF union
+getMult = getF (++)
 
 
 subPT :: Monad m => [(String,String)] -> (String -> m String) -> PT -> m PT
@@ -1358,16 +1368,17 @@ subPT sigma fresh x =
     do { m <- fresh n
        ; s <- subPT ((n,m):sigma) fresh t
        ; return(Tlamx m s)}
-  (Forallx xs eqs t) -> 
+  (Forallx quant xs eqs t) -> 
     do { let fresh1 (x,y,z) = do { x1 <- fresh x; return(x,x1)}
              g (x,y,z) (_,x1) = (x1,y,z)
        ; xs1 <- mapM fresh1 xs
        ; let sigma1 = xs1 ++ sigma
              rcall1 x = subPT sigma1 fresh x
-             f (x,y) = do { a <- rcall1 x; b <- rcall1 y; return(a,b)}
+             f (Equality' x y) = do { a <- rcall1 x; b <- rcall1 y; return(Equality' a b)}
+             f (Rel' nm ts) = do { ys <- rcall1 ts; return(Rel' nm ys)}
        ; eqs1 <- mapM f eqs
        ; t1 <- rcall1 t
-       ; return(Forallx (zipWith g xs xs1) eqs1 t1)}
+       ; return(Forallx quant (zipWith g xs xs1) eqs1 t1)}
 
 -- Apply a substitution, but don't rename any of the binding
 -- occurences. The user must be sure that this doesn't matter.
@@ -1384,74 +1395,116 @@ ptsub sigma x =
   (Star' n) -> (Star' n)
   (AnyTyp n) -> (AnyTyp n)
   (Tlamx n t) -> Tlamx n (ptsub ((n,n):sigma) t) 
-  (Forallx xs eqs t) -> 
+  (Forallx quant xs eqs t) -> 
    let sub1 (nm,kind,quant) = (nm,ptsub sigma kind,quant)
-       sub2 (t1,t2) = (rcall t1,rcall t2)
-    in Forallx (map sub1 xs) (map sub2 eqs) (rcall t)
+       sub2 (Equality' t1 t2) = Equality' (rcall t1) (rcall t2)
+       sub2 (Rel' nm ts) = Rel' nm (rcall ts)
+    in Forallx quant (map sub1 xs) (map sub2 eqs) (rcall t)
 
    
 --------------------------------------------------------------------
 -- Translating. The translation respects (and enforces) the 3 level
 -- distinctions between Sigma, Rho and Tau.
- 
-toSigma :: TyCh m => ToEnv -> PT -> m Sigma
-toSigma env (Forallx xs eqs body) =
-   do { (fargs,env2) <- argsToEnv xs env
-      ; r <- toRho env2 body
-      ; eqs2 <- toEqs env2 eqs
-      ; return(Forall (windup fargs (eqs2,r))) }
-toSigma env x = do { r <- toRho env x; return(Forall (Nil ([],r)))}
 
-toEqs :: TyCh m => ToEnv -> [(PT,PT)] -> m [Eqn]
+type ToEnv = [(String,Tau,PolyKind)]
+ 
+toSigma :: TyCh m => ToEnv -> PT -> m(Sigma,[(String,Name)])
+toSigma env (Forallx All xs eqs body) =
+   do { (ns,fargs,env2) <- argsToEnv xs env
+      ; eqs2 <- toEqs env2 eqs
+      ; r <- toRho env2 body
+      ; return(Forall (windup fargs (eqs2,r)),ns) }
+toSigma env x = do { r <- toRho env x; return(Forall (Nil ([],r)),[])}
+
+toEqs :: TyCh m => ToEnv -> [PPred] -> m [Pred]
 toEqs env [] = return []
-toEqs env ((a,b):xs) =
+toEqs env ((Equality' a b):xs) =
   do { m <- toTau env a
      ; n <- toTau env b
      ; ys <- toEqs env xs
      ; return((Equality m n):ys) }
+toEqs env ((Rel' nm ts):xs) =
+  do { zs <- toTau env ts
+     ; ys <- toEqs env xs
+     ; return((Rel nm zs):ys) }     
+
+
 
 toRho env (Rarrow' x y) =
-  do { s <- toSigma env x; r <- toRho env y; return(arrow s r)}
+  do { (s,_) <- toSigma env x; r <- toRho env y; return(arrow s r)}
 toRho env (TyApp' (TyApp' (TyCon' "(,)") x) y) =
-  do { a <- toSigma env x; b <- toSigma env y; return(pair a b)}
+  do { (a,_) <- toSigma env x; (b,_) <- toSigma env y; return(pair a b)}
 toRho env (TyApp' (TyApp' (TyCon' "(+)") x) y) =
-  do { a <- toSigma env x; b <- toSigma env y; return(rsum a b)}
+  do { (a,_) <- toSigma env x; (b,_) <- toSigma env y; return(rsum a b)}
 toRho env t = do { w <- toTau env t; return(Rtau w) }
 
+nonCon (x:xs) = isLower x
+nonCon x = False
 
-toTau :: TyCh m => ToEnv -> PT -> m Tau
-toTau env (TyVar' s) = readName "In To Tau (TyVar' _): " env s
-toTau env (Rarrow' x y) =
-  do { s <- toTau env x; r <- toTau env y; return(tarr s r)}
-toTau env (Karrow' x y) =
-  do { s <- toTau env x; r <- toTau env y; return(Karr s r)}  
-toTau env (ty@(TyFun' (x:xs))) =   
-  do { s <- toTau env x
-     ; ys <- mapM (toTau env) xs
+-- whenever we translate to a Tau we need a count of how many TyApp nodes
+-- we are under, because if we find a TySyn its arity must match the number
+-- of nodes we are under. The parameter "n" counts this number. Note how
+-- in most recursive calls it is 0.
+
+toTau env x = readTau 0 env x
+
+readTau :: TyCh m => Int -> ToEnv -> PT -> m Tau
+readTau n env (TyVar' s) = readName "In To Tau (TyCon' _): " env s
+readTau n env (Rarrow' x y) =
+  do { s <- readTau 0 env x; r <- readTau 0 env y; return(tarr s r)}
+readTau n env (Karrow' x y) =
+  do { s <- readTau 0 env x; r <- readTau 0 env y; return(Karr s r)}  
+readTau n env (TyCon' (tag@('`':cs))) = return(TyCon tag tagKind)
+readTau n env (TyCon' s) = 
+  do { x <- readName "In To Tau (TyVar' _): " env s
+     ; case x of
+        (TySyn nm m fs as x) | m>n -> failD 0 [Ds ("Type synonym: "++nm++" applied to few args")]
+        (TySyn nm m fs as x) | m<n -> failD 0 [Ds ("Type synonym: "++nm++" applied to many args")]
+        x -> return x }
+readTau n env (Star' m) = return(Star m)
+readTau n env (TyApp' x y) = 
+  let (funtyp,argtyps) = root x [y]
+  in do { f <- readTau (length argtyps) env funtyp
+        ; xs <- mapM (readTau 0 env) argtyps
+        ; case f of
+           (TySyn nm m fs as b) -> 
+               do { let subst = zipWith (\ (nm,k) t -> (nm,t)) fs xs
+                  ; body <- sub (subst,[],[]) b
+                  ; return(TySyn nm n fs xs body)}
+           _ -> return(applyT (f:xs)) }
+readTau n env (ty@(TyFun' (x:xs))) =   
+  do { s <- readTau 0 env x
+     ; ys <- mapM (readTau 0 env) xs
      ; case s of
-        TyCon nm k -> return(TyFun nm k ys)
-        _ -> fail ("\n"++ show ty++" doesn't have type var in function position"++sht s++show x)
-     }
-toTau env (TyApp' x y) = 
-  do { z <- toTau env x; r <- toTau env y; return(TyApp z r)}
-toTau env (TyCon' s) = readName "In To Tau (TyCon' _): " env s
-toTau env (Star' n) = return(Star n)
-toTau env (t@(Forallx xs eqs body)) = 
+        TyCon nm k | nonCon nm -> return(TyFun nm k ys)
+        TyCon nm k -> failD 0 [Ds ("The name of a type function must begin with a lower case letter: "++nm)]
+        _ -> failD 0 [Ds "\n",Dd ty
+                     ,Ds " doesn't have a type function name in the function position of type function application."
+                     ,Dd x]}
+readTau n env (AnyTyp m) = 
+   do { k <- newKind (MK(Star m))
+      ; v <- newFlexiTyVar (MK (Star m)) ; return(TcTv v)}
+readTau n env (t@(Forallx Ex xs eqs body)) = 
+   do { (_,fargs,env2) <- argsToEnv xs env
+      ; r <- readTau 0 env2 body
+      ; eqs2 <- toEqs env2 eqs
+      ; return(TyEx(windup fargs (eqs2,r))) }
+readTau n env (t@(Forallx q xs eqs body)) = 
   fail ("Sigma type in Tau context: "++show t)
-toTau env (t@(Tlamx s x)) = fail ("No lambda types in rankN: "++show t)
-toTau env (AnyTyp n) = 
-   do { k <- newKind (MK(Star n))
-      ; v <- newFlexiTyVar (MK (Star n)) ; return(TcTv v)}
+readTau n env (t@(Tlamx s x)) = fail ("No lambda types in rankN: "++show t)
 
+ 
+root (TyApp' f y) ys = root f (y:ys)
+root f ys = (f,ys)
 
-argsToEnv :: TyCh m => [(String,PT,Quant)] -> ToEnv -> m (ForAllArgs,ToEnv)
-argsToEnv [] env = return([],env)
+argsToEnv :: TyCh m => [(String,PT,Quant)] -> ToEnv -> m ([(String,Name)],ForAllArgs,ToEnv)
+argsToEnv [] env = return([],[],env)
 argsToEnv ((s,k,quant):xs) env =
  do { w <- toTau env k
     ; let k2 = MK w
     ; nm <- fresh
-    ; (zs,env2) <- argsToEnv xs ((s,TyVar nm k2,poly k2):env)
-    ; return ((nm,k2,quant):zs,env2)
+    ; (ns,zs,env2) <- argsToEnv xs ((s,TyVar nm k2,poly k2):env)
+    ; return ((s,nm):ns,(nm,k2,quant):zs,env2)
     }
 
 ------------------------------------------------------
@@ -1480,27 +1533,52 @@ applyT' (x : y : z) = applyT' ((TyApp' x y):z)
 ------------------------------------------------------------------
 -- parsing simple types, ones that never need parenthesizing
 
+parse_tag inject = 
+     try (do { whiteSpace
+             ; (char '`')
+             ; v <- ident
+             ; notFollowedBy (char '`')
+             ; whiteSpace
+             ; return(inject v)})	                
+  where ident = do{ c <- identStart tokenDef
+                  ; cs <- many (identLetter tokenDef)
+                  ; return (c:cs)
+                  } <?> "identifier"
+
+buildNat :: Num a => b -> (b -> b) -> a -> b
+buildNat z s 0 = z
+buildNat z s n = s(buildNat z s (n-1))
+
 simpletyp :: Int -> Parser PT
 simpletyp strata =
-       do {t <- constructorName; return (TyCon' t) }          -- T
+       (do {t <- constructorName; return (TyCon' t) })        -- T
+   <|> (let inject s = TyCon' ("`"++s) in parse_tag inject)   -- `abc
    <|> do {x <- identifier; return (TyVar' x) }               -- x
    <|> (symbol "?" >> return (AnyTyp (strata + 1)))           -- ?
    <|> parseStar                                              -- * *1 *2
+   <|> (do{ symbol "#"                                        -- #1  #3
+          ; n <- natural
+          ; return(buildNat (TyCon' "Z") 
+                            (TyApp' (TyCon' "S")) n)})
+   
+   
+   <|> try (do { x <- (symbol "()" <|> symbol "[]")           -- () and []
+               ; return(TyCon' x)})   
+   <|> try (do { x <- parens(symbol "->" <|>                  -- (->) (+) and (,)  
+                             symbol "+"  <|> 
+                             symbol ",")  
+               ; return(TyCon' ("("++x++")"))})               
 
-   -- () and []
-   <|> try (do { x <- (symbol "()" <|> symbol "[]"); return(TyCon' x)})  
-   -- (->) (+) and (,)   
-   <|> try (do { x <- parens(symbol "->" <|> symbol "+" <|> symbol ",")  
-               ; return(TyCon' ("("++x++")"))})
-
-   <|> try (parens(do { x <- identifier; symbol "."
-                      ; t <- typN strata; return(Tlamx x t)})) -- (x.[x])
+   <|> try (parens(do { x <- identifier; symbol "."            -- (x.[x])
+                      ; t <- typN strata; return(Tlamx x t)})) 
    <|> try(do {ts <- parens(sepBy1 (typN strata) (symbol ",")) -- (t,t,t)
               ; return (tprods' ts)})
    <|> try(do {ts <- parens(sepBy1 (typN strata) (symbol "+")) -- (t+t+t)
               ; return (tsums' ts)})
    <|> do {t <- squares (typN strata); return (list' t)}       -- [t]
    <|> (do { xs <- braces (many1 (simpletyp strata)); return(TyFun' xs)}) -- {plus x y}
+   <|> (do { n <- natural
+           ; fail (show n++" is not a type. Use #"++show n++" for Nat constants")})
 
 constructorName = lexeme (try construct)
   where construct = do{ c <- upper
@@ -1526,15 +1604,13 @@ arrTyp n =
       }
 
 allTyp n =
-  do { reserved "forall"
+  do { q2 <- ((reserved "forall") >> (return All)) <|> 
+             ((reserved "exists") >> (return Ex))
      ; ns <- many1 (argument n All)
      ; symbol "."
-     ; eqs <- possible(do { xs <- parens(sepBy (equality n) comma)
-                          ; symbol "=>"; return xs})
-     ; let f Nothing = []
-           f (Just xs) = xs
+     ; eqs <- props n
      ; t <- typN n
-     ; return (Forallx ns (f eqs) t)
+     ; return (Forallx q2 ns eqs t)
      }
 
 argument n q = 
@@ -1544,30 +1620,32 @@ argument n q =
 typN :: Int -> Parser PT
 typN n = allTyp n <|> arrTyp n
 
-eqnTyp :: Int -> Parser PT
-eqnTyp n = 
-   --(do { xs <- between (symbol "{") (symbol "}") (arrTyp n); return(TyFun' [xs])}) <|>
-   (arrTyp n)
 
+qual = (reservedOp "="  >> return "=" ) <|> 
+       (reservedOp "!=" >> return "!=")
 
-
-equality n =
- do { t1 <- eqnTyp n 
-    ; reservedOp "="
-    ; t2 <- eqnTyp n
-    ; return(t1,t2)
+proposition n =
+ do { t1 <- arrTyp n 
+    ; rest <- possible (do { t <- qual; x <- arrTyp n; return(t,x)})
+    ; case rest of
+        Just("=",t2)  -> return(Equality' t1 t2)
+        Just("!=",t2) -> return(Rel' "(!=)" (TyApp' (TyApp' (TyCon' "(!=)") t1) t2))
+        Nothing -> typToRel t1 t1
     }
 
+props :: Int -> Parser [PPred]
+props n = (try (do { x <- proposition n; symbol "=>"; return[x]})) <|>
+          (try (do { xs <- parens(sepBy (proposition n) comma)
+                   ; symbol "=>"; return xs}))                     <|>
+          (return [])
+ 
+typToRel t (TyApp' (TyCon' nm) x) = return(Rel' nm t)
+typToRel t (TyApp' f x) = typToRel t f
+typToRel t _ = fail ("Expecting a relational predicate, found:\n  "++ show t)  
+   
    
 pt s = case parse2 (typN 0) s of { Right(x,more) -> x; Left s -> error (show s) }
-peqt s = case parse2 (eqnTyp 0) s of { Right(x,more) -> x; Left s -> error s }
-
-parseSigma :: TyCh m => String -> m Sigma
-parseSigma s = toSigma toEnv0 (pt s)
-
-getrho :: TyCh m => [Char] -> m Rho
-getrho s = toRho toEnv0 (pt s)
-
+peqt s = case parse2 (arrTyp 0) s of { Right(x,more) -> x; Left s -> error s }
 
 k = "forall a b . a -> b -> b"
 f1 = "(Int -> Int -> Int) -> Int"
@@ -1595,6 +1673,14 @@ subpairs =
 
 -----------------------------------------------------------------------
 
+
+instance NameStore d => Exhibit d PPred where
+  exhibit d (Equality' x y) = (d,show x++"="++show y)
+  exhibit d (Rel' nm ts) = (d,show ts)
+
+instance NameStore d => Exhibit d PT where
+  exhibit d x = (d,show x)
+
 instance Show PT where
   show (TyVar' s) = s
   show (Rarrow' x y) = showp x ++ " -> "++show y
@@ -1602,6 +1688,7 @@ instance Show PT where
   show (TyApp' (TyCon' "[]") x) = "[" ++ show x ++ "]"
   show (TyApp'(TyApp'(TyCon' "(,)") x) y)= "("++show x++","++show y++")"
   show (TyApp'(TyApp'(TyCon' "(+)") x) y)= "("++show x++"+"++show y++")"
+  show (TyApp'(TyApp'(TyCon' "(!=)") x) y)= show x++" != "++show y
   show (TyApp' x (y@(TyApp' _ _))) = show x ++ " " ++ showp y
   show (TyApp' x y) = show x ++ " " ++ showp y
   show (TyCon' s) = s
@@ -1609,201 +1696,55 @@ instance Show PT where
   show (Star' n) = "*"++show n
   show (Tlamx n t) = "("++n++" . "++show t++")"
   show (AnyTyp n) = "?::*"++show n
-  show (Forallx xs eqs t) = "(forall "++ f xs++ g eqs ++ show t ++ ")"
+  show (Forallx q2 xs eqs t) = showquant q2 ++ f xs++ g eqs ++ show t ++ ")"
     where f [(s,AnyTyp _,q)] = s ++ shq q ++ " . "
           f ((s,AnyTyp _,q):xs) = s ++ shq q++ " "++f xs
           f [(s,k,q)] = "("++ s ++ shq q++ "::" ++ show k ++") . "
           f ((s,k,q):xs) = "("++ s++ shq q ++ "::" ++ show k ++") "++f xs
           g [] = ""
-          g xs = plist "(" xs "," ") => "
+          g xs = plistf show "(" xs "," ") => "
           shq All = ""
           shq Ex  = "'"
+          
+
+showquant All = "(forall "
+showquant Ex = "(exists "
           
 showp x@(Rarrow' _ _) = "("++show x ++ ")" 
 showp x@(Karrow' _ _) = "("++show x ++ ")" 
 showp x@(TyApp' _ _) = "("++show x ++ ")" 
-showp x@(Forallx _ _ _) = "("++show x ++ ")" 
+showp x@(Forallx q _ _ _) = "("++show x ++ ")" 
 showp x = show x
 
 --------------------------------------------------------------
 -- show instances
 
-showparR x@(Forall (Nil (_,Rarrow _ _))) = "("++show x ++ ")"
-showparR x = show x
+isRow :: Tau -> Bool
+isRow (TyApp (TyApp (TyCon "RCons" _) x) y) = True
+isRow (TyCon "RNil" _) = True
+isRow _ = False
 
-instance Show Rho where
-  show (Rarrow x y) = (showparR x)++" r-> "++(show y)
-  show (Rpair x y) = "("++(show x)++";"++(show y)++")"
-  show (Rsum x y) = "("++(show x)++" | "++(show y)++")"
-  show (Rtau x) = (show x)
 
-instance Show Tau where
-  show (TyVar nm k) = show nm -- "("++show nm ++":"++show k++")"
-  show (TyApp (TyCon "[]" _) (TyCon "Char" _)) = "String"
-  show (TyApp (TyCon "[]" _) x) = "[" ++ show x ++ "]"
+rowElem :: Tau -> [Tau] -> Either [Tau] ([Tau],Tau)
+rowElem (TyCon "RNil" _) es = Left (reverse es)
+rowElem (TyApp (TyApp (TyCon "RCons" _) e) y) es = rowElem y (e:es)
+rowElem x es = Right(reverse es,x)
 
-  show (TyApp(TyApp(TyCon "(,)" _) x) y)= "("++show x++","++show y++")"
-  show (TyApp(TyApp(TyCon "(->)" _) x) y)= showpar x ++ " -> "++ show y
-  show (TyApp(TyApp(TyCon "(+)" _) x) y)= "("++show x++"+"++show y++")"
-  show (TyApp x y) = show x ++ " " ++ showpar y
-  show (TyCon s k) = s -- ++"{"++show k++"}"
-  show (Star 0) = "*"
-  show (Star n) = "*"++show n
-  show (Karr x y) = showpar x ++ " ~> "++ show y 
-  show (TyFun nm k xs) = "{"++nm ++ plist " " xs " " "}"
-  show (TcTv v) = show v
+isNat :: Tau -> Bool
+isNat (TyApp (TyCon "S" _) x) = True
+isNat (TyCon "Z" _) = True
+isNat _ = False
 
-instance Show TcTv where
-  show (Tv unq (Rigid _ _ _) k) = "_"++show unq ++ showMono k
-  show (Tv unq (Flexi _) k) = "Z"++show unq ++ showMono k
-  show (Tv unq (Skol s) k) = "*"++show unq  ++ showMono k
-
-instance Show Sigma where
-  show (Forall (Nil (_,x))) = show x
-  show (Forall zs) = "(forall "++g xs++" . "++hww t++")"
-    where g [(x,k,q)] = show x ++ sh q ++ showMono k
-          g ((x,k,q):zs) = show x ++ sh q ++ showMono k ++ " " ++ g zs
-          sh All = ""
-          sh Ex = "'"
-          hww (zs,t) = eqf zs ++ show t
-          eqf [] = ""
-	  eqf zs = plistf h "(" zs "," ") => "
-          h (Equality x y) = show x++ " = "++ show y
-          (xs,t) = unsafeUnwind zs
-          
-instance Show Eqn where
-  show (Equality x y) = "("++show x++" = "++show y++")"
+natElem :: Tau -> Int -> Either Int (Int,Tau)
+natElem (TyCon "Z" _) n = Left n
+natElem (TyApp (TyCon "S" _) y) n = natElem y (n+1)
+natElem x n = Right(n,x)
 
 unsafeUnwind :: Swap a => L a -> ([(Name,Kind,Quant)],a)         
 unsafeUnwind (Nil t) = ([],t)
 unsafeUnwind (Cons (k,q) b) = ((x,k,q):xs,t)
    where (x,rest) = unsafeUnBind b
          (xs,t) = unsafeUnwind rest
-
-showMono (MK (Star 0)) = ""
-showMono (MK x) = ":"++show x
-
-showpar z@(TyApp (TyApp (TyCon "(,)" _) x) y) = show z
-showpar z@(TyApp (TyApp (TyCon "(+)" _) x) y) = show z
-showpar z@(TyApp (TyCon "[]" _) x) = show z
-showpar x@(TyApp _ _) = "("++show x ++ ")" 
-showpar x@(Karr _ _) = "("++show x ++ ")" 
-showpar x = show x
-
-showPolyKind (K (Forall (Nil (_,Rtau (Star 0))))) = "*"
-showPolyKind (K z) = show z
-
-instance Show Kind where
-  show (MK t) = show t
-
-instance Show PolyKind where
-  show = showPolyKind
-
-instance Show a => Show (Expected a) where
-  show (Check a) = "(Check "++show a++")"
-  show (Infer ref) = "Infer"
-
----------------------------------------------------
-class Alpha t where
-  alpha :: [(Name,String)] -> t -> String
-
-instance Alpha PolyKind where
-  alpha e (K z) = alpha e z
-
-instance Alpha Rho where
-  alpha e (Rarrow x y) = (alphaparR e x)++" r-> "++(alpha e y)
-  alpha e (Rpair x y) = "("++(alpha e x)++";"++(alpha e y)++")"
-  alpha e (Rsum x y) = "("++(alpha e x)++" | "++(alpha e y)++")"
-  alpha e (Rtau x) = (alpha e x)
-
-
-alphapar e z@(TyApp (TyApp (TyCon "(,)" _) x) y) = alpha e z
-alphapar e z@(TyApp (TyApp (TyCon "(+)" _) x) y) = alpha e z
-alphapar e z@(TyApp (TyCon "[]" _) x) = alpha e z
-alphapar e x@(Karr _ _) = "("++alpha e x ++ ")"
-alphapar e x@(TyApp _ _) = "("++alpha e x ++ ")" 
-alphapar e x = alpha e x
-
-alphaparR e x@(Forall (Nil (_,Rarrow _ _))) = "("++alpha e x ++ ")"
-alphaparR e x = alpha e x
-
-alphaMono var e (MK (Star 0)) = var
-alphaMono var e (MK z) = "(" ++ var ++":"++alpha e z++")"
-
-
-instance Alpha Tau where
-  alpha e (TyVar nm k) =
-     case lookup nm e of { Just s -> s; Nothing -> show nm }
-  alpha e (TyApp (TyCon "[]" _) x) = "[" ++ alpha e x ++ "]"
-  
-  alpha e (TyApp (TyCon "[]" _) (TyCon "Char" _)) = "String"
-  alpha e (TyApp (TyApp (TyCon "(,)" _) x) y) = 
-        "(" ++ alpha e x ++ ","++ alpha e y ++")"
-  alpha e (TyApp (TyApp (TyCon "(->)" _) x) y) = 
-        alphapar e x ++ " -> "++ alpha e y
-  alpha e (TyApp (TyApp (TyCon "(+)" _) x) y) = 
-        "(" ++ alpha e x ++ "+"++ alpha e y ++")"
-  alpha e (TyApp x y) = alpha e x ++ " " ++ alphapar e y
-  alpha e (TyCon "(->)" _) = "(->)"   -- Never pull on the kind of (->)
-  alpha e (TyCon s k) = s -- ++"{"++show k++"}"
-  alpha e (Star 0) = "*"
-  alpha e (Star n) = "*"++show n
-  alpha e (Karr x y) = alphapar e x ++ " ~> "++ alpha e y 
-  alpha e (TyFun f k xs) = "{"++f ++ g xs
-    where g [x] = " "++alphapar e x++ "}"
-          g (x:xs) = " "++alphapar e x++ g xs
-  alpha e (TcTv v) = show v
-
-instance Alpha Kind where
-  alpha e (MK t) = alpha e t
-
-instance Alpha Sigma where
-  alpha e (Forall (Nil (zs,x))) = alpha e x
-  alpha e (Forall zs) = "(forall "++args++" . "++eqf eqs++alpha e2 t++")"
-    where (args,e2) = g e xs
-          g e [(x,k,q)] = (alphaMono (nm ++ sh q) e k,e2)
-             where (nm,e2) = rename x k e
-          g e ((x,k,q):zs) = (alphaMono (nm ++sh q) e k ++ " " ++ rest,e3)
-             where (nm,e2) = rename x k e
-                   (rest,e3) = g e2 zs
-          eqf [] = ""
-          eqf zs = plistf h "(" zs "," ") => "
-          h (Equality x y) = alpha e2 x++ " = "++alpha e2 y
-          sh All = ""
-          sh Ex = "'"
-          (xs,(eqs,t)) = unwind zs
-          unwind (Nil (eqs,t)) = ([],(eqs,t))
-          unwind (Cons (k,q) b) = ((x,k,q):xs,t)
-               where (x,rest) = unsafeUnBind b
-                     (xs,t) = unwind rest
-
-pprint x = alpha [] x
-
-rename :: Name -> Kind -> [(Name,String)] -> (String,[(Name,String)])
-rename name k xs = (new,(name,new):xs)
-   where new = first xs (choices k)
-         first old (x:xs) = if find x old then first old xs else x
-         find x [] = False
-         find x ((_,y):old) = if x==y then True else find x old
-
-
-
--- Select an infinite list of possible choices given a Kind
-choices :: Kind -> [String]
-choices k = case k of
-    (MK (Star 0))                                           -> types
-    (MK (Karr (Star 0) (Star 0)))                           -> typeConstrs
-    (MK (Star 1))                                           -> kinds
-    (MK (Karr _ _))                                         -> higherOrder
-    _                                                       -> other
-  where types       = makeNames "abcde"   -- *
-        typeConstrs = makeNames "ts"      -- (* -1-> *)
-        kinds       = makeNames "k"       -- *1
-        higherOrder = makeNames "fgh"     -- (k -> k)
-        other       = makeNames "uvwxyz"  -- other
-
-
-monadPt = pt "(forall a . a -> t a) -> (forall a b . (t a) -> (a -> t b) -> t b) -> (forall a . ([Char]) -> t a) -> Monad t"
 
 -------------------------------------------------------------------------
 -- is one Tau a subterm of another Tau?
@@ -1816,11 +1757,49 @@ instance Eq Tau where
   (Karr a b) == (Karr m n) = a==m && b==n
   (TyFun f _ as) == (TyFun g _ bs) = f==g && as==bs
   (TcTv x) == (TcTv y) = x==y
+  (TySyn nm n fs as x) == y = x==y
+  y == (TySyn nm n fs as x) = x==y
   _ == _ = False
+
+instance Ord Tau where
+  compare (TySyn nm n fs as x) y = compare x y
+  compare y (TySyn nm n fs as x) = compare y x
   
+  compare (TyVar n _) (TyVar m _) = compare n m
+  compare (TyVar _ _) _ = LT
+  compare _ (TyVar _ _) = GT
+  
+  compare (TyApp a b) (TyApp m n) = if a==m then compare b n else compare a m
+  compare (TyApp a b) _ = LT
+  compare _ (TyApp a b) = GT
+  
+  compare (TyCon n _) (TyCon m _) = compare n m
+  compare (TyCon n _) _ = LT
+  compare _ (TyCon m _) = GT
+ 
+  compare (Star n) (Star m) = compare n m
+  compare (Star n) _ = LT
+  compare _ (Star m) = GT
+  
+  compare (Karr a b) (Karr m n) = if a==m then compare b n else compare a m
+  compare (Karr a b) _ = LT
+  compare _ (Karr a b) = GT
+  
+  compare (TyFun f _ as) (TyFun g _ bs) = compare as bs
+  compare (TyFun f _ as) _ = LT
+  compare _ (TyFun g _ bs) = GT
+  
+  compare (TcTv x) (TcTv y) = compare x y
+  compare (TcTv x) _ = LT
+  compare _ (TcTv y) = GT
+  
+  compare x y = error ("Can't compare: "++show x++" and "++show y)
+
+{-  
 subTerm old term | old==term = True
 subTerm old (TyApp x y) = (subTerm old x) || (subTerm old y)
 subTerm old (Karr x y) = (subTerm old x) || (subTerm old y)  
+subTerm old (TySyn nm n fs as t) = subTerm old t
 subTerm old (TyFun nm k x) = error "What do we do here?" -- subTerm old x
 subTerm old _ = False    
 
@@ -1830,154 +1809,11 @@ replace new old (Karr x y) = Karr (replace new old x) (replace new old y)
 replace new old (TyVar m (MK k)) = TyVar m (MK (replace new old k))
 replace new old (TcTv(Tv unq fl (MK k))) = TcTv(Tv unq fl (MK (replace new old k)))
 replace new old (TyFun f k x) = TyFun f k (map (replace new old) x)
+replace new old (TySyn nm n fs as t) = TySyn nm n fs (map (replace new old) as) (replace new old t)
 replace new old term = term  
+-}
 
 ---------------------------------------------------------------
-
-dispArr xs (t@(TyApp (TyApp (TyCon "(->)" _) x) y)) = (ys,"("++z++")")
-  where (ys,z) = disp xs t
-dispArr xs t = disp xs t  
-
-instance Display Tau where
-  disp xs (TyCon s k) = (xs,s)
-  disp e (TyApp (TyCon "[]" _) x) = (ys,"[" ++ ans ++ "]")
-    where (ys,ans) = disp e x
-  disp e (TyApp (TyApp (TyCon "(,)" _) x) y) = (zs,"(" ++ a ++ ","++ b++")")
-    where (ys,a) = disp e x
-          (zs,b) = disp ys y 
-  disp e (TyApp (TyApp (TyCon "(->)" _) x) y) = (zs,a ++ " -> "++ b)
-    where (ys,a) = dispArr e x
-          (zs,b) = disp ys y
-  disp e (TyApp (TyApp (TyCon "(+)" _) x) y) = (zs,"(" ++ a ++ "+"++ b ++")")
-    where (ys,a) = disppar e x
-          (zs,b) = disppar ys y        
-  disp xs (TyApp x y) = (zs,a++" "++b)
-    where (ys,a) = disp xs x
-          (zs,b) = disppar ys y
-  disp xs (Star 0) = (xs,"*")
-  disp xs (Star n) = (xs,"*"++show n)
-  disp xs (TyVar nm k) = useDisplay (name2Int nm) f xs 
-    where f s = "'"++s
-  disp xs (Karr x y) = (zs,a ++ " ~> "++ b)
-    where (ys,a) = disp xs x
-          (zs,b) = disp ys y
-  disp info (TcTv v) =  disp info v
-  disp info (TyFun f k xs) = (d2,"{"++f++" "++body++"}")
-    where (d2,body) = dispL disppar info xs " "
-
-
-
-----------------------------------------
--- we'd like variables to display as (x:k1:*1)
-
-instance Display TcTv where
-  disp info (v@(Tv uniq flav (MK k))) = (d2,nameStr ++ suffix)
-    where (d1,nameStr) = dispTv info v
-          (d2,suffix) = dispMono d1 (MK k)
-
-dispMono info (MK (Star 0)) = (info,"")
-dispMono info (MK x) = (d2,":"++z) 
-   where (d2,z) = disp info x
-
-tVarPrefix (Flexi _) n = n
-tVarPrefix (Rigid _ _ _) n = "_"++n
-tVarPrefix (Skol _) n = "*"++n
-
-dispTv :: DispInfo -> TcTv -> (DispInfo,String) 
-dispTv d1 (Tv uniq flav k) = useDisplay uniq (tVarPrefix flav) d1
-
-dispKind :: DispInfo -> Tau -> (DispInfo,[Char])
-dispKind d1 (Star 0) = (d1,"")
-dispKind d1 (t@(Star n)) = (d1,":"++show t)
-dispKind d1 (TyVar nm (MK k)) = (d3,":"++nmStr++kStr)
-   where (d2,nmStr) = useDisplay (name2Int nm) f d1 where f s = "'"++s
-         (d3,kStr) = dispKind d2 k
-dispKind d1 (TcTv (v@(Tv _ _ (MK k)))) = (d3,":"++nmStr++kStr)
-   where (d2,nmStr) = dispTv d1 v
-         (d3,kStr) = dispKind d2 k 
-dispKind d1 (TyCon s k) = (d1,":"++s)         
-dispKind d1 x = (d1,"?"++show x++"?")         
-
----------------------------------------------------------            
-dispRarr xs (t@(Forall (Cons _ _))) = (ys,"("++z++")")
-  where (ys,z) = disp xs t
-dispRarr xs (t@(Forall (Nil (_,Rtau (TyApp (TyApp (TyCon "(->)" _) x) y))))) = (ys,"("++z++")")
-  where (ys,z) = disp xs t
-dispRarr xs t = disp xs t  
-        
-instance Display Rho where 
-  disp xs (Rtau x) = disp xs x
-  disp xs (Rarrow x y) = (zs,a++" -> "++b)
-    where (ys,a) = dispRarr xs x
-          (zs,b) = disp ys y
-  disp xs (Rpair x y) = (zs,"("++a++","++b++")")
-    where (ys,a) = disp xs x
-          (zs,b) = disp ys y
-  disp xs (Rsum x y) = (zs,"("++a++"+"++b++")")
-    where (ys,a) = disp xs x
-          (zs,b) = disp ys y
-
-  
-instance Display Sigma where
-  disp d1 (Forall args) = (d4,prefix ++ eqsS ++ rhoS)
-    where (trips,(eqs,rho)) = unsafeUnwind args
-          (d2,prefix) = f d1 trips 
-          (d3,eqsS) = disp d2 eqs
-          (d4,rhoS) = disp d3 rho
-          f d1 [] = (d1,"")
-          f d1 trips = (d2,"forall "++argStr ++ " . ")
-            where (d2,argStr) = dispL pp d1 trips " "
-          pp d2 (nm,MK k,q) = (d4,name ++ kind)
-            where (d3,name) = useDisplay (name2Int nm) prefix d2
-                  (d4,kind) = dispKind d3 k
-                  prefix s = "'"++s++(case q of {Ex -> "'"; All -> ""})
-          
-
-
-instance Display [(Tau,Tau)] where
-  disp xs [] = (xs,"")
-  disp xs ys = (zs,"( "++ans++" ) => ")
-    where (zs,ans) = dispL disp xs ys ", "
-
-instance Display [Eqn] where
-  disp xs [] = (xs,"")
-  disp xs ys = (zs,"( "++ans++" ) => ")
-    where (zs,ans) = dispL disp xs ys ", "
-    
-instance Display [(TcTv,Tau)] where
-  disp xs [] = (xs,"")
-  disp xs ys = (zs,"( "++ans++" ) => ")
-    where (zs,ans) = dispL disp xs ys ", "
-
-
-instance Display (Tau,Tau) where
-  disp xs (x,y) = (zs,a++"="++b)
-    where (ys,a) = disp xs x
-          (zs,b) = disp ys y
-
-instance Display Eqn where
-  disp xs (Equality x y) = (zs,a++"="++b)
-    where (ys,a) = disp xs x
-          (zs,b) = disp ys y
-          
-
-instance Display ([Eqn], Rho) where
-  disp xs (es,r) = (ys,esx ++ " => " ++ rx)
-     where (ys,esx,rx) = disp2 xs (es,r)
-
-instance Display (TcTv,Tau) where
-  disp xs (x,y) = (zs,a++"="++b)
-    where (ys,a) = disp xs x
-          (zs,b) = disp ys y
-
-disppar xs z@(TyApp (TyApp (TyCon "(,)" _) x) y) = disp xs z
-disppar xs z@(TyApp (TyApp (TyCon "(+)" _) x) y) = disp xs z
-disppar xs x@(Karr _ _) = (ys,"("++ ans ++ ")")
-  where (ys,ans) = disp xs x 
-disppar xs x@(TyApp _ _) = (ys,"("++ans++ ")")
-  where (ys,ans) = disp xs x 
-disppar xs x = disp xs x
-
 -----------------------------------------------------------
 -- Side-effect Free subsitution. Usually you must zonk
 -- before calling this function.
@@ -1991,14 +1827,22 @@ subPoly env (K s) = K(subSigma env s)
 subSigma :: [(TcTv,Tau)] -> Sigma -> Sigma
 subSigma env (Forall xs) = Forall(subL env xs)
 
-subL :: [(TcTv,Tau)] -> L ([Eqn],Rho) -> L ([Eqn],Rho)
-subL env (Nil(eqn,rho)) = Nil(subEqn env eqn,subRho env rho)
+subL :: [(TcTv,Tau)] -> L ([Pred],Rho) -> L ([Pred],Rho)
+subL env (Nil(eqn,rho)) = Nil(subPred env eqn,subRho env rho)
 subL env (Cons (k,q) x) = Cons (subKind env k,q) (bind nm xs)
   where (nm,more) = unsafeUnBind x
         xs = subL env more
 
-subEqn :: [(TcTv,Tau)] -> [Eqn] -> [Eqn]
-subEqn env xs = map f xs where f (Equality x y) = Equality (subTau env x) (subTau env y)
+subLTau :: [(TcTv,Tau)] -> L ([Pred],Tau) -> L ([Pred],Tau)
+subLTau env (Nil(eqn,rho)) = Nil(subPred env eqn,subTau env rho)
+subLTau env (Cons (k,q) x) = Cons (subKind env k,q) (bind nm xs)
+  where (nm,more) = unsafeUnBind x
+        xs = subLTau env more
+
+subPred :: [(TcTv,Tau)] -> [Pred] -> [Pred]
+subPred env xs = map f xs 
+   where f (Equality x y) = Equality (subTau env x) (subTau env y)
+         f (Rel nm ts) = Rel nm  (subTau env ts)
 
 subPairs :: [(TcTv,Tau)] -> [(Tau,Tau)] -> [(Tau,Tau)]
 subPairs env xs = map f xs where f (x,y) = (subTau env x,subTau env y)
@@ -2021,35 +1865,58 @@ subTau env (Star n) = Star n
 subTau env (Karr x y) =  Karr (subTau env x) (subTau env y)
 subTau env (TyFun f k x) = TyFun f (subPoly env k) (map (subTau env) x)
 subTau env (TyVar s k) = TyVar s (subKind env k)
+subTau env (TySyn nm n fs as x) = TySyn nm n (map f fs) (map (subTau env) as) (subTau env x) 
+  where f (nm,k) = (nm,subKind env k)
+subTau env (TyEx e) = TyEx(subLTau env e)
 
 ---------------------------------------------------
 -- Get type variables from a term, should be zonked first
 
-tvsTau (TcTv x) = [x]
-tvsTau (TyApp x y) = union (tvsTau x) (tvsTau y)
-tvsTau (TyCon s k) = tvsPoly k
-tvsTau (Star n) = []
-tvsTau (Karr x y) = union (tvsTau x) (tvsTau y)
-tvsTau (TyFun f k xs) = union (tvsPoly k) (foldr g [] xs)  where g t vs = union (tvsTau t) vs
-tvsTau (TyVar s k) = tvsKind k
+union2 (x,y) (a,b) = (union x a,unionBy f y b)
+  where f (n1,k1) (n2,k2) = n1==n2
 
-tvsPoly(K x) = tvsSigma x
+varsOfTau :: Tau -> ([TcTv],[(Name,Kind)])
+varsOfTau (TcTv x) = ([x],[])
+varsOfTau (TyApp x y) = union2 (varsOfTau x) (varsOfTau y)
+varsOfTau (TyCon s k) = varsOfPoly k
+varsOfTau (Star n) = ([],[])
+varsOfTau (Karr x y) = union2 (varsOfTau x) (varsOfTau y)
+varsOfTau (TyFun f k xs) = union2 (varsOfPoly k) (foldr g ([],[]) xs)  where g t vs = union2 (varsOfTau t) vs
+varsOfTau (TyVar s k) = union2 ([],[(s,k)]) (varsOfKind k)
+varsOfTau (TySyn nm n fs xs x) = 
+      union2 (varsOfTau x) 
+            (union2 (foldr h ([],[]) fs) (foldr g ([],[]) xs))
+   where g t vs = union2 (varsOfTau t) vs
+         h (nm,k) vs = union2 (varsOfKind k) vs
+varsOfTau (TyEx x) = (varsOfLTau x)
 
-tvsKind (MK x) = tvsTau x
+varsOfPoly(K x) = varsOfSigma x
 
-tvsSigma (Forall z) = tvsL z
+varsOfKind (MK x) = varsOfTau x
 
-tvsL (Nil(eqns,rho)) = union (tvsEqn eqns) (tvsRho rho)
-tvsL (Cons (k,q) x) = union(tvsKind k) (tvsL more)
+varsOfSigma (Forall z) = varsOfL z
+
+varsOfL :: L ([Pred],Rho) -> ([TcTv],[(Name,Kind)])
+varsOfL (Nil(eqns,rho)) = union2 (varsOfPred eqns) (varsOfRho rho)
+varsOfL (Cons (k,q) x) = union2(varsOfKind k) (varsOfL  more)
+  where (nm,more) = unsafeUnBind x
+
+varsOfLTau :: L ([Pred],Tau) -> ([TcTv],[(Name,Kind)])
+varsOfLTau (Nil(eqns,rho)) = union2 (varsOfPred eqns) (varsOfTau rho)
+varsOfLTau (Cons (k,q) x) = union2(varsOfKind k) (varsOfLTau more)
   where (nm,more) = unsafeUnBind x
  
-tvsEqn [] = []
-tvsEqn ((Equality x y):xs) = union (union (tvsTau x) (tvsTau y)) (tvsEqn xs)
+varsOfPred [] = ([],[])
+varsOfPred ((Equality x y):xs) = union2 (union2 (varsOfTau x) (varsOfTau y)) (varsOfPred xs)
+varsOfPred ((Rel nm ts):xs) = union2 (varsOfTau ts) (varsOfPred xs)
+     
+varsOfRho (Rarrow x y) = union2 (varsOfSigma x) (varsOfRho y)
+varsOfRho (Rpair x y) = union2 (varsOfSigma x) (varsOfSigma y)
+varsOfRho (Rsum x y) = union2 (varsOfSigma x) (varsOfSigma y)
+varsOfRho (Rtau x) = varsOfTau x
 
-tvsRho (Rarrow x y) = union (tvsSigma x) (tvsRho y)
-tvsRho (Rpair x y) = union (tvsSigma x) (tvsSigma y)
-tvsRho (Rsum x y) = union (tvsSigma x) (tvsSigma y)
-tvsRho (Rtau x) = tvsTau x
+tvsTau x = fst(varsOfTau x)
+
 
 ---------------------------------------------------------------
 -- Computing most general unifiers. Done in a side effect free way
@@ -2062,9 +1929,13 @@ mgu [] = Left []
 mgu ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mgu xs
 mgu ((TcTv (x@(Tv n (Rigid _ _ _) _)),tau):xs) = mguVar x tau xs
 mgu ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = mguVar x tau xs
+
+mgu ((TcTv (x@(Tv n (Skol _) _)),tau):xs) = mguVar x tau xs
+mgu ((tau,TcTv (x@(Tv n (Skol _) _))):xs) = mguVar x tau xs
+
 mgu ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = mguVar x tau xs
 mgu ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguVar x tau xs
-mgu ((TcTv x,TcTv y):xs) | x==y = mgu xs
+-- mgu ((TcTv x,TcTv y):xs) | x==y = mgu xs
 mgu ((TyApp x y,TyApp a b):xs) = mgu ((x,a):(y,b):xs)
 mgu ((TyCon s1 _,TyCon s2 _):xs) | s1==s2 = mgu xs
 mgu ((Star n,Star m):xs) | n==m = mgu xs
@@ -2073,8 +1944,18 @@ mgu ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
   if f==g then mgu (zip ys zs ++ xs) else Right("TyFun doesn't match",x,y)
 mgu ((x@(TyVar s k),y):xs) = Right("No TyVar in MGU", x, y)
 mgu ((y,x@(TyVar s k)):xs) = Right("No TyVar in MGU", x, y)
+mgu ((TySyn nm n fs as x,y):xs) = mgu ((x,y):xs)
+mgu ((y,TySyn nm n fs as x):xs) = mgu ((y,x):xs)
 mgu ((x,y):xs) = Right("No Match", x, y)
 
+mguWithFail xs =
+  case mgu xs of
+        Left sub -> return sub
+        Right (mess,t1,t2) -> 
+           failD 0 [Ds "While trying to solve ",Dd xs
+                   ,Ds mess,Ds "\n ",Dd t1,Ds " != ",Dd t2,Ds "\n"]
+
+mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either [(TcTv,Tau)] ([Char],Tau,Tau)
 mguVar x tau xs = if (elem x vs) 
                      then Right("occurs check", TcTv x, tau)
                      else compose new2 (Left new1)
@@ -2086,16 +1967,27 @@ compose (Left s1) (Left s2) = Left ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 compose _ (Right x) = Right x
 compose (Right y) _ = Right y
 
+equalityP (Equality _ _) = True
+equalityP _ = False
 
-mguM :: TyCh m => [Eqn] -> m [(TcTv,Tau)]
-mguM eqs = 
-  do { let f (Equality x y) = (x,y)
-     ; xs2 <- zonk (map f eqs)
+mguM :: TyCh m => [Pred] -> m ([Pred],[(TcTv,Tau)])
+mguM preds = 
+  do { let (ps,eqs) = split preds 
+     ; xs2 <- nf eqs
+     ; ps2 <- zonk ps
      ; case mgu xs2 of
-        Left ys -> mutVarSolve ys
+        Left ys -> do { unifier <- mutVarSolve ys
+                      ; ps3 <- sub ([],unifier,[]) ps2
+                      ; return(ps3,unifier)}
         Right(s,x,y) -> 
-         let (d1,x1,y1,ts) = disp3 initDI (x,y,xs2)
-         in failP 0 d1 ("While computing an mgu for "++ts++"\n"++s++" "++x1++" =/= "++y1++"\n")
+            do { x2 <- nf x
+               ; y2 <- nf y
+               ; failD 0 
+                  [Ds "While computing an mgu for "
+                  ,Dd xs2,Ds ("\n"++s++" ")
+                  ,Dd x,Ds "   !=   ",Dd y,Ds "\n"
+                  ,Ds (sht x2++"   !=   "++sht y2)]}
+               
      }
 
 mutVarSolve [] = return []
@@ -2152,30 +2044,455 @@ sht (TcTv (Tv n (Flexi _) k))  = "(Flex " ++ show n ++")"
 sht (TcTv (Tv n (Skol _) k))  = "(Skol " ++ show n ++")"
 sht (TcTv (Tv n (Rigid _ _ _) k))  = "(Rigid " ++ show n ++")"
 sht (TyFun nm k xs) = "{TyFun "++nm ++ plistf sht " " xs " " "}"
-sht x = show x
+sht (TySyn nm n fs as t) = "{Syn "++nm++(plistf sht " " as " " " = ")++sht t++"}" 
+-- sht x = show x
 
-----------------------------------------------------------
+shtR (Rarrow x y) = "("++shtS x++" r-> "++shtR y++")"
+shtR (Rpair x y) = "R("++shtS x++","++shtS y++")"
+shtR (Rsum x y) = "R("++shtS x++"+"++shtS y++")"
+shtR (Rtau x) = "RTau("++sht x++")"
+
+shtS (Forall xs) = 
+  let (ys,(eqs,rho)) = unsafeUnwind xs
+  in "(forall ? ." ++ plistf shtEq "(" eqs "," ")"++" => "++shtR rho++")"
+
+shtEq (Equality x y) = "("++sht x++"="++sht y++")"
+shtEq (Rel nm ts) = "Pred("++sht ts++")"
+
+
+-- =============================================================
+-- New style Display
+-- =============================================================
+
+class NameStore d where
+   --useStore :: Kind -> Integer -> (String -> String) -> d -> (d,String)
+   useStoreName :: Name -> Kind -> (String -> String) -> d -> (d,String)
+   useStoreTcTv :: TcTv -> (String -> String) -> d -> (d,String)
+   
+class NameStore d => Exhibit d t where
+  exhibit :: d -> t -> (d,String)
+
+instance NameStore d => Exhibit d Integer where
+  exhibit d n = (d,show n)
+
+instance NameStore d => Exhibit d String where
+  exhibit d s = (d,s)
+
+exhibit2 xs1 (x,y) = (xs3,sx,sy)
+  where (xs2,sx) = exhibit xs1 x
+        (xs3,sy) = exhibit xs2 y
+
+exhibit3 xs1 (x,y,z) = (xs4,sx,sy,sz)
+  where (xs2,sx) = exhibit xs1 x
+        (xs3,sy) = exhibit xs2 y
+        (xs4,sz) = exhibit xs3 z
+        
+-----------------------------------------------------
+-- Helper functions 
+
+-- exhibit a list, given a function to exhibit an element
+exhibitL :: (a -> b -> (a,[Char])) -> a -> [b] -> [Char] -> (a,[Char])  
+exhibitL = dispL
+
+-- Put parenthesis around Tau's that need them
+
+exhibitpar :: Exhibit a Tau => a -> Tau -> (a,String)
+exhibitpar xs z@(TyApp (TyApp (TyCon "(,)" _) x) y) = exhibit xs z
+exhibitpar xs z@(TyApp (TyApp (TyCon "(+)" _) x) y) = exhibit xs z
+exhibitpar xs  z | isRow z = exhibit xs z
+exhibitpar xs  z | isNat z = exhibit xs z
+exhibitpar xs x@(Karr _ _) = (ys,"("++ ans ++ ")")
+  where (ys,ans) = exhibit xs x 
+exhibitpar xs x@(TyApp _ _) = (ys,"("++ans++ ")")
+  where (ys,ans) = exhibit xs x 
+exhibitpar xs x@(TySyn nm n fs as t) | n>1 =  (ys,"("++ans++ ")")
+  where (ys,ans) = exhibit xs x
+exhibitpar xs x@(TyEx _) = (ys,"("++ ans ++ ")")
+  where (ys,ans) = exhibit xs x 
+exhibitpar xs x = exhibit xs x
+
+-- exhibit a TcTv
+exhibitTv :: NameStore a => a -> TcTv -> (a,String)
+exhibitTv d1 (x@(Tv _ flav _)) = useStoreTcTv x (tVarPrefix flav) d1
+
+tVarPrefix (Flexi _) n = n
+tVarPrefix (Rigid _ _ _) n = "_"++n
+tVarPrefix (Skol _) n = "!"++n
+
+instance NameStore d => Exhibit d TcTv where
+  exhibit = exhibitTv
+
+
+-- exhibit an arrow type at the Tau level           
+exhibitArr :: Exhibit a Tau => a -> Tau -> (a,[Char])
+exhibitArr xs (t@(TyApp (TyApp (TyCon "(->)" _) x) y)) = (ys,"("++z++")")
+  where (ys,z) = exhibit xs t
+exhibitArr xs (t@(Karr _ _)) = (ys,"("++z++")")
+  where (ys,z) = exhibit xs t  
+exhibitArr xs x@(TyEx _) = (ys,"("++ ans ++ ")")
+  where (ys,ans) = exhibit xs x 
+exhibitArr xs t = exhibit xs t  
+
+-- exhibit an arrow type at the Rho level 
+exhibitRarr xs (t@(Forall (Cons _ _))) = (ys,"("++z++")")
+  where (ys,z) = exhibit xs t
+exhibitRarr xs (t@(Forall (Nil (_,Rtau (TyApp (TyApp (TyCon "(->)" _) x) y))))) = (ys,"("++z++")")
+  where (ys,z) = exhibit xs t
+exhibitRarr xs t = exhibit xs t  
+  
+
+--  returns things like  Nat:*1, Row:(*1 ~> *1):*2  
+exhibitKinding :: NameStore a => a -> Tau -> (a,[Char])
+exhibitKinding d1 (Star 0) = (d1,"")
+exhibitKinding d1 (t@(Star n)) = (d1,":*"++show n)
+exhibitKinding d1 (TyVar nm (MK k)) = (d3,":"++nmStr++kStr)
+   where (d2,nmStr) = useStoreName nm (MK k) f d1 where f s = "'"++s
+         (d3,kStr) = exhibitKinding d2 k
+exhibitKinding d1 (TcTv (v@(Tv _ _ (MK k)))) = (d3,":"++nmStr++kStr)
+   where (d2,nmStr) = exhibitTv d1 v
+         (d3,kStr) = exhibitKinding d2 k 
+exhibitKinding d1 (TyCon s k) = (d1,":"++s)         
+exhibitKinding d1 (x@(TyApp _ _)) = (d1,":"++show x) 
+exhibitKinding d1 x = (d1,":"++show x) 
+
+
+exhibitLdata quant d1 args =  (d4,prefix ++ eqsS ++ rhoS)
+    where (trips,(eqs,rho)) = unsafeUnwind args
+          (d2,prefix) = tripf d1 trips 
+          (d3,eqsS) = feqs d2 eqs
+          (d4,rhoS) = exhibit d3 rho
+          sh All = "forall "
+          sh Ex  = "exists "
+          feqs d [] = (d,"")
+	  feqs d [x::Pred] = (d1,s++" => ") where (d1,s) = exhibit d x
+	  feqs d xs = (d1,"("++s++") => ") where (d1,s) = exhibitL exhibit d xs ","
+          tripf d1 [] = (d1,"")
+          tripf d1 trips = (d2,sh quant++argsStr ++ " . ")
+            where (d2,argsStr) = exhibitL pp d1 trips " "
+          pp d2 (nm,MK k,q) = 
+            let (d3,name) = useStoreName nm (MK k) prefix d2
+                prefix s = s++(case q of {Ex -> "'"; All -> ""})
+            in case k of
+                (Star 0) -> (d3,name)
+                _ -> let (d4,kind) = exhibitKinding d3 k
+                     in (d4,"("++name ++ kind++")")
+
+         
+
+---------------------------------------------------------------
+-- Now some instances for exhibiting different type like things
+-- All these are paramterized by "d" being a NameStore
+
+-- Kind
+instance NameStore d => Exhibit d Kind where 
+  exhibit d1 (MK k) = exhibit d1 k
+
+-- Tau
+instance NameStore d => Exhibit d Tau where
+  exhibit xs (t@(TyCon s k)) = if isNat t then (xs,"#0") else (xs,s)
+  exhibit e (tau@(TyApp x y)) | isRow tau =
+    case rowElem tau [] of
+      Left xs -> let (e2,mid) = exhibitL exhibit e xs ","
+                 in (e2,"{"++mid++"}")
+      Right(xs,dot) ->  
+        let (e2,mid) = exhibitL exhibit e xs ","
+            (e3,end) = exhibit e2 dot
+        in (e3,"{"++mid++"; "++end++"}")
+  exhibit e (tau@(TyApp x y)) | isNat tau =
+    case natElem tau 0 of
+      Left n -> (e,"#"++show n)
+      Right(n,dot) ->  
+        let (e2,end) = exhibit e dot
+        in (e2,"#("++show n++"+"++end++")")      
+  exhibit e (TyApp (TyApp (TyCon "Has" _) x) y) = (e2,x1 ++":"++y1)
+    where (e1,x1) = exhibit e x
+          (e2,y1) = exhibit e1 y
+  exhibit e (TyApp (TyCon "[]" _) x) = (ys,"[" ++ ans ++ "]")
+    where (ys,ans) = exhibit e x
+  exhibit e (TyApp (TyApp (TyCon "(,)" _) x) y) = (zs,"(" ++ a ++ ","++ b++")")
+    where (ys,a) = exhibit e x
+          (zs,b) = exhibit ys y 
+  exhibit e (TyApp (TyApp (TyCon "(->)" _) x) y) = (zs,a ++ " -> "++ b)
+    where (ys,a) = exhibitArr e x
+          (zs,b) = exhibit ys y
+  exhibit e (TyApp (TyApp (TyCon "(+)" _) x) y) = (zs,"(" ++ a ++ "+"++ b ++")")
+    where (ys,a) = exhibitpar e x
+          (zs,b) = exhibitpar ys y        
+  exhibit e (TyApp (TyApp (TyCon "(!=)" _) x) y) = (zs,a ++ " != "++ b)
+      where (ys,a) = exhibitpar e x
+            (zs,b) = exhibitpar ys y        
+  
+  exhibit xs (TyApp x y) = (zs,a++" "++b)
+    where (ys,a) = exhibit xs x
+          (zs,b) = exhibitpar ys y
+  exhibit xs (Star 0) = (xs,"*")
+  exhibit xs (Star n) = (xs,"*"++show n)
+  exhibit xs (TyVar nm k) = useStoreName nm k f xs 
+    where f s = "'"++s
+  exhibit xs (Karr x y) = (zs,a ++ " ~> "++ b)
+    where (ys,a) = exhibitArr xs x
+          (zs,b) = exhibit ys y
+  exhibit info (TcTv v) =  exhibitTv info v
+  exhibit info (TyFun f k xs) = (d2,"{"++f++" "++body++"}")
+    where (d2,body) = exhibitL exhibitpar info xs " "
+  exhibit info (TySyn nm n fs as t) = (d2,nm++" "++xs)
+    where (d2,xs) = exhibitL exhibit info as " "
+  exhibit xs (TyEx x) = exhibitLdata Ex xs x
+
+-- Rho
+instance NameStore d => Exhibit d Rho where 
+  exhibit xs (Rtau x) = exhibit xs x
+  exhibit xs (Rarrow x y) = (zs,a++" -> "++b)
+    where (ys,a) = exhibitRarr xs x
+          (zs,b) = exhibit ys y
+  exhibit xs (Rpair x y) = (zs,"("++a++","++b++")")
+    where (ys,a) = exhibit xs x
+          (zs,b) = exhibit ys y
+  exhibit xs (Rsum x y) = (zs,"("++a++"+"++b++")")
+    where (ys,a) = exhibit xs x
+          (zs,b) = exhibit ys y
+  
+-- Sigma
+instance NameStore d => Exhibit d Sigma where 
+  exhibit d1 (Forall args) = exhibitLdata All d1 args
+
+-- PolyKind
+instance NameStore d => Exhibit d PolyKind where 
+  exhibit d1 (K(Forall args)) = exhibitLdata All d1 args
+
+-- [(Tau,Tau)]  
+instance NameStore d => Exhibit d [(Tau,Tau)] where
+  exhibit xs [] = (xs,"")
+  exhibit xs ys = (zs,"("++ans++") => ")
+    where (zs,ans) = exhibitL exhibit xs ys ", "
+
+-- Pred
+instance NameStore d => Exhibit d Pred where
+  exhibit xs (Rel nm ts) = exhibit xs ts
+  exhibit xs (Equality x y) = (zs,a++"="++b)
+    where (ys,a) = exhibit xs x
+          (zs,b) = exhibit ys y
+
+-- [Pred]
+instance NameStore d => Exhibit d [Pred] where
+  exhibit xs [] = (xs,"")
+  exhibit xs ys = exhibitL exhibit xs ys ", "
+    
+    
+instance NameStore d => Exhibit d [(TcTv,Tau)] where
+  exhibit xs [] = (xs,"")
+  exhibit xs ys = exhibitL exhibit xs ys ", "
+
+instance NameStore d => Exhibit d (Tau,Tau) where
+  exhibit xs (x,y) = (zs,a++"="++b)
+    where (ys,a) = exhibit xs x
+          (zs,b) = exhibit ys y
+
+
+instance NameStore d => Exhibit d (TcTv,Tau) where
+  exhibit xs (x,y) = (zs,a++"="++b)
+    where (ys,a) = exhibitTv xs x
+          (zs,b) = exhibit ys y
+
+instance Exhibit d x => Exhibit d (Maybe x) where
+  exhibit d Nothing = (d,"Nothing")
+  exhibit d (Just x) = (d1,"(Just "++s++")") where (d1,s) = exhibit d x
+
+{-
+instance NameStore d => Exhibit d ([Pred], Rho) where
+  exhibit xs (es,r) = (ys,esx ++ " => " ++ rx)
+     where (ys,esx,rx) = exhibit2 xs (es,r)
+-}
+
+instance (NameStore d,Exhibit d a) => Exhibit d ([Pred], a) where
+  exhibit xs (es,r) = (ys,esx ++ " => " ++ rx)
+     where (ys,esx,rx) = exhibit2 xs (es,r)     
+          
+------------------------------------------------
+-- Make Display instances 
+
+instance NameStore DispInfo where
+  --useStore k = useDisplay
+  useStoreName name kind newname d = useDisplay (name2Int name) newname d
+  useStoreTcTv (Tv uniq flavor kind) f d = useDisplay uniq f d
+
+instance Exhibit DispInfo t => Display t where
+  disp = exhibit
+  
+-------------------------------------------------  
+-- Make Alpha instances
+
+class Alpha t where
+  alpha :: [(Name,String)] -> t -> String
+
+instance Exhibit [(Name,String)] t => Alpha t where
+  alpha disp x = y where (disp2,y) = exhibit disp x
+  
+instance NameStore [(Name,String)] where
+  useStoreTcTv v f xs = (xs,show v)
+  useStoreName nm k f xs = case lookup nm xs of 
+                       Just s -> (xs,s)
+                       Nothing -> ((nm,new):xs,new)
+    where new = f(first xs (choices k))
+          first old (x:xs) = if find x old then first old xs else x
+          find x [] = False
+          find x ((_,y):old) = if x==y then True else find x old
+          --nm = integer2Name i
+     
+-- Select an infinite list of possible choices given a Kind
+choices :: Kind -> [String]
+choices k = case k of
+    (MK (Star 0))                     -> typesCh
+    (MK (Karr (Star 0) (Star 0)))     -> typeConstrsCh
+    (MK (Star 1))                     -> kindsCh
+    (MK (Karr _ _))                   -> higherOrderCh
+    _                                 -> otherCh
+
+typesCh       = makeNames "abcde"   -- *
+typeConstrsCh = makeNames "ts"      -- (* -1-> *)
+kindsCh       = makeNames "k"       -- *1
+higherOrderCh = makeNames "fgh"     -- (k -> k)
+otherCh       = makeNames "uvwxyz"  -- other
+
+pprint x = s
+ where (d2,s) = exhibit initDI x
+
+------------------------------------------------------------
+-- Make Show instances
+
+instance Show Tau where
+  show x = y where (disp2,y) = exhibit () x
+
+instance Show Rho where
+  show x = y where (disp2,y) = exhibit () x
+
+instance Show Sigma  where
+  show x = y where (disp2,y) = exhibit () x
+
+instance Show Kind  where
+  show x = y where (disp2,y) = exhibit () x
+
+instance Show PolyKind  where
+  show x = y where (disp2,y) = exhibit () x
+
+instance Show Pred  where
+  show x = y where (disp2,y) = exhibit () x
+
+instance Show a => Show (Expected a) where
+  show (Check a) = "(Check "++show a++")"
+  show (Infer ref) = "Infer"
+
+instance Show PPred where
+  show x = y where (disp2,y) = exhibit () x
+
+instance Show TcTv where
+  show (Tv unq (flav@(Flexi _)) k) = "z"++tVarPrefix flav (show unq) 
+  show (Tv unq flav k) = tVarPrefix flav (show unq) 
+
+
+instance NameStore () where
+  useStoreTcTv v f xs = (xs,show v)
+  useStoreName nm k f xs = (xs,show nm)
+  
+-------------------------------------------------------
+-------------------------------------------------------
 -- Putting types in normal form
 
+teval :: TyCh m => [(Name,Tau)] -> Tau -> m Tau
+teval env (y@(TyVar nm k)) = 
+   case lookup nm env of {Just x -> return x; Nothing -> return y}
+teval env (TyApp x y) = 
+   do { a <- teval env x; b <- teval env y; return(TyApp a b)}
+teval env (TyCon s k) = return(TyCon s k) 
+teval env (Star n) = return(Star n)
+teval env (Karr x y) = 
+   do { a <- teval env x; b <- teval env y; return(Karr a b)}
+teval env (w@(TyFun f k xs)) = 
+   do { ys <- mapM (teval env) xs
+      --; outputString ("\nNormalizing: "++show w)
+      ; info <- lookupTyFun f
+      ; ans <- case info of
+                Just ffun ->  ffun ys
+                Nothing -> return(TyFun f k ys)
+      --; outputString ("To get: "++show ans)
+      ; return ans }
+teval env (TySyn nm n fs as x) = teval env x      
+teval env (TyEx x) =  do { a <- tevalLTau env x; return(TyEx a) }
+teval env x = return x         
+
+tevalLTau env xs = 
+  do { let (ys,(eqn,t)) = unsafeUnwind xs
+           f (nm,MK k,q) = do { a <- (teval env k); return (nm,MK a,q)}
+     ; eqn2 <- mapM (tevalEq env) eqn
+     ; ys2 <- mapM f ys
+     ; t2 <- teval env t
+     ; return(windup ys2 (eqn2,t2))
+     }
+
+tevalLRho :: TyCh m => [(Name,Tau)] -> L ([Pred],Rho) -> m (L ([Pred],Rho))
+tevalLRho env xs = 
+  do { (ys,(eqn,t)) <- unwind xs
+     ; let f (nm,MK k,q) = do { a <- (teval env k); return (nm,MK a,q)}
+     ; eqn2 <- mapM (tevalEq env) eqn
+     ; ys2 <- mapM f ys
+     ; t2 <- tevalRho env t
+     ; return(windup ys2 (eqn2,t2))
+     }
+
+tevalEq env (Equality x y) = 
+     do { a <- teval env x; b<- teval env y; return(Equality a b)}
+tevalEq env (Rel nm ts) =
+     do { ys <- teval env ts; return(Rel nm ys)}
+     
+tevalRho env (Rtau x) = do { a <- teval env x; return(Rtau a) }
+tevalRho env (Rarrow s r) = 
+  do { a <- tevalSig env s; b <- tevalRho env r; return(Rarrow a b)}
+tevalRho env (Rpair s r) = 
+  do { a <- tevalSig env s; b <- tevalSig env r; return(Rpair a b)}
+tevalRho env (Rsum s r) = 
+  do { a <- tevalSig env s; b <- tevalSig env r; return(Rsum a b)}
+
+tevalSig :: TyCh m => [(Name,Tau)] -> Sigma -> m Sigma
+tevalSig env (Forall xs) = do { ys <- tevalLRho env xs; return(Forall ys) }
+  
+
 nfRho :: TyCh m => Rho -> m Rho
-nfRho (Rpair x y) = binaryLift Rpair (nfSigma x) (nfSigma y)
-nfRho (Rarrow x y) = binaryLift Rarrow (nfSigma x) (nfRho y)
-nfRho (Rsum x y) = binaryLift Rsum (nfSigma x) (nfSigma y)
-nfRho (Rtau x) =  do { a <- nfTau x; return(Rtau a) }
+nfRho x = tevalRho [] x
 
 nfSigma ::  TyCh m => Sigma -> m Sigma
-nfSigma (Forall xs) = 
-  do { let (ys,(eqn,rho)) = unsafeUnwind xs
-           f (nm,MK k,q) = do { a <- (nfTau k); return (nm,MK a,q)}
-     ; eqn2 <- nfEqns eqn
-     ; ys2 <- mapM f ys
-     ; rho2 <- nfRho rho
-     ; return(Forall (windup ys2 (eqn2,rho2)))
-     }
-  
+nfSigma x = tevalSig [] x
 
-nfEqns xs = mapM f xs
-  where f (Equality x y) = binaryLift Equality (nfTau x) (nfTau y)
+nfL ::  TyCh m => L([Pred],Rho) -> m(L([Pred],Rho))
+nfL xs = tevalLRho [] xs
   
+nfPreds xs = mapM (tevalEq []) xs
+
 nfTau ::  TyCh m => Tau -> m Tau
-nfTau = normform
+nfTau x = 
+  do { y <- zonk x
+     ; ans <- teval [] y
+     ; return ans }
+
+nfKind (MK k) = do { k2 <- nfTau k; return(MK k2)}
+
+nfPolyKind (K s) = do { k2 <- nfSigma s; return(K k2)}
+
+nfTauPair (x,y) = binaryLift (,) (nfTau x) (nfTau y)
+
+------------------------------------------------------------
+failD :: TyCh m => Int -> [DispElem] -> m b
+failD n elems =  do { d <- getDisplay; failDd n d elems }
+    
+failDd n d elems = failP n d2 s
+   where(d2,s) = displays d elems
+
+warnD d elems = do {outputString message; return d2}
+  where (d2,message) = displays d elems
+  
+  
+warn elems = warnD initDI elems
+
+whenDd True d elems = warnD d elems
+whenDd False d elems = return d
+
+whenD b elems = whenDd b initDI elems

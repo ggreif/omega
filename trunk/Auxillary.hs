@@ -2,11 +2,12 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 module Auxillary where
 
+import Char(isAlpha)
 
 whenM :: Monad m => m Bool -> m b -> [Char] -> m b
 whenM test x s = do { b <- test; if b then x else error s}
@@ -99,10 +100,17 @@ class Display t where
   disp :: DispInfo -> t -> (DispInfo,String)
   
 newtype DispInfo = DI ([(Integer,String)],[String])
+  
+------------------------------------------------------
+
+
 initDI = DI([],makeNames "abcdefghijklmnopqrstuvwxyz")
 
-instance Display Integer where
-  disp d n = (d,show n)
+newDI xs = DI(xs,filter (notIn xs) (makeNames "abcdefghijklmnopqrstuvwxyz"))
+  where notIn [] x = True
+        notIn ((n,y):ys) x = if x==(root y) then False else notIn ys x
+        root (c:cs) | not(isAlpha c) = root cs
+        root cs = cs
 
 -- We define a function "makeNames" which can be used to generate
 -- an infinite list of distinct names based on some list of initial Chars
@@ -113,7 +121,7 @@ makeNames source = g 0 (map (:[]) source)  -- "abc" --> ["a","b","c"]
          h 0 s = s
          h n s = s++show n
 
-dispL ::(DispInfo -> a -> (DispInfo,String)) -> DispInfo -> [a] -> String -> (DispInfo,String)
+--dispL ::(DispInfo -> a -> (DispInfo,String)) -> DispInfo -> [a] -> String -> (DispInfo,String)
 dispL f xs [] sep = (xs,"")
 dispL f xs [m] sep = f xs m 
 dispL f xs (m:ms) sep = (zs,a++sep++b)
@@ -128,7 +136,7 @@ disp3 xs1 (x,y,z) = (xs4,sx,sy,sz)
   where (xs2,sx) = disp xs1 x
         (xs3,sy) = disp xs2 y
         (xs4,sz) = disp xs3 z
-            
+        
 disp4 xs0 (w,x,y,z) = (xs4,sw,sx,sy,sz)
   where (xs1,sw) = disp xs0 w
         (xs2,sx) = disp xs1 x
@@ -141,7 +149,6 @@ disp5 xs0 (w,x,y,z,a) = (xs5,sw,sx,sy,sz,sa)
         (xs3,sy) = disp xs2 y
         (xs4,sz) = disp xs3 z
         (xs5,sa) = disp xs4 a
-
   
 useDisplay :: Integer -> (String -> String) -> DispInfo -> (DispInfo,String)
 useDisplay uniq newname (info@(DI(xs,n:ns))) = 
@@ -156,4 +163,24 @@ mergeDisp (DI(map1,src1)) (DI(map2,src2)) = DI(map3,src3)
         map3 = map2++map2
 
 instance Show DispInfo where
-  show (DI(xs,_)) = show xs
+  show (DI(xs,names)) = "(DI "++show xs++" "++show(take 6 names)++")"
+
+data DispElem 
+  = forall x . (Display x) =>  Dd x
+  | Ds String
+  | forall x . (Display x) => Dn x
+  | forall x . (Display x) => Dl [x] String
+  | forall x . Df (DispInfo -> x -> (DispInfo,String)) x
+  | forall x . Dlf (DispInfo -> x -> (DispInfo,String)) [x] String
+  
+displays :: DispInfo -> [DispElem] -> (DispInfo,String)
+displays d xs = help d (reverse xs) "" where
+ help d [] s = (d,s)
+ help d (x:xs) s = help d2 xs (s2++s)
+  where (d2,s2) = case x of
+                   Dd y -> disp d y
+                   Ds s -> (d,s)
+                   Dn y -> let (d2,s) = disp d y in (d2,s++"\n")
+                   Dl ys sep -> dispL disp d ys sep
+                   Df f ys  -> f d ys 
+                   Dlf f ys sep -> dispL f d ys sep
