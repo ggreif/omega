@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 
 module Toplevel where
@@ -13,7 +13,7 @@ import Time
 import Syntax
 import ParserDef(getInt,pCommand,parseString,Command(..)
                 ,program,parseFile)
-import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV,show_init_vals)
+import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio)
 import IO
@@ -23,7 +23,7 @@ import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo)
 import SCC(topSortR)
 import Monad(when)
 import Infer2
-import RankN(pprint,trans0)
+import RankN(pprint)
 import System(getArgs)
 import Data.FiniteMap
 import Directory
@@ -67,7 +67,6 @@ readEvalPrint sources tenv =
                 ; new <- elabManyFiles (take n sources) (typeEnv0)
                 ; return new
                 }
-          (ColonCom "r" _) -> error "no reload option, exiting instead"
           (ColonCom "v" _) -> do { writeln version
                                  ; writeln buildtime
                                  ; return tenv}
@@ -86,6 +85,12 @@ readEvalPrint sources tenv =
           (ColonCom "e" _) ->
              do { writeln "Back to inital state"
                 ; return (typeEnv0) }
+          (ColonCom "rules" s) ->
+             let rs = getRules s tenv
+                 f x = writeln(pprint x);
+             in do { writeln "rules"
+                   ; mapM f rs
+                   ; return tenv}
           (ColonCom x y) -> fail ("Unknown command :"++x)
           (ExecCom e) ->
              do { (t,e') <- wellTyped tenv e
@@ -352,7 +357,7 @@ getVarOrTypeName nm env
        varName (Global ('%':s)) = s  -- strip off Type Con Prefix
        varName (Global s) = s
        varName (Alpha s n) = s
-       varName (Alpha ('%':s) n) = s
+       -- varName (Alpha ('%':s) n) = s
        f [] = Nothing
        f ((y,t,k):xs) = if y== orig then return orig else f xs
            
@@ -388,7 +393,7 @@ alltests =
 -- Some shortcuts to running the interpreter
 
 work = run "work.prg"
-
+circ = run "Examples/RecursiveCircuit.prg"
 parse = run "Examples/Parser.prg"
 
 tests = go "tests.prg"

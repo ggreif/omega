@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 import "LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
@@ -183,11 +183,12 @@ c8 = run ((\ x -> [| \ y -> y x |]) 4)
 c9 = (run ((\ x -> [| \ y -> y x |]) 4)) (\ x -> x)
 c10 = 3 + 4
 c11 = [| \ a -> $(( \ x -> [|  x  |] ) (\ y -> [| a |]) ) 0 |]
-c12 = run(run [| \ a -> $(( \ x -> [|  x  |] ) (\ y -> [| a |]) ) 0 |] 5)
+c12 = run((run [| \ a -> $(( \ x -> [|  x  |] ) (\ y -> [| a |]) ) 0 |]) 5)
 
-c13 = [| (\ a -> $( (\ x -> [|  x  |] ) (\ w -> run [| a |] ) ) 0) |]
+-- Is this ok? seems to run an open term [| a |]
+c13 = [| (\ a -> $( (\ x -> [|  x  |] ) (\ w -> run [| a |]  )) 0) |]
 
-c14 = run [| (\ a -> $( (\ x -> [|  x  |]) (\ w -> run [| a |])) 0) |] 5
+c14 = (run [| (\ a -> $( (\ x -> [|  x  |]) (\ w -> run [| a |])) 0) |]) 5
 
 c15 = let fact x = if x==0 then 1 else x * (fact (x-1)) in fact 3
 
@@ -286,7 +287,7 @@ testEx2 (PairX g z) = g z
 data Zx = Zx
 data Sx x = Sx x
 
-data Nat t = IsZ where t = Zx
+data Nat1 t = IsZ where t = Zx
            | forall x . IsS x where t = Sx x
 
 
@@ -323,8 +324,8 @@ sum _ x = 0
 
 
 data Var e t
- = forall f.   Z           where e = (f,t)
- | forall f a. S (Var f t) where e = (f,a)
+ = forall f.   Z2           where e = (f,t)
+ | forall f a. S2 (Var f t) where e = (f,a)
 
  
 data Exp e t 
@@ -340,8 +341,8 @@ data Exp e t
 -- Generalize lifting to all kinds env transformations
 
 up :: (forall t . (Var a t -> Var b t)) ->  Var (a,x) t -> Var (b,x) t
-up f Z = Z
-up f (S v) = S(f v)
+up f Z2 = Z2
+up f (S2 v) = S2(f v)
 
 lift1 :: (forall t . (Var a t -> Var b t)) -> Exp a t -> Exp b t
 lift1 f (V v) = V(f v)
@@ -353,15 +354,15 @@ lift1 f (Pi1 x) = Pi1 (lift1 f x)
 lift1 f (Pi2 x) = Pi2 (lift1 f x)
 
 liftV :: Var e t -> Var (e,a) t
-liftV Z = S Z
-liftV (S v) = S(liftV v)
+liftV Z2 = S2 Z2
+liftV (S2 v) = S2(liftV v)
 
 promote :: (forall a b c . (Exp a b) -> Exp ((a,c)) b)
 promote = lift1 liftV 
 
 demV ::  Var (e,a) t -> Var e t 
-demV Z = error "Impossible in demote"
-demV (S v) = v 
+demV Z2 = error "Impossible in demote"
+demV (S2 v) = v 
 
 demote :: (forall a . Exp (e,a) b) -> Exp e b
 demote = lift1 demV
@@ -372,24 +373,24 @@ eval :: (Exp e t) -> e -> t
 eval (App x y) env = (eval x env) (eval y env)
 eval (Lit n) env = n
 eval (Abs e) env = \ x -> eval e (env,x)
-eval (V Z) env = snd env
-eval (V (S v)) env = eval (V v) (fst env)
+eval (V Z2) env = snd env
+eval (V (S2 v)) env = eval (V v) (fst env)
 eval (Pair x y) env = (eval x env, eval y env)
 eval (Pi1 x) env = fst(eval x env)
 eval (Pi2 x) env = snd(eval x env)
 
 evalVar :: (Var e t) -> e -> t
-evalVar Z e = snd e
-evalVar Z (x,y) = y
-evalVar (S v) e = evalVar v (fst e)
-evalVar (S v) (x,y) = evalVar v x
+evalVar Z2 e = snd e
+evalVar Z2 (x,y) = y
+evalVar (S2 v) e = evalVar v (fst e)
+evalVar (S2 v) (x,y) = evalVar v x
  
 
-x3 = App (Abs (V Z)) (Lit 5)
+x3 = App (Abs (V Z2)) (Lit 5)
 
 evV :: Var e t -> e -> t
-evV Z (x,y) = y
-evV (S v) (x,y) = evV v x
+evV Z2 (x,y) = y
+evV (S2 v) (x,y) = evV v x
 
 ----------------------------------------------------
 ----------------------------------------------------
@@ -397,16 +398,16 @@ evV (S v) (x,y) = evV v x
 
 ##test "Facts accumulate from left to right in clauses"
   evVar :: e -> (Var e t) -> t
-  evVar (x,y) Z = y
+  evVar (x,y) Z2 = y
 
 evV2 :: (Var e t,e) -> t
-evV2 (Z,(x,y)) = y
-evV2 (S v,(x,y)) = evV v x
+evV2 (Z2,(x,y)) = y
+evV2 (S2 v,(x,y)) = evV v x
 
 ##test "Facts accumulate from left to right in tuples"
   evV3 :: (e,Var e t) -> t
-  evV3 ((x,y),Z) = y
-  evV3 ((x,y),S v) = evV3 (x,v) 
+  evV3 ((x,y),Z2) = y
+  evV3 ((x,y),S2 v) = evV3 (x,v) 
  
 ----------------------------------------- 
 
@@ -417,10 +418,10 @@ data Subst e =
 
 subVar :: Subst e -> Var e t -> Exp e t
 subVar Id v = V v
-subVar (None _) Z = V Z
-subVar (None e) (S v) = promote(subVar e v)
-subVar (One exp e) Z = exp
-subVar (One exp e) (S v) = promote(subVar e v)
+subVar (None _) Z2 = V Z2
+subVar (None e) (S2 v) = promote(subVar e v)
+subVar (One exp e) Z2 = exp
+subVar (One exp e) (S2 v) = promote(subVar e v)
 
 sub :: Subst e -> Exp e t -> Exp e t
 sub env (V v) = subVar env v
@@ -443,7 +444,7 @@ data List n a
   = Nil where n = Zero
   | forall m . Cons a (List m a) where n = Succ m
 
-kind Row = Rnil | Rcons * Row
+kind RowS = Rnil | Rcons *0 RowS
 
 data Tuple r = Tnil where r = Rnil
              | forall t r' . Tcons t (Tuple r') where r = Rcons t r'
@@ -467,3 +468,109 @@ f Int = 1
 f Prod = 2
 f (Ap a b) = f a + f b
 
+-----------------------------------------------------------
+-- Tags and labels are predefined
+-- kind Tag = %name | %age | ... | for all legal symbols
+-- data Label t = %name where t=%name | %age where t = %age | ...
+
+tim :: Label `tim
+tim = `tim
+
+------------------------------------------------------------
+-- HasType and Rows are predefined
+
+
+-- kind HasType = Has Tag *0
+-- Row :: *1 ~> *1
+-- kind Row x = RCons x (Row x) | RNil
+
+data Variable :: Row HasType ~> HasType ~> *0 where
+  V0 :: Variable (RCons (Has s t) env) (Has s t)
+  Vn :: Variable env t -> Variable (RCons s env) t
+
+data RowExp :: Row HasType ~> *0 ~> *0 where
+  IntExp :: Int -> RowExp e Int
+  Variable :: Label s -> (Variable env (Has s t)) -> RowExp env t
+
+--------------------------------------------------------------------
+-- Anonymous existential types
+
+existsA :: exists t . (t,t->String)
+existsA = Ex (5,\ x -> show(x+1))
+
+testf :: (exists t . (t,t-> String)) -> String
+testf (Ex (a,f)) = f a
+
+------------------------------------------------------------
+-- Duplicate variables in ranges
+
+kind Ctype = Comb | Seq (*0 ~> *0)
+
+data Var2 :: Row HasType ~> HasType ~> *0 where
+  Vz :: Var2 (RCons (Has s t) env) (Has s t)
+  Vm :: Var2 env t -> Var2 (RCons s env) t
+
+data Exp2 :: Ctype ~> Row HasType ~> *0 ~> *0 where
+  Var :: Label s -> Var2 env (Has s t) -> Exp2 c env t
+  
+data Decs2 :: Ctype ~> Row HasType ~> Row HasType ~> *0 ~> *0 where
+   In :: (Exp2 c all t) -> Decs2 c all all t
+--                                 ^   ^  Note duplicates!!!
+-- this causes us to miss some equations.
+ 
+----------------------------------------------
+-- Type synonyms with arguments
+
+type Pair x y = (x,y)
+
+testg :: String -> Int -> Pair String Int
+testg x y = (x,y)
+
+----------------------------------------------
+-- Qualified arguments with constraints
+
+f7 :: (forall a . (a=Int) => (a,a)) -> Int
+f7 (x,y) = x +y
+
+try1 = f7 (2,3)
+
+g7 :: (forall a . (a=b) => (a,b)) -> [b]
+g7 (x,y) = [x,y]
+
+try2 = g7(True,False)
+
+----------------------------------------------------
+-- Static constraints and propositions
+
+prop LE :: Nat ~> Nat ~> *0 where
+  Base:: LE Z a
+  Step:: LE a b -> LE (S a) (S b)
+
+data LE' x y = LE where LE x y
+
+data SSeq a = Snil where a = Z
+         | exists b . Scons (Nat' a) (SSeq b) where LE b a
+
+##test "Refute (LE #3 #1)"
+  bad23 = Scons #1 (Scons #3 Snil)
+  
+trans :: LE a b -> LE b c -> LE a c
+trans Base Base = Base
+-- trans (Step z) Base = UNREACHABLE CODE
+trans Base (Step z) = Base
+trans (Step x) (Step y) = (Step(trans x y))
+
+compare :: Nat' a -> Nat' b -> (LE' a b + LE' b a)
+compare Z Z     = L LE
+compare (a@Z) (b@(S x)) = 
+   case compare Z x of  
+      L LE -> L LE
+      R LE -> L LE
+compare (a@(S x)) (b@Z) = 
+   case compare x Z of  
+      R LE -> R LE
+      L LE -> R LE
+compare (S x) (S y) =  
+   case compare x y of  
+      R LE -> R LE
+      L LE -> L LE  

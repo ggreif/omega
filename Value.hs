@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 module Value where
 import Auxillary(plist,plistf)
@@ -105,6 +105,7 @@ instance Swap Pat where
   swaps cs (Pvar v) = Pvar (swaps cs v)
   swaps cs (Pprod x y) = Pprod (swaps cs x) (swaps cs y)
   swaps cs (Psum inj y) = Psum inj (swaps cs y)
+  swaps cs (Pexists y) = Pexists (swaps cs y)
   swaps cs (Paspat x y) = Paspat (swaps cs x) (swaps cs y)
   swaps cs Pwild = Pwild
   swaps cs (Pcon x y) = Pcon(swaps cs x) (map (swaps cs) y)
@@ -118,10 +119,12 @@ instance Swap Exp where
   swaps cs (App x y) = App (swaps cs x) (swaps cs y)
   swaps cs (Lam ps e fs) = Lam (swaps cs ps) (swaps cs e) (swaps cs fs)
   swaps cs (Let ds e) = Let (swaps cs ds) (swaps cs e)
+  swaps cs (Circ vs e ds) = Circ (swaps cs vs) (swaps cs e)(swaps cs ds) 
   swaps cs (Case e ms) = Case (swaps cs e) (map (swapsMatch cs) ms)
   swaps cs (Do ss) = Do (map (swaps cs) ss)
   swaps cs (CheckT e) = CheckT (swaps cs e)
   swaps cs (Lazy e) = Lazy (swaps cs e)
+  swaps cs (Exists e) = Exists (swaps cs e)
   swaps cs (Under e f) = Under (swaps cs e) (swaps cs f)
   swaps cs (Bracket e) = Bracket (swaps cs e)
   swaps cs (Escape e) = Escape(swaps cs e)
@@ -150,8 +153,8 @@ instance Swap Dec where
   swaps cs (Pat loc v vs p) = Pat loc (swaps cs v) (swaps cs vs) (swaps cs p)
   swaps cs (TypeSig loc v t) = TypeSig loc v t -- What do we do here?
   swaps cs (Prim loc nm t) = Prim loc nm t
-  swaps cs (Data loc n v sig vs cons ds) = Data loc n v sig vs cons ds
-  swaps cs (TypeSyn loc nm ty) = TypeSyn loc nm ty
+  swaps cs (Data loc b n v sig vs cons ds) = Data loc b n v sig vs cons ds
+  swaps cs (TypeSyn loc nm args ty) = TypeSyn loc nm args ty
   swaps cs (Kind loc v vs ts) = Kind loc v vs ts
   swaps cs (Flag x y) = Flag (swaps cs x) (swaps cs y)
   swaps cs (Reject s d) = Reject s (swaps cs d)
@@ -194,6 +197,12 @@ instance Show V where
   show (Vpat nm f g) = (show nm)
   show (Vcon (Global "[]") []) = "[]"
   show (VChrSeq s) = "#"++show s
+  show (Vcon (Global "Z") []) = "#0"
+  show (Vcon (Global "S") [x]) = "#"++(f 1 x)
+      where f n (Vcon (Global "Z") []) = show n
+            f n (Vcon (Global "S") [x]) = f (n+1) x
+            f n (Vswap cs u) = f n (swaps cs u)
+            f n (Vlazy cs _) = "("++show n++"+ ...)"
   -- special case for [Char]  
   show (Vcon (Global ":") [Vlit (Char c),xs]) = "\""++[c]++ f xs
       where f (Vlazy cs _) = "...\""

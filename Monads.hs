@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Mar  3 11:15:06 Pacific Standard Time 2005
--- Omega Interpreter: version 1.0
+-- Mon May 23 09:40:05 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1
 
 module Monads where
 
@@ -283,6 +283,9 @@ instance Monad (Mtc e n) where
      where h env = do { (a,ns1) <- f env
                       ; (b,ns2) <- unTc (g a) env
                       ; return(b,ns1++ns2)}
+
+instance Functor (Mtc e n)  where
+  fmap f x = do { a <- x; return(f a) }
 
 handleTC :: Int -> Mtc e n a -> (DispInfo -> String -> Mtc e n a) -> Mtc e n a 
 handleTC m (Tc x) f = Tc w
