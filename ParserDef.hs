@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon May 23 09:40:05 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1
+-- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1 (revision 1)
 
 module ParserDef (pp,pe,pd,name,getExp,getInt,
                 pattern,expr,decl,
@@ -25,7 +25,7 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,freshNames,step1,step2,step3,step4,monadDec)
 import Monads
 import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
-            ,ptsub,getFree,parse_tag,buildNat)
+            ,ptsub,getFree,parse_tag,buildNat,props)
 import Auxillary(Loc(..),plistf,plist)
 
 ---------------------------------------------------------
@@ -778,8 +778,9 @@ explicitConstr =
   do { l <- getPosition
      ; c <- constructorName
      ; symbol "::"
+     ; preds <- props 0
      ; domain <- typN 0
-     ; return(loc l,c,domain)
+     ; return(loc l,c,preds,domain)
      }
 
 targs strata = many arg
@@ -1131,4 +1132,4 @@ dd = GADT (SrcLoc 1 1) False (Global "Decs")
   (Karrow' (TyApp' (TyCon' "Row") (TyCon' "HasType")) 
   (Karrow' (TyApp' (TyCon' "Row") (TyCon' "HasType")) 
   (Karrow' (Star' 0) (Star' 0))))) 
-  [(SrcLoc 2 3,Global "In",Rarrow' (TyApp' (TyApp' (TyApp' (TyCon' "Exp") (TyVar' "c")) (TyVar' "all")) (TyVar' "t")) (TyApp' (TyApp' (TyApp' (TyApp' (TyCon' "Decs") (TyVar' "c")) (TyVar' "all")) (TyVar' "all")) (TyVar' "t")))]
+  [(SrcLoc 2 3,Global "In",[],Rarrow' (TyApp' (TyApp' (TyApp' (TyCon' "Exp") (TyVar' "c")) (TyVar' "all")) (TyVar' "t")) (TyApp' (TyApp' (TyApp' (TyApp' (TyCon' "Decs") (TyVar' "c")) (TyVar' "all")) (TyVar' "all")) (TyVar' "t")))]

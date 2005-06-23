@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon May 23 09:40:05 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1
+-- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1 (revision 1)
 
 module Infer2 where
 
@@ -31,6 +31,10 @@ pstr = outputString
 
 appendFM map key element = addToFM_C add map key [element]
   where add old new = old ++ new
+  
+appendFM2 map [] = map
+appendFM2 map ((key,element):xs) = addToFM_C add (appendFM2 map xs) key element
+  where add old new = old ++ new  
 
 appendFMmany map []  = map
 appendFMmany map ((k,e):xs) = appendFMmany (appendFM map k e) xs 
@@ -60,7 +64,7 @@ instance TyCh (Mtc TcEnv Pred) where
    getDisplay = (Tc ( \ env -> return(displayInfo env,[])))
    lookupTyFun s = 
      do { table <- getTyFuns; return(lookup s table) }
-   solve = solvePred
+   solve = solveConstraints
 
 getAssume = do { env <- tcEnv; return(assumptions env) }
 getMatchingRules s = do { env <- tcEnv; return(getRules s env)}
@@ -611,6 +615,9 @@ data Decs
 checkDataDecs :: Strata -> [Dec] -> TC (Sigma,Frag,[Dec])
 checkDataDecs strata ds =
   do { (tmap,cmap) <- doManyData strata ds 
+     ; let propList = foldr isProp [] tmap -- Get list of props from mutRecDatas
+           isProp (True,name,_,_) ps = name:ps
+           isProp (False,name,_,_) ps = ps
      ; tmap2 <- mapM genTyCon tmap
      ; let f (nm,tau,polykind) = (nm,tau)
      ; cmap2 <- genConstrFunFrag (map f tmap2) (map snd cmap)
@@ -620,7 +627,7 @@ checkDataDecs strata ds =
                  ; x <- case lhsRho of
                      Rtau lhsTau -> 
                             do { (doms,rng) <- splitRho lhsRho
-                               ; sigmaToRule rng c preds rho }
+                               ; sigmaToRule propList rng c preds rho }
                      _ -> failD 0 [Ds "Rule has Rank N type ",Dd sigma]
                  ; return [x]}
            makeRule (False,(Global c,(sigma,_,_))) = return []
@@ -642,23 +649,24 @@ doManyData strata ds =
      ; info <- mapM (dataBinds strata envMap) ds
      ; let acc (t,c) (ts,cs) = (t:ts,c++cs)
            (tMap,constrBinds) = foldr acc ([],[]) info
+           project (isprop,name,sig,tau) = (name,sig,tau)
      ; let g (loc,isprop,name,allExParams,env2,eqs,body) = 
-             do { let env3 = env2 ++ tMap
+             do { let env3 = env2 ++ (map project tMap)
                 ; eqs2 <- toPred env3 eqs
                 ; body2 <- toRho env3 body
                 ; let typ = Forall (windup allExParams (eqs2,body2))
-                -- ; outputString (show strata ++ " Check "++name++" :: "++show typ)
                 ; newLoc loc $ hasKind name typ (MK (Star strata))
+                ; typ2 <- zonk typ
+                --; warn [Ds ("\n"++name++" :: "),Dd typ2]
                 ; return(isprop,(Global name,(typ,0::Level,Var(Global name))))
                 }
      ; cMap <- mapM g constrBinds
      ; return (tMap,cMap)
      }
-
     
 -- compute typings and kindings from a Dec, they'll be checked later in "doManyData"
 
-dataBinds:: Strata -> (ToEnv) -> Dec -> TC((String,Tau,PolyKind),[ConType])
+dataBinds:: Strata -> (ToEnv) -> Dec -> TC((Bool,String,Tau,PolyKind),[ConType])
 dataBinds strata currentEnv (Data loc isprop _ (t@(Global tname)) sig xs cs derivs) = 
   do { let (allArgs,eqs,hint) = sigToForallParts strata sig
      ; if null eqs then return () 
@@ -674,13 +682,14 @@ dataBinds strata currentEnv (Data loc isprop _ (t@(Global tname)) sig xs cs deri
      --; outputString ("AllEnv = " ++ show allEnv++"\ntkindbody = "++show tkindbody)
      ; rho <- toRho allEnv tkindbody
      ; tkind <- return (K(Forall (windup allParams ([],rho))))
-     ; return((tname,TyCon tname tkind,tkind),cTypes) }
+     ; return((isprop,tname,TyCon tname tkind,tkind),cTypes) }
 
 
 type ConType = (Loc,Bool,String,ForAllArgs,ToEnv, Maybe[PPred],PT)
 
+
 conType :: Bool -> Strata -> ForAllArgs -> (ToEnv) -> PT -> Constr -> TC ConType
-conType isprop strata allParams allEnv rng (Constr loc exs c@(Global cname) ts eqs) = 
+conType isprop strata allParams allEnv rng (cc@(Constr loc exs c@(Global cname) ts eqs)) = 
     do {(_,exParams,allExEnv) <- argsToEnv (map f exs) allEnv
        ; return(loc,isprop,cname,allParams ++ exParams,allExEnv,eqs,cbody) }
   where f (Global s,k) = (s,k,Ex)
@@ -733,11 +742,11 @@ genConstrFunFrag tyConSub xs = mapM f xs where
   f (nm,(sig,lev,exp)) =
     do { -- Replace TyCon's which have stale (i.e. mono) PolyKind fields
          sig1 <- sub ([],[],tyConSub) sig
-       ; sig2 <- generalize sig1  -- Now generalize
-       ; return(nm,(sig2,lev,exp))}
+       ; sig3 <- generalize sig1  -- Now generalize
+       ; return(nm,(sig3,lev,exp))}
 
-genTyCon :: (String,Tau,PolyKind) -> TC (String,Tau,PolyKind)
-genTyCon (nm,TyCon _ _,K k) =
+genTyCon :: (Bool,String,Tau,PolyKind) -> TC (String,Tau,PolyKind)
+genTyCon (isprop,nm,TyCon _ _,K k) =
   do { k2 <- generalize k
      ; return(nm,TyCon nm (K k2),K k2) }
 
@@ -787,7 +796,7 @@ getOneDec rename (Val loc (Pann pat pt) body ds) = newLoc loc $
   do { (sigma,(d1,rho,assump)) <- checkPT pt    -- use the hint to get rho and display
      ; (frag,pat2) <- checkBndr rename pat sigma
      ; frag2 <- addTheorem (show pat) frag sigma
-     ; return(d1,frag,rho,Val loc pat2 body ds,assump)}
+     ; return(d1,frag2,rho,Val loc pat2 body ds,assump)}
 getOneDec rename (Val loc pat body ds) = newLoc loc $
   do { (sigma,frag,pat2) <- inferBndr rename pat
      ; (rigid,assump,rho) <- rigidTy Ex loc (show pat) sigma
@@ -842,7 +851,7 @@ checkDec frag (d1,rho,Val loc pat body ds,eqns) = newLoc loc $
            (lambdaExtend preds unifier frag2 
            (setDisplay (newDI d1) (check body rho))))
      ; truths <- getAssume
-     ; oblig2 <- return oblig -- solvePred (assump++truths) oblig
+     ; oblig2 <- solveConstraints (assump++truths) oblig
      ; when (not (null oblig2)) 
             (failD 3 [Ds "\nWhile type checking: ", Dd pat
                      ,Ds "\nUnder the truths: "
@@ -860,7 +869,8 @@ checkDec frag (d1,rho,Fun loc nm hint ms,eqns) = newLoc loc $
            (underLamGetPred frag3 ("CheckDec "++show nm) 
            (setDisplay (newDI d1) (mapM hasRho ms)))
      ; truths <- getAssume
-     ; oblig2 <- solvePred (assump++truths) oblig
+     --; warn [Ds "\nGetting ready to solve for ",Ds (show nm),Ds "\n"]
+     ; oblig2 <- solveConstraints (assump++truths) oblig
      ; when (not (null oblig2)) 
                  (failD 3
                    [Ds ("\nWhile type checking: "++show nm)
@@ -1005,7 +1015,13 @@ under extend p frag@(Frag xs patVars tenv eqs rs) comp =
   do { assump <- getAssume  -- Truths we already know, "eqs" are truths we will add
      ; (a,oblig) <- handleM 3 (collectPred(extend frag comp)) (underErr1 patVars)
      ; (residual,unifier) <- handleM 1 (mguM oblig) (underErr frag p assump oblig)
-     --; outputString("\nunder "++p++"\noblig = "++show oblig++"\nresidual = "++show residual)  
+     ; when False -- (p=="(L ws)")
+            (warn [Ds ("\nunder "++p)
+                  ,Ds "\noblig = ", Dd oblig
+                  ,Ds "\nresidual = ", Dd residual
+                  ,Ds "\nunifier = ", Dd unifier
+                  ,Ds "\neqs = ",Dd eqs
+                  ,Ds "\nassump = ",Dd assump] >> return())
      ; let truths = (eqs++assump)
      ; unsolved <- solvePred truths residual
      --; outputString("\ntruths = "++show truths++"\nunsolved = "++show unsolved)                       
@@ -1085,9 +1101,10 @@ instance Typable (Mtc TcEnv Pred) (Match [Pat] Exp Dec) Rho where
                        ,Ds "\n*** where ", Dl (subPred truths ts) ", "
                        ,Ds s]} )
 
-        ; (_,frag2,ds2) <- underLam frag1 ("fun "++(show ps)) 
+        ; (_,frag2,ds2) <- underLam frag1 ("fun "++(show ps)++" where ...") 
                                    (inferBndr localRename ds)
-        ; body3 <- handleM 2 (underLet "Y" frag2
+        ; body3 <- handleM 2 (underLet ("fun "++(show ps)++" = "++show body++" :: "++show rng) 
+                                       frag2
                                        (underLam frag1 (show ps) 
                                                  (hasMonoTypeest body rng))) err
         ; escapeCheck body t frag1
@@ -1158,12 +1175,12 @@ instance Typable (Mtc TcEnv Pred) Exp Rho where
   tc (Lit x) expect = do { x' <- tc x expect; return (Lit x') }
   tc (Var v) expect =
      do { m <- getLevel
-        --; when (show v=="ff") (outputString ("Checking variable "++show v))
+        --; when (show v=="xyz") (outputString ("Checking variable "++show v))
         ; (sigma,n,exp) <- lookupVar v
         ; when (n > m) (failD 2 [Ds (show v++" used at level "++show m++" but defined at level "++show n)])
-        --; when (show v=="ff") $ outputString ("Sigma = "++show sigma++"\nExpect = "++show expect)
+        --; when (show v=="xyz") $ outputString ("Sigma = "++show sigma++"\nExpect = "++show expect)
         ; morePoly (Var v) sigma expect
-        --; when (show v=="ff") $ outputString ("Poly check succeeds"++show sigma)
+        --; when (show v=="xyz") $ outputString ("Poly check succeeds"++show sigma)
         ; return exp }
 
   tc (Sum inj x) (Check (Rsum t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
@@ -1704,16 +1721,17 @@ rootPropM s x = failD 2 [Ds "\nNon Type constructor: "
                        ,Ds " used as Prop in:\n  "
                        ,Dd s]
 
-isPropM :: Rho -> String -> Tau -> TC Pred
+isPropM :: Rho -> [String] -> Tau -> TC Pred
 isPropM sigma new t = 
   do { s <- rootPropM sigma t; 
-     ; if s==new
+     ; if elem s new
           then return (Rel s t)
           else ifM (isRuleCon s)
                    (return (Rel s t))
                    (failD 2 [Ds "\nThe type: ("
                             ,Dd t
-                            ,Ds ") is not a proposition."])}
+                            ,Ds ") is not a proposition."
+                            ])}
 
 ------------------------------------------------------------------
 -- This code tests the type of a function to see if it could
@@ -1743,8 +1761,8 @@ addTheorem fname (frag@(Frag vs exs ts toenv rules)) sig =
      ; always <- newTau star
      ; case okRho rho of
         Just (tname,doms,rng) -> 
-            ifM (allM (isProp tname) (rng:doms))
-                (do { r <- sigmaToRule always fname preds rho
+            ifM (allM (isProp "") (rng:doms))
+                (do { r <- sigmaToRule [] always fname preds rho
                     ; return(Frag vs exs ts toenv (r:rules))
                     })
                 (return frag)
@@ -1776,12 +1794,12 @@ refute env (Frag _ _ _ _ rules) = newenv where
        
 -----------------------------------------------------------
   
-sigmaToRule :: Tau -> String -> [Pred] -> Rho -> TC(String,Rule)
-sigmaToRule lhsTau name preds rho = 
+sigmaToRule :: [String] -> Tau -> String -> [Pred] -> Rho -> TC(String,Rule)
+sigmaToRule mutRecPropList lhsTau name preds rho = 
   do { (doms,rng) <- splitRho rho
      ; tname <- rootPropM rho rng
      ; pat <- tau2Tpat rng
-     ; results <- mapM (isPropM rho tname) doms
+     ; results <- mapM (isPropM rho mutRecPropList) doms
      ; let vs = uninstanVars preds doms rng
            fix (r@(Rel s t)) = do { p <- tau2Tpat t; return(s,p,r)}
      ; conds <- if null vs 
@@ -1857,9 +1875,22 @@ solveNotEqual x y =
     Left [(v,t)] -> return Nothing -- (Just[Rel "(!=)" (notEq (TcTv v) t)])
     Left xs -> failD 1 [Ds "More than one residual in in-equality",Dl xs ", "]
     Right _ -> return (Just[])
+    
+solveEqual:: Tau -> Tau -> TC(Maybe[Pred])
+solveEqual x y =
+  do { a <- nf x; b <- nf y
+     ; let f (v,e) = equalRel (TcTv v) e
+     ; case mgu [(a,b)] of 
+        Left [] -> return(Just [])
+        Left xs -> return Nothing
+        Right(s,m,n) -> failD 3 [Ds "The Equality constraint: "
+                                ,Dd x, Ds " = ",Dd y
+                                ,Ds "Cannot be solved\n"
+                                ,Ds s]}
 
 useRule :: [Pred] -> [Rule] -> Tau -> TC(Maybe[Pred])
 useRule truths rules (TyApp (TyApp (TyCon "(!=)" k) x) y) = solveNotEqual x y
+useRule truths rules (TyApp (TyApp (TyCon "Equal" k) x) y) = solveEqual x y
 useRule truths [] t = return Nothing
 useRule truths ((conP,name,free,permutes,pat,conds,results):rs) t = 
   case tmatch pat t [] of
@@ -1885,14 +1916,26 @@ instance Eq Pred where
   (Equality a b) == (Equality x y) = a==x && b==y
   (Rel s x) == (Rel t y) = s==t && x==y
   _ == _ = False
+
+
+solveConstraints :: [Pred] -> [Pred] -> TC [Pred]
+solveConstraints truths cs =
+  do { (residual,unifier) <- (mguM cs)
+     ; solvePred truths residual
+     }
+
     
 solvePred :: [Pred] -> [Pred] -> TC [Pred]
 solvePred truths [] = return []
 solvePred truths ((r@(Rel s term)):ps) = 
+  -- (warn [Ds "R = ",Dd r,Ds (sht term),Ds "\n truths are ",Dl truths ", "
+  --       ,Ds (concat (map shtEq truths))]) >>
   if elem r truths
      then solvePred truths ps
      else do { refute <- getRefutation s
+             --; warn [Ds "the term r = ",Dd r]
              ; rules <- getMatchingRules s
+             --; warn [Ds "Matchning rules are: ",Dl rules ", "]
              ; t <- zonk term
              ; refute t
              ; xs <- useRuleMany truths rules s t
@@ -1900,6 +1943,8 @@ solvePred truths ((r@(Rel s term)):ps) =
              ; ys <- solvePred truths ps
              ; xs2 <- removeAlreadyTrue truths xs
              ; return(xs2++ys)}
+solvePred truths (p:ps) =  
+  failD 1 [Ds "unknown predicate: ", Dd p]
 
 -------------------------------------------------------------
 -- Split the propositions into two lists, those that can be
@@ -1923,6 +1968,7 @@ oneMatch2 un1 ((Rel _ t):ts) (z@(Rel _ x)) =
     un2 -> case compose un2 un1 of
              Right _ -> oneMatch2 un1 ts z
              Left un3 -> Just un3
+oneMatch2 un1 (t:ts) z = oneMatch2 un1 ts z
     
 has1Mut (Tv u (Flexi _) k,_) = True
 has1Mut (_,TcTv(Tv u (Flexi _) k)) = True
@@ -2167,6 +2213,7 @@ infixOperators = (concat (map f metaHaskellOps))
                  Nothing -> []
                  Just (_,y) -> [(x,show y)]
   
+main2 = show_init_vals "D:/work/papers/OmegaManual/kinds.tex" "D:/work/papers/OmegaManual/types.tex"
 
 show_init_vals :: String -> String -> IO()
 show_init_vals kindfile prefixfile = go
@@ -2180,7 +2227,8 @@ show_init_vals kindfile prefixfile = go
         g (s@(c:cs)) | isAlpha c = s         -- normal names
                      | c == '(' = s
                      | True = "("++s++")"    -- infix operators
-        go = do { h <- openFile kindfile WriteMode
+        go = do { putStrLn "Writing tables for Manual"
+                ; h <- openFile kindfile WriteMode
         
                 ; hPutStr h "\\begin{figure}[t]\n"
 	        ; hPutStr h "\\begin{multicols}{2}\n"
@@ -2265,7 +2313,7 @@ predefined =
  "data Bool = True | False\n"++
  "data Maybe a = Just a | Nothing\n"++
  "kind Nat = Z | S Nat\n"++
- "data Nat' t = Z where t=Z | exists y . S (Nat' y) where t = S y\n"++
+ "prop Nat' t = Z where t=Z | exists y . S (Nat' y) where t = S y\n"++
  "data Equal a b = Eq where a=b\n"++
  "kind HasType = Has Tag *0\n"++
  "kind Row (x::*1) = RCons x (Row x) | RNil\n"++
@@ -2511,3 +2559,13 @@ instance Exhibit DispInfo Exp where
   exhibit d1 c = (d1,show c)
 
 
+instance Exhibit DispInfo Constr where
+  exhibit d (Constr _ targs c doms Nothing) = 
+    displays d [Ds "exists ",Dlf hf targs ",",Ds " . ",Ds (show c++" ")
+               ,Dl doms ", "]
+  exhibit d (Constr _ targs c doms (Just ps)) = 
+    displays d [Ds "exists ",Dlf hf targs ",",Ds " . ",Ds (show c++" ")
+               ,Dl doms ", ",Ds " where ",Dl ps ", "]
+
+hf d (Global s,pt) = displays d [Ds ("("++show s++","), Dd pt, Ds ")"]
+  

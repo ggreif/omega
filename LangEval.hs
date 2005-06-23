@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon May 23 09:40:05 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1
+-- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1 (revision 1)
 
 module LangEval where
 
@@ -665,6 +665,7 @@ vals =
  ,("-",make2 ((-)::Int -> Int -> Int))
  ,("div",make2 ((div)::Int -> Int -> Int))
  ,("rem",make2 ((rem)::Int -> Int -> Int))
+ ,("mod",make2 ((mod)::Int -> Int -> Int))
  ,("negate",make1((\ x -> 0-x)::Int -> Int))
  ,("<", make2 ((<) ::Int -> Int -> Bool))
  ,("<=",make2 ((<=)::Int -> Int -> Bool))

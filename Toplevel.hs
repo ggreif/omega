@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon May 23 09:40:05 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1
+-- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1 (revision 1)
 
 
 module Toplevel where
@@ -324,8 +324,10 @@ importNames name vs new old =
       , var_env = addListToFM (var_env old) (filter p (fmToList (var_env new)))
       , type_env = (filter q (type_env new)) ++ (type_env old)
       , runtime_env = add (runtime_env new) (runtime_env old)
+      , rules = appendFM2 (rules old) (filter p2 (fmToList (rules new)))
       }
  where p (x,y) = elem x vs
+       p2 (s,y) = elem (Global s) vs
        q (str,tau,polyk) = elem (Global str) vs
        add (Ev xs _) (Ev ys t) = Ev (filter p xs ++ ys) t
 
