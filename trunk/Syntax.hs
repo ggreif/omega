@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon May 23 09:40:05 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1
+-- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1 (revision 1)
 
 module Syntax where
 
@@ -14,7 +14,8 @@ import IOExts
 --import Types
 import Auxillary
 import List(elem,nub,union,(\\),partition)
-import RankN(PT(..),showp,getAll,getFree,getFreePred,applyT',ptsub,getMult,PPred(..))
+import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
+            ,getMult,PPred(..))
 import Char(isLower,isUpper)
 import Pretty
 
@@ -1185,7 +1186,7 @@ declBindsFree vars d = binds(boundBy d)
 -- see the code and comments below.
 
            
-data ExplicitGADT = GADT Loc Bool Var PT [(Loc,Var,PT)]
+data ExplicitGADT = GADT Loc Bool Var PT [(Loc,Var,[PPred],PT)]
 
 transGADT :: ExplicitGADT -> Dec
 transGADT (GADT loc b (name@(Global t)) kind constrs) = 
@@ -1193,11 +1194,15 @@ transGADT (GADT loc b (name@(Global t)) kind constrs) =
   where fresh = freshNames (TyFun' (map g constrs))
         args = step1 fresh kind
         f (name,pt) = (Global name,pt)
-        g (loc,constr,typ) = typ
-        forEachConstr (loc,c@(Global constr),typ) 
-            = step4 constr loc sub (qual++eqnsDup) newrange domains
+        g (loc,constr,preds,typ) = typ
+        forEachConstr (loc,c@(Global constr),preds,typ) 
+            = step4 constr loc sub (preds2++equalities) newrange domains
           where (domains,triples,newrange,eqnsDup) = step2 args (constr,typ)
                 (sub,qual) = step3 triples
+                g (t1,t2) = Equality' (ptsub sub t1) (ptsub sub t2)
+                equalities = map g (qual++eqnsDup)
+                preds2 = map (ppredsub sub) preds
+                
         constrs' = map forEachConstr constrs
 
 
@@ -1272,17 +1277,12 @@ step3 ((typ,TyVar' y,k):xs) = (subs,(TyVar' y,typ):quals)
 step4 c loc subs quals newrange domains = Constr loc exists (Global c) doms eqls
    where doms = map (ptsub subs) domains
          constrType = foldr Rarrow' newrange doms
-         allVars = union (getFree [] constrType) (freeFromQuals eqls)
+         allVars = union (getFree [] constrType) (getFreePredL [] quals)
          rangeVars = getFree [] newrange 
          f t = (Global t, AnyTyp 1)
          exists = map f (allVars \\ rangeVars)
-         g (t1,t2) = Equality' (ptsub subs t1) (ptsub subs t2)
-         eqls = if null quals then Nothing else Just(map g quals)
+         eqls = if null quals then Nothing else Just quals
 
-         freeFromQuals Nothing = []
-         freeFromQuals (Just quals) = foldr acc [] quals
-            where acc p xs = union (getFreePred [] p) xs
-          
 
 -- Test if an explicit GADT is well formed 
 -- Nothing means yes, (Just errormessage) otherwise 
@@ -1292,14 +1292,14 @@ okGADT (GADT loc b (Global tname) kind constrs) = okCONSTR constrs
         okCONSTR (triple:cs) = okAnd (test triple) (okCONSTR cs)
         okAnd Nothing xs = xs
         okAnd (Just s) xs = Just s
-        test (cloc,Global cname,ctype) = okRange cname cloc ctype
+        test (cloc,Global cname,preds,ctype) = okRange cname cloc ctype
         okRange cname cloc (Rarrow' x y) = okRange cname cloc y
         okRange cname cloc typ = okAppOfT kind typ
           where okAppOfT (Karrow' x y) (TyApp' t z) = okAppOfT y t
                 okAppOfT (Karrow' x y) t = Just
                          (show cloc ++ 
                           "\nRange of "++cname++" is not fully applied application of " ++
-                          tname)
+                          tname++"\n"++show t)
                 okAppOfT _ (f@(TyApp' _ _)) = Just
                          (show cloc ++
                           "\nkind: " ++ 
@@ -1307,11 +1307,11 @@ okGADT (GADT loc b (Global tname) kind constrs) = okCONSTR constrs
                           " is not consistent with range of "++cname++": "++
                           show typ)
                 okAppOfT _ (TyCon' z) | z==tname = Nothing
-                okAppOfT _ t = Just
+                okAppOfT w t = Just
                          (show cloc ++
                           "\nrange of "++cname++" "++show t++
                           " is not consistent with type being defined "++
-                          show tname)
+                          show tname++"\n "++show w)
 
 
 ------------------------------------------------------------

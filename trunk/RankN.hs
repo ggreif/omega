@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon May 23 09:40:05 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1
+-- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
+-- Omega Interpreter: version 1.1 (revision 1)
 
 module RankN where
 
@@ -300,6 +300,10 @@ trow (MK x) = MK(TyApp rowT x)
 
 tprods [t] = t
 tprods (x:xs) = tpair x (tprods xs)
+
+unPair :: Tau -> [Tau]
+unPair (TyApp (TyApp (TyCon "(,)" k) x) y) = x:(unPair y)
+unPair y = [y] 
 
 rK :: Rho -> PolyKind
 rK rho = K(Forall (Nil ([],rho)))
@@ -664,7 +668,8 @@ unify x y =
 	f (TyEx x) (TyEx y) = unifyEx x y
         f s t = matchErr "different types" s t
 
-emit x y = do { a <- zonk x; b <- zonk y; injectAccum [Equality a b]}
+emit x y = do { a <- zonk x; b <- zonk y; injectAccum [equalRel a b]}
+equalRel x y = Rel "Equal" (TyApp (TyApp eqT x) y)
 
 unifyEx x y = 
  do { (tripsX,(eqn1,x1)) <- unwind x
@@ -852,15 +857,17 @@ instanExPat loc s ty = unBindWithL (newRigid loc s) ty
 -- in data defs. Eg.     data Dyn = exists t . Dyn (Rep t) t
 -- so quantify  will never produce one.
 
-quantify :: (TypeLike m t,Quantify m t,Display t) => [TcTv] -> t -> m Sigma
+quantify :: (TypeLike m t,Quantify m t,Display t,Sht t) => [TcTv] -> t -> m Sigma
 quantify tvs ty =
   do { (_,newbinders,ty2) <- subFreshNames tvs [] ty
      ; for_all newbinders ty2
      }
 
-subFreshNames :: (TyCh m,TypeLike m t,Display t)
+subFreshNames :: (TyCh m,TypeLike m t,Display t,Sht t)
   => [TcTv] -> [(TcTv,Tau)] -> t -> m( [(TcTv,Tau)],[(Name,Kind,Quant)],t)
-subFreshNames [] env ty = do { w <- sub ([],env,[]) ty; return(env,[],w) }
+subFreshNames [] env ty = 
+   do { w <- sub ([],env,[]) ty
+     ; return(env,[],w) }
 subFreshNames (v@(Tv unq (Flexi ref) k):xs) env ty =
    do { name <- fresh
       ; k2 <- sub ([],env,[]) k
@@ -869,11 +876,10 @@ subFreshNames (v@(Tv unq (Flexi ref) k):xs) env ty =
       }
 subFreshNames (v:xs) env ty = subFreshNames xs env ty -- ignore non-flexi vars      
      
-generalize :: (TypeLike m t,Quantify m t,Display t) => t -> m Sigma
+generalize :: (TypeLike m t,Quantify m t,Display t,Sht t) => t -> m Sigma
 generalize rho =
   do { rvars <- get_tvs rho
      ; evars <- envTvs
-     --; let evars =  varsFromTriples triples
      ; let generic = filter (not . (`elem` evars)) rvars
      ; rho2 <- nf rho
      ; sig <- quantify generic rho2
@@ -1096,8 +1102,8 @@ hasKind name sigma (MK kind) =
      ; (env,eqs,rho) <- unBindWith new sigma
      ; let err disp1 message = failDd 3 disp1
                [Ds ("\nWhile checking the kind of constructor\n   "++name++" :: ")
-               ,Dl eqs ", ",Dd rho, Ds message]
-           err2 disp mess = err disp ("$$$ While checking Constraints "++mess)
+               ,Dl eqs ", ",Ds " =>\n      ",Dd rho, Ds message]
+           err2 disp mess = err disp ("\nWe checked the well formedness of constraints, and found: "++mess)
                   
      ; handleM 3 (check rho kind) err
      ; handleM 3 (mapM kindPred eqs) err2
@@ -1185,8 +1191,9 @@ instance TyCh m => Subsumption m Sigma Rho where
         ; injectAccum preds -- ## DO THIS WITH THE PREDS?
         -- ; outputString ("rho1 = "++show rho1++" rho2 = "++show rho2)
         ; ((),oblig2) <- extract(morepoly rho1 rho2)
-        ; (preds2,_) <- handleM 1 (mguM oblig2)  
-                                  (no_solution sigma1 rho2 rho1)
+        ; (preds2,unifier) <- handleM 1 (mguM oblig2)  
+                                        (no_solution sigma1 rho2 rho1)
+        -- ; warn [Ds "\nunifier = ",Dd unifier]
         ; injectAccum preds2                      
         }
 
@@ -1324,7 +1331,10 @@ getFree bnd (Forallx q xs eqs t) = f bnd xs t `union` g bnd xs eqs
 
 getFreePred bnd (Equality' x y) = getFree bnd x `union` getFree bnd y
 getFreePred bnd (Rel' nm ts) =  getFree bnd ts 
-    
+
+getFreePredL bnd xs = foldr g [] xs 
+    where g t free = union (getFreePred bnd t) free
+
 
 -- Get all the variables appearing in the type, both free and bound
 getF :: ([String]->[String]->[String]) -> PT -> [String]
@@ -1401,6 +1411,8 @@ ptsub sigma x =
        sub2 (Rel' nm ts) = Rel' nm (rcall ts)
     in Forallx quant (map sub1 xs) (map sub2 eqs) (rcall t)
 
+ppredsub sub (Equality' x y) = Equality' (ptsub sub x) (ptsub sub y)
+ppredsub sub (Rel' x y) = Rel' x (ptsub sub y)
    
 --------------------------------------------------------------------
 -- Translating. The translation respects (and enforces) the 3 level
@@ -1482,8 +1494,9 @@ readTau n env (ty@(TyFun' (x:xs))) =
                      ,Ds " doesn't have a type function name in the function position of type function application."
                      ,Dd x]}
 readTau n env (AnyTyp m) = 
-   do { k <- newKind (MK(Star m))
-      ; v <- newFlexiTyVar (MK (Star m)) ; return(TcTv v)}
+   do { --k <- newKind (MK(Star m));
+        v <- newFlexiTyVar (MK (Star m)) 
+      ; return(TcTv v)}
 readTau n env (t@(Forallx Ex xs eqs body)) = 
    do { (_,fargs,env2) <- argsToEnv xs env
       ; r <- readTau 0 env2 body
@@ -1549,6 +1562,18 @@ buildNat :: Num a => b -> (b -> b) -> a -> b
 buildNat z s 0 = z
 buildNat z s n = s(buildNat z s (n-1))
 
+hash = 
+  do { symbol "#"                                        -- #1  #3
+     ; (z,n) <- shapeA <|> shapeB
+     ; return(buildNat z (TyApp' (TyCon' "S")) n)
+     }
+ where shapeA = do { n <- natural; return(TyCon' "Z",n)}
+       shapeB = parens(do { n <- natural
+                          ; symbol "+"
+                          ; x <- identifier
+                          ; return(TyVar' x,n)})
+
+
 simpletyp :: Int -> Parser PT
 simpletyp strata =
        (do {t <- constructorName; return (TyCon' t) })        -- T
@@ -1556,12 +1581,7 @@ simpletyp strata =
    <|> do {x <- identifier; return (TyVar' x) }               -- x
    <|> (symbol "?" >> return (AnyTyp (strata + 1)))           -- ?
    <|> parseStar                                              -- * *1 *2
-   <|> (do{ symbol "#"                                        -- #1  #3
-          ; n <- natural
-          ; return(buildNat (TyCon' "Z") 
-                            (TyApp' (TyCon' "S")) n)})
-   
-   
+   <|> hash                                                   -- #1  #3 #(1+n)
    <|> try (do { x <- (symbol "()" <|> symbol "[]")           -- () and []
                ; return(TyCon' x)})   
    <|> try (do { x <- parens(symbol "->" <|>                  -- (->) (+) and (,)  
@@ -1624,23 +1644,34 @@ typN n = allTyp n <|> arrTyp n
 qual = (reservedOp "="  >> return "=" ) <|> 
        (reservedOp "!=" >> return "!=")
 
+--tt = parse (try (do { x <- proposition 0; symbol "=>"; (return x)})) "One => Two"
+--Right (t1,ss) = parse2 (arrTyp 0)  "One => Two"
+--tt = parse2 ((possible (do { t <- qual; x <- arrTyp 0; return(t,x)})))  ss
+
+
 proposition n =
  do { t1 <- arrTyp n 
-    ; rest <- possible (do { t <- qual; x <- arrTyp n; return(t,x)})
+    ; rest <- (possible (do { t <- qual; x <- arrTyp n; return(t,x)}))
     ; case rest of
         Just("=",t2)  -> return(Equality' t1 t2)
         Just("!=",t2) -> return(Rel' "(!=)" (TyApp' (TyApp' (TyCon' "(!=)") t1) t2))
         Nothing -> typToRel t1 t1
     }
 
+
 props :: Int -> Parser [PPred]
-props n = (try (do { x <- proposition n; symbol "=>"; return[x]})) <|>
+props n = (try (do { x <- proposition n; symbol "=>"; g x})) <|>
           (try (do { xs <- parens(sepBy (proposition n) comma)
                    ; symbol "=>"; return xs}))                     <|>
           (return [])
+  where g (Rel' "(,)" x) = mapM (\ t -> typToRel t t) (unPair x)
+        g x = return[x]
+        unPair (TyApp' (TyApp' (TyCon' "(,)") x) y) = x:(unPair y)
+        unPair y = [y] 
  
 typToRel t (TyApp' (TyCon' nm) x) = return(Rel' nm t)
 typToRel t (TyApp' f x) = typToRel t f
+typToRel t (TyCon' nm) = return(Rel' nm t)
 typToRel t _ = fail ("Expecting a relational predicate, found:\n  "++ show t)  
    
    
@@ -2035,6 +2066,24 @@ go = mgu test2
 -- a type, since the "show" printed version
 -- is ambiguous. "sht" allows you to do this.
 
+class Sht t where
+  shtt :: t -> String
+
+instance Sht Tau where
+  shtt = sht
+instance Sht Rho where
+  shtt = shtR
+instance Sht Sigma where
+  shtt = shtS
+instance Sht Pred where
+  shtt = shtEq
+instance (Sht p,Sht s) => Sht ([p],s) where
+  shtt (ps,s) = shtt ps ++ " => "++shtt s
+instance Sht x => Sht [x] where
+  shtt xs = plistf shtt "[" xs "," "]"
+instance Sht Kind where
+  shtt (MK s) = shtt s
+  
 sht (TyVar n k) = "(TyVar "++show n++")"
 sht (TyApp x y) = "(TyApp "++sht x++" "++sht y++")"
 sht (TyCon x k) = "(Con "++show x++")"
@@ -2054,7 +2103,10 @@ shtR (Rtau x) = "RTau("++sht x++")"
 
 shtS (Forall xs) = 
   let (ys,(eqs,rho)) = unsafeUnwind xs
-  in "(forall ? ." ++ plistf shtEq "(" eqs "," ")"++" => "++shtR rho++")"
+      f [] = ""
+      f [(nm,MK k,_)] = "("++show nm++":"++sht k++")"
+      f ((nm,MK k,_):xs) = "("++show nm++":"++sht k++")"++"\n  "++f xs
+  in "(forall\n  "++(f ys)++ plistf shtEq "(" eqs "," ")"++" => "++shtR rho++")"
 
 shtEq (Equality x y) = "("++sht x++"="++sht y++")"
 shtEq (Rel nm ts) = "Pred("++sht ts++")"
@@ -2086,7 +2138,10 @@ exhibit3 xs1 (x,y,z) = (xs4,sx,sy,sz)
   where (xs2,sx) = exhibit xs1 x
         (xs3,sy) = exhibit xs2 y
         (xs4,sz) = exhibit xs3 z
-        
+
+--instance (NameStore d,Exhibit d a,Exhibit d b, Exhibit d c) => Exhibit d (a,b,c) where
+--  exhibit d x = (d,a++b++c) where (d,a,b,c) = exhibit3 d x
+  
 -----------------------------------------------------
 -- Helper functions 
 
@@ -2151,8 +2206,9 @@ exhibitKinding d1 (TyVar nm (MK k)) = (d3,":"++nmStr++kStr)
 exhibitKinding d1 (TcTv (v@(Tv _ _ (MK k)))) = (d3,":"++nmStr++kStr)
    where (d2,nmStr) = exhibitTv d1 v
          (d3,kStr) = exhibitKinding d2 k 
-exhibitKinding d1 (TyCon s k) = (d1,":"++s)         
-exhibitKinding d1 (x@(TyApp _ _)) = (d1,":"++show x) 
+exhibitKinding d1 (TyCon s k) = (d1,":"++s)
+exhibitKinding d1 (x@(Karr _ _)) = (d2,":"++s) where (d2,s)= exhibit d1 x
+exhibitKinding d1 (x@(TyApp _ _)) = (d2,":"++s) where (d2,s)= exhibit d1 x
 exhibitKinding d1 x = (d1,":"++show x) 
 
 
@@ -2278,7 +2334,10 @@ instance NameStore d => Exhibit d [Pred] where
   exhibit xs [] = (xs,"")
   exhibit xs ys = exhibitL exhibit xs ys ", "
     
-    
+instance NameStore d => Exhibit d [PPred] where
+  exhibit xs [] = (xs,"")
+  exhibit xs ys = exhibitL exhibit xs ys ", "
+  
 instance NameStore d => Exhibit d [(TcTv,Tau)] where
   exhibit xs [] = (xs,"")
   exhibit xs ys = exhibitL exhibit xs ys ", "
@@ -2307,6 +2366,24 @@ instance NameStore d => Exhibit d ([Pred], Rho) where
 instance (NameStore d,Exhibit d a) => Exhibit d ([Pred], a) where
   exhibit xs (es,r) = (ys,esx ++ " => " ++ rx)
      where (ys,esx,rx) = exhibit2 xs (es,r)     
+
+
+instance NameStore d => Exhibit d (Name,Kind,Quant) where
+  exhibit xs (nm,k,q) = (d2,"("++nmS++","++kS++","++show q++")")
+    where (d1,nmS) = useStoreName nm k f xs
+          (d2,kS) = exhibit d1 k
+          f s = "'"++s
+
+
+instance NameStore d => Exhibit d (String,Tau,PolyKind) where
+  exhibit xs (str,tau,pkind)= (d2,"("++str++","++tauS++","++pkindS++")")
+    where (d1,tauS) = exhibit xs tau
+          (d2,pkindS) = exhibit d1 pkind
+
+instance NameStore d => Exhibit d (String,PT,Quant) where
+  exhibit xs (str,pt,q)= (d1,"("++str++","++tauS++","++show q++")")
+    where (d1,tauS) = exhibit xs pt
+
           
 ------------------------------------------------
 -- Make Display instances 
