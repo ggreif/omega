@@ -2,12 +2,15 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module Monads where
 
-import IOExts
+-- import IOExts
+import Data.IORef(newIORef,readIORef,writeIORef,IORef)
+import System.IO(fixIO)
+import System.IO.Unsafe(unsafePerformIO)
 import Auxillary(Loc(..),DispInfo(..),initDI)
 --------------------------------------------------------------
 class Monad m => HasNext m where
@@ -31,10 +34,10 @@ class Accumulates m z where
   
 class Monad m => TracksLoc m where
   position :: m Loc
-  failN :: DispInfo -> Loc -> Int -> String -> m b
+  failN :: DispInfo -> Loc -> Int -> String -> String -> m b
 
-failP :: TracksLoc m => Int -> DispInfo -> String -> m b
-failP n dis s = do { p <- position; failN dis p n s}
+failP :: TracksLoc m => String -> Int -> DispInfo -> String -> m b
+failP k n dis s = do { p <- position; failN dis p n k s}
   
 -----------------------------------------------------
 instance HasFixpoint IO where
@@ -68,16 +71,23 @@ instance Monad Id where
 
 ------------------------------
 
-data Exception x = Ok x | Fail DispInfo Loc Int String
+data Exception x 
+   = Ok x 
+   | Fail DispInfo   -- Display
+          Loc        -- Source Location of Error
+          Int        -- Severity or level of error
+          String     -- kind of error
+          String     -- message
  
 instance Monad Exception where
   return x = Ok x
   (>>=) (Ok x) f = f x
-  (>>=) (Fail dis loc n s) f  = Fail dis loc n s
+  (>>=) (Fail dis loc n k s) f  = Fail dis loc n k s
+  fail s = Fail initDI Z 0 "" s
 
 instance Functor Exception where
   fmap f (Ok x) = Ok (f x)
-  fmap f (Fail dis loc n s) = Fail dis loc n s
+  fmap f (Fail dis loc n k s) = Fail dis loc n k s
 
 -----------------------------------
 data Env e x = Env (e -> x)
@@ -186,40 +196,42 @@ instance Monad FIO where
     where w = do { x <- a
                  ; case x of
                     Ok z -> unFIO(g z)
-                    Fail dis loc n s -> return(Fail dis loc n s)}
+                    Fail dis loc n k s -> return(Fail dis loc n k s)}
                     
 instance Functor FIO where
   fmap f (FIO x) = FIO(fmap (fmap f) x)
 
-failFIO disp loc n s = FIO(return(Fail disp loc n s))
+failFIO disp loc n s = FIO(return(Fail disp loc n "" s))
   
-handle :: Int -> FIO a -> (DispInfo -> String -> FIO a) -> FIO a 
-handle m (FIO x) f = FIO w
+handleP :: (String -> Bool) -> Int -> FIO a -> (DispInfo -> String -> FIO a) -> FIO a 
+handleP p m (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
-                   Fail dis loc n s -> 
-                       if m > n 
+                   Fail dis loc n k s -> 
+                       if (m > n) && (p k) 
                           then unFIO(f dis s)
-                          else return(Fail dis loc n s)
+                          else return(Fail dis loc n k s)
                    ok -> return(ok)}
+                   
+handle = handleP (\ _ -> True)                   
                    
 tryAndReport :: FIO a -> (Loc -> DispInfo -> String -> FIO a) -> FIO a 
 tryAndReport (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
-                   Fail dis loc n s -> unFIO(f loc dis s)
+                   Fail dis loc n k s -> unFIO(f loc dis s)
                    ok -> return(ok)}                   
                    
 runFIO :: FIO x -> (DispInfo -> Loc -> Int -> String -> IO x) -> IO x
 runFIO (FIO x) f = do { a <- x
                       ; case a of
                           Ok z -> return z
-                          Fail dis loc n s -> f dis loc n s }
+                          Fail dis loc n k s -> f dis loc n s }
 
 fixFIO :: (a -> FIO a) -> FIO a
 fixFIO f = FIO(fixIO (unFIO . f . unRight))
     where unRight (Ok x) = x
-          unRight (Fail disp loc n s) = error ("Failure in fixFIO: "++s)
+          unRight (Fail disp loc n k s) = error ("Failure in fixFIO: "++s)
 
 
 fio :: IO x -> FIO x
@@ -227,8 +239,9 @@ fio x = FIO(fmap Ok x)
 
 write = fio . putStr
 writeln = fio . putStrLn
-readln :: FIO String
-readln = fio getLine
+
+readln :: String -> FIO String
+readln prompt = fio (do {putStr prompt; getLine})
 
 instance HasFixpoint FIO where
   fixpoint = fixFIO
@@ -287,9 +300,16 @@ instance Monad (Mtc e n) where
 instance Functor (Mtc e n)  where
   fmap f x = do { a <- x; return(f a) }
 
-handleTC :: Int -> Mtc e n a -> (DispInfo -> String -> Mtc e n a) -> Mtc e n a 
-handleTC m (Tc x) f = Tc w
-  where w env = handle m (x env) (\ dis s -> unTc (f dis s) env)
+handleTC :: (String -> Bool) -> Int -> Mtc e n a -> (DispInfo -> String -> Mtc e n a) -> Mtc e n a 
+handleTC p m (Tc x) f = Tc w
+  where w env = handleP p m (x env) (\ dis s -> unTc (f dis s) env)
+
+
+
+fio2Mtc :: FIO a -> Mtc b c a                                  
+fio2Mtc x = Tc h
+  where h env = do { ans <- x; return(ans,[]) }
+                                  
                                   
 ------------------------------------------------
 -- Some instance Declarations 

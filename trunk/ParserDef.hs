@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module ParserDef (pp,pe,pd,name,getExp,getInt,
                 pattern,expr,decl,
@@ -25,7 +25,7 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,freshNames,step1,step2,step3,step4,monadDec)
 import Monads
 import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
-            ,ptsub,getFree,parse_tag,buildNat,props)
+            ,ptsub,getFree,parse_tag,buildNat,props,typingHelp,typing)
 import Auxillary(Loc(..),plistf,plist)
 
 ---------------------------------------------------------
@@ -450,7 +450,9 @@ caseExpression =
 
 bodyP :: Parser a -> Parser (Body Exp)
 bodyP equal = (fmap Guarded (many1 guard)) <|>
-              (equal >> fmap Normal expr)
+              (equal >> ((reserved "unreachable" >> return Unreachable) <|>
+                         (fmap Normal expr)))
+              
    where guard = do { try (symbol "|")
                     ; x <- expr
                     ; equal
@@ -692,8 +694,7 @@ importDec =
 typeSig =
    do{ pos <- getPosition
      ; n <- (constructorName <|> name)
-     ; reservedOp "::"
-     ; t <- typN 0
+     ; t <- typing 0
      ; return $ TypeSig (loc pos) n t }
 
 typeSyn = 
@@ -721,8 +722,7 @@ primDec =
    do{ pos <- getPosition
      ; reserved "primitive"
      ; n <- (name <|> parens operator)
-     ; reservedOp "::"
-     ; t <- typN 0
+     ; t <- typing 0
      ; return $ Prim (loc pos) n t }
  where operator = 
           do { cs <- many (opLetter tokenDef)
@@ -748,8 +748,8 @@ datadecl =
     ; (strata,prop) <- (reserved "data" >> return(0,False)) <|>
                        (reserved "prop" >> return(0,True)) <|>
                        (reserved "kind" >> return(1,False))
-    ; t <- name
-    ; explicit prop pos t <|> implicit prop pos strata t
+    ; t <- name;
+    ; (explicit prop pos t) <|> (implicit prop pos strata t)
     }
  
 implicit b pos strata t =
@@ -777,11 +777,13 @@ explicit b pos tname =
 explicitConstr = 
   do { l <- getPosition
      ; c <- constructorName
-     ; symbol "::"
-     ; preds <- props 0
-     ; domain <- typN 0
-     ; return(loc l,c,preds,domain)
+     ; (prefix,preds,body) <- typingHelp 0
+     ; let format Nothing = []
+           format (Just(q,kindings)) = map g kindings
+           g (nm,kind,quant) = (nm,kind)
+     ; return(loc l,c,format prefix,preds,body)
      }
+
 
 targs strata = many arg
   where arg = simple <|> parens kinded
@@ -1122,14 +1124,7 @@ look = putStr(show (transGADT z3))
 Right(z5,_) = pd "data Exp:: *0 ~> *0 ~> *0 ~> *0 ~> *0 where\n Const:: t -> Exp past now future t\n Run:: (forall n . Exp past now (n,future) (Cd n future t)) -> Exp past now future t"
 
 
+zz = parse2 explicitConstr "Bind :: forall i j k a b . Lub i j k => M i a -> (a -> M j b) -> M k b"
 
-
-zz = pe "(Decl `inpz )"
+zz2 = parse2 explicitConstr "Bind :: Lub i j k => M i a -> (a -> M j b) -> M k b"
  
-
-dd = GADT (SrcLoc 1 1) False (Global "Decs") 
-  (Karrow' (TyCon' "Ctype") 
-  (Karrow' (TyApp' (TyCon' "Row") (TyCon' "HasType")) 
-  (Karrow' (TyApp' (TyCon' "Row") (TyCon' "HasType")) 
-  (Karrow' (Star' 0) (Star' 0))))) 
-  [(SrcLoc 2 3,Global "In",[],Rarrow' (TyApp' (TyApp' (TyApp' (TyCon' "Exp") (TyVar' "c")) (TyVar' "all")) (TyVar' "t")) (TyApp' (TyApp' (TyApp' (TyApp' (TyCon' "Decs") (TyVar' "c")) (TyVar' "all")) (TyVar' "all")) (TyVar' "t")))]

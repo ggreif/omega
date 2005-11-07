@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module Auxillary where
 
@@ -172,10 +172,13 @@ data DispElem
   | forall x . (Display x) => Dl [x] String
   | forall x . Df (DispInfo -> x -> (DispInfo,String)) x
   | forall x . Dlf (DispInfo -> x -> (DispInfo,String)) [x] String
+  | forall x . Dlg (DispInfo -> x -> (DispInfo,String)) String [x] String String
+  | Dr [DispElem]
   
 displays :: DispInfo -> [DispElem] -> (DispInfo,String)
 displays d xs = help d (reverse xs) "" where
  help d [] s = (d,s)
+ help d ((Dr xs):ys) s = help d (xs++ys) s
  help d (x:xs) s = help d2 xs (s2++s)
   where (d2,s2) = case x of
                    Dd y -> disp d y
@@ -184,3 +187,9 @@ displays d xs = help d (reverse xs) "" where
                    Dl ys sep -> dispL disp d ys sep
                    Df f ys  -> f d ys 
                    Dlf f ys sep -> dispL f d ys sep
+                   Dlg f open [] sep close -> (d,"")
+                   Dlg f open ys sep close -> 
+                      let (d2,inner) = dispL f d ys sep
+                      in (d2,open++inner++close)
+
+

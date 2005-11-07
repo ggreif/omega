@@ -2,16 +2,15 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module Syntax where
 
 import Bind
 import Monad
 import Monads
-import IOExts
---import Types
+import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Auxillary
 import List(elem,nub,union,(\\),partition)
 import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
@@ -139,6 +138,7 @@ type Match p e d = (Loc,p,Body e,[d]) -- case e of { p -> b where decs }
 data Body e
   = Guarded [(e,e)]           -- f p { | e1 = e2 | e3 = e4 } where ds
   | Normal e                  -- f p = { e } where ds
+  | Unreachable
 
 data Stmt p e d
   = BindSt Loc p e
@@ -593,6 +593,7 @@ showListExp xs =
 
 
 instance Show e => Show (Body e) where
+  show Unreachable = "unreachable"
   show (Normal e) = show e
   show (Guarded xs) = plistf  f "| " xs " | " ""
     where f (x,y) = show x ++ " = " ++ show y
@@ -664,6 +665,7 @@ instance Show Program where
 
 
 instance Functor Body where
+  fmap f Unreachable = Unreachable
   fmap f (Normal e) = Normal (f e)
   fmap f (Guarded ps) = Guarded(map (\ (x,y) -> (f x, f y)) ps)
 
@@ -796,6 +798,7 @@ parMatch (loc,p,body,ds) f =
       ; return(loc,p2,b2,ds3)}
 
 parBody :: Monad m => Body Exp -> Par m -> m(Body Exp)
+parBody Unreachable f = return Unreachable
 parBody (Normal e) f = do { e2 <- parE e f; return(Normal e2) }
 parBody (Guarded xs) f = do { ys <- mapM g xs; return(Guarded xs) }
   where g (e1,e2) = do {e3 <- parE e1 f; e4 <- parE e2 f; return(e3,e4) }
@@ -1071,6 +1074,7 @@ instance Vars (Var,[PT]) where
 
 instance Vars PPred where
   vars bnd (Equality' x y) = vars bnd x . vars bnd y
+  vars bnd (NotEqual' x y) = vars bnd x . vars bnd y
   vars bnd (Rel' nm ts) = addFreeT [Global nm] . vars bnd ts
 
 
@@ -1137,6 +1141,7 @@ instance Vars [Pat] where  -- Necessary to make the (Vars (Match p e d)) instanc
   vars = varsL      -- work when p is [p] (Fun matches as opposed to Case matches)
 
 instance Vars e => Vars (Body e) where
+  vars bnd Unreachable = id
   vars bnd (Normal e) = vars bnd e
   vars bnd (Guarded []) = id
   vars bnd (Guarded ((x,y):ps)) = vars bnd x . vars bnd y . vars bnd (Guarded ps)
@@ -1186,7 +1191,7 @@ declBindsFree vars d = binds(boundBy d)
 -- see the code and comments below.
 
            
-data ExplicitGADT = GADT Loc Bool Var PT [(Loc,Var,[PPred],PT)]
+data ExplicitGADT = GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)]
 
 transGADT :: ExplicitGADT -> Dec
 transGADT (GADT loc b (name@(Global t)) kind constrs) = 
@@ -1194,8 +1199,8 @@ transGADT (GADT loc b (name@(Global t)) kind constrs) =
   where fresh = freshNames (TyFun' (map g constrs))
         args = step1 fresh kind
         f (name,pt) = (Global name,pt)
-        g (loc,constr,preds,typ) = typ
-        forEachConstr (loc,c@(Global constr),preds,typ) 
+        g (loc,constr,prefix,preds,typ) = typ
+        forEachConstr (loc,c@(Global constr),prefix,preds,typ) 
             = step4 constr loc sub (preds2++equalities) newrange domains
           where (domains,triples,newrange,eqnsDup) = step2 args (constr,typ)
                 (sub,qual) = step3 triples
@@ -1211,9 +1216,10 @@ transGADT (GADT loc b (name@(Global t)) kind constrs) =
 freshNames :: PT -> [String]
 freshNames typ = makeNames "abcdefghijklmnopqrstuvwxyz" \\ getAll typ
 
--- First Note that in an explicitly typed data the type of each
--- constructor is a Rho type. No toplevel "forall" allowed.
+-- First Note that in an explicitly typed data the type of each constructor 
+-- is a Rho type. Because the parser has factored out any explicit forall.
 -- getRange( T a -> [Int] -> T b ) ====> ([T a,[Int]],T b)
+
 getRange (Rarrow' d x) = (d:ds,r) where (ds,r) = getRange x
 getRange r = ([],r)
 
@@ -1289,11 +1295,12 @@ step4 c loc subs quals newrange domains = Constr loc exists (Global c) doms eqls
 okGADT :: ExplicitGADT -> Maybe String
 okGADT (GADT loc b (Global tname) kind constrs) = okCONSTR constrs
   where okCONSTR [] = Nothing
-        okCONSTR (triple:cs) = okAnd (test triple) (okCONSTR cs)
+        okCONSTR (quad:cs) = okAnd (test quad) (okCONSTR cs)
         okAnd Nothing xs = xs
         okAnd (Just s) xs = Just s
-        test (cloc,Global cname,preds,ctype) = okRange cname cloc ctype
+        test (cloc,Global cname,prefix,preds,ctype) = okRange cname cloc ctype
         okRange cname cloc (Rarrow' x y) = okRange cname cloc y
+        okRange cname cloc (Forallx _ _ _ z) = okRange cname cloc z
         okRange cname cloc typ = okAppOfT kind typ
           where okAppOfT (Karrow' x y) (TyApp' t z) = okAppOfT y t
                 okAppOfT (Karrow' x y) t = Just

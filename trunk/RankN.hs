@@ -2,13 +2,14 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module RankN where
 
 import Bind
-import IOExts
+-- import IOExts
+import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Monads
 import Monad(when,foldM)
 import List((\\),nub,union,unionBy,sortBy,groupBy,partition)
@@ -24,7 +25,7 @@ import Char(isLower)
 --------------------------------------------------------------------
 type Uniq = Integer
 type TRef = IORef (Maybe Tau)
-data Pred = Equality Tau Tau | Rel String Tau
+data Pred = Equality Tau Tau | NotEqual Tau Tau | Rel Tau
 
 data PolyKind = K Sigma -- some Type Constrs have polymorphic kinds!
 data Kind = MK Tau
@@ -69,13 +70,14 @@ type MGU = [(TcTv,Tau)]
 class (HasIORef m,Fresh m,HasNext m,Accumulates m Pred
       ,TracksLoc m,HasOutput m) => TyCh m where
   envTvs :: m [TcTv]   -- extract free type vars from typing environment
-  handleM :: Int -> m a -> (DispInfo -> String -> m a) -> m a
+  handleK :: (String -> Bool) -> Int -> m a -> (DispInfo -> String -> m a) -> m a
   assume :: [Pred] -> MGU -> m a -> m a
   getBindings :: m MGU
   getDisplay :: m DispInfo
   lookupTyFun :: String -> m(Maybe([Tau]-> m Tau))
   solve :: [Pred] -> [Pred] -> m[Pred]
-  
+ 
+handleM n = handleK (const True) n
 
 -- A type is TypeLike if it supports a few primitive operations
 -- substitution, zonking, putting terms in normal form, and 
@@ -413,7 +415,8 @@ instance Swap Rho where
 instance Swap Pred where
   swaps [] x = x
   swaps cs (Equality x y) = Equality (swaps cs x) (swaps cs y)
-  swaps cs (Rel nm ts) = Rel nm (swaps cs ts)
+  swaps cs (NotEqual x y) = NotEqual (swaps cs x) (swaps cs y)
+  swaps cs (Rel ts) = Rel (swaps cs ts)
 
 -------------------------------------------------------------
 -- Typelike instances
@@ -516,13 +519,17 @@ instance  TyCh m => TypeLike m Kind where
 -- TypeLike Equations
 instance TyCh m => TypeLike m Pred where
   sub env (Equality x y) = do { a <- sub env x; b <- sub env y; return(Equality a b)}
-  sub env (Rel nm ts) = do {ys <- sub env ts; return(Rel nm ys)}
+  sub env (NotEqual x y) = do { a <- sub env x; b <- sub env y; return(NotEqual a b)}
+  sub env (Rel ts) = do {ys <- sub env ts; return(Rel ys)}
   zonk (Equality x y) = do { a <- zonk x; b <- zonk y; return(Equality a b)}
-  zonk (Rel nm ts) = do {ys <- zonk ts; return(Rel nm ys)}
+  zonk (NotEqual x y) = do { a <- zonk x; b <- zonk y; return(NotEqual a b)}
+  zonk (Rel ts) = do {ys <- zonk ts; return(Rel ys)}
   get_tvs (Equality x y) = binaryLift union (get_tvs x) (get_tvs y)
-  get_tvs (Rel nm ts) = (get_tvs ts)
+  get_tvs (NotEqual x y) = binaryLift union (get_tvs x) (get_tvs y)
+  get_tvs (Rel ts) = (get_tvs ts)
   nf (Equality x y) = binaryLift Equality (nfTau x) (nfTau y) 
-  nf (Rel nm ts) = do { ys <- nf ts; return(Rel nm ys)}
+  nf (NotEqual x y) = binaryLift NotEqual (nfTau x) (nfTau y) 
+  nf (Rel ts) = do { ys <- nf ts; return(Rel ys)}
   
 
 --- Helper functions for unwinding the (L Rho) objects in Forall
@@ -669,7 +676,7 @@ unify x y =
         f s t = matchErr "different types" s t
 
 emit x y = do { a <- zonk x; b <- zonk y; injectAccum [equalRel a b]}
-equalRel x y = Rel "Equal" (TyApp (TyApp eqT x) y)
+equalRel x y = Equality x y
 
 unifyEx x y = 
  do { (tripsX,(eqn1,x1)) <- unwind x
@@ -706,7 +713,7 @@ matchErr s t1 t2 = failD 0
    [Ds (s++"\n   "),Dd t1,Ds "   !=   ",Dd t2,Ds "\n",Ds (show(t1,t2))]
 
 kinderr t k u1 d1 s = 
-   failDd 0 d1 
+   failDd "" 0 d1 
     [Ds "Type: ",Dd t,Ds "\ndoes not have kind: ",Dd k,Ds (s++"\n var = "),Dd u1]
                              
 
@@ -905,7 +912,8 @@ polyP (Forall (Nil _)) = False
 split :: [Pred] -> ([Pred],[(Tau,Tau)])
 split [] = ([],[])
 split ((Equality x y):zs) = (ps,(x,y):bs) where (ps,bs) = split zs
-split ((p@(Rel _  _)):zs) = (p:ps,bs) where (ps,bs) = split zs
+split ((p@(Rel _)):zs) = (p:ps,bs) where (ps,bs) = split zs
+split ((p@(NotEqual _  _)):zs) = (p:ps,bs) where (ps,bs) = split zs
 
 
    
@@ -915,7 +923,8 @@ instance (Show term, Exhibit DispInfo term,Typable m term Rho
   check expr exp_ty
     = do { (skol_tvs, assump, rho) <- skolTy exp_ty
          ; info <- getDisplay
-         ; d1 <- whenD False -- (polyP exp_ty)
+         ; let verbose = False
+         ; d1 <- whenD verbose  -- (polyP exp_ty)
                   [Ds "\nThe type is: ",Dd exp_ty
                   ,Ds "\nskolem is: ",Dd rho
                   ,Ds "\nassump: = ",Dd assump,Ds (show assump)
@@ -924,9 +933,9 @@ instance (Show term, Exhibit DispInfo term,Typable m term Rho
          ; let (preds,bindings) = split assump
          ; unifier <- mguWithFail bindings
          ; (s,need::[Pred]) <-  extractAccum (assume preds unifier (check expr rho))
-         ; whenDd False -- (not (null need)) 
+         ; whenDd verbose -- (not (null need)) 
               d1 [Ds "\nNeed is: ",Dl need ", ",Ds (show need)]
-         ; passOn <- solve assump need
+         ; passOn <- solveHP assump need
          ; tvs2 <- get_tvs exp_ty
          ; env_tvs <- envTvs
          --; let env_tvs = varsFromTriples trips
@@ -934,7 +943,7 @@ instance (Show term, Exhibit DispInfo term,Typable m term Rho
                bad_tvs = filter (`elem` esc_tvs) skol_tvs
          ; case bad_tvs of
               [] -> return ()
-              zs -> failDd 1 info [Ds "Type not polymorphic enough",Dl zs ", "]
+              zs -> failDd "" 1 info [Ds "Type not polymorphic enough",Dl zs ", "]
          ; injectAccum passOn
          ; return s }   
 
@@ -980,7 +989,7 @@ instance TyCh m => Typable m Tau Tau where
       do { (fk,a) <- infer ff
          ; fk2 <- zonk fk
          ; (arg_ty,res_ty) <- unifyKindFun ff fk2
-         ; let err disp mess = failDd 2 disp
+         ; let err disp mess = failDd "" 2 disp
                 [Ds "\nwhile checking the kind of "
                 ,Dd t, Ds " we expected ",Dd x
                 ,Ds " to have kind ",Dd arg_ty,Ds " because ",Dd ff
@@ -1055,7 +1064,7 @@ mustBe (term,qual) t comput expect = handleM 1 (zap t comput expect) (errZap exp
          do { tz <- zonk t
             ; rz <- zonk r
             ; computz <- zonk comput
-            ; failDd 1 dispIn
+            ; failDd "" 1 dispIn
                [Ds ("\nWe computed the "++term++" ")
                ,Dd tz,Ds (" to have "++qual++" ")
                ,Dd computz,Ds "\nWe expected it to be "
@@ -1100,7 +1109,7 @@ hasKind :: TyCh m => String -> Sigma -> Kind -> m ()
 hasKind name sigma (MK kind) =
   do { let new nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
      ; (env,eqs,rho) <- unBindWith new sigma
-     ; let err disp1 message = failDd 3 disp1
+     ; let err disp1 message = failDd "" 3 disp1
                [Ds ("\nWhile checking the kind of constructor\n   "++name++" :: ")
                ,Dl eqs ", ",Ds " =>\n      ",Dd rho, Ds message]
            err2 disp mess = err disp ("\nWe checked the well formedness of constraints, and found: "++mess)
@@ -1116,9 +1125,14 @@ kindPred(Equality a b) =
   handleM 1 (do{(k1::Tau,t1) <- infer a; t2 <- check b k1; return(Equality t1 t2)})
     (\ dis s -> failD 0 [Ds "While checking equality constraint: "
                         ,Dd a,Ds " = ",Dd b,Ds ("\nkinds do not match"++s)])
-kindPred (x@(Rel nm ts)) =
+kindPred(NotEqual a b) = 
+  handleM 1 (do{(k1::Tau,t1) <- infer a; t2 <- check b k1; return(Equality t1 t2)})
+    (\ dis s -> failD 0 [Ds "While checking dis-equality constraint: "
+                        ,Dd a,Ds " != ",Dd b,Ds ("\nkinds do not match"++s)])
+
+kindPred (x@(Rel ts)) =
   do { ts2 <- check ts (Star 0)
-     ; return(Rel nm ts2)}
+     ; return(Rel ts2)}
      
 -----------------------------------------------------
 -- A helper function for reporting errors when "morepoly" fails.
@@ -1136,7 +1150,7 @@ escapes2 bad = failD 0 [Dlf f bad "\n"]
 
 
 captured sig1 sig2 rho dispInfo mess =
-  failDd 0 dispInfo 
+  failDd "" 0 dispInfo 
     [Dd sig1,Ds " is not more polymorphic than\n"
     ,Dd sig2,Ds ("\n"++"Because the skolemized version of the second type: ")
     ,Dd rho,Ds ("\nhas the following problem: "++mess)]
@@ -1178,19 +1192,16 @@ instance TyCh m => Subsumption m Sigma (Expected Rho) where
       do { (preds,rho1) <- instanTy s1; 
          ; injectAccum preds -- ## DO THIS WITH THE PREDS?
          ; writeRef ref rho1
-         --; assumptions <- getBindings
-         --; outputString "In morepoly Sigma (Expected Rho)"
-         --; handleM 1 (solve2 oblig1) -- (solve False "morePoly Sigma Rho Infer" assumptions oblig1)
-         --    (no_solution s1 rho1 rho1)
          }
 
 instance TyCh m => Subsumption m Sigma Rho where
   morepoly sigma1 rho2 =
-     do { -- outputString ("\nIn morepoly Sigma Rho\nSigma = "++show sigma1++"\nRho = "++show rho2);
+     do { -- d0 <- showD [Ds "\nIn morepoly Sigma Rho\nSigma = ",Dd sigma1, Ds "\nRho = ",Dd rho2];
           (preds,rho1) <- instanTy sigma1 
         ; injectAccum preds -- ## DO THIS WITH THE PREDS?
-        -- ; outputString ("rho1 = "++show rho1++" rho2 = "++show rho2)
+        -- ; d1 <- warnD d0 [Ds "rho1 = ", Dd rho1, Ds "\n preds = ",Dd preds]
         ; ((),oblig2) <- extract(morepoly rho1 rho2)
+        -- ; d2 <- warnD d1 [Ds "\nobligations = ",Dd oblig2]
         ; (preds2,unifier) <- handleM 1 (mguM oblig2)  
                                         (no_solution sigma1 rho2 rho1)
         -- ; warn [Ds "\nunifier = ",Dd unifier]
@@ -1204,31 +1215,15 @@ norm (Equality x y) =
      ; b <- nfTau y
      ; ((),oblig2) <- extract(unify a b)
      ; return oblig2}
-norm (Rel nm ts) =
-  do { ts2 <- nfTau ts; return[Rel nm ts2] }
-
-{-
-solve3 :: TyCh m => [Pred] -> m [Pred]
-solve3 [] = return []
-solve3 preds = 
-  do { preds1 <- zonk preds
-     ; let (ps,eqns) = split preds1     
-     ; eqns3 <- mapM nfTauPair eqns
-     
-     ; outputString ("eqn = "++show preds++"\nequalities = "++show eqns3++"\npredicates = "++show ps)
-     ; case mgu eqns3 of
-        Left sub -> do { mutVarSolve sub; return ps}
-        Right (mess,t1,t2) -> 
-            let f d (x,y) = (d,"("++sht x++" , "++sht y++")")
-            in failD 0
-              [Ds "While trying to solve ",Dd preds1
-              ,Ds " we get the residual "
-              ,Dd eqns3,Ds "\n",Dlf f eqns3 ", "]
-     }
--}
+norm (NotEqual x y) = 
+  do { a <- nfTau x
+     ; b <- nfTau y
+     ; return [NotEqual a b]}     
+norm (Rel ts) =
+  do { ts2 <- nfTau ts; return[Rel ts2] }
 
 
-no_solution sigma rho skoRho info s = failDd 1 info
+no_solution sigma rho skoRho info s = failDd "" 1 info
      [Ds "while checking that\n   ", Dd sigma
      ,Ds "\nwas more polymorphic than\n   ",Dd rho
      ,Ds "\nwe skolemized the second to get\n   ", Dd skoRho
@@ -1236,6 +1231,7 @@ no_solution sigma rho skoRho info s = failDd 1 info
                    
  
 
+----------------------------------------------------------------
 
 instance TyCh m => Subsumption m Rho Rho where
  morepoly x y = f x y where
@@ -1270,7 +1266,8 @@ checkSum x = failD 0 [Ds "Expecting a sum type: ",Dd x]
 
 showPred xs = plistf g "{" xs ", " "}"
   where g (Equality x y) = show x ++ " = " ++ show y
-        g (Rel nm ts) = show ts
+        g (NotEqual x y) = show x ++ " != " ++ show y
+        g (Rel ts) = show ts
   
 
 showPairs xs = plistf g "{" xs ", " "}"
@@ -1284,7 +1281,7 @@ extract comp = do { (a,eqs) <- extractAccum comp
 --------------------------------------------------------------------------
 -- Parsing types. Note that we parse type PT, and then translate
 
-data PPred = Equality' PT PT | Rel' String PT
+data PPred = Equality' PT PT | NotEqual' PT PT | Rel' String PT
 
 data PT
   = TyVar' String
@@ -1324,12 +1321,14 @@ getFree bnd (Forallx q xs eqs t) = f bnd xs t `union` g bnd xs eqs
       
         g bnd ((s,a,q):xs) ys = g (s:bnd) xs ys
         g bnd [] ((Equality' a b):xs) = (getFree bnd a) `union` (getFree bnd b) `union` g bnd [] xs 
+        g bnd [] ((NotEqual' a b):xs) = (getFree bnd a) `union` (getFree bnd b) `union` g bnd [] xs 
         g bnd [] ((Rel' nm ts):xs) = (getFree bnd ts)  `union` (g bnd [] xs) 
         g bnd _ [] = []
          
         h bnd t free = union (getFree bnd t) free
 
 getFreePred bnd (Equality' x y) = getFree bnd x `union` getFree bnd y
+getFreePred bnd (NotEqual' x y) = getFree bnd x `union` getFree bnd y
 getFreePred bnd (Rel' nm ts) =  getFree bnd ts 
 
 getFreePredL bnd xs = foldr g [] xs 
@@ -1353,6 +1352,7 @@ getF union (Forallx q xs eqs t) = f xs t `union` g eqs
         f ((s,a,q):xs) t = (getF union a) `union` (f xs t)
         g [] = []
         g ((Equality' a b):xs) = (getF union a) `union` (getF union b) `union` g xs
+        g ((NotEqual' a b):xs) = (getF union a) `union` (getF union b) `union` g xs
         g ((Rel' nm ts):xs) =(getF union ts) `union` (g xs)
         
         
@@ -1385,6 +1385,7 @@ subPT sigma fresh x =
        ; let sigma1 = xs1 ++ sigma
              rcall1 x = subPT sigma1 fresh x
              f (Equality' x y) = do { a <- rcall1 x; b <- rcall1 y; return(Equality' a b)}
+             f (NotEqual' x y) = do { a <- rcall1 x; b <- rcall1 y; return(NotEqual' a b)}
              f (Rel' nm ts) = do { ys <- rcall1 ts; return(Rel' nm ys)}
        ; eqs1 <- mapM f eqs
        ; t1 <- rcall1 t
@@ -1408,10 +1409,12 @@ ptsub sigma x =
   (Forallx quant xs eqs t) -> 
    let sub1 (nm,kind,quant) = (nm,ptsub sigma kind,quant)
        sub2 (Equality' t1 t2) = Equality' (rcall t1) (rcall t2)
+       sub2 (NotEqual' t1 t2) = NotEqual' (rcall t1) (rcall t2)
        sub2 (Rel' nm ts) = Rel' nm (rcall ts)
     in Forallx quant (map sub1 xs) (map sub2 eqs) (rcall t)
 
 ppredsub sub (Equality' x y) = Equality' (ptsub sub x) (ptsub sub y)
+ppredsub sub (NotEqual' x y) = NotEqual' (ptsub sub x) (ptsub sub y)
 ppredsub sub (Rel' x y) = Rel' x (ptsub sub y)
    
 --------------------------------------------------------------------
@@ -1435,10 +1438,15 @@ toEqs env ((Equality' a b):xs) =
      ; n <- toTau env b
      ; ys <- toEqs env xs
      ; return((Equality m n):ys) }
+toEqs env ((NotEqual' a b):xs) =
+  do { m <- toTau env a
+     ; n <- toTau env b
+     ; ys <- toEqs env xs
+     ; return((NotEqual m n):ys) }     
 toEqs env ((Rel' nm ts):xs) =
   do { zs <- toTau env ts
      ; ys <- toEqs env xs
-     ; return((Rel nm zs):ys) }     
+     ; return((Rel zs):ys) }     
 
 
 
@@ -1502,8 +1510,9 @@ readTau n env (t@(Forallx Ex xs eqs body)) =
       ; r <- readTau 0 env2 body
       ; eqs2 <- toEqs env2 eqs
       ; return(TyEx(windup fargs (eqs2,r))) }
+readTau n env (Forallx All [] [] body) = readTau n env body
 readTau n env (t@(Forallx q xs eqs body)) = 
-  fail ("Sigma type in Tau context: "++show t)
+  fail ("\n\nSigma type in Tau context: "++show t)
 readTau n env (t@(Tlamx s x)) = fail ("No lambda types in rankN: "++show t)
 
  
@@ -1611,23 +1620,34 @@ parseStar = lexeme(do{char '*'; ds <- many digit; return(Star' (val ds))})
         val [] = 0
         val xs = read xs
 
+data ArrowSort 
+  = Single   -- ->
+  | Wavy     -- ~>
+  | Fat      -- =>
+
 arrTyp n =
    do { ts <- many1 (simpletyp n)-- "f x y -> z"  parses as "(f x y) -> z"
       ; let d = (applyT' ts)     -- since (f x y) binds tighter than (->)
       ; range <- possible 
-                 ((do {symbol "->"; ans <- typN n; return(True,ans)}) <|>
-                  (do {symbol "~>"; ans <- typN n; return(False,ans)}) )
+           ((do {symbol "->"; ans <- typN n; return(Single,ans)})  <|>
+            (do {symbol "~>"; ans <- typN n; return(Wavy,ans)})
+           )
       ; case range of
            Nothing -> return d
-           Just(True,r) -> return(Rarrow' d r)
-           Just(False,r) -> return(Karrow' d r)
+           Just(Single,r) -> return(Rarrow' d r)
+           Just(Wavy,r) -> return(Karrow' d r)
       }
 
+allPrefix n =
+    do { q2 <- ((reserved "forall") >> (return All)) <|> 
+               ((reserved "exists") >> (return Ex))
+       ; ns <- many1 (argument n All)
+       ; symbol "."
+       ; return(q2,ns)
+       }
+
 allTyp n =
-  do { q2 <- ((reserved "forall") >> (return All)) <|> 
-             ((reserved "exists") >> (return Ex))
-     ; ns <- many1 (argument n All)
-     ; symbol "."
+  do { (q2,ns) <- allPrefix n
      ; eqs <- props n
      ; t <- typN n
      ; return (Forallx q2 ns eqs t)
@@ -1635,39 +1655,45 @@ allTyp n =
 
 argument n q = 
   (do { x <- identifier; return(x,AnyTyp (n+1),q)})  <|>
-  parens (do { x <- identifier; reservedOp "::"; k <- typN n; return(x,k,q)})
+  (parens (do { x <- identifier
+              ; (reservedOp "::")
+              ; k <- typN n
+              ; return(x,k,q)})) 
+  
 
 typN :: Int -> Parser PT
 typN n = allTyp n <|> arrTyp n
 
+------------------------------------------------
 
 qual = (reservedOp "="  >> return "=" ) <|> 
        (reservedOp "!=" >> return "!=")
 
---tt = parse (try (do { x <- proposition 0; symbol "=>"; (return x)})) "One => Two"
---Right (t1,ss) = parse2 (arrTyp 0)  "One => Two"
---tt = parse2 ((possible (do { t <- qual; x <- arrTyp 0; return(t,x)})))  ss
-
+-- A proposition looks like:  t1 = t2,  t1 != t2, or   T t1 t2 t3
 
 proposition n =
- do { t1 <- arrTyp n 
+ do { t1 <- typN n
     ; rest <- (possible (do { t <- qual; x <- arrTyp n; return(t,x)}))
     ; case rest of
         Just("=",t2)  -> return(Equality' t1 t2)
-        Just("!=",t2) -> return(Rel' "(!=)" (TyApp' (TyApp' (TyCon' "(!=)") t1) t2))
-        Nothing -> typToRel t1 t1
+        Just("!=",t2) -> return(NotEqual' t1 t2)
+        Nothing -> case isTyConAp t1 of
+                     Just nm -> return(Rel' nm t1)
+                     Nothing -> fail "not prop"
     }
 
+isTyConAp (TyApp' (TyApp' (TyCon' "(,)") x) y) = Nothing
+isTyConAp (TyApp' (TyCon' t) x) = Just t
+isTyConAp (TyApp' (TyVar' t) x) = Just t
+isTyConAp (TyApp' f x) = isTyConAp f
+isTyConAp x = Nothing
 
 props :: Int -> Parser [PPred]
-props n = (try (do { x <- proposition n; symbol "=>"; g x})) <|>
+props n = (try (do { x <- proposition n; symbol "=>"; return[x]})) <|>
           (try (do { xs <- parens(sepBy (proposition n) comma)
                    ; symbol "=>"; return xs}))                     <|>
           (return [])
-  where g (Rel' "(,)" x) = mapM (\ t -> typToRel t t) (unPair x)
-        g x = return[x]
-        unPair (TyApp' (TyApp' (TyCon' "(,)") x) y) = x:(unPair y)
-        unPair y = [y] 
+  
  
 typToRel t (TyApp' (TyCon' nm) x) = return(Rel' nm t)
 typToRel t (TyApp' f x) = typToRel t f
@@ -1675,6 +1701,35 @@ typToRel t (TyCon' nm) = return(Rel' nm t)
 typToRel t _ = fail ("Expecting a relational predicate, found:\n  "++ show t)  
    
    
+-- A typing has many forms, some are listed below
+-- f :: a -> b                              simple
+-- f :: P a => a -> b                       qualified
+-- f :: a=b => a -> b                       equality qualified
+-- f :: a!=b => a -> b                      disequality
+-- f :: (a=b,P a) => a -> b                 multiply qualified
+-- f :: forall a b . (a=b,P a) => a -> b    explicit forall
+
+typingHelp n = 
+  do { reservedOp "::"
+     ; prefix <- possible (allPrefix n)
+     ; preds <- props n
+     ; body <- typN n
+     ; return(prefix,preds,body)
+     }
+
+typing n = 
+  do { (prefix,preds,body) <- typingHelp n
+     ; case prefix of
+        Nothing -> let predfree = getFreePredL [] preds
+                       bodyfree = getFree [] body
+                       free = nub(predfree++bodyfree)
+                       f x = (x,AnyTyp (n+1),All)
+                   in return(Forallx All (map f free) preds body)
+        Just(q2,ns) -> return (Forallx q2 ns preds body)
+     }
+                             
+--------------------------------------------------------                             
+
 pt s = case parse2 (typN 0) s of { Right(x,more) -> x; Left s -> error (show s) }
 peqt s = case parse2 (arrTyp 0) s of { Right(x,more) -> x; Left s -> error s }
 
@@ -1707,6 +1762,7 @@ subpairs =
 
 instance NameStore d => Exhibit d PPred where
   exhibit d (Equality' x y) = (d,show x++"="++show y)
+  exhibit d (NotEqual' x y) = (d,show x++" != "++show y)
   exhibit d (Rel' nm ts) = (d,show ts)
 
 instance NameStore d => Exhibit d PT where
@@ -1732,6 +1788,7 @@ instance Show PT where
           f ((s,AnyTyp _,q):xs) = s ++ shq q++ " "++f xs
           f [(s,k,q)] = "("++ s ++ shq q++ "::" ++ show k ++") . "
           f ((s,k,q):xs) = "("++ s++ shq q ++ "::" ++ show k ++") "++f xs
+          f [] = "" 
           g [] = ""
           g xs = plistf show "(" xs "," ") => "
           shq All = ""
@@ -1873,7 +1930,8 @@ subLTau env (Cons (k,q) x) = Cons (subKind env k,q) (bind nm xs)
 subPred :: [(TcTv,Tau)] -> [Pred] -> [Pred]
 subPred env xs = map f xs 
    where f (Equality x y) = Equality (subTau env x) (subTau env y)
-         f (Rel nm ts) = Rel nm  (subTau env ts)
+         f (NotEqual x y) = NotEqual (subTau env x) (subTau env y)
+         f (Rel ts) = Rel (subTau env ts)
 
 subPairs :: [(TcTv,Tau)] -> [(Tau,Tau)] -> [(Tau,Tau)]
 subPairs env xs = map f xs where f (x,y) = (subTau env x,subTau env y)
@@ -1939,7 +1997,8 @@ varsOfLTau (Cons (k,q) x) = union2(varsOfKind k) (varsOfLTau more)
  
 varsOfPred [] = ([],[])
 varsOfPred ((Equality x y):xs) = union2 (union2 (varsOfTau x) (varsOfTau y)) (varsOfPred xs)
-varsOfPred ((Rel nm ts):xs) = union2 (varsOfTau ts) (varsOfPred xs)
+varsOfPred ((NotEqual x y):xs) = union2 (union2 (varsOfTau x) (varsOfTau y)) (varsOfPred xs)
+varsOfPred ((Rel ts):xs) = union2 (varsOfTau ts) (varsOfPred xs)
      
 varsOfRho (Rarrow x y) = union2 (varsOfSigma x) (varsOfRho y)
 varsOfRho (Rpair x y) = union2 (varsOfSigma x) (varsOfSigma y)
@@ -1952,8 +2011,18 @@ tvsTau x = fst(varsOfTau x)
 ---------------------------------------------------------------
 -- Computing most general unifiers. Done in a side effect free way
 -- Note that Flexi vars might be bound in the unifer returned.
--- A computational pass can force these to be unified unified later if
+-- A computational pass can force these to be unified later if
 -- necessary. See the function "mutVarSolve" and "mguM"
+
+a = TcTv(Tv 5 (Skol "a") star)
+b = TcTv(Tv 6 (Skol "b") star)
+c = TcTv(Tv 7 (Skol "c") star)
+
+ps = [ Equality b a, Equality c a]
+
+Left qas = mgu [(b,a),(c,a)]
+wsd = subTau qas (tpair a (tpair b c))
+
 
 mgu :: [(Tau,Tau)] -> Either [(TcTv,Tau)] (String,Tau,Tau)
 mgu [] = Left []
@@ -2005,7 +2074,7 @@ mguM :: TyCh m => [Pred] -> m ([Pred],[(TcTv,Tau)])
 mguM preds = 
   do { let (ps,eqs) = split preds 
      ; xs2 <- nf eqs
-     ; ps2 <- zonk ps
+     ; ps2 <- nf ps
      ; case mgu xs2 of
         Left ys -> do { unifier <- mutVarSolve ys
                       ; ps3 <- sub ([],unifier,[]) ps2
@@ -2014,20 +2083,20 @@ mguM preds =
             do { x2 <- nf x
                ; y2 <- nf y
                ; failD 0 
-                  [Ds "While computing an mgu for "
-                  ,Dd xs2,Ds ("\n"++s++" ")
-                  ,Dd x,Ds "   !=   ",Dd y,Ds "\n"
-                  ,Ds (sht x2++"   !=   "++sht y2)]}
+                  [Ds "While computing an mgu for:\n   "
+                  ,Dd xs2,Ds ("\n   "++s++" ")
+                  ,Dd x,Ds "   !=   ",Dd y
+                  ]}
                
      }
 
 mutVarSolve [] = return []
+mutVarSolve ((v@(Tv unq (Flexi _) k),tau):more) =  
+  do { unifyVar {- accumulateMGU -} v tau
+     ; mutVarSolve more }   -- Always bind this way first
 mutVarSolve ((x,TcTv(v@(Tv unq (Flexi _) k))):more) = 
   do { unifyVar {- accumulateMGU -} v (TcTv x)
-     ; mutVarSolve more }
-mutVarSolve ((v@(Tv unq (Flexi _) k),tau):more) = 
-  do { unifyVar {- accumulateMGU -} v tau
-     ; mutVarSolve more }     
+     ; mutVarSolve more }   -- Use this case only if case above doesn't match
 mutVarSolve (x:xs) = do { ys <- mutVarSolve xs; return(x:ys) }
 
 --------------------------------------------------------------------
@@ -2109,7 +2178,8 @@ shtS (Forall xs) =
   in "(forall\n  "++(f ys)++ plistf shtEq "(" eqs "," ")"++" => "++shtR rho++")"
 
 shtEq (Equality x y) = "("++sht x++"="++sht y++")"
-shtEq (Rel nm ts) = "Pred("++sht ts++")"
+shtEq (NotEqual x y) = "("++sht x++"!="++sht y++")"
+shtEq (Rel ts) = "Pred("++sht ts++")"
 
 
 -- =============================================================
@@ -2239,6 +2309,9 @@ exhibitLdata quant d1 args =  (d4,prefix ++ eqsS ++ rhoS)
 -- Now some instances for exhibiting different type like things
 -- All these are paramterized by "d" being a NameStore
 
+instance NameStore d => Exhibit d Int where
+  exhibit d n = (d,show n)
+
 -- Kind
 instance NameStore d => Exhibit d Kind where 
   exhibit d1 (MK k) = exhibit d1 k
@@ -2324,10 +2397,13 @@ instance NameStore d => Exhibit d [(Tau,Tau)] where
 
 -- Pred
 instance NameStore d => Exhibit d Pred where
-  exhibit xs (Rel nm ts) = exhibit xs ts
+  exhibit xs (Rel ts) = exhibit xs ts
   exhibit xs (Equality x y) = (zs,a++"="++b)
     where (ys,a) = exhibit xs x
           (zs,b) = exhibit ys y
+  exhibit xs (NotEqual x y) = (zs,a++" != "++b)
+    where (ys,a) = exhibit xs x
+          (zs,b) = exhibit ys y          
 
 -- [Pred]
 instance NameStore d => Exhibit d [Pred] where
@@ -2518,8 +2594,10 @@ tevalLRho env xs =
 
 tevalEq env (Equality x y) = 
      do { a <- teval env x; b<- teval env y; return(Equality a b)}
-tevalEq env (Rel nm ts) =
-     do { ys <- teval env ts; return(Rel nm ys)}
+tevalEq env (NotEqual x y) = 
+     do { a <- teval env x; b<- teval env y; return(NotEqual a b)}     
+tevalEq env (Rel ts) =
+     do { ys <- teval env ts; return(Rel ys)}
      
 tevalRho env (Rtau x) = do { a <- teval env x; return(Rtau a) }
 tevalRho env (Rarrow s r) = 
@@ -2558,9 +2636,12 @@ nfTauPair (x,y) = binaryLift (,) (nfTau x) (nfTau y)
 
 ------------------------------------------------------------
 failD :: TyCh m => Int -> [DispElem] -> m b
-failD n elems =  do { d <- getDisplay; failDd n d elems }
+failD n = failK "" n
+
+failK :: TyCh m => String -> Int -> [DispElem] -> m b
+failK k n elems =  do { d <- getDisplay; failDd k n d elems }
     
-failDd n d elems = failP n d2 s
+failDd k n d elems = failP k n d2 s
    where(d2,s) = displays d elems
 
 warnD d elems = do {outputString message; return d2}
@@ -2573,3 +2654,47 @@ whenDd True d elems = warnD d elems
 whenDd False d elems = return d
 
 whenD b elems = whenDd b initDI elems
+
+showD xs = warnD initDI xs 
+------------------------------------------------------
+
+solveHP ::  TyCh m => [Pred] -> [Pred] -> m [Pred]
+solveHP truths oblig =
+  do { truths2 <- zonk truths
+     ; oblig2 <- zonk oblig
+     ; let (hotruths,fots) = span higherOrder truths2           
+           counts = map (countM oblig2) hotruths
+           force (1,u) = mutVarSolve u
+           force (n,u) = return []
+     ; mapM force counts
+     ; truths3 <- zonk truths2
+     ; oblig3 <- zonk oblig2
+     ; solve truths3 oblig3
+     }
+
+
+-- When we map "matchRel p" over a list we get a list of (count,unifier).
+-- Interpret this as (1,unifer) if "p"  matches and (0,[]) if it doesn't.
+-- "sumM"ing up such a list we get (number_of_matches,first_unifier)
+-- if it is (1,unifer) then there was exactly 1 match and unifer 
+-- comes from that match. For those with exactly 1 match, we can force
+-- the unification to take place, by using solveMutVars.
+
+sumM :: [(Int,[a])] -> (Int,[a])
+sumM [] = (0,[])
+sumM ((n,xs):zs) = (n+m,xs) where (m,_) = sumM zs
+
+matchRel (Rel p) (Rel q) = 
+  case mgu [(p,q)] of 
+    Left u -> (1,u)
+    Right (a,b,c) -> (0,[])
+matchRel p q = (0,[])
+
+countM ps p = sumM(map (matchRel p) ps)
+
+higherOrder (Rel t) = ho t
+  where ho (TyApp f y) = ho f 
+        ho (TyCon nm k) = False
+        ho (TcTv _) = True
+        ho _ = False
+higherOrder _ = False        

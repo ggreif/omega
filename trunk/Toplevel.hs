@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 
 module Toplevel where
@@ -17,7 +17,6 @@ import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio)
 import IO
-import IOExts
 import List(partition,(\\),nub)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo)
 import SCC(topSortR)
@@ -29,6 +28,8 @@ import Data.FiniteMap
 import Directory
 import Char(isAlpha,isDigit)
 
+import System.Console.Readline(setCompletionEntryFunction)
+-- setCompletionEntryFunction :: Maybe (String -> IO [String]) -> IO ()
 -------------------------------------------------------------
 -- The programmer interface: the top level loop.
 -- it performs the read-eval-typecheck-print loop.
@@ -47,11 +48,11 @@ readInt nullNum s =
 
 readEvalPrint :: [String] -> (TcEnv) -> FIO(TcEnv)
 readEvalPrint sources tenv =
-  do { input <- readln
-     ; z <- parseString pCommand (backspace input [])
+  do { let tabExpandFun = completionEntry tenv
+     ; input <- lineEditReadln "prompt> " tabExpandFun
+     ; z <- parseString pCommand input
      ; case z of
         Left s -> do {writeln s; return (tenv) }
-
         Right(x,rest) ->
          case x of
           (ColonCom "q" _) -> error "quitting"
@@ -87,7 +88,7 @@ readEvalPrint sources tenv =
                 ; return (typeEnv0) }
           (ColonCom "rules" s) ->
              let rs = getRules s tenv
-                 f x = writeln(pprint x);
+                 f newstyle = writeln(pprint newstyle);
              in do { writeln "rules"
                    ; mapM f rs
                    ; return tenv}
@@ -138,13 +139,12 @@ envArg tenv (s@(c:cs))
                    ; showSomeVals p tenv
                    ; return tenv}
   | True = do { writeln ("Bad arg ':env "++s++"'"); return tenv}
-       
+envArg tenv [] = return tenv       
 
 -- Repeat Read-Eval-Print until the :q command is given
 
 topLoop sources env = tryAndReport
-  (do { write "prompt> "
-      ; fio(hFlush stdout)
+  (do { fio(hFlush stdout)
       ; env' <-  (readEvalPrint sources env)
       ; topLoop sources env'
       }) (report (topLoop sources env))
@@ -174,7 +174,7 @@ errF disp loc n s = error ("At "++show loc++"\n"++s)
 report :: FIO a -> Loc -> DispInfo -> String -> FIO a
 report continue Z   dis message = do { writeln message; continue }
 report continue loc dis message =
-   do { writeln ("\nNear "++(show loc)++"\n"++message); continue }
+   do { writeln ("\n\n**** Near "++(show loc)++"\n"++message); continue }
 
 ---------------------------------------------------------------------------
 -- load just the prelude and then go into the toplevel loop

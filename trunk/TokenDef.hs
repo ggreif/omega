@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module TokenDef(tokenDef) where
 
@@ -19,7 +19,8 @@ stratusStyle = haskellStyle
    , reservedNames = ["let","case","in","of","data","kind","prop", "where","splice"
                      ,"type","then","else","deriving","reify"
                      ,"circuit"
-                     ,"forall","exists","L","R","Ex","check","lazy","under","flag", "monad", "primitive"
+                     ,"forall","exists","L","R","Ex","check","lazy","under","flag"
+                     , "monad", "primitive", "unreachable"
                      , "mono"
                      --,"exp","dec","pat","match","clause","import"
                      ]
