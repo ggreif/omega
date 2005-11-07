@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module PrimParser (parserPairs) where
 
@@ -11,7 +11,7 @@ import ParserAll
 import Encoding2
 import Syntax(V(..),Var(..),Lit(..),Inj(..))
 import Monads(FIO(..),Exception(..))
-import IOExts(unsafePerformIO)
+import System.IO.Unsafe(unsafePerformIO)
 import Value(pv,analyzeWith)
 
 
@@ -39,7 +39,7 @@ backwards fun v = help ((getf fun) v)
              case unsafePerformIO w of
                 Ok (v@(Vlazy _ _)) -> help(analyzeWith return v)
                 Ok v -> v
-                Fail dis loc _ mess -> error("Near "++show loc++"\n"++mess)
+                Fail dis loc _ _ mess -> error("Near "++show loc++"\n"++mess)
         getf (Vf f _ _) = f
         getf (Vprimfun _ f) = f
         getf v = error ("Not function in backwards: "++ show v)
@@ -136,7 +136,7 @@ bindParserP = lift2 "bindParser" bind where
                         Vprimfun _ f -> f v
       ; case unsafePerformIO z of
           Ok(Vparser q) -> q
-          Fail dis loc n message -> fail ("Near "++show loc++"\n"++message)
+          Fail dis loc n k message -> fail ("\n\n**** Near "++show loc++"\n"++message)
       }))
            
 failParserP = lift1 "failParser" f where

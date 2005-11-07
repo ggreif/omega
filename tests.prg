@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 import "LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
@@ -357,7 +357,7 @@ liftV :: Var e t -> Var (e,a) t
 liftV Z2 = S2 Z2
 liftV (S2 v) = S2(liftV v)
 
-promote :: (forall a b c . (Exp a b) -> Exp ((a,c)) b)
+promote :: forall a b c . (Exp a b) -> Exp ((a,c)) b
 promote = lift1 liftV 
 
 demV ::  Var (e,a) t -> Var e t 
@@ -574,3 +574,74 @@ compare (S x) (S y) =
    case compare x y of  
       R LE -> R LE
       L LE -> L LE  
+      
+----------------------------------------------
+-- Test parser for various forms of prototyping
+
+f1 :: a -> a
+f1 x = x
+
+f2 :: LE a b => Nat' a -> Nat' a
+f2 x = x
+
+g3 :: a=b => a -> b                   
+g3 x = x
+
+g4 :: a!=b => a -> Int
+g4 x = 5
+
+g5 :: (a=b,LE a b) => Nat' a -> Nat' b
+g5 x = x
+
+f6 :: forall a b . (a=b,LE a b) => Nat' a -> Nat' b
+f6 x = x
+
+--------------------------------------------------------
+-- test constrained types in data decls
+
+kind Latice = None | Reads | Writes | Both
+
+prop Lub :: Latice ~> Latice ~> Latice ~> *0 where
+  NRR :: Lub None Reads Reads
+  
+  
+data M :: Latice ~> *0 ~> *0 where
+  Bind2 :: Lub i j k => M i a -> (a -> M j b) -> M k b
+  Read :: M Reads String
+  Write :: String -> M Writes ()
+  Unit2 :: a -> M i a
+  Bind :: forall i j k a b . Lub i j k => M i a -> (a -> M j b) -> M k b 
+
+-------------------------------------------------------
+-- exercising the unreachable clause
+
+transA :: LE a b -> LE b c -> LE a c
+transA Base Base = Base
+transA (Step z) Base = unreachable
+transA Base (Step z) = Base
+transA (Step x) (Step y) = (Step(trans x y))
+
+transP :: LE a b -> LE b c -> LE a c
+transP x y =
+  case (x,y) of
+   (Base,Base) -> Base
+   (Step z,Base) -> unreachable
+   (Base,Step z) -> Base
+   (Step x,Step y) -> (Step(transP x y))
+   
+##test "Unreachable 1"
+  trans1 :: LE a b -> LE b c -> LE a c
+  trans1 Base Base = unreachable 
+
+##test "Unreachable 2"
+  trans2 :: LE a b -> LE b c -> LE a c
+  trans2 (Step z) Base = undefined 
+
+##test "Unreachable 3"
+  trans3 :: LE a b -> LE b c -> LE a c
+  trans3 x y = case (x,y) of (Base,Base) -> unreachable
+
+##test "Unreachable 4"
+  trans4 :: LE a b -> LE b c -> LE a c
+  trans4 x y = case (x,y) of (Step z,Base) -> undefined
+

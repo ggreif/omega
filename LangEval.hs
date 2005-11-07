@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jun 23 11:51:26 Pacific Daylight Time 2005
--- Omega Interpreter: version 1.1 (revision 1)
+-- Mon Nov  7 10:25:59 Pacific Standard Time 2005
+-- Omega Interpreter: version 1.2
 
 module LangEval where
 
@@ -12,14 +12,14 @@ import Syntax
 import Encoding2
 import Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
-              write,writeln,readln,HasNext(..),HasOutput(..))
+              write,writeln,HasNext(..),HasOutput(..))
 import Value
 import RankN --(Sigma,runType,liftType, sigma4Eq,sigma4Hide,ToEnv,
              -- star,star_star,poly,intT)
 import Char(chr,ord)
 
 import ParserDef(pe)
-import IOExts
+import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
@@ -258,6 +258,7 @@ evalBody env (Normal e) failcase = eval env e
 evalBody env (Guarded xs) failcase = test env xs
  where test env [] = failcase
        test env ((x,y):xs) = ifV (eval env x) (eval env y) (test env xs)
+evalBody env Unreachable failcase = fail "Impossible! Execution of Unreachable code."    
 
 px x = putStrLn x
 
