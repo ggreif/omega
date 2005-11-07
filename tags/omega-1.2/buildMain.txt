@@ -1,0 +1,17 @@
+cd ../res	
+-- Profile and no opt
+ghc Main.hs -prof -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
+
+mv a.out omega.exe
+
+
+-- Compile but No Profile and No opt
+ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
+
+
+-- Compile and Optimize
+ghc Main.hs -O -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
+
+used when building the distribution
+
+./omega.exe -prim "D:/work/papers/OmegaManual/kinds.tex" "D:/work/papers/OmegaManual/infix.tex" 
