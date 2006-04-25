@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 module Value where
 import Auxillary(plist,plistf)
@@ -25,7 +25,7 @@ showenv (Ev xs) =
 type EnvFrag = [(Var,V)]
 type Perm = [(Name,Name)]
 
-compose = Vprimfun "(.)" (\ 
+compose = Vprimfun "(.)" (\
 
 data V
   = Vlit Lit
@@ -89,7 +89,7 @@ instance Swap V where
   swaps cs (VChrSeq s) = VChrSeq s
   swaps cs (Vparser p) = Vparser p
   swaps cs Vbottom = Vbottom
-  
+
 instance Swap Ev where
   swaps [] ev = ev
   swaps cs (Ev xs m) = Ev (swaps cs xs) (swaps cs m)
@@ -119,7 +119,7 @@ instance Swap Exp where
   swaps cs (App x y) = App (swaps cs x) (swaps cs y)
   swaps cs (Lam ps e fs) = Lam (swaps cs ps) (swaps cs e) (swaps cs fs)
   swaps cs (Let ds e) = Let (swaps cs ds) (swaps cs e)
-  swaps cs (Circ vs e ds) = Circ (swaps cs vs) (swaps cs e)(swaps cs ds) 
+  swaps cs (Circ vs e ds) = Circ (swaps cs vs) (swaps cs e)(swaps cs ds)
   swaps cs (Case e ms) = Case (swaps cs e) (map (swapsMatch cs) ms)
   swaps cs (Do ss) = Do (map (swaps cs) ss)
   swaps cs (CheckT e) = CheckT (swaps cs e)
@@ -203,14 +203,14 @@ instance Show V where
             f n (Vcon (Global "S") [x]) = f (n+1) x
             f n (Vswap cs u) = f n (swaps cs u)
             f n (Vlazy cs _) = "("++show n++"+ ...)"
-  -- special case for [Char]  
+  -- special case for [Char]
   show (Vcon (Global ":") [Vlit (Char c),xs]) = "\""++[c]++ f xs
       where f (Vlazy cs _) = "...\""
             f (Vcon (Global ":") [Vlit(Char c),xs]) = [c] ++ f xs
             f (Vcon (Global ":") [Vlazy cs _,xs]) = "..."++f xs
             f (Vcon (Global "[]") []) = "\""
             f (Vswap cs u) = f (swaps cs u)
-  
+
   show (Vcon (Global ":") [x,xs]) = "[" ++ show x ++ f xs
     where f (Vlazy cs _) = " ...]"
           f (Vcon (Global ":") [x,xs]) = "," ++ show x ++ f xs
@@ -259,7 +259,7 @@ pv v = help v
  where help (Vlazy cs comp) = "(Lazy ...)"
        help (Vlit l) = "(Vlit "++(show l)++")"
        help (Vsum inj x) = "(Vsum "++show inj++" "++pv x++")"
-       help (Vprod x y) = "(Vsum "++pv x++","++pv y++")"
+       help (Vprod x y) = "(Vprod "++pv x++","++pv y++")"
        help (Vprimfun s _) = "(Vprimfun "++s++")"
        help (Vfun p body env) = "(fn)"
        help (Vf f push swap) = "(Vf f g h)"

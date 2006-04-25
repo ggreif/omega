@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 module Auxillary where
 
@@ -36,7 +36,7 @@ maybeM mma f mb = do { x <- mma; case x of { Nothing -> mb ; Just x -> f x }}
 {-- Already in Monad
 filterM :: Monad m => (a -> m Bool) -> [a] -> m[a]
 filterM p [] = return []
-filterM p (x:xs) = 
+filterM p (x:xs) =
    ifM (p x) (do { ys <- filterM p xs; return (x:ys)}) (filterM p xs)
 -}
 
@@ -85,7 +85,7 @@ loc0 = Z
 instance Show Loc where
   show (SrcLoc x y) = "line: "++(show x)++" column: "++(show y)
   show Z = "unknown location"
-  
+
 showLocLine (SrcLoc x y) = show x
 showLocLine Z = "unknown line"
 
@@ -98,12 +98,12 @@ report loc s = fail ("\nError near "++(show loc)++"\n"++s)
 
 class Display t where
   disp :: DispInfo -> t -> (DispInfo,String)
-  
+
 newtype DispInfo = DI ([(Integer,String)],[String])
-  
+
 ------------------------------------------------------
 
-
+disp0 = initDI
 initDI = DI([],makeNames "abcdefghijklmnopqrstuvwxyz")
 
 newDI xs = DI(xs,filter (notIn xs) (makeNames "abcdefghijklmnopqrstuvwxyz"))
@@ -123,7 +123,7 @@ makeNames source = g 0 (map (:[]) source)  -- "abc" --> ["a","b","c"]
 
 --dispL ::(DispInfo -> a -> (DispInfo,String)) -> DispInfo -> [a] -> String -> (DispInfo,String)
 dispL f xs [] sep = (xs,"")
-dispL f xs [m] sep = f xs m 
+dispL f xs [m] sep = f xs m
 dispL f xs (m:ms) sep = (zs,a++sep++b)
   where (ys,a) = f xs m
         (zs,b) = dispL f ys ms sep
@@ -136,12 +136,12 @@ disp3 xs1 (x,y,z) = (xs4,sx,sy,sz)
   where (xs2,sx) = disp xs1 x
         (xs3,sy) = disp xs2 y
         (xs4,sz) = disp xs3 z
-        
+
 disp4 xs0 (w,x,y,z) = (xs4,sw,sx,sy,sz)
   where (xs1,sw) = disp xs0 w
         (xs2,sx) = disp xs1 x
         (xs3,sy) = disp xs2 y
-        (xs4,sz) = disp xs3 z         
+        (xs4,sz) = disp xs3 z
 
 disp5 xs0 (w,x,y,z,a) = (xs5,sw,sx,sy,sz,sa)
   where (xs1,sw) = disp xs0 w
@@ -149,9 +149,9 @@ disp5 xs0 (w,x,y,z,a) = (xs5,sw,sx,sy,sz,sa)
         (xs3,sy) = disp xs2 y
         (xs4,sz) = disp xs3 z
         (xs5,sa) = disp xs4 a
-  
+
 useDisplay :: Integer -> (String -> String) -> DispInfo -> (DispInfo,String)
-useDisplay uniq newname (info@(DI(xs,n:ns))) = 
+useDisplay uniq newname (info@(DI(xs,n:ns))) =
   case lookup uniq xs of
     Just s -> (info,s)
     Nothing -> (DI((uniq,name):xs,ns),name)
@@ -165,7 +165,7 @@ mergeDisp (DI(map1,src1)) (DI(map2,src2)) = DI(map3,src3)
 instance Show DispInfo where
   show (DI(xs,names)) = "(DI "++show xs++" "++show(take 6 names)++")"
 
-data DispElem 
+data DispElem
   = forall x . (Display x) =>  Dd x
   | Ds String
   | forall x . (Display x) => Dn x
@@ -174,7 +174,7 @@ data DispElem
   | forall x . Dlf (DispInfo -> x -> (DispInfo,String)) [x] String
   | forall x . Dlg (DispInfo -> x -> (DispInfo,String)) String [x] String String
   | Dr [DispElem]
-  
+
 displays :: DispInfo -> [DispElem] -> (DispInfo,String)
 displays d xs = help d (reverse xs) "" where
  help d [] s = (d,s)
@@ -185,11 +185,12 @@ displays d xs = help d (reverse xs) "" where
                    Ds s -> (d,s)
                    Dn y -> let (d2,s) = disp d y in (d2,s++"\n")
                    Dl ys sep -> dispL disp d ys sep
-                   Df f ys  -> f d ys 
+                   Df f ys  -> f d ys
                    Dlf f ys sep -> dispL f d ys sep
                    Dlg f open [] sep close -> (d,"")
-                   Dlg f open ys sep close -> 
+                   Dlg f open ys sep close ->
                       let (d2,inner) = dispL f d ys sep
                       in (d2,open++inner++close)
 
-
+-- displays d [dv "x" 123]  --->  "x = 1233"
+dv s x = Dr [Ds ", ",Dd x,Ds (s++" = ")]

@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 module LangEval where
 
@@ -24,7 +24,7 @@ import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
 
-  
+
 type Level = Int
 
 type Env = Ev
@@ -165,14 +165,14 @@ evalZ env (Bracket e) =
      ; e3 <- rebuild 1 env e2
      ; return (Vcode e3 empty) }
 evalZ env (Escape e) = fail ("Escape not allowed at level 0" ++ (show (Escape e))) --evalZ env e
-evalZ env (Run e) = 
+evalZ env (Run e) =
   do { x <- eval env e
      ; case x of
         Vcode c env2 -> eval env2 c
         v -> fail ("Run expression:\n  "++show (Run e)++
                    "\nDoes not evaluate to code:\n   "++show v)
      }
-     
+
 evalZ env (Reify s v) = return(push env v)
 evalZ env (Ann x t) = eval env x
 evalZ env e = fail ("\n\nNo such exp yet: "++show e)
@@ -190,7 +190,7 @@ makeR env level perm = Par ext app inc esc
                ; return(Alpha s n',makeR env level ((n,n'):perm)) }
         app v = let name = swaps perm v
                 in case static name env of
-	            Just v -> return(Reify (show name) v)
+                    Just v -> return(Reify (show name) v)
                     Nothing -> return(Var name)
         inc = makeR env (level+1) perm
         esc e = case level of
@@ -212,10 +212,10 @@ makeLam ps body frag perm1 env = Vf (f frag ps) push swapp
         f frag (p:ps) v =
            do { --outputString ("In Vf with: "++show v);
                 z <- mPatStrict Tick frag p v
-	      ; case (z,ps) of
-	         (Just frag2,[]) -> eval (extendV frag2 (swaps perm1 env)) body
-	         (Just frag2,ps) -> return(makeLam ps body frag2 perm1 env)
-	         (Nothing,_) -> fail ("Pattern: "++show p++" does not match: "++show v++"\n")}
+              ; case (z,ps) of
+                 (Just frag2,[]) -> eval (extendV frag2 (swaps perm1 env)) body
+                 (Just frag2,ps) -> return(makeLam ps body frag2 perm1 env)
+                 (Nothing,_) -> fail ("Pattern: "++show p++" does not match: "++show v++"\n")}
 
 
 
@@ -258,7 +258,7 @@ evalBody env (Normal e) failcase = eval env e
 evalBody env (Guarded xs) failcase = test env xs
  where test env [] = failcase
        test env ((x,y):xs) = ifV (eval env x) (eval env y) (test env xs)
-evalBody env Unreachable failcase = fail "Impossible! Execution of Unreachable code."    
+evalBody env Unreachable failcase = fail "Impossible! Execution of Unreachable code."
 
 px x = putStrLn x
 
@@ -287,17 +287,18 @@ mPatStrict prefix es  Pwild v = return(Just es)
    -- Only analyze v if we have to, otherwise mPatStrict is too strict
 mPatStrict prefix es p v = analyzeWith (mf p) v
   where mf (Plit x) (Vlit y) = if x==y then return(Just es) else return Nothing
-        mf (Pprod x y) (Vprod u v) = m2PatStrict prefix es x y u v
+        mf (Pprod x y) (Vprod u v) =
+           m2PatStrict prefix es x y u v
         mf (Psum i x) (Vsum j y) =
            if i==j then mPatStrict prefix es x y else return Nothing
-        mf (Pexists p) v = mf p v
+        mf (Pexists p) v = mPatStrict prefix es p v
         {-  -- ** Begin Special Case for Strings **
-        mf (Pcon (Global ":") [p,ps]) (VChrSeq (v:vs)) = 
+        mf (Pcon (Global ":") [p,ps]) (VChrSeq (v:vs)) =
             m2PatStrict prefix es p ps (Vlit (Char v)) (VChrSeq vs)
         mf (Pcon (Global "[]") []) (VChrSeq "") = return(Just es)
         mf (Pcon (Global "[]") []) (VChrSeq _) = return Nothing
         -- ** End Special Case for Strings ** -}
-        
+
         mf (Pcon n ps) (Vcon c vs) =
            if n==c then mStrictPats prefix ps vs es else return Nothing
         mf p v = return Nothing
@@ -309,7 +310,7 @@ m2PatStrict prefix es p ps v vs =
     ; case z of
         Just es2 -> mPatStrict prefix es2 ps vs
         Nothing -> return Nothing}
-  
+
 
 mStrictPats prefix [] [] es = return(Just es)
 mStrictPats prefix (p:ps) (v:vs) es =
@@ -460,11 +461,18 @@ elab prefix magic init (Fun loc nm _ cs) =
            caseExp = Case tuple (map tupleUpPats cs)
            u = makeLam patterns caseExp [] [] magic
            free = getFreeTermVars newNames caseExp
-     ; return (extendV [(nm,u)] init) }       
+     ; return (extendV [(nm,u)] init) }
 elab prefix magic init (Data loc b strata nm sig args constrs derivs) =
   return(extendV xs init)
  where xs = map f constrs
        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon cname) (length args) []))
+elab prefix magic init (Explicit (GADT l s p t k cs)) = return(extendV xs init)
+ where xs = map f cs
+       f (loc,cname,allv,preds,ty) =
+            (cname,(mkFun (show cname) (Vcon cname) (size ty) []))
+       size (Rarrow' x y) = 1 + size y
+       size _ = 0
+
 elab prefix magic init (Kind _ _ _ _) = return init
 elab prefix magic init (TypeSig loc nm t) = return init
 elab prefix magic init (Prim loc nm t) =
@@ -674,7 +682,7 @@ vals =
  ,(">=",make2 ((>=)::Int -> Int -> Bool))
  ,("==",make2 ((==)::Int -> Int -> Bool))
  ,("/=",make2 ((/=)::Int -> Int -> Bool))
- 
+
  ,("#+",make2 ((+)::Float -> Float -> Float))
  ,("#*",make2 ((*)::Float -> Float -> Float))
  ,("#-",make2 ((-)::Float -> Float -> Float))
@@ -689,14 +697,14 @@ vals =
  ,("intToFloat",make1(fromIntegral ::Int -> Float))
  ,("round",make1(round :: Float -> Int))
  ,("truncate",make1(truncate :: Float -> Int))
- 
+
  ,("eqStr", make2 ((==)::String -> String -> Bool))
  ,("chr",make1 chr)
  ,("ord",make1 ord)
 
  ,("putStr",make1 (putStr :: String -> IO ()))
  ,("getStr",make(getLine::IO String))
- 
+
  ,("&&",make2 (&&))
  ,("||",make2 (||))
  ,("not",make1 not)
@@ -708,7 +716,7 @@ vals =
  ,("null",make1 (null:: [A] -> Bool))
  ,("[]",make([]::[A]))
  ,("++",make2((++):: [A] -> [A] -> [A]))
- 
+
  ,("undefined", (Vbottom,gen(typeOf(undefined :: A))))
 
  ,("Nothing",make(Nothing::(Maybe A)))
@@ -721,15 +729,15 @@ vals =
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
 
 -- ,(".",make2(($)::(A -> B) -> A -> B))
- 
+
 
  ,("trace",(traceV,gen(typeOf(undefined :: String -> A -> A))))
  ,("error",(to errorC,gen(typeOf(undefined :: String -> A))))
  ,("fresh",(freshV,gen(typeOf(undefined :: Char -> Symbol))))
  ,("swap",(swapV,gen(typeOf(undefined :: Symbol -> Symbol -> A -> A))))
  ,("symbolEq",(symbolEqV,gen(typeOf(undefined :: Symbol -> Symbol -> Bool))))
- 
- 
+
+
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
  ,("run",(to run,runType))
  ,("lift",(reifyV,liftType))
@@ -763,7 +771,7 @@ vals =
 -- the interaction with Vlazy seems over specified
 -- This code is temporarily not used.
 
-listVals = 
+listVals =
   [(":",(consV,gen(typeOf(undefined :: A -> [A] -> [A]))))
   ,("null",(nullV,gen(typeOf(undefined:: [A] -> Bool))))
   ,("++",(appendV,gen(typeOf(undefined::[A] -> [A] -> [A]))))
@@ -787,7 +795,7 @@ consV = Vprimfun ":" g
 charCons :: Char -> V -> FIO V
 charCons c (VChrSeq cs) = return(VChrSeq (c:cs))
 charCons c (Vcon (Global "[]") []) = return(VChrSeq [c])
-charCons c (v@(Vcon (Global ":") [_,_])) = 
+charCons c (v@(Vcon (Global ":") [_,_])) =
      do { cs <- list2seq v; return(VChrSeq (c:cs))}
 charCons c vs = return(Vcon (Global ":") [Vlit (Char c),vs])
 
@@ -795,11 +803,11 @@ list2seq :: V -> FIO String
 list2seq v = analyzeWith f v
   where f (VChrSeq cs) = return cs
         f (Vcon (Global "[]") []) = return ""
-        f (Vcon (Global ":") [c,cs]) = 
+        f (Vcon (Global ":") [c,cs]) =
           do { Vlit(Char x) <- analyzeWith return c
              ; xs <- list2seq cs
              ; return(x:xs)}
- 
+
 appendV = lift2 "++" g
   where g (VChrSeq xs) (VChrSeq cs) = return(VChrSeq (xs ++ cs))
         g (VChrSeq xs) (Vcon (Global "[]") []) = return(VChrSeq xs)
@@ -830,7 +838,7 @@ reify (Vprod x y) = Prod (reify x) (reify y)
 reify (Vcon c vs) = f (Var c) (map reify vs)
   where f g [] = g
         f g (x:xs) = f (App g x) xs
-reify v = error ("Cannot reify: "++show v)        
+reify v = error ("Cannot reify: "++show v)
 
 freshV = lift1 "fresh" f
   where f (Vlit (Char c)) = do { nm <- fresh; return(mkSymbol nm) }
@@ -840,7 +848,7 @@ swapV = lift2 "swap" h
   where h (Vlit (Symbol s1)) (Vlit (Symbol s2)) = return(Vprimfun (nam2 "swap" s1 s2) (downSwap [(s1,s2)] return))
         h (Vlit (Symbol _)) v = fail ("Non Name as argument to swap: "++show v)
         h v (Vlit (Symbol _)) = fail ("Non Name as argument to swap: "++show v)
-         
+
 errorC = lift1 "error" g where
   g v = fail(from v)
 
@@ -880,7 +888,7 @@ applyV message f v = analyzeWith apply f
 dollar = Vprimfun "($)" f
   where f v1 = return(Vprimfun (nam1 "$" v1) h)
                where h v2 = applyV (nam2 "$" v1 v2) v1 v2
-               
+
 
 -- (f . g) = \ v -> f (g v)
 composeV = Vprimfun "(.)" f
@@ -888,10 +896,10 @@ composeV = Vprimfun "(.)" f
           where h v2 = return(Vprimfun (nam2 "." v1 v2) g)
                   where g x = do { g2 <- applyV "(.)" v2 x
                                  ; applyV "(.)" v1 g2 }
-               
-               
-  
-               
+
+
+
+
 -----------------------------------------------------------------
 -- IO primitives
 
@@ -951,7 +959,7 @@ handleIO = Vprimfun "handleIO" (analyzeWith f) where
 fresh2 = Vfio [] (do { nm <- fresh; return(Right(mkSymbol nm)) })
 
 sameAtom = lift2 "sameAtom" f  where
-  f (Vlit (Symbol s1)) (Vlit (Symbol s2)) =  
+  f (Vlit (Symbol s1)) (Vlit (Symbol s2)) =
                   if s1 == s2 then return(Vcon (Global "Just") [Vcon (Global "Eq") []])
                               else return(Vcon (Global "Nothing") [])
   f (Vlit (Symbol s1)) v = fail ("Non Name as argument to sameAtom: "++show v)
@@ -978,16 +986,16 @@ freshenV = Vprimfun "freshen" (analyzeWith f) where
 symbolEqV = Vprimfun "symbolEq" (analyzeWith f) where
   f (Vlit (Symbol s1)) = return(Vprimfun (nam1 "symbolEq" s1) (analyzeWith (g s1)))
   g s1 (Vlit (Symbol s2)) = return(to (s1 == s2))
-  
-  
+
+
 fuse = lift2 "fuse" f where
   f a b = return(Vprod a b)
-  
+
 melt = Vprimfun "melt" (analyzeWith f) where
   f (Vprod a b) = return(Vfio [] comp)
      where comp = do { (u,cs) <- freshU a; return(Right(Vprod u (swaps cs b))) }
   f x = fail ("Arg to melt is not a fusion: "++show x)
-  
+
 -----------------------------------------------------------
 -- interface to the "primitive" decl
 
