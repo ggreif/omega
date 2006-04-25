@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 module Monads where
 
@@ -12,14 +12,22 @@ import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
 import Auxillary(Loc(..),DispInfo(..),initDI)
+
+-------------------------------------------------------------
+
+instance Monad (Either String) where
+  return x = Right x
+  (>>=) (Right x) f = f x
+  fail s = Left s
+
 --------------------------------------------------------------
 class Monad m => HasNext m where
   nextInteger :: m Integer
   resetNext   :: Integer -> m()
-  
+
 class Monad m => HasOutput m where
   outputString :: String -> m ()
-  
+
 class Monad m => HasFixpoint m where
   fixpoint :: (a -> m a) -> m a
 
@@ -27,25 +35,25 @@ class HasIORef m where
   newRef :: a -> m (IORef a)
   readRef :: IORef a -> m a
   writeRef :: IORef a -> a -> m ()
-  
+
 class Accumulates m z where
   extractAccum :: m a -> m (a,[z])
   injectAccum :: [z] -> m ()
-  
+
 class Monad m => TracksLoc m where
   position :: m Loc
   failN :: DispInfo -> Loc -> Int -> String -> String -> m b
 
 failP :: TracksLoc m => String -> Int -> DispInfo -> String -> m b
 failP k n dis s = do { p <- position; failN dis p n k s}
-  
+
 -----------------------------------------------------
 instance HasFixpoint IO where
   fixpoint = fixIO
 
 instance HasOutput IO where
   outputString = putStrLn
-  
+
 instance HasNext IO where
   nextInteger = do { n <- readIORef counter; writeIORef counter (n+1); return n }
   resetNext m = writeIORef counter m
@@ -63,7 +71,7 @@ instance HasIORef IO where
 
 -------------------------------------------------------------
 
-data Id x = Id x 
+data Id x = Id x
 
 instance Monad Id where
   return x = Id x
@@ -71,14 +79,14 @@ instance Monad Id where
 
 ------------------------------
 
-data Exception x 
-   = Ok x 
+data Exception x
+   = Ok x
    | Fail DispInfo   -- Display
           Loc        -- Source Location of Error
           Int        -- Severity or level of error
           String     -- kind of error
           String     -- message
- 
+
 instance Monad Exception where
   return x = Ok x
   (>>=) (Ok x) f = f x
@@ -103,9 +111,9 @@ qq x yf =
       h e = let x = f e
                 Env g = yf x
             in g e
-  in Env h 
+  in Env h
 
-type Map value = [(String,value)]   
+type Map value = [(String,value)]
 
 getEnv :: String -> (Env (Map v) v)
 getEnv nm = Env(\ s -> find s)
@@ -117,20 +125,20 @@ runInNewEnv s n (Env g) = Env(\ m -> g ((s,n):m))
 
 ------------------------------
 
-data Store s x = St(s -> (x,s)) 
+data Store s x = St(s -> (x,s))
 
 instance Monad (Store s) where
   return x = St(\ s -> (x,s))
   (>>=) (St f) g = St(\ s1 -> let (x,s2) = f s1
                                   St g' = g x
                               in g' s2)
-                                    
+
 get = St(\s -> (s,s))
 put x = St(\ s -> ((),x))
 
 runStore :: (Store s a) -> s -> (a,s)
 runStore (St f) x = f x
-                                    
+
 tt x yf =
  let St f = x
      h s1 = let (x,s2) = f s1
@@ -138,7 +146,7 @@ tt x yf =
                 (y,s3) = g s2
             in (y,s3)
  in St h
-                                    
+
 getStore :: Num v => String -> (Store (Map v) v)
 getStore nm = St(\ s -> find s s)
   where find w [] = (0,w)
@@ -147,12 +155,12 @@ getStore nm = St(\ s -> find s s)
 putStore :: String -> v -> (Store (Map v) ())
 putStore nm n = (St(\ s -> ((),build s)))
   where build [] = [(nm,n)]
-        build ((s,v):zs) = 
+        build ((s,v):zs) =
            if s==nm then (s,n):zs else (s,v):(build zs)
 
 next :: Num n => Store n n
 next = St(\ n -> (n,n+1))
--------------------------    
+-------------------------
 
 data Mult x = Mult [x]
 
@@ -161,14 +169,14 @@ instance Monad Mult where
   (>>=) (Mult zs) f = Mult(flat(map f zs))
      where flat [] = []
            flat ((Mult xs):zs) = xs ++ (flat zs)
- 
+
 
 zz x yf =
   let Mult xs = x
       ys = map yf xs
   in Mult (concat[ z | Mult z <- ys ])
 
---------------------------- 
+---------------------------
 
 data Output x = OP(x,String)
 
@@ -197,31 +205,31 @@ instance Monad FIO where
                  ; case x of
                     Ok z -> unFIO(g z)
                     Fail dis loc n k s -> return(Fail dis loc n k s)}
-                    
+
 instance Functor FIO where
   fmap f (FIO x) = FIO(fmap (fmap f) x)
 
 failFIO disp loc n s = FIO(return(Fail disp loc n "" s))
-  
-handleP :: (String -> Bool) -> Int -> FIO a -> (DispInfo -> String -> FIO a) -> FIO a 
+
+handleP :: (String -> Bool) -> Int -> FIO a -> (DispInfo -> String -> FIO a) -> FIO a
 handleP p m (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
-                   Fail dis loc n k s -> 
-                       if (m > n) && (p k) 
+                   Fail dis loc n k s ->
+                       if (m > n) && (p k)
                           then unFIO(f dis s)
                           else return(Fail dis loc n k s)
                    ok -> return(ok)}
-                   
-handle = handleP (\ _ -> True)                   
-                   
-tryAndReport :: FIO a -> (Loc -> DispInfo -> String -> FIO a) -> FIO a 
+
+handle = handleP (\ _ -> True)
+
+tryAndReport :: FIO a -> (Loc -> DispInfo -> String -> FIO a) -> FIO a
 tryAndReport (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
                    Fail dis loc n k s -> unFIO(f loc dis s)
-                   ok -> return(ok)}                   
-                   
+                   ok -> return(ok)}
+
 runFIO :: FIO x -> (DispInfo -> Loc -> Int -> String -> IO x) -> IO x
 runFIO (FIO x) f = do { a <- x
                       ; case a of
@@ -266,24 +274,24 @@ instance Monad (StEnv s e) where
   return x = SE h
     where h s e = (x,s)
   (>>=) (SE f) g = SE(\ s1 e1 -> let (x,s2) = f s1 e1
-                                     SE g' = g x 
+                                     SE g' = g x
                                  in g' s2 e1)
 
 newN :: StEnv Int a Int
 newN = SE h
   where h s e = (s,s+1)
-      
+
 inenv :: env -> (StEnv s env x) -> StEnv s env x
 inenv env m = SE h
   where h s e = h s env
-  
+
 getenv = SE h
   where h st env = (env,st)
 
 
 -----------------------------------------------------------------
 -----------------------------------------------------------------
--- Mtc is the Monad-for-type-checking. Its just an environment 
+-- Mtc is the Monad-for-type-checking. Its just an environment
 -- monad layed over the FIO monad with the ability to acculumate.
 
 newtype Mtc e n a = Tc (e -> FIO(a,[n]))
@@ -292,7 +300,7 @@ unTc (Tc f) = f
 instance Monad (Mtc e n) where
   return x = Tc f where f env = return(x,[])
   fail s = Tc f where f env = fail s
-  (>>=) (Tc f) g = Tc h 
+  (>>=) (Tc f) g = Tc h
      where h env = do { (a,ns1) <- f env
                       ; (b,ns2) <- unTc (g a) env
                       ; return(b,ns1++ns2)}
@@ -300,19 +308,31 @@ instance Monad (Mtc e n) where
 instance Functor (Mtc e n)  where
   fmap f x = do { a <- x; return(f a) }
 
-handleTC :: (String -> Bool) -> Int -> Mtc e n a -> (DispInfo -> String -> Mtc e n a) -> Mtc e n a 
+handleTC :: (String -> Bool) -> Int -> Mtc e n a -> (DispInfo -> String -> Mtc e n a) -> Mtc e n a
 handleTC p m (Tc x) f = Tc w
   where w env = handleP p m (x env) (\ dis s -> unTc (f dis s) env)
 
 
 
-fio2Mtc :: FIO a -> Mtc b c a                                  
+fio2Mtc :: FIO a -> Mtc b c a
 fio2Mtc x = Tc h
   where h env = do { ans <- x; return(ans,[]) }
-                                  
-                                  
+
+-- Error reporting funcions in FIO
+
+-- Report an error then die.
+errF :: DispInfo -> Loc -> Int -> String -> a
+errF disp loc n s = error ("At "++show loc++"\n"++s)
+
+-- Report an error, then continue with the continuation
+report :: FIO a -> Loc -> DispInfo -> String -> FIO a
+report continue Z   dis message = do { writeln message; continue }
+report continue loc dis message =
+   do { writeln ("\n\n**** Near "++(show loc)++"\n"++message); continue }
+
+
 ------------------------------------------------
--- Some instance Declarations 
+-- Some instance Declarations
 
 instance HasFixpoint (Mtc e n) where
   fixpoint = error "No fixpoint for TC"
@@ -329,17 +349,17 @@ instance HasIORef (Mtc e n) where
   readRef r = lift (readIORef r)
   writeRef r v = lift (writeIORef r v)
 
-instance Accumulates (Mtc e n) n where  
+instance Accumulates (Mtc e n) n where
   extractAccum (Tc f) = Tc g
     where g env = do { (a,ns) <- f env; return((a,ns),[])}
   injectAccum ns = Tc g
     where g env = return((),ns)
- 
+
 ------------------------------------------------
 -- Moving back and forth between IO and Mtc
 
 runTC :: Show n => e -> Mtc e n a -> IO a
-runTC env (Tc f) = 
+runTC env (Tc f) =
    do { --let env = TcEnv { var_env = listToFM []
         --                , generics = []
         --                , verbose = False }
@@ -347,10 +367,16 @@ runTC env (Tc f) =
       ; putStrLn ("Need = "++show out)
       ; return a }
 
--- Lift an IO action into Mtc, ignores the environment 
+-- Lift an IO action into Mtc, ignores the environment
 -- and always succeeds and accumulates nothing
 
 lift :: IO a -> Mtc e n a
-lift st = Tc (\env -> do { r <- fio st; return(r,[]) }) 
+lift st = Tc (\env -> do { r <- fio st; return(r,[]) })
+
+testTC :: e -> Mtc e n a -> a
+testTC env (Tc f) = unsafePerformIO
+  (do { (a,out) <- runFIO (f env) (\ dis loc n s -> error s)
+      ; return a })
 
 
+traceSh s x = unsafePerformIO(putStrLn ("\n--- Trace ---\n"++s++show x))

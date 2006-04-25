@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 import "LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
@@ -645,3 +645,23 @@ transP x y =
   trans4 :: LE a b -> LE b c -> LE a c
   trans4 x y = case (x,y) of (Step z,Base) -> undefined
 
+------------------------------------------------------
+-- type functions and narrowing
+
+data Li :: *0 ~> Nat ~> *0 where
+  N :: Li a Z
+  C :: a -> Li a n -> Li a (S n)
+
+plus:: Nat ~> Nat ~> Nat
+{plus Z x} = x
+{plus (S y) x} = S {plus y x}
+
+app :: Li a n -> Li a m -> Li a {plus n m}
+app N ys = ys
+app (C x xs) ys = C x (app xs ys)
+
+{- This will need some kind of theorem?
+rev :: Li a n -> Li a n
+rev N = N
+rev (C x xs) = app (rev xs) (C x N)
+-}

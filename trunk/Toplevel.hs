@@ -2,52 +2,51 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 
 module Toplevel where
 
-import Version(version,buildtime)
 import Time
+import Version(version,buildtime)
 import Syntax
 import ParserDef(getInt,pCommand,parseString,Command(..)
-                ,program,parseFile)
+                ,program,parseHandle)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
-             ,write,writeln,readln,unTc,tryAndReport,fio)
+             ,write,writeln,readln,unTc,tryAndReport,fio
+             ,errF,report)
 import IO
-import List(partition,(\\),nub)
+import List(partition,(\\),nub,find)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo)
 import SCC(topSortR)
 import Monad(when)
 import Infer2
 import RankN(pprint)
+import NarrowMod(narrow,showStep)
 import System(getArgs)
-import Data.FiniteMap
+import Data.Map(Map,toList)
 import Directory
 import Char(isAlpha,isDigit)
+import System.IO(hClose)
+import Monads(handleP)
+import Manual(makeManual)
+import Commands
 
 import System.Console.Readline(setCompletionEntryFunction)
 -- setCompletionEntryFunction :: Maybe (String -> IO [String]) -> IO ()
+
 -------------------------------------------------------------
 -- The programmer interface: the top level loop.
 -- it performs the read-eval-typecheck-print loop.
 -- It catches exceptions, and ties all the other pieces together.
 
-
-
-typeEnv0 = initTcEnv
-
--- Read an Int from stdin, and return nullNum on failure.
-
-readInt nullNum s =
-  if null s then return nullNum else getInt fail s
-  
+----------------------------------------------
 -- Perform one Read-Eval-Print action.
 
-readEvalPrint :: [String] -> (TcEnv) -> FIO(TcEnv)
-readEvalPrint sources tenv =
+-- readEvalPrint :: [String] -> (TcEnv) -> FIO(TcEnv)
+readEvalPrint commandTable sources tenv =
   do { let tabExpandFun = completionEntry tenv
      ; input <- lineEditReadln "prompt> " tabExpandFun
      ; z <- parseString pCommand input
@@ -55,183 +54,80 @@ readEvalPrint sources tenv =
         Left s -> do {writeln s; return (tenv) }
         Right(x,rest) ->
          case x of
-          (ColonCom "q" _) -> error "quitting"
-          (ColonCom "t" x) ->
-             case getVar (Global x) tenv of
-                Just(sigma,lev,exp) ->
-                        do { writeln (x++" :: "++(pprint sigma)) -- ++"\n"++sht t)
-                           ; return (tenv) }
-                Nothing -> do { writeln ("Unknown name: "++x); return(tenv)}
-          (ColonCom "env" s) -> envArg tenv s
-          (ColonCom "r" s) ->
-             do { n <- readInt (length sources) s
-                ; new <- elabManyFiles (take n sources) (typeEnv0)
-                ; return new
-                }
-          (ColonCom "v" _) -> do { writeln version
-                                 ; writeln buildtime
-                                 ; return tenv}
-          (ColonCom "k" x) ->
-             case (getkind x tenv) of
-               Nothing -> do { (rho,t) <- parseAndKind tenv x
-                             ; writeln (x++" :: "++(pprint rho)++"  = " ++ pprint t)
-                             ; return (tenv)}
-               Just(k,t) -> do { writeln (x++" :: "++(pprint k)++"  = " ++ pprint t)
-                               ; return (tenv)}
-          (ColonCom "l" file) ->
-             do { writeln ("Loading file "++file)
-                ; elabFile file (tenv) }
-          (ColonCom "noisy" _) ->  return(mknoisy tenv)
-          (ColonCom "silent" _) -> return(mksilent tenv)
-          (ColonCom "e" _) ->
-             do { writeln "Back to inital state"
-                ; return (typeEnv0) }
-          (ColonCom "rules" s) ->
-             let rs = getRules s tenv
-                 f newstyle = writeln(pprint newstyle);
-             in do { writeln "rules"
-                   ; mapM f rs
-                   ; return tenv}
-          (ColonCom x y) -> fail ("Unknown command :"++x)
-          (ExecCom e) ->
-             do { (t,e') <- wellTyped tenv e
-                ; t1 <- fio getClockTime
-                ; v <- (eval (runtime_env tenv) e')		
-		; t2 <- fio getClockTime
-		; u <- runAction v
-                ; writeln ((show u)++ " : "++(pprint t))
-		; t3 <- fio getClockTime
-		; let evTime = diffClockTimes t2 t1
-                      evPTime = diffClockTimes t3 t1
-		--; writeln ( "\nTime1 = " ++ (show evTime))
-		--; writeln ( "\nTime2 = " ++ (show evPTime))
-                ; return (tenv) }
-          (DrawCom p e) -> 
-             do { (e',p',env',t) <- ioTyped tenv p e
-                ; v <- (eval (runtime_env env') e')
-                ; u <- runAction v
-                ; z <- mPatStrict Tick [] p' u
-                ; case z of
-                    Just frag -> let rtenv = extendV frag (runtime_env env')
-                                 in do { writeln ((show u)++ " : "++(pprint t))
-                                       ; return(env' { runtime_env = rtenv }) }
-                    Nothing -> do { writeln ("Pattern "++show p++" does not match "++show v)
-                                  ; return tenv }
-                }
-          (LetCom d) ->
-             do { mapM (notDup tenv "Keyboard input") (fst (freeOfDec d))
-                ; ans <- foldF elabDs (tenv) [[d]]
-                ; writeln ""
-                ; return ans
-                }
-          other -> do { writeln "Unknown command"; return(tenv) }
+          (ColonCom com str) -> dispatchColon commandTable tenv com str
+          (ExecCom e) -> execExp tenv e
+          (DrawCom p e) -> drawPatExp tenv p e
+          (LetCom d) -> letDec elabDs tenv d
      }
 
-envArg tenv (s@(c:cs)) 
-  | isDigit c = do { count <- (readInt 100 s)
-                   ; showAllVals count tenv
-                   ; return tenv }
-  | isAlpha c = do { let subString [] ys = True
-                         subString _ [] = False
-                         subString (x:xs) (y:ys) =
-                            if x==y then subString xs ys else subString s ys
-                         p (Global nm,_) = subString s nm
-                   ; showSomeVals p tenv
-                   ; return tenv}
-  | True = do { writeln ("Bad arg ':env "++s++"'"); return tenv}
-envArg tenv [] = return tenv       
 
 -- Repeat Read-Eval-Print until the :q command is given
-
-topLoop sources env = tryAndReport
+topLoop commandTable sources env = tryAndReport
   (do { fio(hFlush stdout)
-      ; env' <-  (readEvalPrint sources env)
-      ; topLoop sources env'
-      }) (report (topLoop sources env))
+      ; env' <-  (readEvalPrint commandTable sources env)
+      ; topLoop commandTable sources env'
+      }) (report (topLoop commandTable sources env))
 
--- A toplevel expression of type IO can be executed
+------------------------------------------------------------------
+-- Commands for load files, then going into the Toplevel loop
+------------------------------------------------------------------
 
-runAction v =
-  case v of
-    Vfio _ action ->
-      do { writeln "Executing IO action"
-         ; u <- action
-         ; case u of
-             Right v -> return v
-             Left s -> fail ("Uncaught IO Error: "++s) }
-    v -> return v
-
---topLoop :: (Env,TEnv IORef) -> FIO Env
-
---------------------------------------------------------
--- Error reporting funcions
-
--- Report an error then die.
-errF :: DispInfo -> Loc -> Int -> String -> a
-errF disp loc n s = error ("At "++show loc++"\n"++s)
-
--- Report an error, then continue with the continuation
-report :: FIO a -> Loc -> DispInfo -> String -> FIO a
-report continue Z   dis message = do { writeln message; continue }
-report continue loc dis message =
-   do { writeln ("\n\n**** Near "++(show loc)++"\n"++message); continue }
-
----------------------------------------------------------------------------
 -- load just the prelude and then go into the toplevel loop
-
 main :: IO ()
 main = runFIO(do { writeln "loading the prelude (LangPrelude.prg)"
-		 ; fio $ hSetBuffering stdout NoBuffering
-		 ; fio $ hSetBuffering stdin  NoBuffering
-		 ; env1 <- tryAndReport (elabFile "LangPrelude.prg" (typeEnv0))
-		             (report (return (typeEnv0)))
-                 ; topLoop ["LangPrelude.prg"] env1
+                 ; fio $ hSetBuffering stdout NoBuffering
+                 ; fio $ hSetBuffering stdin  NoBuffering
+                 ; env1 <- tryAndReport (elabFile "LangPrelude.prg" initTcEnv)
+                             (report (return initTcEnv))
+                 ; let sources = ["LangPrelude.prg"]
+                 ; topLoop (commandF sources elabFile) sources env1
                  ; return () }) errF
 
 
 -- load the prelude and then load the file "s", and then go into the toplevel loop.
-
 go :: String -> IO ()
 go s =
-  runFIO(do { writeln "loading the prelude (LangPrelude.prg)"
-            ; env <- tryAndReport (elabFile "LangPrelude.prg" (typeEnv0))
-		            (report (return (typeEnv0)))
+  runFIO(do { writeln (version++"  --  Type ':?' for command line help."++"\n\n")
+            ; writeln "loading the prelude (LangPrelude.prg)"
+            ; env <- tryAndReport (elabFile "LangPrelude.prg" initTcEnv)
+                            (report (return initTcEnv))
             ; env2 <- elabFile s env
-            ; topLoop [s,"LangPrelude.prg"] env2
+            ; let sources = [s,"LangPrelude.prg"]
+            ; topLoop (commandF sources elabFile) sources env2
             ; return () }) errF
 
--- Don't load the prelude, just load "s" then go into the toplevel loop.
 
+-- Don't load the prelude, just load "s" then go into the toplevel loop.
 run :: String -> IO ()
-run  s = runFIO(do { writeln ("loading "++s)
-		 ; env1 <- tryAndReport (elabFile s (typeEnv0))
-		                        (report (return(typeEnv0)))
-                 ; topLoop [s] env1
-                 ; return () }) errF                 
+run s = runFIO(do { writeln ("loading "++s)
+                  ; env1 <- tryAndReport (elabFile s initTcEnv)
+                                         (report (return initTcEnv))
+                  ; topLoop (commandF [s] elabFile) [s] env1
+                  ; return () }) errF
+
 
 -- Try to load a file, if it fails for any reason, exit the program
 -- with an unrecoverable error. Used in testing, where failure means
 -- a major error, something very bad (and unexpected), has happened
-
-try_to_load s = 
+try_to_load s =
    runFIO(do { writeln ("loading "++s)
-             ; env1 <- tryAndReport (elabFile s (typeEnv0)) err2
+             ; env1 <- tryAndReport (elabFile s initTcEnv) err2
              ; writeln (s++" successfully loaded")
              ; return () }) errF
   where err2 loc disp mess = error ("At "++show loc++"\n"++mess)
-             
-             
--- Get the file to "run" from the command line arguments, then "run" it
 
+
+-- Get the file to "run" from the command line arguments, then "run" it
 omega :: IO()
 omega =
   do { args <- getArgs
      ; putStr (version++"\n")
      ; putStr ("Build Date: "++buildtime++"\n\n")
+     ; putStr "Type ':?' for command line help.\n"
      ; case args of
         [] -> run "LangPrelude.prg"
         ("-tests" :_ ) -> alltests
-        ("-prim" : kindf : typef : _) -> show_init_vals kindf typef
+        ("-prim" : _) -> makeManual
         (_ : _) -> let arg1 = head args
                    in if arg1=="-tests"
                          then alltests
@@ -258,26 +154,15 @@ display [s] = s
 display ss = plistf id "(" ss " " ")"
 
 
-------------------------------------------------------------------
--- Get a [Dec] from a file name
-
-parseDecs :: String -> FIO[Dec]
-parseDecs file =
-  do { x <- fio (parseFile program file)
-     ; case x of
-        Left s -> fail s
-        Right(Program ds) -> return ds
-     }
-
--------------------------------------------------------------------
--- Read a [Dec] from a file, then split it into imports and binding groups
--- uses elabDs to do the work.
+------------------------------------------------------------
+-- Read a [Dec] from a file, then split it into imports and
+-- binding groups, uses elabDs to do the work.
 
 elabFile :: String -> (TcEnv) -> FIO(TcEnv)
 elabFile file (tenv) =
    do { all <- parseDecs file
       ; let (imports,ds) = partition importP all
-            (dss,pairs) = topSortR freeOfDec ds 
+            (dss,pairs) = topSortR freeOfDec ds
       --; writeln (show(map freeOfDec ds))
       ; tenv2 <- importManyFiles imports tenv
       -- Check for multiple definitions in the file
@@ -289,12 +174,25 @@ elabFile file (tenv) =
       ; return tenv3
       }
 
-foldF acc base [] = return base
-foldF acc base (x:xs) = do { b <- acc x base
-                           ; tryAndReport (foldF acc b xs)(report (return base)) }
 
-elabManyFiles [] env = return env
-elabManyFiles (x:xs) env = do { env2 <- elabManyFiles xs env; elabFile x env2}
+
+------------------------------------------------------------------
+-- Get a [Dec] from a file name
+
+parseDecs :: String -> FIO[Dec]
+parseDecs file =
+  do { hndl <- fio (openFile file ReadMode)
+     ; let err disp mess = fio((hClose hndl) >> fail mess)
+           -- if parsing fails, we should close the file
+     ; x <- handleP (const True) 10
+                    (fio (parseHandle program file hndl)) err
+     ; fio(hClose hndl)
+     ; case x of
+        Left s -> fail s
+        Right(Program ds) -> return ds   -- mapM gadt2Data ds
+     }
+
+
 
 -------------------------------------------------------------------------
 -- Omega has a very simple importing mechanism. A user writes:
@@ -315,57 +213,24 @@ importFile :: Dec -> TcEnv -> FIO TcEnv
 importFile (Import name vs) tenv =
   case lookup name (imports tenv) of
      Just previous -> return tenv
-     Nothing -> do { new <- elabFile name typeEnv0
+     Nothing -> do { new <- elabFile name initTcEnv
                    ; return(importNames name vs new tenv) }
 
 importNames :: String -> [Var] -> TcEnv -> TcEnv -> TcEnv
 importNames name vs new old =
   old { imports = (name,new):(imports old)
-      , var_env = addListToFM (var_env old) (filter p (fmToList (var_env new)))
+      , var_env = addListToFM (var_env old) (filter p (toList (var_env new)))
       , type_env = (filter q (type_env new)) ++ (type_env old)
       , runtime_env = add (runtime_env new) (runtime_env old)
-      , rules = appendFM2 (rules old) (filter p2 (fmToList (rules new)))
+      , rules = appendFM2 (rules old) (filter p2 (toList (rules new)))
       }
  where p (x,y) = elem x vs
        p2 (s,y) = elem (Global s) vs
        q (str,tau,polyk) = elem (Global str) vs
        add (Ev xs _) (Ev ys t) = Ev (filter p xs ++ ys) t
 
--------------------------------------------------------------------------
--- Reports an error if "nm" already appears in the existing
--- type environment "tenv", "nm" comes from attempting load "file"
 
-notDup tenv file nm =
-  case getVarOrTypeName nm tenv of
-    Nothing -> return ()
-    Just s -> if (s `elem` ["Monad","Equal","Eq"])
-	      then return ()
-	      else (fail ("The name: "++ show s++" which is found in the"++
-                    " environment is redefined in file "++file))
 
--- There are 2 name spaces. Value and Type.
--- We need to look up each name in the right environments
--- We also need to strip off the type cons prefix ( %name --> name ) 
--- which is added to names which are defined in Type Name space 
--- before looking them up. A name is "flagged" if it starts with a '%'
-
-getVarOrTypeName :: Var -> TcEnv -> Maybe String
-getVarOrTypeName nm env  
- | flagged nm = f (type_env env)
- | otherwise = case getVar nm env of
-                Nothing -> Nothing
-                Just(name,_,_) -> Just (varName nm)
- where orig = varName nm
-       varName (Global ('%':s)) = s  -- strip off Type Con Prefix
-       varName (Global s) = s
-       varName (Alpha s n) = s
-       -- varName (Alpha ('%':s) n) = s
-       f [] = Nothing
-       f ((y,t,k):xs) = if y== orig then return orig else f xs
-           
-
-       
-       
 
 multDef :: [Dec] -> [Var] -> FIO ()
 multDef ds names = if null dups then return () else fail (foldr report "" dups)
@@ -381,7 +246,7 @@ multDef ds names = if null dups then return () else fail (foldr report "" dups)
 -- to load all the files in the TestPrograms directory with
 -- extension ".prg"   It is used to exercise Omega.
 
-alltests = 
+alltests =
   do { setCurrentDirectory "./TestPrograms"
      ; files <- getDirectoryContents "."
      ; let ok x = case reverse x of { ('g':'r':'p':'.':_) -> True; _ -> False}
@@ -389,6 +254,7 @@ alltests =
      ; mapM try_to_load (filter ok files)
      ; setCurrentDirectory ".."
      }
+
 
 -------------------------------------------------------------------------------
 ------------------------------------------------------------------

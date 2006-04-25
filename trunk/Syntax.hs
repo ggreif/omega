@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 module Syntax where
 
@@ -12,7 +12,7 @@ import Monad
 import Monads
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Auxillary
-import List(elem,nub,union,(\\),partition)
+import List(elem,nub,union,(\\),partition,find)
 import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
             ,getMult,PPred(..))
 import Char(isLower,isUpper)
@@ -151,14 +151,15 @@ data Dec
   | Pat Loc Var [Var] Pat               -- { Let x y z = App (Lam x z) y
   | TypeSig Loc Var PT                  -- { id :: a -> a }
   | Prim Loc Var PT                     -- { prim bind :: a -> b }
-  | Data Loc Bool Strata Var (Maybe PT) Targs [Constr][Var]    -- { data T x (y : Nat ) = B (T x) deriving (Z,W)} 
+  | Data Loc Bool Strata Var (Maybe PT) Targs [Constr][Var]    -- { data T x (y : Nat ) = B (T x) deriving (Z,W)}
+  | Explicit ExplicitGADT
   | Kind Loc Var [Var] [(Var,[PT])]
   | Flag Var Var
   | Reject String [Dec]
   | Import String [Var]
   | TypeSyn Loc String Targs PT
   | TypeFun Loc String (Maybe PT) [([PT],PT)]
-  
+
 data Constr = Constr Loc Targs Var [PT] (Maybe [PPred])
 type Strata = Int
 data Program = Program [ Dec ]
@@ -183,10 +184,12 @@ strat n = "data@"++show n
 
 ---------------------------------------------------
 isData (Data _ _ n _ _ _ _ _) | n == typeStrata = True
+isData (Explicit (GADT loc n isProp nm knd cs)) | n == typeStrata = True
 isData (TypeSig loc (Global (x:xs)) pt) | isUpper x = True
 isData x = False
 
 isKind (Data _ _ n _ _ _ _ _) | n == kindStrata = True
+isKind (Explicit (GADT loc n isProp nm knd cs)) | n >= kindStrata = True
 isKind (TypeSig loc (Global (x:xs)) pt) | isUpper x = True
 isKind x = False
 
@@ -271,7 +274,9 @@ decname (Fun loc nm _ cs) = [nm]
 decname (Pat loc nm ps p) = [nm]
 decname (Data loc b strata nm sig args cs ds) = nm : map f cs
   where f (Constr loc skol nm ts eqs) = nm
-decname (TypeSyn loc nm args ty) = [Global nm] 
+decname (Explicit (GADT loc n isProp nm knd cs)) = nm : map f cs
+  where f (loc,c,free,preds,typ) = c
+decname (TypeSyn loc nm args ty) = [Global nm]
 decname (TypeFun loc nm k ms) = [Global nm]
 decname (Kind loc nm args ts) = nm : map f ts
   where f (nm,ts) = nm
@@ -288,8 +293,10 @@ decloc (Fun loc nm _ cs) = [(nm,loc)]
 decloc (Pat loc nm ps p) = [(nm,loc)]
 decloc (Data loc b strata nm sig args cs ds) = [(nm,loc)] ++ map f cs
   where f (Constr loc skol nm ts eqs) = (nm,loc)
-decloc (TypeSyn loc nm args ty) = [(Global nm,loc)] 
-decloc (TypeFun loc nm ty ms) = [(Global nm,loc)] 
+decloc (Explicit (GADT loc n isProp nm knd cs)) = [(nm,loc)] ++ map f cs
+  where f (loc,c,free,preds,typ) = (c,loc)
+decloc (TypeSyn loc nm args ty) = [(Global nm,loc)]
+decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
 decloc (Kind loc nm args cs) = [(nm,loc)] ++ map f cs
   where f (nm,ts) = (nm,loc)
 decloc (TypeSig loc nm t) = [(proto nm,loc)]
@@ -409,6 +416,7 @@ dt (Val _ _ _ _) = V
 dt (TypeSig loc n _) = TS n
 dt (Prim loc n _) = Pr
 dt (Data _ _ _ _ _ _ _ _) = D
+dt (Explicit _) = D
 dt (Kind _ _ _ _) = D
 dt (TypeSyn _ _ _ _) = Syn
 dt (TypeFun _ s _ _) = TFun s
@@ -471,7 +479,7 @@ merge ((Fun l1 n1 h1 c1):(Fun l2 n2 h2 c2):ds) =
 
 --------------- Show Instances ---------------------
 
- 
+
 instance Show Lit where
   show (Int n) = show n
   show (Char c) = show c
@@ -543,7 +551,7 @@ data Fpair x y = forall t . Fpair (x -> Maybe t) (t -> y)
 
 tryL :: a -> [Fpair a b] -> Maybe b
 tryL x [] = Nothing
-tryL x ((Fpair f g):fs) = 
+tryL x ((Fpair f g):fs) =
    case f x of
       Just x -> Just(g x)
       Nothing -> tryL x fs
@@ -557,7 +565,7 @@ instance Show Exp where
     case (tryL x [Fpair isList prList,Fpair isOp doOp]) of
       Just ans -> ans
       Nothing -> (parFun a)++" "++(parExp b)
-    where doOp (a,b,c) = (parFun a)++" "++b++" "++(parFun c)      
+    where doOp (a,b,c) = (parFun a)++" "++b++" "++(parFun c)
   show (Lam ps e xs) = "\\ "++(plist "" ps " " "")++" -> "++(show e)
   --show (Lam [p] e) = "\\ "++(show p)++" -> "++(show e)
   show (Prod x y) = "("++show x++","++show y++")"
@@ -618,16 +626,16 @@ instance Show Dec where
       (plistf (sClause name) "\n" cls "\n" "\n")
   show (Val loc p b ds) = (show p)++" = "++(show b)++(sWhere ds)
   show (Pat loc nm ps p) = show nm ++ (plist " " ps " " " = ")++(show p)++"\n"
-  show (TypeSig loc name typ) = show name++" :: "++ (show typ) ++ "\n"  
-  show (Prim loc name typ) = "prim "++show name++" :: "++ (show typ) ++ "\n"  
+  show (TypeSig loc name typ) = show name++" :: "++ (show typ) ++ "\n"
+  show (Prim loc name typ) = "prim "++show name++" :: "++ (show typ) ++ "\n"
   show (Data loc b n nm sig args cs ders) = showSig sig ++
      (strat n)++" "++show nm++(plistf showArg " " args " " "")++(plistf sConstr "\n = " cs "\n | " "")
     where showArg (x,AnyTyp _) = show x
           showArg (x,t) = "("++show x++"::"++show t++")"
           showSig Nothing = ""
           showSig (Just pt) = show nm ++" :: "++show pt++"\n"
-          
-  show (Kind loc nm args cs) = 
+  show (Explicit d) = show d
+  show (Kind loc nm args cs) =
      "kind "++show nm++(plistf show " " args " " "")++(plistf f "\n = " cs "\n | " "")
    where f (nm,ts) = show nm ++ plistf showp " " ts " " ""
   show (Flag s nm) = "flag "++ show s++" "++ show nm
@@ -635,9 +643,12 @@ instance Show Dec where
   show (Import s vs) = "\nimport "++s ++plist "(" vs "," ")"++ "\n"
   -- show (Monad loc e) = "monad "++show e
   show (TypeSyn loc nm args ty) = "type "++nm++(plist "" args " " "")++" = "++show ty
-  show (TypeFun loc nm k ms) = nm++" :: "++show k++"\n"++matches
+  show (TypeFun loc nm k ms) = nm++showK k++"\n"++matches
     where matches = plistf g "" ms "\n" ""
           g (xs,e) = plist "{" xs " " "}"++" = "++show e
+
+showK Nothing = " "
+showK (Just k) = " :: "++show k
 
 sConstr (Constr loc ex c ts eqs) = (exists ex)++show c++(args ts)++eqf eqs
   where args [] = ""
@@ -645,12 +656,12 @@ sConstr (Constr loc ex c ts eqs) = (exists ex)++show c++(args ts)++eqf eqs
         exists [] = ""
         exists ns = "forall "++(plistf showM "" ns " " " . ")
         parenT (x @ (TyApp' y _)) = g (root' y) x
-	  where g (TyCon' "(,)")    y = show y
-	        g (TyCon' "(+)") y = show y
-	        g x y = "("++(show y)++")"
-	parenT x = show x
-	eqf (Just xs) = " where "++ plistf show "" xs ", " ""
-	eqf Nothing = ""
+          where g (TyCon' "(,)")    y = show y
+                g (TyCon' "(+)") y = show y
+                g x y = "("++(show y)++")"
+        parenT x = show x
+        eqf (Just xs) = " where "++ plistf show "" xs ", " ""
+        eqf Nothing = ""
         --g (x,y) = show x ++ " = " ++ show y
         showM (x,AnyTyp _) = show x
         showM (x,k) = "("++show x++"::"++show k++")"
@@ -748,7 +759,7 @@ parE (Circ vs e ds) f =
       ; ds3 <- parDs ds2 f2
       ; e3 <- parE e f2
       ; return(Circ (map unVar vs2) e3 ds3)
-      }      
+      }
 parE (Do ss) f = do { (ss2,_) <- parThread parStmt f ss; return(Do ss2) }
 parE (Ann x t) f = do { a <- parE x f; return(Ann a t)}
 
@@ -849,9 +860,9 @@ makeSwapper level perm = Par ext app inc esc
                  0 -> fail "Escape at level 0"
                  1 -> fail "eval embedded escape"
                  2 -> parE e (makeSwapper (level - 1) perm)
-                 
 
---subExp :: [(Var,Exp)] -> Exp -> a Exp                 
+
+--subExp :: [(Var,Exp)] -> Exp -> a Exp
 subExp xs e = parE e (makeSubst xs)
 
 makeSubst xs = Par ext app inc esc
@@ -860,7 +871,7 @@ makeSubst xs = Par ext app inc esc
                   Just e -> return e
                   Nothing -> return(Var v)
         inc = Par ext app inc esc
-        esc e = parE e (makeSubst xs)                 
+        esc e = parE e (makeSubst xs)
 
 ------------------------------------------------------------
 -- =========================================================
@@ -993,7 +1004,7 @@ instance Binds Dec where
      where y = boundBy p
   boundBy (Fun loc nm _ ms) = FX [nm] [proto nm] [] [] []
   boundBy (Pat loc nm nms p) = FX [nm] [] [] [] []
-  boundBy (TypeSig loc v t) = 
+  boundBy (TypeSig loc v t) =
         if isTyCon v then FX [] [ ] [] (proto v :(nub binds)) [v]
                      else FX [proto v] [v] [] (nub binds) []
      where (FX _ _ _ tbs tfs) = vars [] t emptyF
@@ -1005,8 +1016,14 @@ instance Binds Dec where
            (vs,constrs) = partition typVar tfs
   boundBy (Data l b 0 nm sig vs cs ders) = FX (map get cs) [] [] [nm] [proto nm]
      where get (Constr loc skol c ts eqs) = c
+  boundBy (Explicit (GADT loc 0 isProp nm knd cs)) = FX (map get cs) [] [] [nm] [proto nm]
+     where get (loc,c,free,preds,typ) = c
+
   boundBy (Data l b _ nm sig vs cs ders) = FX [] [] [] (nm : map get cs) [proto nm]
      where get (Constr loc skol c ts eqs) = c
+  boundBy (Explicit (GADT loc 0 isProp nm knd cs)) = FX [] [] [] (nm : map get cs) [proto nm]
+     where get (loc,c,free,preds,typ) = c
+
   boundBy (Kind l nm vs ts) = FX [] [] [] (nm: map get ts) []  -- everything here is in the Type name space
      where get (nm,ts) = nm
   boundBy (Import s vs) = FX [] [] [] [] []
@@ -1027,16 +1044,25 @@ instance Vars Dec where
   vars bnd (Val loc _ body ds) = underBinder ds (\ bnd -> vars bnd body) bnd
   vars bnd (Fun loc _ _ ms) = varsL bnd ms
   vars bnd (Pat loc nm nms p) = \ y -> foldr (addFree bnd) y (depends x)
-     where x = vars [] p emptyF -- pattern C x y = (x,D y)  has "D" as free.                 
-  vars bnd (Data loc b strata nm sig vs cs _) = 
+     where x = vars [] p emptyF -- pattern C x y = (x,D y)  has "D" as free.
+  vars bnd (Data loc b strata nm sig vs cs _) =
        underTs (map fst vs) (varsL bnd cs) . (varsL bnd (map snd vs)) . (vars bnd sig)
+
+  vars bnd (Explicit (GADT loc 0 isProp nm knd cs)) =
+       vars bnd knd . varsL bnd cs
+  -- where get (loc,c,free,preds,typ) = c
+
   vars bnd (Kind loc _ vs ts) = underTs vs (varsL bnd ts)
   vars bnd (TypeSig loc v t) = addFreeT (nub free)
      where (FX _ _ _ tbs tfs) = vars bnd t emptyF
            (binds,free) = partition typVar tfs
-  vars bnd (TypeSyn loc nm args ty) = underTs (map fst args) (vars bnd ty) 
+  vars bnd (TypeSyn loc nm args ty) = underTs (map fst args) (vars bnd ty)
   vars bnd (TypeFun loc nm k ms) = varsL bnd ms
   vars bnd _ = id
+
+instance Vars (Loc,Var,[([Char],PT)],[PPred],PT) where
+  vars bnd (loc,c,free,preds,typ) =
+    varsL bnd preds . vars bnd typ
 
 instance Vars ([PT],PT) where
   vars bnd (args,body) = (addFreeT constrs) . (underTs vs (vars bnd body))
@@ -1052,7 +1078,7 @@ instance Vars a => Vars (Maybe a) where
 -- Combine "binds" "depends" "tbinds" from step 1
 -- with "free" abd "tfree" of second step.
 
-instance Vars [Dec] where   
+instance Vars [Dec] where
   vars bnd ds x = FX vbnd deps fs tbnd (tfs ++ tfs2)               -- Combine
     where (FX vbnd deps    _  tbnd tfs2 ) = boundBy ds             -- Step 1
           (FX _    _ fs _    tfs) = foldr (vars (vbnd++bnd)) x ds  -- Step 2
@@ -1062,12 +1088,12 @@ instance Vars [Dec] where
 
 instance Vars Constr where
   vars bnd (Constr loc skol nm args eqs) =
-      underTs (map fst skol) (varsL bnd args . varsL bnd (map snd skol)) . 
-      underTs (map fst skol) (f eqs)  
-      
+      underTs (map fst skol) (varsL bnd args . varsL bnd (map snd skol)) .
+      underTs (map fst skol) (f eqs)
+
    where f Nothing = id
          f (Just xys) = varsL bnd xys
-         
+
 
 instance Vars (Var,[PT]) where
   vars bnd (_,ts) = varsL bnd ts
@@ -1084,7 +1110,7 @@ instance Vars PT where
   vars bnd (TyApp' x y) = vars bnd x . vars bnd y
   vars bnd (Rarrow' x y) = vars bnd x . vars bnd y
   vars bnd (Karrow' x y) = vars bnd x . vars bnd y
-  vars bnd (TyFun' (TyVar' f :xs)) = addFree bnd (Global f) . varsL bnd xs
+  vars bnd (TyFun' (TyVar' f :xs)) = addFree bnd (Global f) .  varsL bnd xs
   --vars bnd (TyFun' (TyCon' f :xs)) = addFree bnd (Global f) . varsL bnd xs
   vars bnd (w@(TyFun' (f :xs))) = error ("Bad type function: "++show f++" -- "++show w)
   vars bnd (Star' _) = id
@@ -1167,7 +1193,7 @@ freeOfDec d = (bound,deps)
 flagNm (Global x) = Global("%"++x)
 flagNm (Alpha x nm) = Alpha ("%"++x) nm
 
-flagged (Global ('%':s)) = True   
+flagged (Global ('%':s)) = True
 flagged (Alpha ('%':s) n) = True
 flagged _ = False
 
@@ -1181,82 +1207,113 @@ declBindsFree vars d = binds(boundBy d)
 -- data Nat :: *0 ~> Nat -> *0 where
 --   Nil :: Seq a Z
 --   Cons :: a -> Seq a m -> Seq a (S m)
--- 
--- into an equality qualified data  
+--
+-- into an equality qualified data
 -- data Seq a n =
 --   Nil where n = Z
 --   exists m . Cons a m where n = S m
---   
+--
 -- we use the function transGADT which proceeds in several steps
 -- see the code and comments below.
 
-           
-data ExplicitGADT = GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)]
+
+data ExplicitGADT = GADT Loc Int Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)]
+
+-- traceSh s x = unsafePerformIO(putStrLn ("\n--- Trace ---\n"++s++show x))
+
+instance Show ExplicitGADT where
+  show (GADT loc strata isProp nm knd cs) =
+      ("data "++show nm++" :: "++show knd++" where \n"++
+       plistf f "   " cs "\n   " "\n")
+   where f (loc,c,free,preds,typ) = show c++" :: "++show typ
 
 transGADT :: ExplicitGADT -> Dec
-transGADT (GADT loc b (name@(Global t)) kind constrs) = 
-     Data loc b 0 name (Just kind) (map f args) constrs' []
-  where fresh = freshNames (TyFun' (map g constrs))
-        args = step1 fresh kind
+transGADT (GADT loc strata b (name@(Global t)) kind constrs) =
+     Data loc b strata name (Just kind) (map f args) constrs' []
+  where fresh = freshNames (map g constrs)
+        (args,univ) = step1 fresh kind
         f (name,pt) = (Global name,pt)
         g (loc,constr,prefix,preds,typ) = typ
-        forEachConstr (loc,c@(Global constr),prefix,preds,typ) 
-            = step4 constr loc sub (preds2++equalities) newrange domains
-          where (domains,triples,newrange,eqnsDup) = step2 args (constr,typ)
+        forEachConstr (loc,c@(Global constr),prefix,preds,typ)
+            = step4 (addToPrefix prefix prefix)
+                    constr loc sub (map (ppredsub eqnsDup) preds2++equalities)
+                    newrange domains (getFree [] newrange)
+          where (domains,triples,newrange,eqnsDup) = step2 strata args (constr,typ)
                 (sub,qual) = step3 triples
                 g (t1,t2) = Equality' (ptsub sub t1) (ptsub sub t2)
-                equalities = map g (qual++eqnsDup)
+                equalities = (map g (qual ++ map h eqnsDup))
+                h (x,y) = (TyVar' x,TyVar' y)
                 preds2 = map (ppredsub sub) preds
-                
+                -- if there prefix is not null then some one wrote
+                -- Cons :: forall (a::k) . typ
+                -- if "a" appears more than once then it gets renamed
+                -- so we must add the renamed vars to prefix
+                addToPrefix [] ans = ans
+                addToPrefix ((name,pt):xs) ans =
+                  case find (\ (dup,old) -> old==name) eqnsDup of
+                    Nothing -> addToPrefix xs ans
+                    Just(dup,old) -> addToPrefix xs (ans++[(dup,pt)])
+
         constrs' = map forEachConstr constrs
 
 
 -- Generate an infinite list of names not occuring any place
 -- in a PT, either free or bound
-freshNames :: PT -> [String]
-freshNames typ = makeNames "abcdefghijklmnopqrstuvwxyz" \\ getAll typ
+freshNames :: [PT] -> [String]
+freshNames typs = makeNames "abcdefghijklmnopqrstuvwxyz" \\ used
+   where used = foldr g [] typs
+         g t free = union (getAll t) free
 
--- First Note that in an explicitly typed data the type of each constructor 
+-- First Note that in an explicitly typed data the type of each constructor
 -- is a Rho type. Because the parser has factored out any explicit forall.
 -- getRange( T a -> [Int] -> T b ) ====> ([T a,[Int]],T b)
+-- If the declaration is an explicit kind declaration, then it could be
+-- a Karrow.
 
-getRange (Rarrow' d x) = (d:ds,r) where (ds,r) = getRange x
-getRange r = ([],r)
+getRange 0 (Rarrow' d x) = (d:ds,r) where (ds,r) = getRange 0 x
+getRange 1 (Karrow' d x) = (d:ds,r) where (ds,r) = getRange 1 x
+getRange _ r = ([],r)
 
 -- Step 1) Look at the kind (*0 ~> Nat -> *0) of the type being defined
 -- (Seq) and then invent new fresh type variables and pair them up
 -- with their kinds [(i,*0),(j,Nat)]
 
-step1 (n:ns) (Karrow' x y) = (n,x) : step1 ns y
-step1 ns range = []
+step1 n (Forallx _ ps _ t) = (pairs,map f ps ++ univ)
+   where f (nm,k,q) = (nm,k)
+         (pairs,univ) = step1 n t
+step1 (n:ns) (Karrow' x y) = add (n,x) (step1 ns y)
+   where add p (pairs,univ) = (p : pairs, univ)
+step1 ns range = ([],[])
 
 -- Step 2) For each constructor find its Range (which should be an
 -- application of a type constructor like "T a b") Then replace each
 -- argument (like a and b) with a corresponding fresh var (like i and j) to
 -- get a NewRange, then triple up the actual arg with the cooresponding
--- fresh type variable and its kind. Compute equalities if any 
+-- fresh type variable and its kind. Compute equalities if any
 -- var appears more than once in range
--- 
+--
 --   Constr  Domains      Range           Triples                  New Range      Eqns
 --   Nil     []           Seq a Z         [(a,i,*0),(Z,j,Nat)]     Seq i j        []
 --   Cons    [a,Seq a m]  Seq a (S m)     [(a,i,*0),(S m,j,Nat)]   Seq i j        []
 --   In      [Exp c a t]  Decs c a a t    [(c,i,_),(a,j,_)         Decs i j k l   [(a=a1)]
 --                                        ,(a1,k,_),(t,l,_)]
 
-step2 :: [(String,PT)] -> (String,PT) -> ([PT],[(PT,PT,PT)],PT,[(PT,PT)])
-step2 freshKindPairs (constr,typ) = (domains,triples,range3,eqns)
-   where (domains,range) = getRange typ
+step2 :: Int -> [(String,PT)] -> (String,PT) -> ([PT],[(PT,PT,PT)],PT,[(String,String)])
+step2 strata freshKindPairs (constr,typ) = (domains,triples,range3,eqns)
+   where (domains,range) = getRange strata typ
          (range2,eqns) = duplicatesInRange (getAll typ) range
          (triples,range3) = tripleUp freshKindPairs range2
 
--- tripleUp [(i:k1),(j:k2)] (T a (S b)) -> ([(a,i,k1),(S b,j,k2)], T i j)        
-tripleUp :: [(String,pt)] -> PT -> ([(PT,PT,pt)],PT)
+-- tripleUp [(i:k1),(j:k2)] (T a (S b)) -> ([(a,i,k1),(S b,j,k2)], T i j)
+-- tripleUp :: [(String,pt)] -> PT -> ([(PT,PT,pt)],PT)
 tripleUp [] (TyCon' t) = ([],TyCon' t)
-tripleUp fresh_args (TyApp' x y) = 
+tripleUp [] x =  ([],x)
+tripleUp fresh_args (TyApp' x y) =
       ((y,TyVar' fname,knd):trips, TyApp' typ (TyVar' fname))
    where (fname,knd) = last fresh_args
          args = init fresh_args
          (trips,typ) = tripleUp args x
+tripleUp args t = error ("\nBad "++show t++"\n"++show args++"\n")
 
 -- Step 3) Split the triples into two parts, pairs of variables to
 -- variables (a substitution), and pairs of variables to types
@@ -1276,40 +1333,47 @@ step3 ((typ,TyVar' y,k):xs) = (subs,(TyVar' y,typ):quals)
 -- range is the new range obtained in step 1. Apply the substitution
 -- to the qualification to get the qualification. Existentially
 -- quantify all variables not appearing in the new range
--- 
+--
 --   Nil :: Seq i j  where j=Z
 --   Cons :: exists m . i -> Seq i m -> Seq i j  where (j=S m)
 
-step4 c loc subs quals newrange domains = Constr loc exists (Global c) doms eqls
+step4 prefix c loc subs quals newrange domains rangeVars
+       = Constr loc exists (Global c) doms eqls
    where doms = map (ptsub subs) domains
          constrType = foldr Rarrow' newrange doms
          allVars = union (getFree [] constrType) (getFreePredL [] quals)
-         rangeVars = getFree [] newrange 
          f t = (Global t, AnyTyp 1)
-         exists = map f (allVars \\ rangeVars)
+         g (t,x) = (Global t,x)
+         exists = if null prefix
+                    then (map f (allVars \\ rangeVars))
+                    else map g prefix
          eqls = if null quals then Nothing else Just quals
 
 
--- Test if an explicit GADT is well formed 
--- Nothing means yes, (Just errormessage) otherwise 
+-- Test if an explicit GADT is well formed
+-- Nothing means yes, (Just errormessage) otherwise
 okGADT :: ExplicitGADT -> Maybe String
-okGADT (GADT loc b (Global tname) kind constrs) = okCONSTR constrs
+okGADT (GADT loc strata b (Global tname) kind constrs) = okCONSTR constrs
   where okCONSTR [] = Nothing
         okCONSTR (quad:cs) = okAnd (test quad) (okCONSTR cs)
         okAnd Nothing xs = xs
         okAnd (Just s) xs = Just s
-        test (cloc,Global cname,prefix,preds,ctype) = okRange cname cloc ctype
-        okRange cname cloc (Rarrow' x y) = okRange cname cloc y
-        okRange cname cloc (Forallx _ _ _ z) = okRange cname cloc z
-        okRange cname cloc typ = okAppOfT kind typ
+        test (cloc,Global cname,prefix,preds,ctype) = okRange cname cloc strata ctype
+        okRange cname cloc 0 (Rarrow' x y) = okRange cname cloc 0 y
+        okRange cname cloc 1 (Rarrow' x y) = Just ("To classify type Constructor: '"++cname++"' use (~>) not (->)")
+        okRange cname cloc 1 (Karrow' x y) = okRange cname cloc 1 y
+        okRange cname cloc 0 (Karrow' x y) = Just ("To classify value Constructor: '"++cname++"' use (->) not (~>)")
+        okRange cname cloc n (Forallx _ _ _ z) = okRange cname cloc n z
+        okRange cname cloc n typ = okAppOfT kind typ
           where okAppOfT (Karrow' x y) (TyApp' t z) = okAppOfT y t
                 okAppOfT (Karrow' x y) t = Just
-                         (show cloc ++ 
+                         (show cloc ++
                           "\nRange of "++cname++" is not fully applied application of " ++
                           tname++"\n"++show t)
+                okAppOfT (Forallx q ss eqs t) y = okAppOfT t y
                 okAppOfT _ (f@(TyApp' _ _)) = Just
                          (show cloc ++
-                          "\nkind: " ++ 
+                          "\nkind: " ++
                           show kind ++
                           " is not consistent with range of "++cname++": "++
                           show typ)
@@ -1320,6 +1384,11 @@ okGADT (GADT loc b (Global tname) kind constrs) = okCONSTR constrs
                           " is not consistent with type being defined "++
                           show tname++"\n "++show w)
 
+gadt2Data (Explicit x) =
+   case (okGADT x) of
+        Nothing -> return(transGADT x)
+        Just s -> fail s
+gadt2Data x = return x
 
 ------------------------------------------------------------
 -- if we have a constructor with a type where a variable
@@ -1328,17 +1397,19 @@ okGADT (GADT loc b (Global tname) kind constrs) = okCONSTR constrs
 -- any variable that appears more than once, and collect a set
 -- of equations.  [(all = all7)] => Decs c all all7 t
 
-duplicatesInRange :: [[Char]] -> PT -> (PT,[(PT,PT)])
+duplicatesInRange :: [[Char]] -> PT -> (PT,[(String,String)])
 duplicatesInRange bad typ = (typ2,eqns)
   where (typ2,(_,mapping)) = rename (bad,[]) typ
         eqns = concat (map f mapping)
         f (x,[]) = []
-        f (x,ys) = (map g ys) where g y = (TyVar' x,TyVar' y)
+        f (x,ys) = (map g ys) where g y = (y,x)
 
-newname bad name = f 0 
+newname bad name = f 0
   where f n = let new = (name++show n)
               in if elem new bad then f (n+1) else new
-              
+
+rename :: ([String],[(String,[String])]) -> PT ->
+          (PT,([String],[(String,[String])]))
 rename (bad,mapping) (TyVar' s) = (TyVar' x,(badder,mapping2))
   where (x,badder,mapping2) = scan mapping
         scan [] = (s,s:bad,[(s,[])])
@@ -1352,19 +1423,19 @@ rename used (Rarrow' x y) = (Rarrow' a b,u2)
 rename used (Karrow' x y) = (Karrow' a b,u2)
   where (a,u1) = rename used x
         (b,u2) = rename u1 y
-rename used (TyFun' xs) =  (TyFun' ys,u2)
+rename used (TyFun' (x:xs)) =  (TyFun' (x:ys),u2)
   where (ys,u2) = renameL used xs
 rename used (TyApp' x y) = (TyApp' a b,u2)
   where (a,u1) = rename used x
-        (b,u2) = rename u1 y        
+        (b,u2) = rename u1 y
 rename used (TyCon' s) =  (TyCon' s,used)
 rename used (Star' n) =  (Star' n,used)
-rename used (AnyTyp n) =  (AnyTyp n,used) 
-rename used t = error ("The type: "++show t++" should not appear in the range of a GADT")    
+rename used (AnyTyp n) =  (AnyTyp n,used)
+rename used t = error ("The type: "++show t++" should not appear in the range of a GADT")
 
 renameL u [] = ([],u)
-renameL u1 (x:xs) = (y:ys,u3) 
-  where (y,u2) = rename u1 x 
+renameL u1 (x:xs) = (y:ys,u3)
+  where (y,u2) = rename u1 x
         (ys,u3) = renameL u2 xs
-        
-          
+
+

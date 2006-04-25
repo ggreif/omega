@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov  7 10:25:59 Pacific Standard Time 2005
--- Omega Interpreter: version 1.2
+-- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.1
 
 module Bind(Fresh(..),Freshen(..),Swap(..),Name,Perm
            ,Bind,bind
@@ -23,14 +23,14 @@ class Freshen b where
   unbind (B x y) = do { (x',perm) <- freshen x
                       ; return(x',swaps perm y)
                       }
-                      
+
 class Swap b where
   swap :: Name  -> Name -> b -> b
   swap a b x = swaps [(a,b)] x
   swaps :: [(Name ,Name )] -> b -> b
   swaps [] x = x
   swaps ((a,b):ps) x = swaps ps (swap a b x)
-  
+
 sw :: Eq a => a -> a -> a -> a
 sw x y s | x==s = y | y==s = x | True = s
 
@@ -41,14 +41,14 @@ instance Freshen Int  where
 
 instance Freshen b => Freshen [b] where
   freshen xs = do { pairs <- mapM freshen xs
-                  ; return (map fst pairs,concat(map snd pairs))}                
-                
+                  ; return (map fst pairs,concat(map snd pairs))}
+
 instance (Freshen a,Freshen b) => Freshen (a,b) where
   freshen (x,y) = do { (x',p1) <- freshen x
                      ; (y',p2) <- freshen y
                      ; return((x',y'),p1++p2)}
 
------------------------------------------------  
+-----------------------------------------------
 
 name1 = Nm 1
 name2 = Nm 2
@@ -63,15 +63,15 @@ instance Show Name  where
 
 instance Eq Name  where
   (Nm x) == (Nm y) = x==y
-  
+
 instance Ord Name  where
   compare (Nm x) (Nm y) = compare x y
 
 instance Swap Name  where
   swap (Nm a) (Nm b) (Nm x) = Nm(sw a b x)
-  
+
 instance Freshen Name where
-  freshen nm = do { x <- fresh; return(x,[(nm,x)]) }  
+  freshen nm = do { x <- fresh; return(x,[(nm,x)]) }
 
 instance HasNext m => Fresh m where
   fresh = do { n <- nextInteger; return (Nm n) }
@@ -103,28 +103,28 @@ swapsMf xs f = \ x -> swapsM xs (f (swaps xs x))
 
 instance Swap a => Swap (M a) where
   swaps xs comp = do { e <- comp; return(swaps xs e) }
-  
+
 instance Swap a => Swap (IO a) where
-  swaps xs comp = do { e <- comp; return(swaps xs e) }  
+  swaps xs comp = do { e <- comp; return(swaps xs e) }
 
 instance (Swap a,Swap b) => Swap (a,b) where
   swaps perm (x,y)= (swaps perm x,swaps perm y)
-  
+
 instance (Swap a,Swap b,Swap c) => Swap (a,b,c) where
-  swaps perm (x,y,z)= (swaps perm x,swaps perm y,swaps perm z)  
-  
+  swaps perm (x,y,z)= (swaps perm x,swaps perm y,swaps perm z)
+
 instance Swap Bool where
   swaps xs x = x
-  
+
 instance (Swap a,Swap b) => Swap (a -> b) where
   swaps perm f = \ x -> swaps perm (f (swaps perm x))
-  
+
 instance Swap a => Swap [a] where
   swaps perm xs = map (swaps perm) xs
 
 instance Swap Int where
   swap x y n = n
-  
+
 instance Swap Integer where
   swap x y n = n
 
@@ -135,12 +135,12 @@ instance Swap a => Swap (Maybe a) where
 
 instance Swap Char where
   swaps cs c = c
-  
+
 instance (Swap a,Swap b) => Swap (Either a b) where
   swaps [] x = x
   swaps cs (Left x) = Left (swaps cs x)
   swaps cs (Right x) = Right (swaps cs x)
-  
+
 --------------------------------------
 newtype M x = M (Integer -> (x,Integer))
 
@@ -153,7 +153,7 @@ instance Monad M where
                     M k = g a
                 in k n2
 
-runM (M f) = fst(f 0) 
+runM (M f) = fst(f 0)
 
 instance HasNext M where
   nextInteger = M h where h n = (n,n+1)
@@ -161,7 +161,7 @@ instance HasNext M where
 
 instance HasOutput M where
   outputString = error
-  
+
 instance HasFixpoint M where
   fixpoint = undefined
 
