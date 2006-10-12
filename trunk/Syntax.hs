@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 module Syntax where
@@ -14,7 +14,7 @@ import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Auxillary
 import List(elem,nub,union,(\\),partition,find)
 import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
-            ,getMult,PPred(..))
+            ,getMult,PPred(..),Z(..))
 import Char(isLower,isUpper)
 import Pretty
 
@@ -33,19 +33,20 @@ showenv (Ev xs m) =
 
 type EnvFrag = [(Var,V)]
 
+
 data V
   = Vlit Lit
   | Vsum Inj V
   | Vprod V V
-  | Vprimfun String (V -> FIO V)
+  | Vprimfun String (V -> FIO Z V)
   | Vfun [Pat] Exp Ev
-  | Vf (V -> FIO V) (Ev -> V) (Perm -> V)
+  | Vf (V -> FIO Z V) (Ev -> V) (Perm -> V)
   | Vcon Var [V]
   | Vpat Var ([Pat]->Pat) V
-  | Vlazy Perm (IORef (Either (FIO V) V))
+  | Vlazy Perm (IORef (Either (FIO Z V) V))
   | Vcode Exp Ev
   | Vswap Perm V
-  | Vfio Perm (FIO (Either String V))
+  | Vfio Perm (FIO Z (Either String V))
   | Vptr Perm Integer (IORef (Maybe V))
   | VChrSeq String
   | Vparser (Parser V)
@@ -156,6 +157,7 @@ data Dec
   | Kind Loc Var [Var] [(Var,[PT])]
   | Flag Var Var
   | Reject String [Dec]
+  | AddTheorem [Var]
   | Import String [Var]
   | TypeSyn Loc String Targs PT
   | TypeFun Loc String (Maybe PT) [([PT],PT)]
@@ -203,6 +205,8 @@ isTypeFun (TypeFun _ _ _ _) = True
 isTypeFun (TypeSig loc (Global (x:xs)) pt) = True
 isTypeFun _ = False
 
+isTheorem (AddTheorem _ ) = True
+isTheorem _ = False
 -----------------------------------------------------------
 
 instance Freshen Var => Freshen Pat where
@@ -277,6 +281,7 @@ decname (Data loc b strata nm sig args cs ds) = nm : map f cs
 decname (Explicit (GADT loc n isProp nm knd cs)) = nm : map f cs
   where f (loc,c,free,preds,typ) = c
 decname (TypeSyn loc nm args ty) = [Global nm]
+decname (AddTheorem _) = []
 decname (TypeFun loc nm k ms) = [Global nm]
 decname (Kind loc nm args ts) = nm : map f ts
   where f (nm,ts) = nm
@@ -296,6 +301,7 @@ decloc (Data loc b strata nm sig args cs ds) = [(nm,loc)] ++ map f cs
 decloc (Explicit (GADT loc n isProp nm knd cs)) = [(nm,loc)] ++ map f cs
   where f (loc,c,free,preds,typ) = (c,loc)
 decloc (TypeSyn loc nm args ty) = [(Global nm,loc)]
+decloc (AddTheorem _) =[]
 decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
 decloc (Kind loc nm args cs) = [(nm,loc)] ++ map f cs
   where f (nm,ts) = (nm,loc)
@@ -410,7 +416,7 @@ mergeM Nothing y = y
 
 mergeFun ds = state0 ds -- return(mf ds) --
 
-data DT = Fn Var | V | D | S | P | Syn | PT | TS Var | Flg | Rej | Pr | Im | TFun String
+data DT = Fn Var | V | D | S | P | Syn | PT | TS Var | Flg | Rej | Pr | Im | TFun String | Thm
 dt (Fun _ x _ _) = Fn x
 dt (Val _ _ _ _) = V
 dt (TypeSig loc n _) = TS n
@@ -424,7 +430,7 @@ dt (Pat _ _ _ _) = PT
 dt (Flag _ _) = Flg
 dt (Reject s d) = Rej
 dt (Import s vs) = Im
-
+dt (AddTheorem _) = Thm
 
 state0 :: Monad m => [Dec] -> m[Dec]
 state0 [] = return []
@@ -439,6 +445,7 @@ state0 (d:ds) = case dt d of
   Rej -> do { xs <- state0 ds; return(d:xs) }    -- ##test "test 3" x = 5
   Im -> do { xs <- state0 ds; return(d:xs) }
   Syn -> do { xs <- state0 ds; return(d:xs) }
+  Thm -> do { xs <- state0 ds; return(d:xs) }
   TFun s ->  state2 s [d] [] ds -- state2 is collecting contiguous clauses with same Type function name
   other -> fail ("Unknown Dec in state0: "++(show d))
 
@@ -646,6 +653,7 @@ instance Show Dec where
   show (TypeFun loc nm k ms) = nm++showK k++"\n"++matches
     where matches = plistf g "" ms "\n" ""
           g (xs,e) = plist "{" xs " " "}"++" = "++show e
+  show (AddTheorem xs) = plistf show "theorem " xs ", " ""
 
 showK Nothing = " "
 showK (Just k) = " :: "++show k
@@ -1029,6 +1037,7 @@ instance Binds Dec where
   boundBy (Import s vs) = FX [] [] [] [] []
   boundBy (TypeSyn loc nm args ty) = FX [] [] [] [Global nm] [proto (Global nm)]
   boundBy (TypeFun loc nm ty ms) = FX [Global nm] [proto (Global nm)] [] [] []
+  boundBy (AddTheorem _) = emptyF
   boundBy _ = emptyF
 
 dvars d = vars [] [d] emptyF
@@ -1058,6 +1067,7 @@ instance Vars Dec where
            (binds,free) = partition typVar tfs
   vars bnd (TypeSyn loc nm args ty) = underTs (map fst args) (vars bnd ty)
   vars bnd (TypeFun loc nm k ms) = varsL bnd ms
+  vars bnd (AddTheorem xs) = varsL bnd xs
   vars bnd _ = id
 
 instance Vars (Loc,Var,[([Char],PT)],[PPred],PT) where
@@ -1100,7 +1110,7 @@ instance Vars (Var,[PT]) where
 
 instance Vars PPred where
   vars bnd (Equality' x y) = vars bnd x . vars bnd y
-  vars bnd (NotEqual' x y) = vars bnd x . vars bnd y
+  vars bnd (EqAssump' x y) = vars bnd x . vars bnd y
   vars bnd (Rel' nm ts) = addFreeT [Global nm] . vars bnd ts
 
 
@@ -1134,6 +1144,9 @@ instance Vars Pat where  -- Modifies only the "binds" and "depends" fields
   vars bnd (Pwild) = id
   vars bnd (Pcon nm ps) = addDepend nm . (varsL bnd ps)
   vars bnd (Pann p t) = vars bnd p
+
+instance Vars Var where
+  vars bnd v = addFree bnd v
 
 instance Vars Exp where
   vars bnd (Var v) = addFree bnd v
@@ -1360,9 +1373,9 @@ okGADT (GADT loc strata b (Global tname) kind constrs) = okCONSTR constrs
         okAnd (Just s) xs = Just s
         test (cloc,Global cname,prefix,preds,ctype) = okRange cname cloc strata ctype
         okRange cname cloc 0 (Rarrow' x y) = okRange cname cloc 0 y
-        okRange cname cloc 1 (Rarrow' x y) = Just ("To classify type Constructor: '"++cname++"' use (~>) not (->)")
+        okRange cname cloc 1 (Rarrow' x y) = Just ("\nTo classify type Constructor: '"++cname++"' use (~>) not (->)")
         okRange cname cloc 1 (Karrow' x y) = okRange cname cloc 1 y
-        okRange cname cloc 0 (Karrow' x y) = Just ("To classify value Constructor: '"++cname++"' use (->) not (~>)")
+        okRange cname cloc 0 (Karrow' x y) = Just ("\nTo classify value Constructor: '"++cname++"' use (->) not (~>)")
         okRange cname cloc n (Forallx _ _ _ z) = okRange cname cloc n z
         okRange cname cloc n typ = okAppOfT kind typ
           where okAppOfT (Karrow' x y) (TyApp' t z) = okAppOfT y t

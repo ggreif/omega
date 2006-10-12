@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 module Value where
@@ -13,7 +13,7 @@ import Monad
 import Syntax
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Bind
-
+import RankN(Z)
 -----------------------------------------------
 {- These are now defined in the Syntax file
 
@@ -31,15 +31,15 @@ data V
   = Vlit Lit
   | Vsum Inj V
   | Vprod V V
-  | Vprimfun String (V -> FIO V)
+  | Vprimfun String (V -> FIO Z V)
   | Vfun [Pat] Exp Ev
-  | Vf (V -> FIO V) (Ev -> V) (Perm -> V)
+  | Vf (V -> FIO Z V) (Ev -> V) (Perm -> V)
   | Vcon Var [V]
   | Vpat Var ([Pat]->Pat) V
-  | Vlazy (IORef (Either (FIO V) V))
+  | Vlazy (IORef (Either (FIO Z V) V))
   | Vcode Exp Ev
   | Vswap Perm V
-  | Vfio Perm (FIO V)
+  | Vfio Perm (FIO Z V)
   | Vptr Perm Integer (IORef (Maybe V))
   | VChrSeq String
   | Vparser (Parser V)
@@ -158,6 +158,7 @@ instance Swap Dec where
   swaps cs (Kind loc v vs ts) = Kind loc v vs ts
   swaps cs (Flag x y) = Flag (swaps cs x) (swaps cs y)
   swaps cs (Reject s d) = Reject s (swaps cs d)
+  swaps cs (AddTheorem xs) = AddTheorem (swaps cs xs)
 
 
 ---------------------------------------
@@ -281,7 +282,7 @@ mkSymbol s = Vlit(Symbol s)
 -- of a value to proceed. The constructors Vlazy and Vswap hide
 -- this structure. So use the function "analyzeWith" to expose the structure.
 
-analyzeWith :: (V -> FIO a) -> V -> FIO a
+analyzeWith :: (V -> FIO Z a) -> V -> FIO Z a
 analyzeWith f v = downSwap [] f v
 
 
@@ -300,9 +301,9 @@ v1 = Vprod (Vlit (Int 5)) (Vlit (Int 6))
 
 vlazy c = do { r <- fio(newIORef (Left c)); return(Vlazy [] r) }
 
-type Ref a = (IORef (Either (FIO a) a))
+type Ref a = (IORef (Either (FIO Z a) a))
 
-down :: Ref V -> FIO V
+down :: Ref V -> FIO Z V
 down ref =
   do { x <- fio(readIORef ref)
      ; case x of
@@ -326,7 +327,7 @@ newPtr = Vfio [] action
             ; n <- nextInteger
             ; return(Right (Vcon (Global "Nil") [Vptr [] n r]))}
 
-myIo :: V -> FIO (Either String V)
+myIo :: V -> FIO Z (Either String V)
 myIo v = (return(Right v))
 
 initPtr :: V
@@ -380,4 +381,32 @@ samePtr = Vprimfun "samePtr" (analyzeWith f) where
      g v = fail ("Non Ptr as 2nd argument to samePtr: "++show v)
   f v = fail ("Non Ptr as 1st argument to samePtr: "++show v)
 
+------------------------------------------------------
+-- Labels
 
+newtype Label tag = Label String
+
+instance Show (Label tag)  where
+  show (Label x) = "`" ++ (show x)
+
+instance Eq (Label tag)  where
+  (Label x) == (Label y) = x==y
+
+tagOfLabel :: Label t -> t
+tagOfLabel x = error "Someone pulled on tagOfLabel"
+
+------------------------------------------
+
+newtype Equal a b = Eq ()
+
+instance Show (Equal a b) where
+  show (Eq _) = "Eq"
+
+instance Eq (Equal a b) where
+  (Eq _) == (Eq _)= True
+
+leftEqual :: Equal a b -> a
+leftEqual x = error "Someone pulled on leftEqual"
+
+rightEqual :: Equal a b -> b
+rightEqual x = error "Someone pulled on leftEqual"

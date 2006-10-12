@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 module Commands (commands,dispatchColon,execExp,drawPatExp
@@ -19,7 +19,7 @@ import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
 import ParserDef(getInt)
 import Auxillary(plist,plistf)
-import Monads(report)
+import Monads(report,readRef)
 
 --------------------------------------------------------
 -- Build a table of    :com str    commands
@@ -30,7 +30,7 @@ qCom tenv _ = error "quitting"
 -- :t (4 + 2)
 tCom tenv x =
    case getVar (Global x) tenv of
-     Just(sigma,lev,exp) ->
+     Just(sigma,mod,lev,exp) ->
        do { writeln (x++" :: "++(pprint sigma)) -- ++"\n"++sht t)
           ; return (tenv) }
      Nothing -> do { writeln ("Unknown name: "++x); return(tenv)}
@@ -41,7 +41,7 @@ envCom tenv s = envArg tenv s
 -- :r
 rCom elab sources tenv s =
   do { n <- readInt (length sources) s
-     ; new <- elabManyFiles elab (take n sources) (initTcEnv{verbose = verbose tenv})
+     ; new <- elabManyFiles elab (take n sources) initTcEnv
      ; return new }
 
 -- :v
@@ -187,10 +187,6 @@ envArg tenv [] = return tenv
 readInt nullNum s =
   if null s then return nullNum else getInt fail s
 
-setCommand "" value tenv = do { writeln (plistf f "" modes "\n" "\n"); return tenv }
-  where f (mode,bool) = mode++" = "++show bool
-        modes = verbose tenv
-setCommand mode value tenv = setMode mode value tenv
 
 -- A toplevel expression of type IO can be executed
 
@@ -238,7 +234,7 @@ getVarOrTypeName nm env
  | flagged nm = f (type_env env)
  | otherwise = case getVar nm env of
                 Nothing -> Nothing
-                Just(name,_,_) -> Just (varName nm)
+                Just(name,mod,_,_) -> Just (varName nm)
  where orig = varName nm
        varName (Global ('%':s)) = s  -- strip off Type Con Prefix
        varName (Global s) = s

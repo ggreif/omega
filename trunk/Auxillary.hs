@@ -2,12 +2,13 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 module Auxillary where
 
 import Char(isAlpha)
+
 
 whenM :: Monad m => m Bool -> m b -> [Char] -> m b
 whenM test x s = do { b <- test; if b then x else error s}
@@ -94,16 +95,15 @@ report Z s = fail ("\n"++s)
 report loc s = fail ("\nError near "++(show loc)++"\n"++s)
 
 ------------------------------------------------------
--- Display Info  (maps objects tagged with Integer to Strings)
+-- Display Info  (maps objects tagged with `a` to Strings)
 
-class Display t where
-  disp :: DispInfo -> t -> (DispInfo,String)
+class (Show a,Eq a) => Display t a where
+  disp :: DispInfo a -> t -> (DispInfo a,String)
 
-newtype DispInfo = DI ([(Integer,String)],[String])
+newtype DispInfo a = DI ([(a,String)],[String])
 
 ------------------------------------------------------
 
-disp0 = initDI
 initDI = DI([],makeNames "abcdefghijklmnopqrstuvwxyz")
 
 newDI xs = DI(xs,filter (notIn xs) (makeNames "abcdefghijklmnopqrstuvwxyz"))
@@ -150,47 +150,60 @@ disp5 xs0 (w,x,y,z,a) = (xs5,sw,sx,sy,sz,sa)
         (xs4,sz) = disp xs3 z
         (xs5,sa) = disp xs4 a
 
-useDisplay :: Integer -> (String -> String) -> DispInfo -> (DispInfo,String)
+
+useDisplay :: Eq a => a -> (String -> String) -> DispInfo a -> (DispInfo a,String)
 useDisplay uniq newname (info@(DI(xs,n:ns))) =
   case lookup uniq xs of
-    Just s -> (info,s)
+    Just y -> (info,y)
     Nothing -> (DI((uniq,name):xs,ns),name)
   where name = newname n
 
-mergeDisp :: DispInfo -> DispInfo -> DispInfo
+
+mergeDisp :: DispInfo a -> DispInfo a -> DispInfo a
 mergeDisp (DI(map1,src1)) (DI(map2,src2)) = DI(map3,src3)
   where src3 = if length map1 > length map2 then src1 else src2
         map3 = map2++map2
 
-instance Show DispInfo where
+instance Show a => Show (DispInfo a) where
   show (DI(xs,names)) = "(DI "++show xs++" "++show(take 6 names)++")"
 
-data DispElem
-  = forall x . (Display x) =>  Dd x
+data DispElem a
+  = forall x . (Display x a) =>  Dd x
   | Ds String
-  | forall x . (Display x) => Dn x
-  | forall x . (Display x) => Dl [x] String
-  | forall x . Df (DispInfo -> x -> (DispInfo,String)) x
-  | forall x . Dlf (DispInfo -> x -> (DispInfo,String)) [x] String
-  | forall x . Dlg (DispInfo -> x -> (DispInfo,String)) String [x] String String
-  | Dr [DispElem]
+  | forall x . (Display x a) => Dn x
+  | forall x . (Display x a) => Dl [x] String
+  | forall x . Df (DispInfo a -> x -> (DispInfo a ,String)) x
+  | forall x . Dlf (DispInfo a -> x -> (DispInfo a,String)) [x] String
+  | forall x . Dlg (DispInfo a -> x -> (DispInfo a,String)) String [x] String String
+  | Dr [DispElem a]
 
-displays :: DispInfo -> [DispElem] -> (DispInfo,String)
+drI:: DispInfo z -> [DispElem z] -> DispElem z
+drI _ xs = Dr xs
+
+
+dlf2:: (DispInfo z -> x -> DispElem z) -> [x] -> String -> DispElem z
+dlf2 f xs sep = Dlf (\ d x -> displays d [f d x]) xs sep
+
+displays :: DispInfo a -> [DispElem a] -> (DispInfo a,String)
 displays d xs = help d (reverse xs) "" where
- help d [] s = (d,s)
- help d ((Dr xs):ys) s = help d (xs++ys) s
- help d (x:xs) s = help d2 xs (s2++s)
-  where (d2,s2) = case x of
-                   Dd y -> disp d y
-                   Ds s -> (d,s)
-                   Dn y -> let (d2,s) = disp d y in (d2,s++"\n")
-                   Dl ys sep -> dispL disp d ys sep
-                   Df f ys  -> f d ys
-                   Dlf f ys sep -> dispL f d ys sep
-                   Dlg f open [] sep close -> (d,"")
-                   Dlg f open ys sep close ->
-                      let (d2,inner) = dispL f d ys sep
-                      in (d2,open++inner++close)
+  help:: DispInfo a -> [DispElem a] -> String -> (DispInfo a,String)
+  help d [] s = (d,s)
+  help d ((Dr xs):ys) s = help d (reverse xs++ys) s
+  help d (x:xs) s = help d2 xs (s2++s)
+    where (d2,s2) =
+             case x of
+               Dd y -> disp d y
+               Ds s -> (d,s)
+               Dn y -> let (d2,s) = disp d y in (d2,s++"\n")
+               Dl ys sep -> dispL disp d ys sep
+               Df f ys  -> f d ys
+               Dlf f ys sep -> dispL f d ys sep
+               Dlg f open [] sep close -> (d,"")
+               Dlg f open ys sep close ->
+                 let (d2,inner) = dispL f d ys sep
+                 in (d2,open++inner++close)
+
+
 
 -- displays d [dv "x" 123]  --->  "x = 1233"
 dv s x = Dr [Ds ", ",Dd x,Ds (s++" = ")]
