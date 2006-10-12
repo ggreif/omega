@@ -17,3 +17,8 @@ ghc Main.hs -O -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib
 used when building the distribution
 
 ./omega.exe -prim "D:/work/papers/OmegaManual/kinds.tex" "D:/work/papers/OmegaManual/infix.tex"
+
+
+
+
+ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -package lang -fallow-undecidable-instances

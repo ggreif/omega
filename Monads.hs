@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 module Monads where
@@ -11,7 +11,7 @@ module Monads where
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
-import Auxillary(Loc(..),DispInfo(..),initDI)
+import Auxillary(Loc(..),DispInfo(..),DispElem,initDI,displays)
 
 -------------------------------------------------------------
 
@@ -40,11 +40,11 @@ class Accumulates m z where
   extractAccum :: m a -> m (a,[z])
   injectAccum :: [z] -> m ()
 
-class Monad m => TracksLoc m where
+class Monad m => TracksLoc m a | m -> a where
   position :: m Loc
-  failN :: DispInfo -> Loc -> Int -> String -> String -> m b
+  failN :: DispInfo a -> Loc -> Int -> String -> String -> m b
 
-failP :: TracksLoc m => String -> Int -> DispInfo -> String -> m b
+failP :: TracksLoc m a => String -> Int -> DispInfo a -> String -> m b
 failP k n dis s = do { p <- position; failN dis p n k s}
 
 -----------------------------------------------------
@@ -79,21 +79,21 @@ instance Monad Id where
 
 ------------------------------
 
-data Exception x
+data Exception a x
    = Ok x
-   | Fail DispInfo   -- Display
+   | Fail (DispInfo a)  -- Display
           Loc        -- Source Location of Error
           Int        -- Severity or level of error
           String     -- kind of error
           String     -- message
 
-instance Monad Exception where
+instance Monad (Exception a) where
   return x = Ok x
   (>>=) (Ok x) f = f x
   (>>=) (Fail dis loc n k s) f  = Fail dis loc n k s
   fail s = Fail initDI Z 0 "" s
 
-instance Functor Exception where
+instance Functor (Exception a) where
   fmap f (Ok x) = Ok (f x)
   fmap f (Fail dis loc n k s) = Fail dis loc n k s
 
@@ -194,10 +194,10 @@ tag s x = do printOutput s
 -- IO with catchable failure
 
 
-newtype FIO x = FIO(IO (Exception x))
+newtype FIO a x = FIO(IO (Exception a x))
 unFIO (FIO x) = x
 
-instance Monad FIO where
+instance Monad (FIO z) where
   fail s = failFIO initDI Z 0 s
   return x = FIO(return(Ok x))
   (>>=) (FIO a) g = FIO w
@@ -206,12 +206,13 @@ instance Monad FIO where
                     Ok z -> unFIO(g z)
                     Fail dis loc n k s -> return(Fail dis loc n k s)}
 
-instance Functor FIO where
+instance Functor (FIO a) where
   fmap f (FIO x) = FIO(fmap (fmap f) x)
 
 failFIO disp loc n s = FIO(return(Fail disp loc n "" s))
 
-handleP :: (String -> Bool) -> Int -> FIO a -> (DispInfo -> String -> FIO a) -> FIO a
+handleP :: (String -> Bool) -> Int -> FIO z a ->
+           (DispInfo z -> String -> FIO z a) -> FIO z a
 handleP p m (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
@@ -223,45 +224,45 @@ handleP p m (FIO x) f = FIO w
 
 handle = handleP (\ _ -> True)
 
-tryAndReport :: FIO a -> (Loc -> DispInfo -> String -> FIO a) -> FIO a
+tryAndReport :: FIO z a -> (Loc -> DispInfo z -> String -> FIO z a) -> FIO z a
 tryAndReport (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
                    Fail dis loc n k s -> unFIO(f loc dis s)
                    ok -> return(ok)}
 
-runFIO :: FIO x -> (DispInfo -> Loc -> Int -> String -> IO x) -> IO x
+runFIO :: FIO z x -> (DispInfo z -> Loc -> Int -> String -> IO x) -> IO x
 runFIO (FIO x) f = do { a <- x
                       ; case a of
                           Ok z -> return z
                           Fail dis loc n k s -> f dis loc n s }
 
-fixFIO :: (a -> FIO a) -> FIO a
+fixFIO :: (a -> FIO z a) -> FIO z a
 fixFIO f = FIO(fixIO (unFIO . f . unRight))
     where unRight (Ok x) = x
           unRight (Fail disp loc n k s) = error ("Failure in fixFIO: "++s)
 
 
-fio :: IO x -> FIO x
+fio :: IO x -> FIO z x
 fio x = FIO(fmap Ok x)
 
 write = fio . putStr
 writeln = fio . putStrLn
 
-readln :: String -> FIO String
+readln :: String -> FIO z String
 readln prompt = fio (do {putStr prompt; getLine})
 
-instance HasFixpoint FIO where
+instance HasFixpoint (FIO z) where
   fixpoint = fixFIO
 
-instance HasNext FIO where
+instance HasNext (FIO z) where
   nextInteger = fio nextInteger
   resetNext n = fio(resetNext n)
 
-instance HasOutput FIO where
+instance HasOutput (FIO z) where
   outputString = writeln
 
-instance HasIORef FIO where
+instance HasIORef (FIO z) where
   newRef x = FIO(do { r <- newIORef x; return(Ok r)})
   readRef ref = FIO(do { r <- readIORef ref; return(Ok r)})
   writeRef ref x = FIO(writeIORef ref x >> return(Ok ()))
@@ -294,10 +295,15 @@ getenv = SE h
 -- Mtc is the Monad-for-type-checking. Its just an environment
 -- monad layed over the FIO monad with the ability to acculumate.
 
-newtype Mtc e n a = Tc (e -> FIO(a,[n]))
+forceMtc (Tc f) =
+  let g _ _ _ _ = error "IN forceMtc"
+  in case unsafePerformIO(runFIO (f undefined) g) of
+      (a,ns) -> a
+
+newtype Mtc z e n a = Tc (e -> FIO z (a,[n]))
 unTc (Tc f) = f
 
-instance Monad (Mtc e n) where
+instance Monad (Mtc z e n) where
   return x = Tc f where f env = return(x,[])
   fail s = Tc f where f env = fail s
   (>>=) (Tc f) g = Tc h
@@ -305,27 +311,28 @@ instance Monad (Mtc e n) where
                       ; (b,ns2) <- unTc (g a) env
                       ; return(b,ns1++ns2)}
 
-instance Functor (Mtc e n)  where
+instance Functor (Mtc z e n)  where
   fmap f x = do { a <- x; return(f a) }
 
-handleTC :: (String -> Bool) -> Int -> Mtc e n a -> (DispInfo -> String -> Mtc e n a) -> Mtc e n a
+handleTC :: (String -> Bool) -> Int -> Mtc z e n a ->
+            (DispInfo z -> String -> Mtc z e n a) -> Mtc z e n a
 handleTC p m (Tc x) f = Tc w
   where w env = handleP p m (x env) (\ dis s -> unTc (f dis s) env)
 
 
 
-fio2Mtc :: FIO a -> Mtc b c a
+fio2Mtc :: FIO z a -> Mtc z b c a
 fio2Mtc x = Tc h
   where h env = do { ans <- x; return(ans,[]) }
 
 -- Error reporting funcions in FIO
 
 -- Report an error then die.
-errF :: DispInfo -> Loc -> Int -> String -> a
+errF :: DispInfo z -> Loc -> Int -> String -> a
 errF disp loc n s = error ("At "++show loc++"\n"++s)
 
 -- Report an error, then continue with the continuation
-report :: FIO a -> Loc -> DispInfo -> String -> FIO a
+report :: FIO z a -> Loc -> DispInfo z -> String -> FIO z a
 report continue Z   dis message = do { writeln message; continue }
 report continue loc dis message =
    do { writeln ("\n\n**** Near "++(show loc)++"\n"++message); continue }
@@ -334,31 +341,33 @@ report continue loc dis message =
 ------------------------------------------------
 -- Some instance Declarations
 
-instance HasFixpoint (Mtc e n) where
+instance HasFixpoint (Mtc z e n) where
   fixpoint = error "No fixpoint for TC"
 
-instance HasNext (Mtc e n) where  -- Supports a unique supply of Integers
+instance HasNext (Mtc z e n) where  -- Supports a unique supply of Integers
   nextInteger = Tc h where h env = fio(do { n <- nextInteger;return(n,[])})
   resetNext n = Tc h where h env = fio(do { resetNext n; return((),[])})
 
-instance HasOutput (Mtc e n) where -- Supports Output of Strings
+instance HasOutput (Mtc z e n) where -- Supports Output of Strings
   outputString s = Tc h where h env = writeln s >> return((),[])
 
-instance HasIORef (Mtc e n) where
+instance HasIORef (Mtc z e n) where
   newRef v = lift (newIORef v)
   readRef r = lift (readIORef r)
   writeRef r v = lift (writeIORef r v)
 
-instance Accumulates (Mtc e n) n where
+instance Accumulates (Mtc z e n) n where
   extractAccum (Tc f) = Tc g
     where g env = do { (a,ns) <- f env; return((a,ns),[])}
   injectAccum ns = Tc g
     where g env = return((),ns)
 
-------------------------------------------------
+
+-------------------------------------------------------
+
 -- Moving back and forth between IO and Mtc
 
-runTC :: Show n => e -> Mtc e n a -> IO a
+runTC :: Show n => e -> Mtc z e n a -> IO a
 runTC env (Tc f) =
    do { --let env = TcEnv { var_env = listToFM []
         --                , generics = []
@@ -370,13 +379,17 @@ runTC env (Tc f) =
 -- Lift an IO action into Mtc, ignores the environment
 -- and always succeeds and accumulates nothing
 
-lift :: IO a -> Mtc e n a
+lift :: IO a -> Mtc z e n a
 lift st = Tc (\env -> do { r <- fio st; return(r,[]) })
 
-testTC :: e -> Mtc e n a -> a
+testTC :: e -> Mtc z e n a -> a
 testTC env (Tc f) = unsafePerformIO
   (do { (a,out) <- runFIO (f env) (\ dis loc n s -> error s)
       ; return a })
 
 
 traceSh s x = unsafePerformIO(putStrLn ("\n--- Trace ---\n"++s++show x))
+
+traceShA s x = seq (unsafePerformIO(putStrLn ("\n--- Trace ---\n"++s++show x))) x
+
+traceStr x y = seq (unsafePerformIO(putStrLn ("\n--- Trace ---\n"++x))) y

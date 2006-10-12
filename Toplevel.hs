@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 
@@ -16,14 +16,14 @@ import ParserDef(getInt,pCommand,parseString,Command(..)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio
-             ,errF,report)
+             ,errF,report,writeRef)
 import IO
 import List(partition,(\\),nub,find)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo)
 import SCC(topSortR)
 import Monad(when)
 import Infer2
-import RankN(pprint)
+import RankN(pprint,Z)
 import NarrowMod(narrow,showStep)
 import System(getArgs)
 import Data.Map(Map,toList)
@@ -58,6 +58,7 @@ readEvalPrint commandTable sources tenv =
           (ExecCom e) -> execExp tenv e
           (DrawCom p e) -> drawPatExp tenv p e
           (LetCom d) -> letDec elabDs tenv d
+          (EmptyCom) -> return tenv
      }
 
 
@@ -99,7 +100,8 @@ go s =
 
 -- Don't load the prelude, just load "s" then go into the toplevel loop.
 run :: String -> IO ()
-run s = runFIO(do { writeln ("loading "++s)
+run s = runFIO(do { writeRef modes mode0
+                  ; writeln ("loading "++s)
                   ; env1 <- tryAndReport (elabFile s initTcEnv)
                                          (report (return initTcEnv))
                   ; topLoop (commandF [s] elabFile) [s] env1
@@ -138,14 +140,14 @@ omega =
 -- elabDs is the interface to everything. Elaborates a mutually recursive [Dec]
 -- other functions read the [Dec] from files and call this function
 
-elabDs :: [Dec] -> TcEnv -> FIO TcEnv
+elabDs :: [Dec] -> TcEnv -> FIO Z TcEnv
 elabDs ds (tenv) =
   do { let nam (Global s) = s
      ; write ((display (map nam (concat (map decname ds))))++" ")
      ; (tenv1,ds1,cs1) <- checkDecs tenv ds   -- type check the list
      --; mapM (writeln .show) ds
      --; mapM (writeln . show) ds1
-     ; when (not (null cs1)) (fail ("2 Unsolved constraints: "++show cs1))
+     ; when (not (null cs1)) (fail ("Unsolved constraints (type 2): "++show cs1))
      ; env1 <- elaborate None ds1 (runtime_env tenv)  -- evaluate the list
      ; return(tenv1 { runtime_env = env1 })
      }
@@ -158,7 +160,7 @@ display ss = plistf id "(" ss " " ")"
 -- Read a [Dec] from a file, then split it into imports and
 -- binding groups, uses elabDs to do the work.
 
-elabFile :: String -> (TcEnv) -> FIO(TcEnv)
+elabFile :: String -> (TcEnv) -> FIO Z(TcEnv)
 elabFile file (tenv) =
    do { all <- parseDecs file
       ; let (imports,ds) = partition importP all
@@ -179,7 +181,7 @@ elabFile file (tenv) =
 ------------------------------------------------------------------
 -- Get a [Dec] from a file name
 
-parseDecs :: String -> FIO[Dec]
+parseDecs :: String -> FIO Z [Dec]
 parseDecs file =
   do { hndl <- fio (openFile file ReadMode)
      ; let err disp mess = fio((hClose hndl) >> fail mess)
@@ -209,7 +211,7 @@ importManyFiles [] tenv = return tenv
 importManyFiles (d:ds) tenv =
   do { next <- importFile d tenv; importManyFiles ds next }
 
-importFile :: Dec -> TcEnv -> FIO TcEnv
+importFile :: Dec -> TcEnv -> FIO Z TcEnv
 importFile (Import name vs) tenv =
   case lookup name (imports tenv) of
      Just previous -> return tenv
@@ -232,7 +234,7 @@ importNames name vs new old =
 
 
 
-multDef :: [Dec] -> [Var] -> FIO ()
+multDef :: [Dec] -> [Var] -> FIO Z ()
 multDef ds names = if null dups then return () else fail (foldr report "" dups)
   where dups = nub(names \\ nub names)
         locs = concat(map decloc ds)
@@ -261,6 +263,7 @@ alltests =
 -- Some shortcuts to running the interpreter
 
 work = run "work.prg"
+temp = run "D:/IntelWork/temp.prg"
 circ = run "Examples/RecursiveCircuit.prg"
 parse = run "Examples/Parser.prg"
 

@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 module Encoding2 where
@@ -38,6 +38,12 @@ instance Generic Bool where
 
 instance Generic Symbol where
   typeOf x = symbolT
+
+instance Generic a => Generic (Label a) where
+  typeOf x = tlabel (typeOf (tagOfLabel x))
+
+instance (Generic a,Generic b) => Generic (Equal a b) where
+  typeOf x = teq (typeOf (leftEqual x)) (typeOf (rightEqual x))
 
 instance (Generic a,Generic b) => Generic (a,b) where
   typeOf x = tpair (typeOf (fst x)) (typeOf (snd x))
@@ -131,12 +137,12 @@ lift1 name f = Vprimfun name (analyzeWith g)
 
 lift2 name f = Vprimfun name (analyzeWith g)
   where g v = return(lift1 (name++" "++show v) (f v))
-  
+
 lift3 name f = Vprimfun name (analyzeWith g)
   where g v = return(lift2 (name++" "++show v) (f v))
-  
+
 ----------------------------------------------------------
--- Encodings 
+-- Encodings
 
 instance Encoding () where
    to x = Vlit Unit
@@ -145,14 +151,14 @@ instance Encoding () where
 
 instance Encoding a => Encoding (IO a) where
    to x = Vfio [] $ do
-		a <- fio x
-		return (Right (to a))
+                a <- fio x
+                return (Right (to a))
    from (Vfio perm fio) = do
    -- Nathan: what to do with the permutation?  I just ignore it for now
-			e <- runFIO fio (\_ _ _ msg -> fail msg)
-			case e of 
-			  Left msg -> fail msg
-			  Right a -> return (from a)
+                        e <- runFIO fio (\_ _ _ msg -> fail msg)
+                        case e of
+                          Left msg -> fail msg
+                          Right a -> return (from a)
 
    from v = error ("Value not an IO computation: "++(show v))
 
@@ -194,15 +200,20 @@ instance Encoding Symbol where
     from (Vlit (Symbol n)) = n
     from v = error ("Value not a Symbol: "++(show v))
 
+instance Encoding (Label tag) where
+    to (Label s) = Vlit (Tag s)
+    from (Vlit (Tag s)) = Label s
+    from v = error ("Value not a Label: "++(show v))
+
 instance Encoding Int where
     to n = Vlit(Int n)
     from (Vlit(Int n)) = n
     from v = error ("Value not an Int: "++(show v))
-    
+
 instance Encoding Float where
     to n = Vlit(Float n)
     from (Vlit(Float n)) = n
-    from v = error ("Value not a Float: "++(show v))    
+    from v = error ("Value not a Float: "++(show v))
 
 instance Encoding Char where
     to n = Vlit(Char n)

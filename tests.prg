@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 import "LangPrelude.prg" 
@@ -587,8 +587,8 @@ f2 x = x
 g3 :: a=b => a -> b                   
 g3 x = x
 
-g4 :: a!=b => a -> Int
-g4 x = 5
+-- g4 :: a!=b => a -> Int
+-- g4 x = 5
 
 g5 :: (a=b,LE a b) => Nat' a -> Nat' b
 g5 x = x

@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Apr 25 12:54:27 Pacific Daylight Time 2006
+-- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
 -- Omega Interpreter: version 1.2.1
 
 module ParserDef (pp,pe,pd,name,getExp,getInt,
@@ -613,14 +613,17 @@ doexpr =
 ----------------- Read eval printloop commands ------------
 
 data Command =
-    ColonCom String String      -- :t x
+    ColonCom String String   -- :t x
   | LetCom Dec               -- let x = 5
   | DrawCom Pat Exp          -- x <- 6
   | ExecCom Exp              -- x + 4
+  | EmptyCom
 
 
 pCommand :: Parser Command    -- Parse a command
 pCommand =
+  (try (eof >> return EmptyCom))
+  <|>
   (try (do { symbol ":"; Global x <- name
            ; rest <- many (satisfy (\ x-> True))
            ; return (ColonCom x rest)}))
@@ -665,11 +668,18 @@ decl = -- try fundecl
      <|> flagdecl
      <|> monaddecl
      <|> testDec
+     <|> theoremDec
      -- <|> typedecl
      -- <|> splicedecl
      -- <|> anddecl
      -- <|> protodecl
      <?> "decl"
+
+theoremDec =
+  do{ reserved "theorem"
+    ; vs <- sepBy name comma
+    ; return(AddTheorem vs)
+    }
 
 testDec =
   do { testSym
@@ -1127,7 +1137,9 @@ completeExplicit =
      }
 
 s33  = "kind Shape:: Nat ~> *1 where\n"++
-       "  P:: Tag ~> n ~> Shape n"
+       "  P:: Tag ~> n ~> Shape n\n" ++
+       "  D:: Q a => a ~> Shape a\n" ++
+       "  F:: forall a . Q a => Shape a\n"
 Right(e33,_) = parse2 completeExplicit s33
 d33 = (transGADT e33)
 
@@ -1139,9 +1151,13 @@ look = putStr(show (transGADT z3))
 Right(z5,_) = pd "data Exp:: *0 ~> *0 ~> *0 ~> *0 ~> *0 where\n Const:: t -> Exp past now future t\n Run:: (forall n . Exp past now (n,future) (Cd n future t)) -> Exp past now future t"
 
 
-zz = parse2 explicitConstr "Bind :: forall i j k a b . Lub i j k => M i a -> (a -> M j b) -> M k b"
+zz = parse2 datadecl
+  ("data P1:: Set ~> *0 ~> *0 where\n"++
+   "  Pvar1 :: Label a -> P1 Univ t\n"++
+   "  Pnil1 :: P1 (Plus Univ (Empty `Cons)) [t]")
 
 zz2 = parse2 explicitConstr "Bind :: Lub i j k => M i a -> (a -> M j b) -> M k b"
+
 
 
 dd2 = "le:: Nat ~> Boolean\n"++
