@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Thu Oct 19 11:06:32 Pacific Daylight Time 2006
+-- Omega Interpreter: version 1.2.2
 
 module NarrowMod {-(narrow,defTree,DefTree,Rule(..),NS(..),Un,
                   NTerm(..),NMonad(..),Speaks(..),
@@ -269,13 +269,15 @@ simpRel (EqR(x,y)) =
 
 
 
-
-
 mguV :: NMonad z n v t m => ST z -> Rel t -> [(t,t)] -> m(Un v t,ST z)
 mguV s0 truths pairs =
-  case mguN pairs of
-    Nothing -> fail "Unification of (var,term) failed, this is impossible"
-    Just u2 -> return(u2,s0)
+  case mguEither pairs of
+    Left u2 -> return(u2,s0)
+    Right ("Rigid",v,t) -> fail ("the supposedly polymorphic variable '"++name++
+                                 "'\narising from a type signature at "++loc++
+                                 "\nis forced by context to be "++show t)
+       where (name,loc) = locInfo v
+    Right (s,t1,t2) -> fail ("Unification of (var,term) failed, this is impossible\n"++show pairs)
 
 
 fewestVar xAns xterm yAns yterm =
@@ -426,7 +428,8 @@ class (Show name,Eq name,Display name z
   injN :: NS name var term -> term
   varN :: var -> term
   subN :: Un var term -> term -> term
-  mguN :: Monad m => [(term,term)] -> m(Un var term)
+  --mguN :: Monad m => [(term,term)] -> m(Un var term)
+  mguEither :: [(term,term)] -> Either (Un var term) (String,term,term)
   matchN :: Monad m => Un var term -> [(term,term)] -> m(Un var term)
   success :: term
   andName :: name
@@ -438,11 +441,17 @@ class (Show name,Eq name,Display name z
   dterm:: term -> DispElem z
   dname:: name -> DispElem z
   dvar:: var -> DispElem z
-
+  locInfo:: term -> (String,String)
   -- The next 3 are strictly for the sample definitions
   samples :: [(var,term)]
   toName :: String -> name
   varF :: Integer -> term
+
+
+mguN xs =
+  case mguEither xs of
+    Left ans -> return ans
+    Right (s,x,y) -> fail s
 
 
 class Monad m => Speaks m z | m -> z, z -> m where
@@ -1029,7 +1038,7 @@ mguTruth d0 truths xs =
 ----------------------------------------------------------------
 noProgress d0 name term =
   fail ("While narrowing, the term:\n   "++show term++
-        "\ndid not match any rule for "++show name++". The rules are probably incomplete.")
+        "\nNo rule for "++show name++" matched. Either the rules are incomplete, or a lemma is needed.")
 
 
 -- showStep :: (Speaks m z) => String -> (t,Un v t) -> m ()
