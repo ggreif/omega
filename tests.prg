@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 import "LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
@@ -13,7 +13,8 @@ import "LangPrelude.prg"
 
 type IntList = [Int]
 
-data T = CT1 Int IntList
+data T :: *0 where
+   CT1 :: Int -> IntList -> T
 
 x = CT1 5 [2,3]
 
@@ -287,24 +288,24 @@ testEx2 (PairX g z) = g z
 data Zx = Zx
 data Sx x = Sx x
 
-data Nat1 t = IsZ where t = Zx
-           | forall x . IsS x where t = Sx x
+data Nat1:: *0 ~> *0 where
+ IsZ:: Nat1 Zx
+ IsS:: x -> Nat1 (Sx x)
 
-
-
-data Eq1 x y = Eq1 where x = y
+data Eq1:: *0 ~> *0 ~> *0 where
+   Eq1:: Eq1 a a 
 
 testEq1 :: Eq1 (t x) (t y) -> Eq1 x y
 testEq1 Eq1 = Eq1 
 
-data Rep t =
-                 Rint                  where t = Int
-  |              Rchar                 where t = Char
-  |              Runit                 where t = ()
-  | forall a b . Rpair (Rep a) (Rep b) where t = (a,b)
-  | forall a b . Rsum  (Rep a) (Rep b) where t = (+) a b
-  | forall i . Rdata (Rep i) (t -> i) (i -> t)
-  --| Rparam (forall a . Rep a -> Rep (t a))
+data Rep :: *0 ~> *0 where
+   Rint :: Rep Int
+   Rchar :: Rep Char
+   Runit :: Rep ()
+   Rpair :: (Rep a) -> (Rep b) -> Rep (a,b)
+   Rsum :: (Rep a) -> (Rep b) -> Rep (a+b)
+   Rdata :: (Rep i) -> (t -> i) -> (i -> t) -> Rep t
+  -- Rparam (forall a . Rep a -> Rep (t a))
 
 list :: Rep a -> Rep [a]
 list x = Rdata (Rsum Runit (Rpair x (lazy (list x)))) h g
@@ -322,20 +323,18 @@ sum (Rdata i f g) x = sum i (f x)
 sum _ x = 0
 
 
-
-data Var e t
- = forall f.   Z2           where e = (f,t)
- | forall f a. S2 (Var f t) where e = (f,a)
-
- 
-data Exp e t 
-  = Lit t
-  | V (Var e t)
-  | forall a b . Abs  (Exp (e,a) b)                where t = (a -> b)
-  | forall a   . App  (Exp e (a->t)) (Exp e a)
-  | forall a b . Pair (Exp e a) (Exp e b)          where t = (a,b)
-  | forall a b . Pi1  (Exp e (a,b))                where t = a
-  | forall a b . Pi2  (Exp e (a,b))                where t = b
+data Var :: *0 ~> *0 ~> *0 where
+   Z2 :: Var (f,t) t
+   S2 :: (Var f t) -> Var (f,a) t
+   
+data Exp :: *0 ~> *0 ~> *0 where
+   Lit :: t -> Exp e t
+   V :: (Var e t) -> Exp e t
+   Abs :: (Exp ((e,a)) b) -> Exp e (a -> b)
+   App :: (Exp e (a -> t)) -> (Exp e a) -> Exp e t
+   Pair :: (Exp e a) -> (Exp e b) -> Exp e (a,b)
+   Pi1 :: (Exp e ((a,b))) -> Exp e a
+   Pi2 :: (Exp e ((a,b))) -> Exp e b
 
 --------------------------------------------------------------------
 -- Generalize lifting to all kinds env transformations
@@ -411,10 +410,10 @@ evV2 (S2 v,(x,y)) = evV v x
  
 ----------------------------------------- 
 
-data Subst e = 
-    Id
-  | forall x a . None (Subst x) where e = (x,a)
-  | forall x a . One (forall z . Exp z a) (Subst x) where e = (x,a)
+data Subst :: *0 ~> *0 where
+   Id :: Subst e
+   None :: (Subst x) -> Subst (x,a)
+   One :: ((forall z . Exp z a)) -> (Subst x) -> Subst (x,a)
 
 subVar :: Subst e -> Var e t -> Exp e t
 subVar Id v = V v
@@ -440,18 +439,21 @@ s1 = One (Lit 5) (None (One (Lit 6) Id))
 
 kind Natural = Zero | Succ Natural
 
-data List n a 
-  = Nil where n = Zero
-  | forall m . Cons a (List m a) where n = Succ m
+data List :: Natural ~> *0 ~> *0 where
+   Nil :: List n a
+   Cons :: a -> (List m a) -> List (Succ m) a
 
 kind RowS = Rnil | Rcons *0 RowS
 
-data Tuple r = Tnil where r = Rnil
-             | forall t r' . Tcons t (Tuple r') where r = Rcons t r'
 
+data Tuple :: RowS ~> *0 where
+   Tnil :: Tuple Rnil
+   Tcons :: t -> (Tuple r') -> Tuple (Rcons t r')
+   
 -------------------------------------------------------------
 -- Polymorphic kinds
 
+{-
 TRep :: forall (k :: *1 ) . (k ~> *0)
 data TRep t
   = Int  where t = Int
@@ -462,8 +464,20 @@ data TRep t
   | Arr  where t = (->) 
   | ex (k1 :: *1) (f :: k1 ~> k) (x :: k1) .
           Ap (TRep f) (TRep x) where t = f x  
+-}
+
+
+data TRep ::  forall (s :: *2) (k:: s) . s ~> k ~> *0 where
+   Int :: TRep *0 Int
+   Char :: TRep *0 Char
+   Unit :: TRep *0 ()
+   Prod :: TRep (*0 ~> *0 ~> *0) (,)
+   Sum :: TRep (*0 ~> *0 ~> *0) (+)
+   Arr :: TRep (*0 ~> *0 ~> *0) (->)
+   Ap :: forall (k1 :: *1) (k:: *1) (f :: k1 ~> k) (x :: k1) .
+                (TRep (k1 ~> k) f) -> (TRep k1 x) -> TRep k (f x)
     
-f :: forall (k :: *1) (t :: k) . TRep t -> Int
+f :: forall (k :: *1) (t :: k) . TRep k t -> Int
 f Int = 1
 f Prod = 2
 f (Ap a b) = f a + f b
@@ -526,7 +540,7 @@ type Pair x y = (x,y)
 testg :: String -> Int -> Pair String Int
 testg x y = (x,y)
 
-----------------------------------------------
+{---------------------------------------------
 -- Qualified arguments with constraints
 
 f7 :: (forall a . (a=Int) => (a,a)) -> Int
@@ -539,26 +553,45 @@ g7 (x,y) = [x,y]
 
 try2 = g7(True,False)
 
-----------------------------------------------------
+g3 :: a=b => a -> b                   
+g3 x = x
+
+-- g4 :: a!=b => a -> Int
+-- g4 x = 5
+
+g5 :: (a=b,LE a b) => Nat' a -> Nat' b
+g5 x = x
+
+---------------------------------------------------}
+
 -- Static constraints and propositions
 
 prop LE :: Nat ~> Nat ~> *0 where
   Base:: LE Z a
   Step:: LE a b -> LE (S a) (S b)
 
-data LE' x y = LE where LE x y
+data LE':: Nat ~> Nat ~> *0 where
+  LE:: LE x y => LE' x y
 
-data SSeq a = Snil where a = Z
-         | exists b . Scons (Nat' a) (SSeq b) where LE b a
+data SSeq :: Nat ~> *0 where
+   Snil :: SSeq Z
+   Scons :: LE b a => (Nat' a) -> (SSeq b) -> SSeq a
+
+zxc = 0
 
 ##test "Refute (LE #3 #1)"
   bad23 = Scons #1 (Scons #3 Snil)
-  
-trans :: LE a b -> LE b c -> LE a c
-trans Base Base = Base
--- trans (Step z) Base = UNREACHABLE CODE
-trans Base (Step z) = Base
-trans (Step x) (Step y) = (Step(trans x y))
+
+-- we add the bogus Int argument to prevent trans being used as a rule
+-- because if it is allowed then the cases of compare have ambiguous
+-- solutions. We need to control where  the types of functions are used
+-- as static rules better.
+
+trans :: Int -> LE a b -> LE b c -> LE a c
+trans n Base Base = Base
+trans n (Step z) Base = unreachable
+trans n Base (Step z) = Base
+trans n (Step x) (Step y) = (Step(trans n x y))
 
 compare :: Nat' a -> Nat' b -> (LE' a b + LE' b a)
 compare Z Z     = L LE
@@ -584,16 +617,9 @@ f1 x = x
 f2 :: LE a b => Nat' a -> Nat' a
 f2 x = x
 
-g3 :: a=b => a -> b                   
-g3 x = x
 
--- g4 :: a!=b => a -> Int
--- g4 x = 5
 
-g5 :: (a=b,LE a b) => Nat' a -> Nat' b
-g5 x = x
-
-f6 :: forall a b . (a=b,LE a b) => Nat' a -> Nat' b
+f6 :: forall a . (LE a a) => Nat' a -> Nat' a
 f6 x = x
 
 --------------------------------------------------------
@@ -619,8 +645,9 @@ transA :: LE a b -> LE b c -> LE a c
 transA Base Base = Base
 transA (Step z) Base = unreachable
 transA Base (Step z) = Base
-transA (Step x) (Step y) = (Step(trans x y))
+transA (Step x) (Step y) = (Step(transA x y))
 
+-- checks that both function and case versions behave the same
 transP :: LE a b -> LE b c -> LE a c
 transP x y =
   case (x,y) of
@@ -660,8 +687,115 @@ app :: Li a n -> Li a m -> Li a {plus n m}
 app N ys = ys
 app (C x xs) ys = C x (app xs ys)
 
-{- This will need some kind of theorem?
-rev :: Li a n -> Li a n
-rev N = N
-rev (C x xs) = app (rev xs) (C x N)
--}
+flip p a b = p b a
+
+##test "Rigid gets bound"
+  flipApp :: Li a n -> Li a m -> Li a {plus m n}
+  flipApp xs (ys@N) = N
+  flipApp xs (C y ys) = C y (flipApp xs ys)
+  
+##test "Need plus commutes"
+  flipAppend :: Li a n -> Li a m -> Li a {plus n m}
+  flipAppend = flip app
+
+##test "Need theorem for rev"
+  -- This will need some kind of theorem?
+  rev :: Li a n -> Li a n
+  rev N = N
+  rev (C x xs) = app (rev xs) (C x N)
+
+
+---------------------------------------------------
+-- Tests of Simon's Algorithm for GADTS
+
+
+data T2:: *0 ~> *0 where
+ TI :: T2 Int
+ TB :: T2 Bool
+
+gA:: T2 a -> a -> Int 
+gA TI x = x +1
+gA TB x = 1
+
+
+data W:: *0 where 
+  C1:: T2 a -> a -> W
+  
+f8:: W -> Bool
+f8 (C1 TB True) = False
+f8 (C1 TI 3) = True
+f8 x = False
+
+data V:: *0 where 
+  D:: a -> T2 a -> V
+
+##test "Order matters in refinement"  
+ f9:: V -> Bool
+ f9 (D True TB) = False
+ f9 (D 3 TI) = True
+ f9 x = False
+
+
+gB:: a -> T2 a -> Int 
+gB x TI = x +1
+gB x TB = 1
+
+gC:: T2 a -> a -> Int 
+gC TI 3 = 1
+ 
+h:: T2 a -> [a] -> Int 
+h TI (x:xs) = x +1
+h TB x = 0
+
+h1:: T2 a -> [a] -> Int 
+h1 TI (x:1:xs) = x +1
+h1 TB x = 0
+
+ 
+
+##test "Nested Int before GADT match."
+  f:: [a] -> T a -> Int 
+  f (x:1:xs) TI = x+1
+
+##test "Wrong Constructor"
+  bad1:: [a] -> a -> Int
+  bad1 TI x = x+1
+
+##test "Expected has too few args"
+ bad2:: Int -> a -> Int
+ bad2 TI x = x+1
+
+##test "Wrong Constructor 2"
+  bad3:: (Int -> Int) -> a -> Int
+  bad3 TI x = x+1
+
+##test "Concrete pattern before refinement"
+  g2:: a -> T a -> Int 
+  g2 3 TI = 1
+
+##test "Nested concrete pattern before refinement"
+ f:: [a] -> T a -> Int 
+ f (x:1:xs) TI = x+1
+
+mp f [] = []
+mp f (x:xs) = f x : (mp f xs)
+
+-------------------------------------------------------
+-- use of the theorem decl
+
+data Plus :: Nat ~> Nat ~> Nat ~> *0 where
+  Plus0 :: Plus Z x x  -- 0 + x = x
+  Plus1 :: Plus x y z -> Plus (S x) y (S z) -- x + y = z  =>  (x+1) + y = (z+1)
+
+f5:: Plus a b c -> Equal {plus a b} c
+f5 Plus0 = Eq
+f5 (Plus1 p) = Eq
+   where indHyp = f5 p
+         theorem indHyp
+         
+g5:: (Plus a b c,Plus x y c) -> Equal {plus a b} {plus x y}
+g5 (x,y) = Eq
+  where a = f5 x
+        b = f5 y
+        theorem a
+        theorem b

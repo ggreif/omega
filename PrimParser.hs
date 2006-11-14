@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module PrimParser (parserPairs) where
 
@@ -35,29 +35,29 @@ instance Encoding (Parser(V -> V)) where
 
 backwards :: V -> (V -> V)
 backwards fun v = help ((getf fun) v)
-  where help (FIO w) = 
+  where help (FIO w) =
              case unsafePerformIO w of
                 Ok (v@(Vlazy _ _)) -> help(analyzeWith return v)
                 Ok v -> v
-                Fail dis loc _ _ mess -> error("Near "++show loc++"\n"++mess)
+                Fail loc _ _ mess -> error("Near "++show loc++"\n"++mess)
         getf (Vf f _ _) = f
         getf (Vprimfun _ f) = f
         getf v = error ("Not function in backwards: "++ show v)
-   
+
 instance Encoding (Parser(V -> V -> V)) where
    to p = Vparser (fmap (\ f -> lift2 "Parser(V->V->V)" (\ a b ->return(f a b))) p)
    from (Vparser p) = fmap back2 p
      where back2 :: V -> (V -> V -> V)
            back2 v a b = backwards ((backwards v) a) b
    from v = error ("Not a Parser: "++show v)
-   
+
 instance Encoding (Operator V) where
    to (Infix p x) = Vcon (Global "Infix") [to p,to x]
    to (Prefix p) = Vcon (Global "Prefix") [to p]
    to (Postfix p) = Vcon (Global "Postfix") [to p]
    from (Vcon (Global "Infix") [p,x]) = Infix (from p) (from x)
-   from (Vcon (Global "Prefix") [p]) = Prefix (from p) 
-   from (Vcon (Global "Postfix") [p]) = Postfix (from p) 
+   from (Vcon (Global "Prefix") [p]) = Prefix (from p)
+   from (Vcon (Global "Postfix") [p]) = Postfix (from p)
    from v = error ("Not an Operator: "++(show v))
 
 instance Encoding Assoc where
@@ -68,7 +68,7 @@ instance Encoding Assoc where
    from (Vcon (Global "AssocRight")  []) = AssocRight
    from (Vcon (Global "AssocNone")  []) = AssocNone
    from v = error ("Not an Assoc: "++show v)
-   
+
 ------------------------------------------------------------
 -- Parser Primitives
 
@@ -77,13 +77,13 @@ instance Encoding Assoc where
 charV = lift1 "char" f where
   f (Vlit(Char c)) = return(Vparser(char c >>= (return . Vlit . Char)))
 
-satisfyV = lift1 "satisfy" f where 
+satisfyV = lift1 "satisfy" f where
   f v = return(Vparser(do { c <- satisfy g; return(Vlit(Char c)) }))
         where g u = from (backwards v (to u))
-        
+
 stringV = lift1 "string" f where
   f v = return(Vparser(fmap to (string (from v))))
-        
+
 -- Lexeme oriented parsers that eat trailing white space
 
 intLitV = Vparser(intLit >>= (return . Vlit . Int))
@@ -106,9 +106,9 @@ manyP = lift1 "many" f where
 parensP = lift1 "parens" f where
   f (Vparser p) = return(Vparser(parens p))
 tryP = lift1 "try" f where
-  f (Vparser p) = return(Vparser(try p))  
+  f (Vparser p) = return(Vparser(try p))
 parse2P = lift2 "parse2" f where
-  f (Vparser p) (VChrSeq cs)  = 
+  f (Vparser p) (VChrSeq cs)  =
      case parse2 p cs of
       Left message -> return(Vsum L (toStr message))
       Right(v,rest) -> return(Vsum R (Vprod v (VChrSeq rest)))
@@ -125,7 +125,7 @@ sepByP = lift2 "sepBy" f where
 ------------------------------------------------
 -- Make Parser an monad
 
-returnParserP = lift1 "returnParser" ret 
+returnParserP = lift1 "returnParser" ret
   where ret v = return(Vparser(return v))
 
 bindParserP = lift2 "bindParser" bind where
@@ -136,9 +136,9 @@ bindParserP = lift2 "bindParser" bind where
                         Vprimfun _ f -> f v
       ; case unsafePerformIO z of
           Ok(Vparser q) -> q
-          Fail dis loc n k message -> fail ("\n\n**** Near "++show loc++"\n"++message)
+          Fail loc n k message -> fail ("\n\n**** Near "++show loc++"\n"++message)
       }))
-           
+
 failParserP = lift1 "failParser" f where
   f (VChrSeq s) = return(Vparser(fail s))
 
@@ -146,9 +146,9 @@ failParserP = lift1 "failParser" f where
 -- Make Expression Parsers
 
 buildExpressionParserP = lift2 "buildExpressionParser" f where
-  f oper parser = return(Vparser(buildExpressionParser 
+  f oper parser = return(Vparser(buildExpressionParser
                                   (from oper) (from parser)))
-     
+
 ----------------------------------------------------------------
 -- ChrSeq to and from [Char]
 

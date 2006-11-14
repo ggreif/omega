@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Manual where
 
@@ -18,6 +18,7 @@ import LangEval(vals)
 import Syntax(metaHaskellOps)
 import Infer2(typeConstrEnv0,modes_and_doc,predefined)
 import Commands(commands)
+import RankN(Sigma,disp0,Exhibit(..),PolyKind(..))
 
 -----------------------------------------
 -- LaTex-Like macros
@@ -98,10 +99,15 @@ makeManual = go
 ------------------------------------------------------
 -- helper function
 
+showSigma:: Sigma -> String
+showSigma s = snd(exhibit disp0 s)
+showpoly (K s) = showSigma s
+
+
 f ("unsafeCast",_) = ""
 f ("undefined",_) = ""
-f (x,(y,z)) = (g x ++ " :: " ++ show z ++ "\n")
-hf (x,y,z) = (g x ++ " :: " ++ show z ++ "\n")
+f (x,(y,z)) = (g x ++ " :: " ++ showSigma z ++ "\n")
+hf (x,y,z) = (g x ++ " :: " ++ showpoly z ++ "\n")
 hg (x,y) = "("++x++") :: " ++ show y ++ "\n"
 g [] = []
 g "[]" = "[]"

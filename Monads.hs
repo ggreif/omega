@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Monads where
 
@@ -11,7 +11,7 @@ module Monads where
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
-import Auxillary(Loc(..),DispInfo(..),DispElem,initDI,displays)
+import Auxillary(Loc(..),displays)
 
 -------------------------------------------------------------
 
@@ -42,10 +42,10 @@ class Accumulates m z where
 
 class Monad m => TracksLoc m a | m -> a where
   position :: m Loc
-  failN :: DispInfo a -> Loc -> Int -> String -> String -> m b
+  failN :: Loc -> Int -> String -> String -> m b
 
-failP :: TracksLoc m a => String -> Int -> DispInfo a -> String -> m b
-failP k n dis s = do { p <- position; failN dis p n k s}
+failP :: TracksLoc m a => String -> Int -> String -> m b
+failP k n s = do { p <- position; failN p n k s}
 
 -----------------------------------------------------
 instance HasFixpoint IO where
@@ -79,23 +79,22 @@ instance Monad Id where
 
 ------------------------------
 
-data Exception a x
+data Exception x
    = Ok x
-   | Fail (DispInfo a)  -- Display
-          Loc        -- Source Location of Error
+   | Fail Loc        -- Source Location of Error
           Int        -- Severity or level of error
           String     -- kind of error
           String     -- message
 
-instance Monad (Exception a) where
+instance Monad Exception where
   return x = Ok x
   (>>=) (Ok x) f = f x
-  (>>=) (Fail dis loc n k s) f  = Fail dis loc n k s
-  fail s = Fail initDI Z 0 "" s
+  (>>=) (Fail loc n k s) f  = Fail loc n k s
+  fail s = Fail Z 0 "" s
 
-instance Functor (Exception a) where
+instance Functor Exception where
   fmap f (Ok x) = Ok (f x)
-  fmap f (Fail dis loc n k s) = Fail dis loc n k s
+  fmap f (Fail loc n k s) = Fail loc n k s
 
 -----------------------------------
 data Env e x = Env (e -> x)
@@ -194,75 +193,78 @@ tag s x = do printOutput s
 -- IO with catchable failure
 
 
-newtype FIO a x = FIO(IO (Exception a x))
+newtype FIO x = FIO(IO (Exception x))
 unFIO (FIO x) = x
 
-instance Monad (FIO z) where
-  fail s = failFIO initDI Z 0 s
+instance Monad FIO where
+  fail s = failFIO Z 0 s
   return x = FIO(return(Ok x))
   (>>=) (FIO a) g = FIO w
     where w = do { x <- a
                  ; case x of
                     Ok z -> unFIO(g z)
-                    Fail dis loc n k s -> return(Fail dis loc n k s)}
+                    Fail loc n k s -> return(Fail loc n k s)}
 
-instance Functor (FIO a) where
+instance Functor FIO where
   fmap f (FIO x) = FIO(fmap (fmap f) x)
 
-failFIO disp loc n s = FIO(return(Fail disp loc n "" s))
+failFIO loc n s = FIO(return(Fail loc n "" s))
 
-handleP :: (String -> Bool) -> Int -> FIO z a ->
-           (DispInfo z -> String -> FIO z a) -> FIO z a
+fioFailD n disp xs = FIO(return(Fail Z n "" s))
+  where (disp2,s) = displays disp xs
+
+handleP :: (String -> Bool) -> Int -> FIO a ->
+           (String -> FIO a) -> FIO a
 handleP p m (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
-                   Fail dis loc n k s ->
+                   Fail loc n k s ->
                        if (m > n) && (p k)
-                          then unFIO(f dis s)
-                          else return(Fail dis loc n k s)
+                          then unFIO(f s)
+                          else return(Fail loc n k s)
                    ok -> return(ok)}
 
 handle = handleP (\ _ -> True)
 
-tryAndReport :: FIO z a -> (Loc -> DispInfo z -> String -> FIO z a) -> FIO z a
+tryAndReport :: FIO a -> (Loc -> String -> FIO a) -> FIO a
 tryAndReport (FIO x) f = FIO w
   where w = do { a <- x
                ; case a of
-                   Fail dis loc n k s -> unFIO(f loc dis s)
+                   Fail loc n k s -> unFIO(f loc s)
                    ok -> return(ok)}
 
-runFIO :: FIO z x -> (DispInfo z -> Loc -> Int -> String -> IO x) -> IO x
+runFIO :: FIO x -> (Loc -> Int -> String -> IO x) -> IO x
 runFIO (FIO x) f = do { a <- x
                       ; case a of
                           Ok z -> return z
-                          Fail dis loc n k s -> f dis loc n s }
+                          Fail loc n k s -> f loc n s }
 
-fixFIO :: (a -> FIO z a) -> FIO z a
+fixFIO :: (a -> FIO a) -> FIO a
 fixFIO f = FIO(fixIO (unFIO . f . unRight))
     where unRight (Ok x) = x
-          unRight (Fail disp loc n k s) = error ("Failure in fixFIO: "++s)
+          unRight (Fail loc n k s) = error ("Failure in fixFIO: "++s)
 
 
-fio :: IO x -> FIO z x
+fio :: IO x -> FIO x
 fio x = FIO(fmap Ok x)
 
 write = fio . putStr
 writeln = fio . putStrLn
 
-readln :: String -> FIO z String
+readln :: String -> FIO String
 readln prompt = fio (do {putStr prompt; getLine})
 
-instance HasFixpoint (FIO z) where
+instance HasFixpoint FIO where
   fixpoint = fixFIO
 
-instance HasNext (FIO z) where
+instance HasNext FIO where
   nextInteger = fio nextInteger
   resetNext n = fio(resetNext n)
 
-instance HasOutput (FIO z) where
+instance HasOutput FIO where
   outputString = writeln
 
-instance HasIORef (FIO z) where
+instance HasIORef FIO  where
   newRef x = FIO(do { r <- newIORef x; return(Ok r)})
   readRef ref = FIO(do { r <- readIORef ref; return(Ok r)})
   writeRef ref x = FIO(writeIORef ref x >> return(Ok ()))
@@ -296,14 +298,16 @@ getenv = SE h
 -- monad layed over the FIO monad with the ability to acculumate.
 
 forceMtc (Tc f) =
-  let g _ _ _ _ = error "IN forceMtc"
+  let g _ _ _ = error "IN forceMtc"
   in case unsafePerformIO(runFIO (f undefined) g) of
       (a,ns) -> a
 
-newtype Mtc z e n a = Tc (e -> FIO z (a,[n]))
+newtype Mtc e n a = Tc (e -> FIO (a,[n]))
 unTc (Tc f) = f
 
-instance Monad (Mtc z e n) where
+mtc2fio env (Tc f) = do { (x,_) <- f env; return x }
+
+instance Monad (Mtc e n) where
   return x = Tc f where f env = return(x,[])
   fail s = Tc f where f env = fail s
   (>>=) (Tc f) g = Tc h
@@ -311,52 +315,52 @@ instance Monad (Mtc z e n) where
                       ; (b,ns2) <- unTc (g a) env
                       ; return(b,ns1++ns2)}
 
-instance Functor (Mtc z e n)  where
+instance Functor (Mtc e n)  where
   fmap f x = do { a <- x; return(f a) }
 
-handleTC :: (String -> Bool) -> Int -> Mtc z e n a ->
-            (DispInfo z -> String -> Mtc z e n a) -> Mtc z e n a
+handleTC :: (String -> Bool) -> Int -> Mtc e n a ->
+            (String -> Mtc e n a) -> Mtc e n a
 handleTC p m (Tc x) f = Tc w
-  where w env = handleP p m (x env) (\ dis s -> unTc (f dis s) env)
+  where w env = handleP p m (x env) (\ s -> unTc (f s) env)
 
 
 
-fio2Mtc :: FIO z a -> Mtc z b c a
+fio2Mtc :: FIO a -> Mtc b c a
 fio2Mtc x = Tc h
   where h env = do { ans <- x; return(ans,[]) }
 
 -- Error reporting funcions in FIO
 
 -- Report an error then die.
-errF :: DispInfo z -> Loc -> Int -> String -> a
-errF disp loc n s = error ("At "++show loc++"\n"++s)
+errF :: Loc -> Int -> String -> a
+errF loc n s = error ("At "++show loc++"\n"++s)
 
 -- Report an error, then continue with the continuation
-report :: FIO z a -> Loc -> DispInfo z -> String -> FIO z a
-report continue Z   dis message = do { writeln message; continue }
-report continue loc dis message =
+report :: FIO a -> Loc -> String -> FIO a
+report continue Z   message = do { writeln message; continue }
+report continue loc message =
    do { writeln ("\n\n**** Near "++(show loc)++"\n"++message); continue }
 
 
 ------------------------------------------------
 -- Some instance Declarations
 
-instance HasFixpoint (Mtc z e n) where
+instance HasFixpoint (Mtc e n) where
   fixpoint = error "No fixpoint for TC"
 
-instance HasNext (Mtc z e n) where  -- Supports a unique supply of Integers
+instance HasNext (Mtc e n) where  -- Supports a unique supply of Integers
   nextInteger = Tc h where h env = fio(do { n <- nextInteger;return(n,[])})
   resetNext n = Tc h where h env = fio(do { resetNext n; return((),[])})
 
-instance HasOutput (Mtc z e n) where -- Supports Output of Strings
+instance HasOutput (Mtc e n) where -- Supports Output of Strings
   outputString s = Tc h where h env = writeln s >> return((),[])
 
-instance HasIORef (Mtc z e n) where
+instance HasIORef (Mtc e n) where
   newRef v = lift (newIORef v)
   readRef r = lift (readIORef r)
   writeRef r v = lift (writeIORef r v)
 
-instance Accumulates (Mtc z e n) n where
+instance Accumulates (Mtc e n) n where
   extractAccum (Tc f) = Tc g
     where g env = do { (a,ns) <- f env; return((a,ns),[])}
   injectAccum ns = Tc g
@@ -367,24 +371,24 @@ instance Accumulates (Mtc z e n) n where
 
 -- Moving back and forth between IO and Mtc
 
-runTC :: Show n => e -> Mtc z e n a -> IO a
+runTC :: Show n => e -> Mtc e n a -> IO a
 runTC env (Tc f) =
    do { --let env = TcEnv { var_env = listToFM []
         --                , generics = []
         --                , verbose = False }
-      ; (a,out) <- runFIO (f env) (\ dis loc n s -> error s)
+      ; (a,out) <- runFIO (f env) (\ loc n s -> error s)
       ; putStrLn ("Need = "++show out)
       ; return a }
 
 -- Lift an IO action into Mtc, ignores the environment
 -- and always succeeds and accumulates nothing
 
-lift :: IO a -> Mtc z e n a
+lift :: IO a -> Mtc e n a
 lift st = Tc (\env -> do { r <- fio st; return(r,[]) })
 
-testTC :: e -> Mtc z e n a -> a
+testTC :: e -> Mtc e n a -> a
 testTC env (Tc f) = unsafePerformIO
-  (do { (a,out) <- runFIO (f env) (\ dis loc n s -> error s)
+  (do { (a,out) <- runFIO (f env) (\ loc n s -> error s)
       ; return a })
 
 

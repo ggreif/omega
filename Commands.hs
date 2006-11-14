@@ -2,23 +2,25 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Commands (commands,dispatchColon,execExp,drawPatExp
                 ,letDec,commandF,notDup,foldF) where
 
-import Infer2
-import RankN(pprint)
+import Infer2(TcEnv,getVar,initTcEnv,getkind,parseAndKind,setCommand
+             ,getRules,predefined,narrowString,tcInFIO,wellTyped
+             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef)
+import RankN(pprint,warnM)
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
-             ,write,writeln,readln,unTc,tryAndReport,fio)
+             ,write,writeln,readln,unTc,tryAndReport,fio,writeRef)
 import Version(version,buildtime)
 import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
-import ParserDef(getInt)
-import Auxillary(plist,plistf)
+import ParserDef(getInt,getBounds)
+import Auxillary(plist,plistf,DispElem(..))
 import Monads(report,readRef)
 
 --------------------------------------------------------
@@ -68,6 +70,18 @@ lCom elabFile tenv file =
 
 -- :set verbose
 setCom tenv mode = setCommand mode True tenv
+
+-- :bounds narrowing 35
+bndCom tenv args =
+  do { (bound,size) <- getBounds fail args
+     ; let get (s,m,ref) = do { n <- readRef ref; return(s++" = "++show n++ m)}
+     ; if bound == ""
+          then do { xs <- mapM get boundRef; warnM [Dl xs "\n"]}
+          else case find (\ (nm,info,ref) -> nm==bound) boundRef of
+                Just (_,_,ref) -> writeRef ref size
+                Nothing -> fail ("Unknown bound '"++bound++"'")
+     ; return tenv
+     }
 
 -- :clear verbose
 clearCom tenv mode = setCommand mode False tenv
@@ -122,6 +136,7 @@ commandF s f =
   ,("rules",rulesCom,":rules name  display rules for 'name'\n")
   ,("pre",  preCom,  ":pre         display declarations for all predefined types\n")
   ,("n",    nCom,    ":n type      narrow type expression\n")
+  ,("bounds",bndCom, ":bounds X n  set the resource bound X to n\n")
   ,("?",questionCom, ":?           display list of legal commands (this message)\n")
   ]
 

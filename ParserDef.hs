@@ -2,10 +2,10 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
-module ParserDef (pp,pe,pd,name,getExp,getInt,
+module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
                 pattern,expr,decl,
                 bind,program,parse2,parse,parseString,parseFile
                 ,parseHandle, Handle
@@ -22,8 +22,7 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,listExp,patTuple,ifExp,mergeFun,consExp,expTuple
              ,binop,opList,var,freshE,swp,dvars,evars,
              typeStrata,kindStrata,emptyF,Vars(..),freeOfDec
-             ,ExplicitGADT(..) ,transGADT
-             ,freshNames,step1,step2,step3,step4,monadDec)
+             ,monadDec)
 import Monads
 import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
             ,ptsub,getFree,parse_tag,buildNat,props,typingHelp,typing)
@@ -51,6 +50,20 @@ getInt :: Monad m => (String -> m Int) -> String -> m Int
 getInt failf s = case parse2 natural s of
               Left s -> failf s
               Right(n,s) -> return(fromInteger n)
+
+getBounds::  Monad m => (String -> m (String,Int)) -> String -> m (String,Int)
+getBounds failf "" = return("",0)
+getBounds failf s =
+   case parse2 bounds s of
+      Left s -> failf (message ++ s)
+      Right(n,s) -> return n
+  where bounds = do { s <- identifier
+                    ; n <- natural
+                    ; return(s,fromInteger n)}
+        message = "\nIllegal bounds argument. Should be something like\n  "++
+                  ":bounds narrowing 25\nUse :bounds with no argument to see legal bounds arguments.\n\n"
+
+
 
 getExp :: Monad m => String -> m Exp
 getExp s = case pe s of
@@ -185,7 +198,7 @@ name = terminal identifier Global
 
 pattern =
       try asPattern
-  <|> try (do { p <- simplePattern; symbol "::"; t <- typN 0; return(Pann p t)})
+  <|> try (do { p <- simplePattern; symbol "::"; t <- typN; return(Pann p t)})
   <|> try infixPattern  -- There's a problem with infix
                         -- E.g. (L x : xs) parses as (L(x:xs)) rather than ((L x) : xs)
                         -- This will need to be fixed
@@ -375,7 +388,7 @@ expr =
     <|> existExp
     <|> underExp
     <|> try (do { p <- simpleExpression; symbol "::"
-                ; t <- typN 0
+                ; t <- typN
                 ; return(Ann p t)})
     <|> try runExp
     <|> infixExpression     --names last
@@ -664,7 +677,6 @@ decl = -- try fundecl
      <|> vdecl
      <|> datadecl
      <|> typeFunDec
-    -- <|> kinddecl
      <|> flagdecl
      <|> monaddecl
      <|> testDec
@@ -676,10 +688,16 @@ decl = -- try fundecl
      <?> "decl"
 
 theoremDec =
-  do{ reserved "theorem"
-    ; vs <- sepBy name comma
-    ; return(AddTheorem vs)
+  do{ pos <- getPosition
+    ; reserved "theorem"
+    ; vs <- sepBy theorem comma
+    ; return(AddTheorem (loc pos) vs)
     }
+
+theorem =
+  do { v <- name
+     ; term <- (try (do {reservedOp "="; e <- expr; return(Just e)})) <|> (return Nothing)
+     ; return(v,term)}
 
 testDec =
   do { testSym
@@ -716,26 +734,26 @@ importDec =
 typeSig =
    do{ pos <- getPosition
      ; n <- (constructorName <|> name)
-     ; t <- typing 0
+     ; t <- typing
      ; return $ TypeSig (loc pos) n t }
 
 typeSyn =
    do{ pos <- getPosition
      ; reserved "type"
      ; Global n <- constructorName
-     ; args <- targs 0
+     ; args <- targs
      ; reservedOp "="
-     ; t <- typN 0
+     ; t <- typN
      ; return $ TypeSyn (loc pos) n args t }
 
 typeFunDec =
    do{ pos <- getPosition
      ; (f,xs) <- braces args
      ; reservedOp "="
-     ; body <- typN 0
+     ; body <- typN
      ; return(TypeFun (loc pos) f Nothing [(xs,body)])}
   where args = do { Global f <- name
-                  ; zs <- many1 (simpletyp 0)
+                  ; zs <- many1 simpletyp
                   ; return(f,TyVar' f : zs) }
 
 
@@ -744,7 +762,7 @@ primDec =
    do{ pos <- getPosition
      ; reserved "primitive"
      ; n <- (name <|> parens operator)
-     ; t <- typing 0
+     ; t <- typing
      ; return $ Prim (loc pos) n t }
  where operator =
           do { cs <- many (opLetter tokenDef)
@@ -771,33 +789,35 @@ datadecl =
                        (reserved "prop" >> return(0,True)) <|>
                        (reserved "kind" >> return(1,False))
     ; t <- name;
-    ; (explicit prop pos strata t) <|> (implicit prop pos strata t)
+    ; (explicit prop pos t) <|> (implicit prop pos strata t)
     }
 
 implicit b pos strata t =
-  do{ args <- targs 0
+  do{ args <- targs
     ; reservedOp "="
     ; let finish cs ds = Data (loc pos) b strata t Nothing args cs ds
-    ; (reserved "primitive" >> return(finish [] [])) <|>
-      (do { cs <- sepBy1 (constrdec 0) (symbol "|")
+          kindf [] = Star' strata
+          kindf ((_,x):xs) = Karrow' x (kindf xs)
+    ; (reserved "primitive" >> return(GADT (loc pos) b t (kindf args) [])) <|>
+      (do { cs <- sepBy1 constrdec (symbol "|")
           ; ds <- derive
           ; return(finish cs ds)})
     }
 
 
-explicit b pos strata tname =
+explicit b pos tname =
   do { symbol "::"
-     ; kind <- typN 1
+     ; kind <- typN
      ; reserved "where"
      ; cs <- layout explicitConstr (return ())
-     ; let gadt = (GADT (loc pos) strata b tname kind cs)
-     ; return(Explicit gadt)
+     ; let gadt = (GADT (loc pos) b tname kind cs)
+     ; return(gadt)
      }
 
 explicitConstr =
   do { l <- getPosition
      ; c <- constructorName
-     ; (prefix,preds,body) <- typingHelp 0
+     ; (prefix,preds,body) <- typingHelp
      ; let format Nothing = []
            format (Just(q,kindings)) = map g kindings
            g (nm,kind,quant) = (nm,kind)
@@ -805,26 +825,12 @@ explicitConstr =
      }
 
 
-targs strata = many arg
+targs = many arg
   where arg = simple <|> parens kinded
-        simple = do { n <- name; return(n,AnyTyp (strata+1)) }
+        simple = do { n <- name; return(n,AnyTyp) }
         kinded = do { n <- name; symbol "::"
-                    ; t<- typN strata
+                    ; t<- typN
                     ; return(n,t)}
-
-kinddecl =
-  do{ pos <- getPosition
-    ; reserved "kind"
-    ; t <- name
-    ; args <- many name
-    ; reservedOp "="
-    ; cs <- sepBy1 pairs (symbol "|")
-    ; return (Kind (loc pos) t args cs)
-    }
- where pairs = do{ c <- constructorName
-                 ; domain <- many (simpletyp 1)
-                 ; return (c,domain)}
-
 
 derive =
   (do { reserved "deriving"
@@ -832,18 +838,18 @@ derive =
         (parens(sepBy1 constructorName (symbol ","))) })
   <|> (return [])
 
-constrdec strata =
+constrdec =
  do{ pos <- getPosition
-   ; exists <- (forallP strata <|> (return []))
+   ; exists <- forallP <|> (return [])
    ; c <- constructorName
-   ; domain <- many (simpletyp strata)
-   ; eqs <- possible (reserved "where" >> sepBy1 (proposition strata) (symbol ","))
+   ; domain <- many simpletyp
+   ; eqs <- possible (reserved "where" >> sepBy1 proposition (symbol ","))
    ; return (Constr (loc pos) exists c domain eqs)
    }
 
-forallP strata =
+forallP =
  do { (reserved "forall") <|> (reserved "exists") <|> (symbol "ex" >> return ())
-    ; ns <- targs strata
+    ; ns <- targs
     ; symbol "."
     ; return ns
     }
@@ -1116,7 +1122,7 @@ tr s = case getExp s of
 z1 = pd
   "id :: forall (k:: *1) (a:: *) . a -> a\nid x = x"
 
-z2 = parse2 (allTyp 0) "forall (a:: * ) b . a -> (a,b)"
+z2 = parse2 (allTyp ) "forall (a:: * ) b . a -> (a,b)"
 
 
 Right(z4,_) = pd "data Var:: *0 ~> *0 ~> *0 where \n  Z:: Var (w,x) w\n  S:: Var w x -> Var (y,w) x"
@@ -1126,14 +1132,13 @@ Right(z4,_) = pd "data Var:: *0 ~> *0 ~> *0 where \n  Z:: Var (w,x) w\n  S:: Var
 --code for parsing an explicit without translation for debugging
 completeExplicit =
   do { pos <- getPosition
-     ; strata <- (reserved "data" >> return 0) <|>
-                 (reserved "kind" >> return 1)
+     ; reserved "data"
      ; tname <- name
      ; symbol "::"
-     ; kind <- typN strata
+     ; kind <- typN
      ; reserved "where"
      ; cs <- layout explicitConstr (return ())
-     ; return (GADT (loc pos) strata False tname kind cs)
+     ; return (GADT (loc pos) False tname kind cs)
      }
 
 s33  = "kind Shape:: Nat ~> *1 where\n"++
@@ -1141,11 +1146,10 @@ s33  = "kind Shape:: Nat ~> *1 where\n"++
        "  D:: Q a => a ~> Shape a\n" ++
        "  F:: forall a . Q a => Shape a\n"
 Right(e33,_) = parse2 completeExplicit s33
-d33 = (transGADT e33)
+
 
 Right(z3,_) = parse2 completeExplicit
   ("data RepA :: forall (k:: *2)(t::k) . (k ~> Row HasKind ~> t ~> *0) where VarA  :: forall (ww:: *1) (l:: Tag) (env:: Row HasKind) (t:: ww) . Label l -> RepA ww (RCons (HK l ww t) env) t")
-look = putStr(show (transGADT z3))
 
 
 Right(z5,_) = pd "data Exp:: *0 ~> *0 ~> *0 ~> *0 ~> *0 where\n Const:: t -> Exp past now future t\n Run:: (forall n . Exp past now (n,future) (Cd n future t)) -> Exp past now future t"
