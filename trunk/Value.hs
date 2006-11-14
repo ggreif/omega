@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Value where
 import Auxillary(plist,plistf)
@@ -31,15 +31,15 @@ data V
   = Vlit Lit
   | Vsum Inj V
   | Vprod V V
-  | Vprimfun String (V -> FIO Z V)
+  | Vprimfun String (V -> FIO V)
   | Vfun [Pat] Exp Ev
-  | Vf (V -> FIO Z V) (Ev -> V) (Perm -> V)
+  | Vf (V -> FIO V) (Ev -> V) (Perm -> V)
   | Vcon Var [V]
   | Vpat Var ([Pat]->Pat) V
-  | Vlazy (IORef (Either (FIO Z V) V))
+  | Vlazy (IORef (Either (FIO V) V))
   | Vcode Exp Ev
   | Vswap Perm V
-  | Vfio Perm (FIO Z V)
+  | Vfio Perm (FIO V)
   | Vptr Perm Integer (IORef (Maybe V))
   | VChrSeq String
   | Vparser (Parser V)
@@ -155,10 +155,9 @@ instance Swap Dec where
   swaps cs (Prim loc nm t) = Prim loc nm t
   swaps cs (Data loc b n v sig vs cons ds) = Data loc b n v sig vs cons ds
   swaps cs (TypeSyn loc nm args ty) = TypeSyn loc nm args ty
-  swaps cs (Kind loc v vs ts) = Kind loc v vs ts
   swaps cs (Flag x y) = Flag (swaps cs x) (swaps cs y)
   swaps cs (Reject s d) = Reject s (swaps cs d)
-  swaps cs (AddTheorem xs) = AddTheorem (swaps cs xs)
+  swaps cs (AddTheorem loc xs) = AddTheorem loc (swaps cs xs)
 
 
 ---------------------------------------
@@ -282,7 +281,7 @@ mkSymbol s = Vlit(Symbol s)
 -- of a value to proceed. The constructors Vlazy and Vswap hide
 -- this structure. So use the function "analyzeWith" to expose the structure.
 
-analyzeWith :: (V -> FIO Z a) -> V -> FIO Z a
+analyzeWith :: (V -> FIO a) -> V -> FIO a
 analyzeWith f v = downSwap [] f v
 
 
@@ -301,9 +300,9 @@ v1 = Vprod (Vlit (Int 5)) (Vlit (Int 6))
 
 vlazy c = do { r <- fio(newIORef (Left c)); return(Vlazy [] r) }
 
-type Ref a = (IORef (Either (FIO Z a) a))
+type Ref a = (IORef (Either (FIO a) a))
 
-down :: Ref V -> FIO Z V
+down :: Ref V -> FIO V
 down ref =
   do { x <- fio(readIORef ref)
      ; case x of
@@ -327,7 +326,7 @@ newPtr = Vfio [] action
             ; n <- nextInteger
             ; return(Right (Vcon (Global "Nil") [Vptr [] n r]))}
 
-myIo :: V -> FIO Z (Either String V)
+myIo :: V -> FIO (Either String V)
 myIo v = (return(Right v))
 
 initPtr :: V

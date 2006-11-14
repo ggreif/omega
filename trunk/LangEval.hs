@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module LangEval where
 
@@ -83,7 +83,7 @@ monadFail (Ev _ (unit,bind,fail)) = fail
 
 -- The do syntax uses a monad stored in the run-time environment. The default
 -- monad is Maybe. This code precomputes a value which is the default maybeMonad
-maybeMonad = unsafePerformIO (runFIO action (\ dis loc n s -> error s)) where
+maybeMonad = unsafePerformIO (runFIO action (\ loc n s -> error s)) where
   Right(bind,_)= pe "\\ x g -> case x of {Nothing -> Nothing; Just x -> g x}"
   Right(unit,_) = pe "Just"
   Right(fail,_) = pe "\\ x -> Nothing"
@@ -118,7 +118,7 @@ eval env@(Ev xs m) x =
       --; writeln("<< "++show ans)
       ; return ans }
 
-evalZ ::  Env -> Exp -> FIO Z V
+evalZ ::  Env -> Exp -> FIO V
 evalZ env (Var s) = evalVar env s
 evalZ env (Lit (ChrSeq s)) = return(VChrSeq s)
 evalZ env (Lit x) = return(Vlit x)
@@ -225,7 +225,7 @@ makeLam ps body frag perm1 env = Vf (f frag ps) push swapp
 -- do { p <- x; cont }  TO
 -- bind x (\ z -> case z of { p -> cont; _ -> fail "matcherr"})
 
-evalBind :: Env -> V -> V -> Pat -> V -> (Env -> FIO Z V) -> FIO Z V
+evalBind :: Env -> V -> V -> Pat -> V -> (Env -> FIO V) -> FIO V
 evalBind env bind fail p x cont =
     do { g <- applyV badBind bind x
        ; applyV badBind2 g (Vprimfun "implicit case in pat bind of Do exp" casef) }
@@ -239,7 +239,7 @@ evalBind env bind fail p x cont =
                          Nothing -> applyV badFail fail (message v)
                          Just es -> cont (extendV es env)}
 
-evalDo :: V -> V -> [Stmt Pat Exp Dec] -> Ev -> FIO Z V
+evalDo :: V -> V -> [Stmt Pat Exp Dec] -> Ev -> FIO V
 evalDo bind fail [ NoBindSt loc e ] env = eval env e
 evalDo bind _ [ e ] env =
    fail ("The last Stmt in a do-exp must be simple: "++(show e))
@@ -254,7 +254,7 @@ evalDo bind fail ((LetSt loc ds):ss) env =
 
 --------------------------------------------------------
 
-evalBody :: Env -> Body Exp -> FIO Z V -> FIO Z V
+evalBody :: Env -> Body Exp -> FIO V -> FIO V
 evalBody env (Normal e) failcase = eval env e
 evalBody env (Guarded xs) failcase = test env xs
  where test env [] = failcase
@@ -280,7 +280,7 @@ ifV x y z =
 
 matchStrict prefix p v env = mPatStrict prefix [] (expandPat env p) v
 
-mPatStrict :: Prefix -> EnvFrag -> Pat -> V -> FIO Z (Maybe EnvFrag)
+mPatStrict :: Prefix -> EnvFrag -> Pat -> V -> FIO (Maybe EnvFrag)
 mPatStrict prefix es (Pann p typ) v = mPatStrict prefix es p v
 mPatStrict prefix es (Pvar s) v = return(Just((s,v):es))
 mPatStrict prefix es (Paspat n p) v = mPatStrict prefix ((n,v):es) p v
@@ -336,7 +336,7 @@ mStrictPats prefix _ _ es = return Nothing
 -- pat = exp. We need to eval exp in an environment with bindings for the
 -- variables in pat, but we need the value of exp to get those bindings.
 
-matchPatLazy :: Pat -> V -> FIO Z (V,EnvFrag)
+matchPatLazy :: Pat -> V -> FIO (V,EnvFrag)
 matchPatLazy (Pann p typ) v = matchPatLazy p v
 matchPatLazy (Pexists p) v = matchPatLazy p v
 matchPatLazy (Pvar s) v = return(v,[(s,v)])
@@ -440,7 +440,7 @@ funcPat ns p ps = build ns p
 -- use of the fixpoint on the monad, "magic" and the env returned are
 -- identical.
 
-elab :: Prefix -> Env -> Env -> Dec -> FIO Z Env
+elab :: Prefix -> Env -> Env -> Dec -> FIO Env
 elab prefix magic init (Pat loc nm args body) =
   return(extendV [(nm,(Vpat nm (funcPat args body) (evalPat2 args body)))] init)
 elab prefix magic init (d@(Val loc p b ds)) =
@@ -467,14 +467,13 @@ elab prefix magic init (Data loc b strata nm sig args constrs derivs) =
   return(extendV xs init)
  where xs = map f constrs
        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon cname) (length args) []))
-elab prefix magic init (Explicit (GADT l s p t k cs)) = return(extendV xs init)
+elab prefix magic init (GADT l p t k cs) = return(extendV xs init)
  where xs = map f cs
        f (loc,cname,allv,preds,ty) =
             (cname,(mkFun (show cname) (Vcon cname) (size ty) []))
        size (Rarrow' x y) = 1 + size y
        size _ = 0
 
-elab prefix magic init (Kind _ _ _ _) = return init
 elab prefix magic init (TypeSig loc nm t) = return init
 elab prefix magic init (Prim loc nm t) =
    case lookup nm primitives of
@@ -485,8 +484,8 @@ elab prefix magic init (Reject s ds) =
    handle 4 (do { outputString ("Elaborating Reject"++show ds)
                 ; env2 <-  elaborate Tick ds magic
                 ; fail ("Reject test: "++s++" did not fail.")})
-            (\ dis s -> return init)
-elab prefix magic init (AddTheorem xs) = return init
+            (\ s -> return init)
+elab prefix magic init (AddTheorem loc xs) = return init
 elab prefix magic init (TypeSyn loc nm args t) = return init
 elab prefix magic init (TypeFun loc nm k ms) = return init
 elab prefix magic init d = fail ("Unknown type of declaration:\n"++(show d))
@@ -738,7 +737,7 @@ vals =
  ,("fresh",(freshV,gen(typeOf(undefined :: Char -> Symbol))))
  ,("swap",(swapV,gen(typeOf(undefined :: Symbol -> Symbol -> A -> A))))
  ,("symbolEq",(symbolEqV,gen(typeOf(undefined :: Symbol -> Symbol -> Bool))))
- ,("labelEq",(labelEqV,gen(typeOf(undefined :: Label A -> Label B -> Maybe(Equal A B)))))
+ ,("labelEq",(labelEqV,gen(typeOf(undefined :: Label A -> Label B -> Maybe(Equal (Label A) (Label B))))))
 
 
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
@@ -795,14 +794,14 @@ consV = Vprimfun ":" g
         g v               = return(Vprimfun ("(:) "++show v) (f v))
         f v vs = return(Vcon (Global ":") [v,vs])
 
-charCons :: Char -> V -> FIO Z V
+charCons :: Char -> V -> FIO V
 charCons c (VChrSeq cs) = return(VChrSeq (c:cs))
 charCons c (Vcon (Global "[]") []) = return(VChrSeq [c])
 charCons c (v@(Vcon (Global ":") [_,_])) =
      do { cs <- list2seq v; return(VChrSeq (c:cs))}
 charCons c vs = return(Vcon (Global ":") [Vlit (Char c),vs])
 
-list2seq :: V -> FIO Z String
+list2seq :: V -> FIO String
 list2seq v = analyzeWith f v
   where f (VChrSeq cs) = return cs
         f (Vcon (Global "[]") []) = return ""
@@ -926,7 +925,7 @@ bindIO = Vprimfun "bindIO" (analyzeWith f) where
                     Left s -> return(Left s) }
   f v = fail("Non IO action as first arg to bindIO: "++show v)
 
-instance Swap a => Swap (FIO Z a) where
+instance Swap a => Swap (FIO a) where
   swaps [] x = x
   swaps cs comp = (do { x <- comp; return(swaps cs x)})
 
@@ -934,7 +933,7 @@ failIO :: V
 failIO = Vprimfun "failIO" f
   where f arg = do { string <- stringV arg
                    ; return(Vfio [] (return (Left string))) }
-          where stringV :: V -> FIO Z String
+          where stringV :: V -> FIO String
                 stringV v = analyzeWith help v where
                    help (Vcon (Global "[]") []) = return []
                    help (Vcon (Global ":") [Vlit (Char x),y]) =

@@ -2,9 +2,9 @@ MAIN             = Main
 EXEC             = omega.exe
 GHC              = ghc
 GHCI             = ghci
-GHC_FLAGS        = -O -auto-all $(GHC_FLAGS_COMMON)
+GHC_FLAGS        = -auto-all  $(GHC_FLAGS_COMMON)
 GHCI_FLAGS       = $(GHC_FLAGS_COMMON)
-GHC_FLAGS_COMMON = -fglasgow-exts -package lang -fallow-undecidable-instances -id:../Lib/Parser -id:../Lib
+GHC_FLAGS_COMMON = -fglasgow-exts -package lang -fallow-undecidable-instances
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 
@@ -23,4 +23,7 @@ hugs-%: %.hs
 	$(HUGS) $(HUGS_FLAGS) $*
 
 clean :
-	rm -f *.hi *.o *.prof 
+	rm -f *.hi *.o *.prof
+
+
+

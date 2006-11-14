@@ -22,3 +22,8 @@ used when building the distribution
 
 
 ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -package lang -fallow-undecidable-instances
+
+
+
+-- Build the manual tables
+./omega.exe -prim D:/work/papers/OmegaManualkinds.tex D:/work/papers/OmegaManualinfix.tex

@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Syntax where
 
@@ -14,13 +14,13 @@ import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Auxillary
 import List(elem,nub,union,(\\),partition,find)
 import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
-            ,getMult,PPred(..),Z(..))
+            ,getMult,PPred(..),Pred(..),Quant(..),univLevelFromPTkind)
 import Char(isLower,isUpper)
-import Pretty
+import qualified Text.PrettyPrint.HughesPJ as PP
+import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
-
 import ParserAll(Parser)
 
 -- By rights these should be defined in Value.hs But then
@@ -33,20 +33,19 @@ showenv (Ev xs m) =
 
 type EnvFrag = [(Var,V)]
 
-
 data V
   = Vlit Lit
   | Vsum Inj V
   | Vprod V V
-  | Vprimfun String (V -> FIO Z V)
+  | Vprimfun String (V -> FIO V)
   | Vfun [Pat] Exp Ev
-  | Vf (V -> FIO Z V) (Ev -> V) (Perm -> V)
+  | Vf (V -> FIO V) (Ev -> V) (Perm -> V)
   | Vcon Var [V]
   | Vpat Var ([Pat]->Pat) V
-  | Vlazy Perm (IORef (Either (FIO Z V) V))
+  | Vlazy Perm (IORef (Either (FIO V) V))
   | Vcode Exp Ev
   | Vswap Perm V
-  | Vfio Perm (FIO Z (Either String V))
+  | Vfio Perm (FIO (Either String V))
   | Vptr Perm Integer (IORef (Maybe V))
   | VChrSeq String
   | Vparser (Parser V)
@@ -153,11 +152,10 @@ data Dec
   | TypeSig Loc Var PT                  -- { id :: a -> a }
   | Prim Loc Var PT                     -- { prim bind :: a -> b }
   | Data Loc Bool Strata Var (Maybe PT) Targs [Constr][Var]    -- { data T x (y : Nat ) = B (T x) deriving (Z,W)}
-  | Explicit ExplicitGADT
-  | Kind Loc Var [Var] [(Var,[PT])]
+  | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)]
   | Flag Var Var
   | Reject String [Dec]
-  | AddTheorem [Var]
+  | AddTheorem Loc [(Var,Maybe Exp)]
   | Import String [Var]
   | TypeSyn Loc String Targs PT
   | TypeFun Loc String (Maybe PT) [([PT],PT)]
@@ -166,11 +164,9 @@ data Constr = Constr Loc Targs Var [PT] (Maybe [PPred])
 type Strata = Int
 data Program = Program [ Dec ]
 
-
 monadDec location e = Val location pat (Normal e) []
   where pat = Pcon (Global "Monad")
                    [Pvar(Global "return") ,Pvar(Global "bind") ,Pvar(Global "fail")]
-
 
 --------------------------------------------------
 typeStrata = 0 :: Strata
@@ -185,15 +181,10 @@ strat 3 = "class"
 strat n = "data@"++show n
 
 ---------------------------------------------------
-isData (Data _ _ n _ _ _ _ _) | n == typeStrata = True
-isData (Explicit (GADT loc n isProp nm knd cs)) | n == typeStrata = True
+isData (Data _ _ n _ _ _ _ _) = True
+isData (GADT loc isProp nm knd cs) = True
 isData (TypeSig loc (Global (x:xs)) pt) | isUpper x = True
 isData x = False
-
-isKind (Data _ _ n _ _ _ _ _) | n == kindStrata = True
-isKind (Explicit (GADT loc n isProp nm knd cs)) | n >= kindStrata = True
-isKind (TypeSig loc (Global (x:xs)) pt) | isUpper x = True
-isKind x = False
 
 isTypeSig (TypeSig loc _ _) = True
 isTypeSig _ = False
@@ -205,7 +196,7 @@ isTypeFun (TypeFun _ _ _ _) = True
 isTypeFun (TypeSig loc (Global (x:xs)) pt) = True
 isTypeFun _ = False
 
-isTheorem (AddTheorem _ ) = True
+isTheorem (AddTheorem _ _ ) = True
 isTheorem _ = False
 -----------------------------------------------------------
 
@@ -227,7 +218,6 @@ instance Freshen Var => Freshen Pat where
 
 ----------------------------------------------------------
 -- How to deal with N-tuples
-
 
 patTuple :: [Pat] -> Pat     -- Form a Pat like (x,y:ys)
 patTuple [] = Plit Unit      -- (x,y,z,w) --> (x,(y,(z,w)))
@@ -278,13 +268,11 @@ decname (Fun loc nm _ cs) = [nm]
 decname (Pat loc nm ps p) = [nm]
 decname (Data loc b strata nm sig args cs ds) = nm : map f cs
   where f (Constr loc skol nm ts eqs) = nm
-decname (Explicit (GADT loc n isProp nm knd cs)) = nm : map f cs
+decname (GADT loc isProp nm knd cs) = nm : map f cs
   where f (loc,c,free,preds,typ) = c
 decname (TypeSyn loc nm args ty) = [Global nm]
-decname (AddTheorem _) = []
+decname (AddTheorem _ _) = []
 decname (TypeFun loc nm k ms) = [Global nm]
-decname (Kind loc nm args ts) = nm : map f ts
-  where f (nm,ts) = nm
 decname (TypeSig loc nm t) = [proto nm]
 decname (Prim loc nm t) = [nm]
 decname (Flag s nm) =[flagNm nm]
@@ -298,13 +286,11 @@ decloc (Fun loc nm _ cs) = [(nm,loc)]
 decloc (Pat loc nm ps p) = [(nm,loc)]
 decloc (Data loc b strata nm sig args cs ds) = [(nm,loc)] ++ map f cs
   where f (Constr loc skol nm ts eqs) = (nm,loc)
-decloc (Explicit (GADT loc n isProp nm knd cs)) = [(nm,loc)] ++ map f cs
+decloc (GADT loc isProp nm knd cs) = [(nm,loc)] ++ map f cs
   where f (loc,c,free,preds,typ) = (c,loc)
 decloc (TypeSyn loc nm args ty) = [(Global nm,loc)]
-decloc (AddTheorem _) =[]
+decloc (AddTheorem loc _) =[]
 decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
-decloc (Kind loc nm args cs) = [(nm,loc)] ++ map f cs
-  where f (nm,ts) = (nm,loc)
 decloc (TypeSig loc nm t) = [(proto nm,loc)]
 decloc (Prim loc nm t) = [(nm,loc)]
 decloc (Flag s nm) =[]
@@ -338,8 +324,6 @@ patg f p =
    Pcon n ps -> Pcon n (map f ps)
    Pann p t -> Pann (f p) t
 
-
-
 walkPat :: Monad m => (Var -> m b) -> [b] -> Pat -> m [b]
 walkPat f ans p =
  case p of
@@ -371,18 +355,19 @@ applyE [t] = t
 applyE [x,y] = App x y
 applyE (x : y : z) = applyE ((App x y):z)
 
+unApply :: Exp -> [Exp] -> (Exp,[Exp])
+unApply (App f x) args = unApply f (x:args)
+unApply f args = (f,args)
 
 pos x xs = p xs 0
   where p (y:ys) n = if x==y then Just n else p ys (n+1)
         p [] n = Nothing
-
 
 -------------------------------------------------
 -- Making Patterns and Expressions
 
 truePat  = Pcon (Global "True") []
 falsePat = Pcon (Global "False") []
-
 
 ifExp (l1,l2) x y z = Case x [(l1,truePat,Normal y,[]),(l2,falsePat,Normal z,[])]
 
@@ -392,7 +377,6 @@ nilExp = (Var (Global "[]"))
 listExp = foldr consExp nilExp
 
 unitExp = Lit Unit
-
 
 ------------ Binding Groups -----------------
 
@@ -422,15 +406,14 @@ dt (Val _ _ _ _) = V
 dt (TypeSig loc n _) = TS n
 dt (Prim loc n _) = Pr
 dt (Data _ _ _ _ _ _ _ _) = D
-dt (Explicit _) = D
-dt (Kind _ _ _ _) = D
+dt (GADT _  _ _ _ _) = D
 dt (TypeSyn _ _ _ _) = Syn
 dt (TypeFun _ s _ _) = TFun s
 dt (Pat _ _ _ _) = PT
 dt (Flag _ _) = Flg
 dt (Reject s d) = Rej
 dt (Import s vs) = Im
-dt (AddTheorem _) = Thm
+dt (AddTheorem _ _) = Thm
 
 state0 :: Monad m => [Dec] -> m[Dec]
 state0 [] = return []
@@ -483,205 +466,6 @@ merge ((Fun l1 n1 h1 c1):(Fun l2 n2 h2 c2):ds) =
    if n1==n2
       then merge ((Fun l1 n1 (mergeM h1 h2) (c1++c2)):ds)
       else error "different names in merge"
-
---------------- Show Instances ---------------------
-
-
-instance Show Lit where
-  show (Int n) = show n
-  show (Char c) = show c
-  show (Symbol s) = "'"++show s
-  show Unit = "()"
-  show (ChrSeq s) = "#"++show s
-  show (Float n) = show n
-  show (Tag s) = "`"++ s
---  show (Scheme s) = "<Scheme>"
-
-
-instance Show Pat where
-  show (Plit c) = show c
-  show (Pvar s) = show s
-  show (Pprod x y) = "("++show x ++","++show y++")"
-  show (Psum L x) = "(L "++(show x)++")"
-  show (Psum R x) = "(R "++(show x)++")"
-  show (Pexists x) = "(Ex "++(show x)++")"
-  show (Paspat x p) = "("++ show x ++ " @ " ++ show p ++ ")"
-  show Pwild = "_"
-  show (Pcon x []) = show x
-  show (Pcon x ps) = "("++ show x ++ (plist " " ps " " ")")
-  show (Pann p t) = "("++show p++" :: "++show t++")"
-
-
-parExp (x @ (Var _)) = show x
-parExp (x @ (Lit _)) = show x
-parExp (x @ (Prod _ _)) = show x
-parExp (x @ (Escape _)) = show x
-parExp (x @ (Reify s _)) = show x
-parExp x = case isList x of
-             Just z -> prList z
-             Nothing -> "(" ++ show x ++")"
-
-parFun (x @ (App _ _)) = show x
-parFun x = parExp x
-
------------------------------------------------
--- Showing lists using syntactic shorthand
-
-isList (App (App (Var (Global ":")) x) y) =
-       do { ys <- isList y; return (x:ys)}
-isList (Var (Global "[]")) = Just []
-isList _ = Nothing
-
-x2 = listExp (map (Lit . Char) "asd")
-
-isChar (Lit (Char _)) = True
-isChar _ = False
-charOf (Lit (Char c)) = c
-
-prList xs | all isChar xs = show(map charOf xs)
-prList xs = show xs
-
-doList x = fmap prList (isList x)
-
---------------------------------------------------------
--- showing an operator in infix notation
-
-isOp (App (App (Var (Global f)) x) y) = if infixp f then Just (x,f,y) else Nothing
-isOp (App (App (Reify s v) x) y) = if infixp s then Just (x,s,y) else Nothing
-isOp _ = Nothing
-
-
----------------------------------------------------------
--- Showing a thing with multiple ways to show it
-
-data Fpair x y = forall t . Fpair (x -> Maybe t) (t -> y)
-
-tryL :: a -> [Fpair a b] -> Maybe b
-tryL x [] = Nothing
-tryL x ((Fpair f g):fs) =
-   case f x of
-      Just x -> Just(g x)
-      Nothing -> tryL x fs
-
------------------------------------------------
-
-instance Show Exp where
-  show (Var s) = show s
-  show (Lit c) = show c
-  show (x @ (App a b)) =
-    case (tryL x [Fpair isList prList,Fpair isOp doOp]) of
-      Just ans -> ans
-      Nothing -> (parFun a)++" "++(parExp b)
-    where doOp (a,b,c) = (parFun a)++" "++b++" "++(parFun c)
-  show (Lam ps e xs) = "\\ "++(plist "" ps " " "")++" -> "++(show e)
-  --show (Lam [p] e) = "\\ "++(show p)++" -> "++(show e)
-  show (Prod x y) = "("++show x++","++show y++")"
-  show (CheckT x) = "(Check "++show x++")"
-  show (Lazy x) = "(Lazy "++show x++")"
-  show (Exists x) = "(Ex "++show x++")"
-  show (Under p x) = "(under "++show p++" "++show x++")"
-  show (Sum L x) = "(L "++show x++")"
-  show (Sum R x) = "(R "++show x++")"
-  show (Bracket e) = "[| " ++ (show e) ++ " |]"
-  show (Escape  (Var s)) = "$"++ show s
-  show (Escape e) = "$("++show e++")"
-  show (Run e) = "run (" ++ show e++")"
-  show (Reify s (Vlit c)) = show c
-  show (Reify s v) = "%"++s
-  show (Ann x t) = "("++show x++"::"++ show t ++ ")"
-
-  show (Let ds e) = "let "++(plistf gg "{" ds "; " "}")++" in "++(show e)
-     where gg d = show d ++ "\n"
-  show (Circ vs e ds) = "circuit "++f vs++(show e)++
-                     (plistf show " where\n  " ds "\n  " "\n")
-      where f [] = ""
-            f xs = plist "(" xs "," ") "
-  show (Case e xs) = "case "++(show e)++" of "++(plistf sMatch "{" xs "; " "}")
-  show (Do stmts) = "do "++(plist "{ " stmts "; " "}")
-
-
-showListExp xs =
-    if all litchar xs then show(map getchar xs) else plist "[" xs "," "]"
- where litchar (Lit (Char c)) = True
-       litchar _ = False
-       getchar (Lit (Char c)) = c
-
-
-instance Show e => Show (Body e) where
-  show Unreachable = "unreachable"
-  show (Normal e) = show e
-  show (Guarded xs) = plistf  f "| " xs " | " ""
-    where f (x,y) = show x ++ " = " ++ show y
-
-sMatch (loc,p,body,ds) = (show p)++" -> "++(show body)++sWhere ds
-sWhere [] = ""
-sWhere ds = " where "++(plist "{" ds "; " "}")
-
-sClause nm (loc,ps,b,ds) = show nm++" "++(plist "" ps " " " = ")++(show b)++(sWhere ds)
-
-
-instance (Show p, Show e,Show d) => Show (Stmt p e d) where
-  show (BindSt loc p e) = (show p)++" <- "++(show e)
-  show (LetSt loc ds) = "let "++(plistf gg "" ds "\n   " "")
-          where gg d = "\n   "++show d
-  show (NoBindSt loc e) = (show e)
-
-instance Show Dec where
-  show (Fun loc name Nothing cls) = plistf (sClause name) "\n" cls "\n" "\n"
-  show (Fun loc name (Just hint) cls) =
-      "\n*"++show name++" :: "++show hint++
-      (plistf (sClause name) "\n" cls "\n" "\n")
-  show (Val loc p b ds) = (show p)++" = "++(show b)++(sWhere ds)
-  show (Pat loc nm ps p) = show nm ++ (plist " " ps " " " = ")++(show p)++"\n"
-  show (TypeSig loc name typ) = show name++" :: "++ (show typ) ++ "\n"
-  show (Prim loc name typ) = "prim "++show name++" :: "++ (show typ) ++ "\n"
-  show (Data loc b n nm sig args cs ders) = showSig sig ++
-     (strat n)++" "++show nm++(plistf showArg " " args " " "")++(plistf sConstr "\n = " cs "\n | " "")
-    where showArg (x,AnyTyp _) = show x
-          showArg (x,t) = "("++show x++"::"++show t++")"
-          showSig Nothing = ""
-          showSig (Just pt) = show nm ++" :: "++show pt++"\n"
-  show (Explicit d) = show d
-  show (Kind loc nm args cs) =
-     "kind "++show nm++(plistf show " " args " " "")++(plistf f "\n = " cs "\n | " "")
-   where f (nm,ts) = show nm ++ plistf showp " " ts " " ""
-  show (Flag s nm) = "flag "++ show s++" "++ show nm
-  show (Reject s ds) = "\n##test "++show s++"\n"++(plist "{" ds "; " "}")
-  show (Import s vs) = "\nimport "++s ++plist "(" vs "," ")"++ "\n"
-  -- show (Monad loc e) = "monad "++show e
-  show (TypeSyn loc nm args ty) = "type "++nm++(plist "" args " " "")++" = "++show ty
-  show (TypeFun loc nm k ms) = nm++showK k++"\n"++matches
-    where matches = plistf g "" ms "\n" ""
-          g (xs,e) = plist "{" xs " " "}"++" = "++show e
-  show (AddTheorem xs) = plistf show "theorem " xs ", " ""
-
-showK Nothing = " "
-showK (Just k) = " :: "++show k
-
-sConstr (Constr loc ex c ts eqs) = (exists ex)++show c++(args ts)++eqf eqs
-  where args [] = ""
-        args ts = " "++(plistf parenT "" ts " " "")
-        exists [] = ""
-        exists ns = "forall "++(plistf showM "" ns " " " . ")
-        parenT (x @ (TyApp' y _)) = g (root' y) x
-          where g (TyCon' "(,)")    y = show y
-                g (TyCon' "(+)") y = show y
-                g x y = "("++(show y)++")"
-        parenT x = show x
-        eqf (Just xs) = " where "++ plistf show "" xs ", " ""
-        eqf Nothing = ""
-        --g (x,y) = show x ++ " = " ++ show y
-        showM (x,AnyTyp _) = show x
-        showM (x,k) = "("++show x++"::"++show k++")"
-
-
-root' (TyApp' x y) = root' x
-root' x = x
-
-
-instance Show Program where
-  show (Program ds) = plist "\n" ds "\n" ""
-
 
 instance Functor Body where
   fmap f Unreachable = Unreachable
@@ -881,9 +665,6 @@ makeSubst xs = Par ext app inc esc
         inc = Par ext app inc esc
         esc e = parE e (makeSubst xs)
 
-------------------------------------------------------------
--- =========================================================
-
 
 ----------------------------------------------------------------
 -- Computing 1) variables bound, 2) Variables that are depended on (but don't
@@ -1024,20 +805,18 @@ instance Binds Dec where
            (vs,constrs) = partition typVar tfs
   boundBy (Data l b 0 nm sig vs cs ders) = FX (map get cs) [] [] [nm] [proto nm]
      where get (Constr loc skol c ts eqs) = c
-  boundBy (Explicit (GADT loc 0 isProp nm knd cs)) = FX (map get cs) [] [] [nm] [proto nm]
+  boundBy (GADT loc isProp nm knd cs)| univLevelFromPTkind knd==0  = FX (map get cs) [] [] [nm] [proto nm]
      where get (loc,c,free,preds,typ) = c
 
   boundBy (Data l b _ nm sig vs cs ders) = FX [] [] [] (nm : map get cs) [proto nm]
      where get (Constr loc skol c ts eqs) = c
-  boundBy (Explicit (GADT loc 0 isProp nm knd cs)) = FX [] [] [] (nm : map get cs) [proto nm]
+  boundBy (GADT loc isProp nm knd cs) | univLevelFromPTkind knd==0  = FX [] [] [] (nm : map get cs) [proto nm]
      where get (loc,c,free,preds,typ) = c
 
-  boundBy (Kind l nm vs ts) = FX [] [] [] (nm: map get ts) []  -- everything here is in the Type name space
-     where get (nm,ts) = nm
   boundBy (Import s vs) = FX [] [] [] [] []
   boundBy (TypeSyn loc nm args ty) = FX [] [] [] [Global nm] [proto (Global nm)]
   boundBy (TypeFun loc nm ty ms) = FX [Global nm] [proto (Global nm)] [] [] []
-  boundBy (AddTheorem _) = emptyF
+  boundBy (AddTheorem _ _) = emptyF
   boundBy _ = emptyF
 
 dvars d = vars [] [d] emptyF
@@ -1057,18 +836,21 @@ instance Vars Dec where
   vars bnd (Data loc b strata nm sig vs cs _) =
        underTs (map fst vs) (varsL bnd cs) . (varsL bnd (map snd vs)) . (vars bnd sig)
 
-  vars bnd (Explicit (GADT loc 0 isProp nm knd cs)) =
+  vars bnd (GADT loc isProp nm knd cs) | univLevelFromPTkind knd==0 =
        vars bnd knd . varsL bnd cs
   -- where get (loc,c,free,preds,typ) = c
 
-  vars bnd (Kind loc _ vs ts) = underTs vs (varsL bnd ts)
   vars bnd (TypeSig loc v t) = addFreeT (nub free)
      where (FX _ _ _ tbs tfs) = vars bnd t emptyF
            (binds,free) = partition typVar tfs
   vars bnd (TypeSyn loc nm args ty) = underTs (map fst args) (vars bnd ty)
   vars bnd (TypeFun loc nm k ms) = varsL bnd ms
-  vars bnd (AddTheorem xs) = varsL bnd xs
+  vars bnd (AddTheorem loc xs) = varsL bnd xs
   vars bnd _ = id
+
+instance Vars (Var,Maybe Exp) where
+  vars bnd (v,Nothing) = vars bnd v
+  vars bnd (_,Just e) = vars bnd e
 
 instance Vars (Loc,Var,[([Char],PT)],[PPred],PT) where
   vars bnd (loc,c,free,preds,typ) =
@@ -1082,7 +864,6 @@ instance Vars ([PT],PT) where
 instance Vars a => Vars (Maybe a) where
   vars bnd (Just x) = vars bnd x
   vars bnd Nothing = id
-
 
 -- Organize and sequence the two steps
 -- Combine "binds" "depends" "tbinds" from step 1
@@ -1104,7 +885,6 @@ instance Vars Constr where
    where f Nothing = id
          f (Just xys) = varsL bnd xys
 
-
 instance Vars (Var,[PT]) where
   vars bnd (_,ts) = varsL bnd ts
 
@@ -1112,7 +892,6 @@ instance Vars PPred where
   vars bnd (Equality' x y) = vars bnd x . vars bnd y
   vars bnd (EqAssump' x y) = vars bnd x . vars bnd y
   vars bnd (Rel' nm ts) = addFreeT [Global nm] . vars bnd ts
-
 
 instance Vars PT where
   vars bnd (TyVar' s) = addFreeT [Global s]
@@ -1128,7 +907,7 @@ instance Vars PT where
     where args = (map (Global . fst3) ss)
           fst3 (a,b,c) = a
   vars bnd (Tlamx s t) = underTs [Global s] (vars bnd t)
-  vars bnd (AnyTyp n) = id
+  vars bnd (AnyTyp) = id
 
 instance Vars [(PT,PT)] where
   vars bnd [] = id
@@ -1214,241 +993,419 @@ declBindsFree vars d = binds(boundBy d)
 
 -- expFV bound (Var x) = if x `elem` bound then [] else [x]
 
+-- ======================================================================
+-- Term Equality for testing
 
--- ====================================================================
--- To translate an explicitly typed data like:
--- data Nat :: *0 ~> Nat -> *0 where
---   Nil :: Seq a Z
---   Cons :: a -> Seq a m -> Seq a (S m)
---
--- into an equality qualified data
--- data Seq a n =
---   Nil where n = Z
---   exists m . Cons a m where n = S m
---
--- we use the function transGADT which proceeds in several steps
--- see the code and comments below.
+matchEQ:: (Eq a,Eq b, Eq c) => (Match a b c)-> (Match a b c) -> Bool
+matchEQ (loc1,pat1,body1,ds1) (loc,pat,body,ds) = pat1==pat && body1==body && ds1==ds
+
+listEq f [] [] = True
+listEq f (x:xs) (y:ys) = f x y && listEq f xs ys
+listEq f _ _ = False
+
+instance Eq PPred where
+  (Equality' pt1 pt2)==(Equality' pt3 pt4) = pt1==pt3 && pt2==pt4
+  (EqAssump' pt1 pt2)==(EqAssump' pt3 pt4) = pt1==pt3 && pt2==pt4
+  (Rel' s1 pt1) == (Rel' s2 pt2) = s1==s2 && pt1==pt2
+  _ == _  = False
+
+instance Eq PT where
+  (TyVar' s1)==(TyVar' s2) = s1==s2
+  (Rarrow' pt1 pt2)==(Rarrow' pt3 pt4) = pt1==pt3 && pt2==pt4
+  (Karrow' pt1 pt2)==(Karrow' pt3 pt4) = pt1==pt3 && pt2==pt4
+  (TyApp' pt1 pt2)==(TyApp' pt3 pt4) = pt1==pt3 && pt2==pt4
+  (TyFun' pts1)==(TyFun' pts2) = pts1==pts2
+  (TyCon' s1)==(TyCon' s2) = s1==s2
+  (Star' i1)==(Star' i2) = i1==i2
+  (Forallx q1 xs1 pps1 pt1) == (Forallx q2 xs2 pps2 pt2) =
+    q1==q2 && (and $ zipWith f xs1 xs2) && pps1==pps2 && pt1==pt2
+    where
+    f (s1,pt1,q1) (s2,pt2,q2) =
+          s1==s2 && pt1==pt2 && q1==q2
+  (Tlamx s1 pt1)==(Tlamx s2 pt2) = s1==s2 && pt1==pt2
+  AnyTyp == AnyTyp = True
+  _ == _ = False
 
 
-data ExplicitGADT = GADT Loc Int Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)]
+instance Eq Exp where
+  (Var a) == (Var b) = a == b
+  (Lit a) == (Lit b) = a == b
+  (Sum i1 e1) == (Sum i2 e2) = i1==i2 && e1==e2
+  (Prod e1 e2) == (Prod e3 e4) = e1==e3 && e2==e4
+  (App e1 e2) == (App e3 e4) = e1==e3 && e2==e4
+  (Lam pts1 e1 vis1) == (Lam pts2 e2 vis2) =
+    pts1==pts2 && e1==e2 --what's vis for?
+  (Let ds1 e1) == (Let ds2 e2) = ds1==ds2 && e1==e2
+  (Circ vs1 e1 ds1) == (Circ vs2 e2 ds2) =
+    vs1==vs2 && e1==e2 && ds1==ds2
+  (Case e1 ms1) == (Case e2 ms2) = e1==e2 && listEq matchEQ ms1 ms2
+  (Do ss1) == (Do ss2) = ss1 == ss2
+  (CheckT e1) == (CheckT e2) = e1==e2
+  (Lazy e1) == (Lazy e2) = e1==e2
+  (Exists e1) == (Exists e2) = e1==e2
+  (Under e1 e2) ==(Under e3 e4) = e1==e3 && e2==e4
+  (Bracket e1) == (Bracket e2) = e1==e2
+  (Escape e1) == (Escape e2) = e1==e2
+  (Run e1) == (Run e2) = e1==e2
+  (Reify s1 v1) == (Reify s2 v2) = s1==s2 && v1==v2
+  (Ann e1 pt1) == (Ann e2 pt2) = e1==e2 && pt1==pt2
+  _ == _ = False
 
+instance Eq Pat where
+  (Plit l1) == (Plit l2) = l1==l2
+  (Pvar v1) == (Pvar v2) = v1==v2
+  (Pprod p1 p2) == (Pprod p3 p4) = p1==p3 && p2==p4
+  (Psum i1 p1) == (Psum i2 p2) = i1==i2 && p1==p2
+  (Pexists p1) == (Pexists p2) = p1==p2
+  (Paspat v1 p1) == (Paspat v2 p2) = v1==v2 && p1==p2
+  Pwild == Pwild = True
+  (Pcon v1 ps1) == (Pcon v2 ps2) = v1==v2 && ps1==ps2
+  (Pann p1 pt1) == (Pann p2 pt2) = p1==p2 && pt1==pt2
+  _ == _ = False
+
+instance Eq Dec where
+  (Fun _ v1 Nothing ms1) == (Fun _ v2 Nothing ms2) = v1==v2 && listEq matchEQ ms1 ms2
+  (Fun _ v1 (Just pt1) ms1) == (Fun _ v2 (Just pt2) ms2) = v1==v2 && pt1==pt2 && listEq matchEQ ms1 ms2
+  (Val _ p1 b1 ds1) == (Val _ p2 b2 ds2) =
+     p1==p2 && b1==b2 && ds1==ds2
+  (Pat _ v1 vs1 p1) == (Pat _ v2 vs2 p2) = v1==v2 && vs1==vs2 && p1==p2
+  (TypeSig _ v1 pt1) == (TypeSig _ v2 pt2) = v1==v2 && pt1==pt2
+  (Prim _ v1 pt1) == (Prim _ v2 pt2) = v1==v2 && pt1==pt2
+  (Data _ b1 str1 v1 Nothing targ1 cs1 ders1) == (Data _ b2 str2 v2 Nothing targ2 cs2 ders2) =
+    b1==b2 && str1==str2 && v1==v2 && targ1==targ2 && cs1==cs2 && ders1==ders2
+  (Data _ b1 str1 v1 (Just pt1) targ1 cs1 ders1) == (Data _ b2 str2 v2 (Just pt2) targ2 cs2 ders2) =
+    b1==b2 && str1==str2 && v1==v2 && pt1==pt2 && targ1==targ2 && cs1==cs2 && ders1==ders2
+  (Flag v1 v2) == (Flag v3 v4) = v1==v3 && v2==v4
+  (Reject s1 ds1) == (Reject s2 ds2) = s1==s2 && ds1==ds2
+  (Import s1 vs1) == (Import s2 vs2) = s1==s2 && vs1==vs2
+  (TypeSyn _ s1 targs1 pt1) == (TypeSyn _ s2 targs2 pt2) =
+    s1==s2 && targs1==targs2 && pt1==pt2
+  (TypeFun _ s1 Nothing xs1) == (TypeFun _ s2 Nothing xs2) =
+    s1==s2 && xs1==xs2
+  (TypeFun _ s1 (Just pt1) xs1) == (TypeFun _ s2 (Just pt2) xs2) =
+    s1==s2 && pt1==pt2 && xs1==xs2
+  _ == _ = False
+
+instance (Eq p, Eq e, Eq d) => Eq (Stmt p e d) where
+  (BindSt _ p1 e1) == (BindSt _ p2 e2) = p1==p2 && e1==e2
+  (LetSt _ ds1) == (LetSt _ ds2) = ds1==ds2
+  (NoBindSt _ e1) == (NoBindSt _ e2) = e1==e2
+  _ == _ = False
+
+instance Eq V where
+  Vlit v1 == Vlit v2 = v1==v2
+  _ == _ = True -- need more?
+
+instance Eq Constr where
+  (Constr _ targs1 v1 pts1 Nothing) == (Constr _ targs2 v2 pts2 Nothing) =
+    targs1==targs2 && v1==v2 && pts1==pts2
+  (Constr _ targs1 v1 pts1 (Just pps1)) == (Constr _ targs2 v2 pts2 (Just pps2)) =
+    targs1==targs2 && v1==v2 && pts1==pts2 && pps1 == pps2
+  _ == _ = False
+
+instance Eq e => Eq (Body e) where
+  (Guarded es1) == (Guarded es2) = es1==es2
+  (Normal e1) == (Normal e2) = e1==e2
+  Unreachable == Unreachable = True
+  _ == _ = False
+
+-- =======================================================================
+-- Syntax into Documents
+
+ppSig Nothing _ = PP.empty
+ppSig (Just pt) v = ppVar v <+> text "::" <+> ppPT pt
+
+ppArg (v,AnyTyp) = ppVar v
+ppArg (v,pt) = PP.parens $ ppVar v <> text "::" <> ppPT pt
+
+ppStrat 0 = text "data"
+ppStrat 1 = text "kind"
+ppStrat 2 = text "sort"
+ppStrat 3 = text "class"
+ppStrat n = text "data@" <> PP.int n
+
+data Pos = Front | Back
+
+myPP f _ _ [] = PP.empty
+myPP f _ _ [x] = x
+myPP f Front s (x:xs) = f (x:(map (\ y -> s <> y) xs))
+myPP f Back s xs = f ((map (\ y -> y <> s) (init xs)) ++ [last xs])
+
+ppWhere [] = PP.empty
+ppWhere ds = text "where" <+> PP.vcat (map ppDec ds)
+
+ppClause (_,ps,b@(Guarded _) ,ds) = PP.sep [PP.sep [PP.hsep (map ppPat ps), ppBody b], PP.nest 2 $ ppWhere ds]
+ppClause (_,ps,b ,ds) = PP.vcat [PP.sep [PP.sep (map ppPat ps) <+> text "=", ppBody b], PP.nest 2 $ ppWhere ds]
+ppMatch (_,p,body,d) = PP.vcat [ppPat p <+> text "->" <+> ppBody body,PP.nest 2 $ ppWhere d]
+
+ppDec :: Dec -> Doc
+ppDec dec =
+  case dec of
+    Fun _ v Nothing ms -> PP.vcat $ map ((ppVar v) <+>) (map ppClause ms)
+    Fun _ v (Just pt) ms -> text "*" <> ppVar v <+> text "::" <+> ppPT pt <+>
+                            PP.vcat (map ((ppVar v) <+>) (map ppClause ms))
+    --Fun _ v Nothing ms -> (ppVar v) <+> (text "=") <+> PP.vcat (map ppMatch ms)
+    Val _ p b ds -> PP.vcat [PP.sep [ppPat p <+> text "=", PP.nest 2 $ ppBody b], PP.nest 2 $ ppWhere ds]
+    Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> text "=" <+> ppPat p
+    TypeSig _ v pt -> ppVar v <+> text "::" <+> ppPT pt
+    Prim _ v pt -> text "prim" <+> ppVar v <+> text "::" <+> ppPT pt
+    Data _ b n v sig args cs [] -> PP.vcat [ppSig sig v,
+                                     ppStrat n <+> ppVar v <+>
+                                     PP.hsep (map ppArg args) <+> text "=" <+>
+                                     myPP PP.vcat Front (PP.nest (-2) (text "| ")) (map ppConstr cs)]
+    Data _ b n v sig args cs ders -> PP.vcat [ppSig sig v,
+                                       ppStrat n <+> ppVar v <+>
+                                       PP.hsep (map ppArg args) <+> text "=" <+>
+                                       myPP PP.vcat Front (PP.nest (-2) (text "| ")) (map ppConstr cs),
+                                       PP.nest 2 $ text "deriving" <+> PP.parens (myPP PP.hsep Back (text ",") (map ppVar ders))]
+    GADT loc isprop nm kind cs ->
+      (text "data" <+> ppVar nm <> text "::" <+> ppPT kind <+> text "where") $$
+      (PP.nest 3 (PP.vcat (map ppCs cs)))
+    Flag v1 v2 -> text "flag" <+> ppVar v1 <+> ppVar v2
+    Reject s ds -> PP.vcat [text "##test" <+> PP.doubleQuotes (text s), PP.nest 2 $
+                   --PP.braces (myPP PP.vcat Back (text ";") (map ppDec ds))]
+                   (myPP PP.vcat Back PP.empty (map ppDec ds))]
+    Import s vs -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back (text ",") (map ppVar vs))
+    TypeSyn _ s args pt -> PP.sep [text ("type "++s) <+> PP.hsep (map ppArg args) <+> text "=",ppPT pt]
+    TypeFun _ s Nothing ms -> PP.vcat [text s <> text "::Nothing",f1 ms]
+    TypeFun _ s (Just pt) ms -> text (s++" :: ") <> ppPT pt <+> f1 ms
+    AddTheorem loc xs -> text "theorem " <> (PP.vcat (map f xs))
+     where f (x,Nothing) = ppVar x
+           f (x,Just e) = ppVar x <+> text "=" <+> ppExp e
+   where
+      f (v,pts) = ppVar v <+> PP.hsep (map ppPT pts)
+      f1 ms = PP.vcat (map f2 ms)
+      f2 (pts,pt) = PP.braces (PP.hsep (map ppPT pts)) <+> text "=" <+> ppPT pt
+ppCs (loc,name,vars,preds,typ) =
+   PP.sep [ ((ppVar name) <> text "::"),PP.nest 3 (PP.sep [(all vars),quals preds,ppPT typ]) ]
+  where all [] = PP.empty
+        all xs = text "forall" <+> PP.fsep (map showM xs) <+> text "."
+        quals [] = PP.empty
+        quals xs = PP.nest 2 (PP.parens (PP.fsep (sepBy ppPred "," xs)) <+> text "=>")
+        showM (v,AnyTyp) = text v
+        showM (v,pt) = PP.parens $ text v <> text "::" <> ppPT pt
+
+sepBy f comma [] = []
+sepBy f comma [x] = [f x]
+sepBy f comma (x:xs) = ((f x)<>(text comma)):sepBy f comma xs
+
+ppConstr (Constr _ args v pts mpps) =
+  exists args <+> ppVar v <+> PP.vcat [PP.hsep (map parenT pts), eqf mpps]
+  where exists [] = PP.empty
+        exists ns = text "forall" <+> PP.hsep (map showM ns) <+> text "."
+        parenT (x @ (TyApp' y _)) = g (root' y) x
+          where g (TyCon' "(,)") y = ppPT y
+                g (TyCon' "(+)") y = ppPT y
+                g (TyCon' "[]") y = ppPT y
+                g x y = PP.parens $ ppPT y
+        parenT (x@(Rarrow' _ _)) = PP.parens $ ppPT x
+        parenT (x@(Forallx _ _ _ _)) = PP.parens $ ppPT x
+        parenT x = ppPT x
+        eqf Nothing = PP.empty
+        eqf (Just xs) = text " where" <+> myPP PP.sep Back (text ",") (map ppPred xs)
+        root' (TyApp' x y) = root' x
+        root' x = x
+
+showM (v,AnyTyp) = ppVar v
+showM (v,pt) = PP.parens $ ppVar v <> text "::" <> ppPT pt
+
+ppVar (Global s) = text s
+ppVar (Alpha s1 n) = (text s1) <+> text (show n)
+
+ppPred (Equality' x y) = PP.hsep [ppPT x, text "=", ppPT y]
+ppPred (Rel' _ t) = ppPT t
+
+ppPat pat =
+  case pat of
+    Plit l -> ppLit l
+    Pvar v -> ppVar v
+    Pprod p1 p2 -> PP.parens $ ppPat p1 <> text "," <+>  ppPat p2
+    Psum L p -> PP.parens $ text "L" <+> ppPat p
+    Psum R p -> PP.parens $ text "R" <+> ppPat p
+    Pexists p -> PP.parens $ text "Ex" <+> ppPat p
+    Paspat v p -> PP.parens $ ppVar v <> text "@" <> ppPat p
+    Pwild -> text "_"
+    Pcon v [] -> ppVar v
+    --Yang Chen: pattern Cp x y zs = (y:zs,x) --> pattern Cp x y zs = ((: y zs),x) Wrong!
+    Pcon (Global ":") (p1:ps) -> PP.parens $ ppPat p1 <+> text  ":" <+> PP.hsep (map ppPat ps)
+    Pcon v ps -> PP.parens $ ppVar v <+> PP.hsep (map ppPat ps)
+    Pann p pt -> ppPat p <+> text "::" <+> ppPT pt
+
+ppLit l =
+  case l of
+    Int i -> PP.int i
+    Char c -> PP.quotes $ PP.char c
+    Unit -> text "()"
+    Symbol s -> text "'" <> text (show s)
+    ChrSeq s -> text "#" <> text s
+    Tag s -> text "`" <> text s
+    Float f -> PP.float f
+
+ppBody b =
+  case b of
+    Guarded pes -> text "|" <+> myPP PP.vcat Front (PP.nest (-2) $ text "| ") (map f pes)
+      where f (e1,e2) = ppExp e1 <+> text "=" <+> ppExp e2
+      -- -> PP.hsep (map f pes)
+      --where f (e1,e2) = text "|" <+> ppExp e1 <+> text "=" <+> ppExp e2
+    Normal e -> ppExp e
+    Unreachable -> text "unreachable"
+
+ppParFun (x@(App _ _)) = ppExp x
+ppParFun x = ppParExp x
+
+ppParExp (x @ (Var _)) = ppExp x
+ppParExp (x @ (Lit _)) = ppExp x
+ppParExp (x @ (Prod _ _)) = ppExp x
+ppParExp (x @ (Escape _)) = ppExp x
+ppParExp (x @ (Bracket _)) = ppExp x
+ppParExp x = case isList x of
+             Just z -> ppList z
+             Nothing -> PP.parens $ ppExp x
+
+ppList xs | all isChar xs = PP.doubleQuotes $ text (map charOf xs)
+ppList xs = PP.brackets(PP.fsep (sepBy ppExp "," xs))    -- text (show xs)
+
+isOp (App (App (Var (Global f)) x) y) = if infixp f then Just (x,f,y) else Nothing
+isOp (App (App (Reify s v) x) y) = if infixp s then Just (x,s,y) else Nothing
+isOp _ = Nothing
+
+ppExp e =
+  case e of
+    Var v -> ppVar v
+    Lit l -> ppLit l
+    Sum L e -> PP.parens $ text "L" <+> ppExp e
+    Sum R e -> PP.parens $ text "R" <+> ppExp e
+    Prod e1 e2 -> PP.parens $ ppExp e1 <> text "," <+> ppExp e2
+    x @ (App e1 e2) ->
+      case (tryL x [Fpair isList ppList, Fpair isOp ppOp]) of
+        Just ans -> ans
+        Nothing -> (ppParFun e1) <+> (ppParExp e2)
+      where ppOp (a,b,c) = (ppParFun a) <+> text b <+> ppParFun c
+    Lam ps e vis -> text "\\" <+> PP.hsep (map ppPat ps) <+> text "->" <+> ppExp e
+    Let ds e -> PP.vcat [text "let" <+> PP.vcat (map ppDec ds),PP.sep [text "in",ppExp e]]
+    Circ vs e ds -> PP.parens $ PP.vcat [PP.sep [text "circuit",
+                                        PP.parens (myPP PP.hsep Back (text ",") (map ppVar vs)),
+                                        ppExp e], PP.nest 2 (ppWhere ds)]
+                    --PP.vcat ((text "where"):(zipWith ((<+>).((flip $ (<+>))) (text "=")) (map ppVar vs) (map ppDec ds))))
+    Case e ms -> PP.vcat [text "case" <+> ppExp e <+> text "of",
+                 PP.nest 2 $ PP.vcat $ map ppMatch ms]
+    Do ss -> text "do" <+> PP.braces (PP.space <> myPP PP.vcat Front (PP.nest (-2) $ text "; ") (map ppStmt ss) <> PP.space)
+    CheckT e -> PP.parens $ text "Check" <+> ppExp e
+    Lazy e -> PP.parens $ text "lazy" <+> ppExp e
+    Exists e -> PP.parens $ text "Ex" <+> ppExp e
+    Under e1 e2 -> PP.parens $ text "under" <+> PP.hsep [ppExp e1,ppExp e2]
+    Bracket e -> PP.brackets $ text "|" <+> ppExp e <+> text "|"
+    Escape (Var v) -> text "$" <> ppVar v
+    Escape e -> text "$" <> PP.parens (ppExp e)
+    Run e -> text "run" <+> PP.parens (ppExp e)
+    Reify s (Vlit c) -> ppLit c
+    Reify s v -> text $ "%"++s
+    Ann e pt -> PP.parens $ ppExp e <> text "::" <> ppPT pt
+
+ppStmt s =
+  case s of
+    BindSt _ p e -> ppPat p <+> text "<-" <+> ppExp e
+    LetSt _ ds -> text "let" <+> PP.vcat (map ppDec ds)
+    NoBindSt _ e -> ppExp e
+
+-- Print Type
+
+needsParens (TyApp' (TyCon' "[]") x) = False
+needsParens (TyApp' (TyApp' (TyCon' "(,)") _) _) = False
+needsParens (TyApp' _ _) = True
+needsParens (Rarrow' _ _) = True
+needsParens (Karrow' _ _) = True
+needsParens (Forallx _ _ _ _) = True
+needsParens _ = False
+
+ppAll (x@(Forallx _ _ _ _)) = PP.parens(ppPT x)
+ppAll x = ppPT x
+
+ppPT x =
+  case x of
+    TyVar' s -> text s
+    Rarrow' x y -> PP.hsep [ ppAll x, text "->", ppAll y]
+    Karrow' x y -> PP.parens $ PP.hsep [ ppPT x, text "~>", ppPT y]
+    TyApp' (TyApp' (TyCon' "(,)") x) y ->
+        PP.sep[PP.lparen <> ppPT x <> PP.comma,PP.nest 1 (ppPT y<>PP.rparen)]
+        --PP.sep[ppPT x <> PP.comma,PP.nest 1 (ppPT y)]
+    TyApp' (TyApp' (TyCon' "(+)") x) y ->
+        PP.sep[PP.lparen <> ppPT x <> text "+",PP.nest 1 (ppPT y<>PP.rparen)]
+    TyApp' (TyApp' (TyCon' "(->)") x) y ->
+        PP.sep[ppPT x <+> text "->",PP.nest 1 (ppPT y)]
+    TyApp' (TyCon' "[]") x -> PP.brackets (ppPT x)
+    TyApp' f x | needsParens x -> (ppPT f) <+> (PP.parens (ppPT x))
+    TyApp' f x -> (ppPT f) <+> (ppPT x)
+    TyFun' xs -> PP.braces(PP.hsep (map ppPT xs))
+    TyCon' s -> text s
+    Star' n -> text "*" <> PP.int n
+    Forallx q [] [] t -> ppPT t
+    Forallx q vs [] t ->
+        ppQ q <+> PP.sep [PP.sep (ppV vs) <+> text ".", ppPT t]
+    Forallx q vs [p] t ->
+        ppQ q <+> PP.sep [PP.sep (ppV vs) <+> text "."
+                         ,ppP p <+> text "=>"
+                         ,ppPT t]
+    Forallx q vs ps t ->
+        ppQ q <+> PP.sep [PP.sep (ppV vs) <+> text "."
+                         ,PP.parens (myPP PP.sep Back (text ",") (map ppP ps)) <+> text "=>"
+                         ,ppPT t]
+    AnyTyp -> text "*?"
+
+ppQ All = text "forall"
+ppQ Ex = text "exists"
+
+--temp ppV
+ppV [(s,AnyTyp,q)] = [text s <> shq q] -- <+> text ". "]
+ppV ((s,AnyTyp,q):xs) = (text s <> shq q):(ppV xs)
+ppV [(s,k,q)] = [PP.parens $ text s <> shq q <+> text "::" <+> ppPT k] -- <+> text ". "]
+ppV ((s,k,q):xs) = (PP.parens $ text s <> shq q <+> text "::" <+> ppPT k):(ppV xs)
+ppV [] = [PP.empty]
+shq All = PP.empty
+shq Ex  = text "'"
+
+ppP (Equality' x y) = PP.hsep [ppPT x, text "=", ppPT y]
+ppP (Rel' _ t) = ppPT t
+
+-----------------------------------------------
+-- Showing lists using syntactic shorthand
+
+isList (App (App (Var (Global ":")) x) y) =
+       do { ys <- isList y; return (x:ys)}
+isList (Var (Global "[]")) = Just []
+isList _ = Nothing
+
+x2 = listExp (map (Lit . Char) "asd")
+
+isChar (Lit (Char _)) = True
+isChar _ = False
+charOf (Lit (Char c)) = c
+
+---------------------------------------------------------
+-- Showing a thing with multiple ways to show it
+
+data Fpair x y = forall t . Fpair (x -> Maybe t) (t -> y)
+
+tryL :: a -> [Fpair a b] -> Maybe b
+tryL x [] = Nothing
+tryL x ((Fpair f g):fs) =
+   case f x of
+      Just x -> Just(g x)
+      Nothing -> tryL x fs
+
+instance Show Lit where
+  show l = render(ppLit l)
+instance Show Pat where
+  show p = render(ppPat p)
+instance Show Dec where
+  show d = render(ppDec d)
+instance Show Exp where
+  show d = render(ppExp d)
+instance Show (Body Exp) where
+  show b = render(ppBody b)
+instance Show (Stmt Pat Exp Dec) where
+  show s = render(ppStmt s)
+
+-------------------------------------------------------------------------
 -- traceSh s x = unsafePerformIO(putStrLn ("\n--- Trace ---\n"++s++show x))
-
-instance Show ExplicitGADT where
-  show (GADT loc strata isProp nm knd cs) =
-      ("data "++show nm++" :: "++show knd++" where \n"++
-       plistf f "   " cs "\n   " "\n")
-   where f (loc,c,free,preds,typ) = show c++" :: "++show typ
-
-transGADT :: ExplicitGADT -> Dec
-transGADT (GADT loc strata b (name@(Global t)) kind constrs) =
-     Data loc b strata name (Just kind) (map f args) constrs' []
-  where fresh = freshNames (map g constrs)
-        (args,univ) = step1 fresh kind
-        f (name,pt) = (Global name,pt)
-        g (loc,constr,prefix,preds,typ) = typ
-        forEachConstr (loc,c@(Global constr),prefix,preds,typ)
-            = step4 (addToPrefix prefix prefix)
-                    constr loc sub (map (ppredsub eqnsDup) preds2++equalities)
-                    newrange domains (getFree [] newrange)
-          where (domains,triples,newrange,eqnsDup) = step2 strata args (constr,typ)
-                (sub,qual) = step3 triples
-                g (t1,t2) = Equality' (ptsub sub t1) (ptsub sub t2)
-                equalities = (map g (qual ++ map h eqnsDup))
-                h (x,y) = (TyVar' x,TyVar' y)
-                preds2 = map (ppredsub sub) preds
-                -- if there prefix is not null then some one wrote
-                -- Cons :: forall (a::k) . typ
-                -- if "a" appears more than once then it gets renamed
-                -- so we must add the renamed vars to prefix
-                addToPrefix [] ans = ans
-                addToPrefix ((name,pt):xs) ans =
-                  case find (\ (dup,old) -> old==name) eqnsDup of
-                    Nothing -> addToPrefix xs ans
-                    Just(dup,old) -> addToPrefix xs (ans++[(dup,pt)])
-
-        constrs' = map forEachConstr constrs
-
-
--- Generate an infinite list of names not occuring any place
--- in a PT, either free or bound
-freshNames :: [PT] -> [String]
-freshNames typs = makeNames "abcdefghijklmnopqrstuvwxyz" \\ used
-   where used = foldr g [] typs
-         g t free = union (getAll t) free
-
--- First Note that in an explicitly typed data the type of each constructor
--- is a Rho type. Because the parser has factored out any explicit forall.
--- getRange( T a -> [Int] -> T b ) ====> ([T a,[Int]],T b)
--- If the declaration is an explicit kind declaration, then it could be
--- a Karrow.
-
-getRange 0 (Rarrow' d x) = (d:ds,r) where (ds,r) = getRange 0 x
-getRange 1 (Karrow' d x) = (d:ds,r) where (ds,r) = getRange 1 x
-getRange _ r = ([],r)
-
--- Step 1) Look at the kind (*0 ~> Nat -> *0) of the type being defined
--- (Seq) and then invent new fresh type variables and pair them up
--- with their kinds [(i,*0),(j,Nat)]
-
-step1 n (Forallx _ ps _ t) = (pairs,map f ps ++ univ)
-   where f (nm,k,q) = (nm,k)
-         (pairs,univ) = step1 n t
-step1 (n:ns) (Karrow' x y) = add (n,x) (step1 ns y)
-   where add p (pairs,univ) = (p : pairs, univ)
-step1 ns range = ([],[])
-
--- Step 2) For each constructor find its Range (which should be an
--- application of a type constructor like "T a b") Then replace each
--- argument (like a and b) with a corresponding fresh var (like i and j) to
--- get a NewRange, then triple up the actual arg with the cooresponding
--- fresh type variable and its kind. Compute equalities if any
--- var appears more than once in range
---
---   Constr  Domains      Range           Triples                  New Range      Eqns
---   Nil     []           Seq a Z         [(a,i,*0),(Z,j,Nat)]     Seq i j        []
---   Cons    [a,Seq a m]  Seq a (S m)     [(a,i,*0),(S m,j,Nat)]   Seq i j        []
---   In      [Exp c a t]  Decs c a a t    [(c,i,_),(a,j,_)         Decs i j k l   [(a=a1)]
---                                        ,(a1,k,_),(t,l,_)]
-
-step2 :: Int -> [(String,PT)] -> (String,PT) -> ([PT],[(PT,PT,PT)],PT,[(String,String)])
-step2 strata freshKindPairs (constr,typ) = (domains,triples,range3,eqns)
-   where (domains,range) = getRange strata typ
-         (range2,eqns) = duplicatesInRange (getAll typ) range
-         (triples,range3) = tripleUp freshKindPairs range2
-
--- tripleUp [(i:k1),(j:k2)] (T a (S b)) -> ([(a,i,k1),(S b,j,k2)], T i j)
--- tripleUp :: [(String,pt)] -> PT -> ([(PT,PT,pt)],PT)
-tripleUp [] (TyCon' t) = ([],TyCon' t)
-tripleUp [] x =  ([],x)
-tripleUp fresh_args (TyApp' x y) =
-      ((y,TyVar' fname,knd):trips, TyApp' typ (TyVar' fname))
-   where (fname,knd) = last fresh_args
-         args = init fresh_args
-         (trips,typ) = tripleUp args x
-tripleUp args t = error ("\nBad "++show t++"\n"++show args++"\n")
-
--- Step 3) Split the triples into two parts, pairs of variables to
--- variables (a substitution), and pairs of variables to types
--- (an equality qualification).
---     Constructor   Triples                   Substitution     Qualification
---     Nil           [(a,i,*0),(Z,j,Nat)]      [(a,i)]          [(j,Z)]
---     Cons          [(a,i,*0),(S m,j,Nat)]    [(a,i)]          [(j,S m)]
-
-step3 [] = ([],[])
-step3 ((TyVar' x,TyVar' y,k):xs) = ((x,y):subs,quals)
-   where (subs,quals) = step3 xs
-step3 ((typ,TyVar' y,k):xs) = (subs,(TyVar' y,typ):quals)
-   where (subs,quals) = step3 xs
-
--- Step 4) For each constructor, rebuild a new type, where the domains
--- are obtained by applying the subsitution to the old domains, and the
--- range is the new range obtained in step 1. Apply the substitution
--- to the qualification to get the qualification. Existentially
--- quantify all variables not appearing in the new range
---
---   Nil :: Seq i j  where j=Z
---   Cons :: exists m . i -> Seq i m -> Seq i j  where (j=S m)
-
-step4 prefix c loc subs quals newrange domains rangeVars
-       = Constr loc exists (Global c) doms eqls
-   where doms = map (ptsub subs) domains
-         constrType = foldr Rarrow' newrange doms
-         allVars = union (getFree [] constrType) (getFreePredL [] quals)
-         f t = (Global t, AnyTyp 1)
-         g (t,x) = (Global t,x)
-         exists = if null prefix
-                    then (map f (allVars \\ rangeVars))
-                    else map g prefix
-         eqls = if null quals then Nothing else Just quals
-
-
--- Test if an explicit GADT is well formed
--- Nothing means yes, (Just errormessage) otherwise
-okGADT :: ExplicitGADT -> Maybe String
-okGADT (GADT loc strata b (Global tname) kind constrs) = okCONSTR constrs
-  where okCONSTR [] = Nothing
-        okCONSTR (quad:cs) = okAnd (test quad) (okCONSTR cs)
-        okAnd Nothing xs = xs
-        okAnd (Just s) xs = Just s
-        test (cloc,Global cname,prefix,preds,ctype) = okRange cname cloc strata ctype
-        okRange cname cloc 0 (Rarrow' x y) = okRange cname cloc 0 y
-        okRange cname cloc 1 (Rarrow' x y) = Just ("\nTo classify type Constructor: '"++cname++"' use (~>) not (->)")
-        okRange cname cloc 1 (Karrow' x y) = okRange cname cloc 1 y
-        okRange cname cloc 0 (Karrow' x y) = Just ("\nTo classify value Constructor: '"++cname++"' use (->) not (~>)")
-        okRange cname cloc n (Forallx _ _ _ z) = okRange cname cloc n z
-        okRange cname cloc n typ = okAppOfT kind typ
-          where okAppOfT (Karrow' x y) (TyApp' t z) = okAppOfT y t
-                okAppOfT (Karrow' x y) t = Just
-                         (show cloc ++
-                          "\nRange of "++cname++" is not fully applied application of " ++
-                          tname++"\n"++show t)
-                okAppOfT (Forallx q ss eqs t) y = okAppOfT t y
-                okAppOfT _ (f@(TyApp' _ _)) = Just
-                         (show cloc ++
-                          "\nkind: " ++
-                          show kind ++
-                          " is not consistent with range of "++cname++": "++
-                          show typ)
-                okAppOfT _ (TyCon' z) | z==tname = Nothing
-                okAppOfT w t = Just
-                         (show cloc ++
-                          "\nrange of "++cname++" "++show t++
-                          " is not consistent with type being defined "++
-                          show tname++"\n "++show w)
-
-gadt2Data (Explicit x) =
-   case (okGADT x) of
-        Nothing -> return(transGADT x)
-        Just s -> fail s
-gadt2Data x = return x
-
-------------------------------------------------------------
--- if we have a constructor with a type where a variable
--- appears more than once in the range. E.g.
--- C:: (Exp c all t) -> Decs c all all t,  we need to rename
--- any variable that appears more than once, and collect a set
--- of equations.  [(all = all7)] => Decs c all all7 t
-
-duplicatesInRange :: [[Char]] -> PT -> (PT,[(String,String)])
-duplicatesInRange bad typ = (typ2,eqns)
-  where (typ2,(_,mapping)) = rename (bad,[]) typ
-        eqns = concat (map f mapping)
-        f (x,[]) = []
-        f (x,ys) = (map g ys) where g y = (y,x)
-
-newname bad name = f 0
-  where f n = let new = (name++show n)
-              in if elem new bad then f (n+1) else new
-
-rename :: ([String],[(String,[String])]) -> PT ->
-          (PT,([String],[(String,[String])]))
-rename (bad,mapping) (TyVar' s) = (TyVar' x,(badder,mapping2))
-  where (x,badder,mapping2) = scan mapping
-        scan [] = (s,s:bad,[(s,[])])
-        scan ((x,xs):ms) | s==x = (y,y:bad,(x,y:xs):ms)
-           where y = newname bad s
-        scan (m:ms) = (y,badder,m:ms2)
-           where (y,badder,ms2) = scan ms
-rename used (Rarrow' x y) = (Rarrow' a b,u2)
-  where (a,u1) = rename used x
-        (b,u2) = rename u1 y
-rename used (Karrow' x y) = (Karrow' a b,u2)
-  where (a,u1) = rename used x
-        (b,u2) = rename u1 y
-rename used (TyFun' (x:xs)) =  (TyFun' (x:ys),u2)
-  where (ys,u2) = renameL used xs
-rename used (TyApp' x y) = (TyApp' a b,u2)
-  where (a,u1) = rename used x
-        (b,u2) = rename u1 y
-rename used (TyCon' s) =  (TyCon' s,used)
-rename used (Star' n) =  (Star' n,used)
-rename used (AnyTyp n) =  (AnyTyp n,used)
-rename used t = error ("The type: "++show t++" should not appear in the range of a GADT")
-
-renameL u [] = ([],u)
-renameL u1 (x:xs) = (y:ys,u3)
-  where (y,u2) = rename u1 x
-        (ys,u3) = renameL u2 xs
-
 

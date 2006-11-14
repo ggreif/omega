@@ -2,17 +2,18 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
--- This module based upon code described in 
+-- This module based upon code described in
 -- "Structuring Depth First Search Algorithms in Haskell"
 -- by David King and John Launchbury
--- Proc. ACM Principles of Programming Languages, San Francisco, 1995. 
+-- Proc. ACM Principles of Programming Languages, San Francisco, 1995.
 
 
 module DepthFirstSearch where
-import ST
+import Control.Monad.ST
+import Data.Array.ST
 import qualified Array as A
 
 type Vertex  = Int
@@ -56,7 +57,7 @@ graph = buildG (1,10)
             (5, 4),  (7, 8),  (7, 10),
             (8, 6),  (8, 9),  (8, 10) ]
          )
-         
+
 -- Depth-first search
 
 -- Specification and implementation of depth-first search:
@@ -86,13 +87,13 @@ generate g v  = Node v (map (generate g) (g `aat` v))
 type Set s    = STArray s Vertex Bool
 
 mkEmpty      :: Bounds -> ST s (Set s)
-mkEmpty bnds  = newSTArray bnds False
+mkEmpty bnds  = newArray bnds False
 
 contains     :: Set s -> Vertex -> ST s Bool
-contains m v  = readSTArray m v
+contains m v  = readArray m v
 
 include      :: Set s -> Vertex -> ST s ()
-include m v   = writeSTArray m v True
+include m v   = writeArray m v True
 
 prune        :: Bounds -> Forest Vertex -> Forest Vertex
 prune bnds ts = runST (mkEmpty bnds >>= \m ->
@@ -109,7 +110,7 @@ chop m (Node v ts : us)
                   chop m ts   >>= \as ->
                   chop m us   >>= \bs ->
                   return (Node v as : bs)
-         
+
 -- Algorithm 2: topological sorting
 
 postorder :: Tree a -> [a]
@@ -122,7 +123,7 @@ postOrd      :: Graph -> [Vertex]
 postOrd       = postorderF . dff
 
 --topSort      :: Graph -> [Vertex]
---topSort       = reverse . postOrd   
+--topSort       = reverse . postOrd
 
 -- Algorithm 4: strongly connected components
 
@@ -134,6 +135,6 @@ transposeG g = buildG (A.bounds g) (reverseE g)
 
 scc          :: Graph -> Forest Vertex
 scc g         = dfs (transposeG g) (reverse (postOrd g))
- 
-scc2 :: Graph -> [[Int]] 
+
+scc2 :: Graph -> [[Int]]
 scc2 g = reverse (map (\ t -> nodesTree t []) (scc g))

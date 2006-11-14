@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Encoding2 where
 
@@ -155,7 +155,7 @@ instance Encoding a => Encoding (IO a) where
                 return (Right (to a))
    from (Vfio perm fio) = do
    -- Nathan: what to do with the permutation?  I just ignore it for now
-                        e <- runFIO fio (\_ _ _ msg -> fail msg)
+                        e <- runFIO fio (\_ _ msg -> fail msg)
                         case e of
                           Left msg -> fail msg
                           Right a -> return (from a)

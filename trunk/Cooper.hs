@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Cooper where
 
@@ -55,7 +55,7 @@ SUCH DAMAGE.
 import Char(isDigit)
 import List(sortBy,nub)
 import Auxillary(plist,plistf,DispElem(..))
-import RankN(Tau(..),Pred(..),warn,warnD,TcTv)
+import RankN(Tau(..),Pred(..),warnM,TcTv)
 import Monads(fio,fio2Mtc)
 
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
@@ -1034,7 +1034,7 @@ toFormula env truths concl =
                              xs -> (init xs,last xs)
      ; let formula = (Imp(list_conj(hyp++prefix),tail))
      ; return (universal formula,formula) }
-toFormula env truths _ = Nothing
+
 
 
 

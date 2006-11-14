@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 
 module Toplevel where
@@ -15,21 +15,23 @@ import ParserDef(getInt,pCommand,parseString,Command(..)
                 ,program,parseHandle)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
-             ,write,writeln,readln,unTc,tryAndReport,fio
+             ,write,writeln,readln,unTc,tryAndReport,fio,fioFailD
              ,errF,report,writeRef)
 import IO
 import List(partition,(\\),nub,find)
-import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo)
+import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
 import Monad(when)
-import Infer2
-import RankN(pprint,Z)
-import NarrowMod(narrow,showStep)
+import Infer2(TcEnv,completionEntry,lineEditReadln,initTcEnv
+             ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
+             ,var_env,type_env,rules,runtime_env)
+import RankN(pprint,Z,failD,disp0,dispRef)
 import System(getArgs)
 import Data.Map(Map,toList)
 import Directory
 import Char(isAlpha,isDigit)
 import System.IO(hClose)
+import System.IO.Error(try,ioeGetErrorString)
 import Monads(handleP)
 import Manual(makeManual)
 import Commands
@@ -65,6 +67,7 @@ readEvalPrint commandTable sources tenv =
 -- Repeat Read-Eval-Print until the :q command is given
 topLoop commandTable sources env = tryAndReport
   (do { fio(hFlush stdout)
+      ; fio(writeRef dispRef disp0)
       ; env' <-  (readEvalPrint commandTable sources env)
       ; topLoop commandTable sources env'
       }) (report (topLoop commandTable sources env))
@@ -116,7 +119,7 @@ try_to_load s =
              ; env1 <- tryAndReport (elabFile s initTcEnv) err2
              ; writeln (s++" successfully loaded")
              ; return () }) errF
-  where err2 loc disp mess = error ("At "++show loc++"\n"++mess)
+  where err2 loc mess = error ("At "++show loc++"\n"++mess)
 
 
 -- Get the file to "run" from the command line arguments, then "run" it
@@ -140,14 +143,15 @@ omega =
 -- elabDs is the interface to everything. Elaborates a mutually recursive [Dec]
 -- other functions read the [Dec] from files and call this function
 
-elabDs :: [Dec] -> TcEnv -> FIO Z TcEnv
+elabDs :: [Dec] -> TcEnv -> FIO TcEnv
 elabDs ds (tenv) =
   do { let nam (Global s) = s
      ; write ((display (map nam (concat (map decname ds))))++" ")
      ; (tenv1,ds1,cs1) <- checkDecs tenv ds   -- type check the list
      --; mapM (writeln .show) ds
      --; mapM (writeln . show) ds1
-     ; when (not (null cs1)) (fail ("Unsolved constraints (type 2): "++show cs1))
+     ; when (not (null cs1))
+            (fioFailD 3 disp0 [Ds "Unsolved constraints (type 2): ",Ds  (show cs1)])
      ; env1 <- elaborate None ds1 (runtime_env tenv)  -- evaluate the list
      ; return(tenv1 { runtime_env = env1 })
      }
@@ -160,7 +164,7 @@ display ss = plistf id "(" ss " " ")"
 -- Read a [Dec] from a file, then split it into imports and
 -- binding groups, uses elabDs to do the work.
 
-elabFile :: String -> (TcEnv) -> FIO Z(TcEnv)
+elabFile :: String -> (TcEnv) -> FIO(TcEnv)
 elabFile file (tenv) =
    do { all <- parseDecs file
       ; let (imports,ds) = partition importP all
@@ -181,10 +185,12 @@ elabFile file (tenv) =
 ------------------------------------------------------------------
 -- Get a [Dec] from a file name
 
-parseDecs :: String -> FIO Z [Dec]
+parseDecs :: String -> FIO [Dec]
 parseDecs file =
-  do { hndl <- fio (openFile file ReadMode)
-     ; let err disp mess = fio((hClose hndl) >> fail mess)
+  do { hndl <- eitherM (fio (try(openFile file ReadMode)))
+                 (\ err -> fail ("\nProblem opening file: "++file))
+                 return
+     ; let err mess = fio((hClose hndl) >> fail mess)
            -- if parsing fails, we should close the file
      ; x <- handleP (const True) 10
                     (fio (parseHandle program file hndl)) err
@@ -211,7 +217,7 @@ importManyFiles [] tenv = return tenv
 importManyFiles (d:ds) tenv =
   do { next <- importFile d tenv; importManyFiles ds next }
 
-importFile :: Dec -> TcEnv -> FIO Z TcEnv
+importFile :: Dec -> TcEnv -> FIO TcEnv
 importFile (Import name vs) tenv =
   case lookup name (imports tenv) of
      Just previous -> return tenv
@@ -234,7 +240,7 @@ importNames name vs new old =
 
 
 
-multDef :: [Dec] -> [Var] -> FIO Z ()
+multDef :: [Dec] -> [Var] -> FIO ()
 multDef ds names = if null dups then return () else fail (foldr report "" dups)
   where dups = nub(names \\ nub names)
         locs = concat(map decloc ds)

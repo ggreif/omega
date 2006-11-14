@@ -2,12 +2,13 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 module Auxillary where
 
 import Char(isAlpha)
+import List(find,union)
 
 
 whenM :: Monad m => m Bool -> m b -> [Char] -> m b
@@ -31,8 +32,14 @@ foldrM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
 foldrM acc base [] = return base
 foldrM acc base (x:xs) = do { b <- acc x base; foldrM acc b xs}
 
+foldlM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
+foldlM acc base [] = return base
+foldlM acc base (x:xs) = do { b <- foldrM acc base xs; acc x b; }
+
 maybeM :: Monad m => m(Maybe a) -> (a -> m b) -> (m b) -> m b
 maybeM mma f mb = do { x <- mma; case x of { Nothing -> mb ; Just x -> f x }}
+
+eitherM comp f g = do { x <- comp; case x of {Left x -> f x; Right x -> g x}}
 
 {-- Already in Monad
 filterM :: Monad m => (a -> m Bool) -> [a] -> m[a]
@@ -72,6 +79,10 @@ extendL f ((x,v):xs) y = if x==y then v else extendL f xs y
 elemBy :: (a -> a -> Bool) -> a -> [a] -> Bool
 elemBy p x xs = any (p x) xs
 
+prefix [] xs = True
+prefix (x:xs) (y:ys) | x==y = prefix xs ys
+prefix _ _ = False
+
 backspace [] ans = reverse ans
 backspace (x:xs) []  | x == '\BS' = backspace xs []
 backspace (x:xs) ans | x == '\BS' = backspace xs (tail ans)
@@ -100,17 +111,17 @@ report loc s = fail ("\nError near "++(show loc)++"\n"++s)
 class (Show a,Eq a) => Display t a where
   disp :: DispInfo a -> t -> (DispInfo a,String)
 
-newtype DispInfo a = DI ([(a,String)],[String])
+newtype DispInfo a = DI ([(a,String)],[String],[String])
+--                       map          bad      name-supply
 
 ------------------------------------------------------
 
-initDI = DI([],makeNames "abcdefghijklmnopqrstuvwxyz")
+initDI = DI([],[],makeNames "abcdefghijklmnopqrstuvwxyz")
 
-newDI xs = DI(xs,filter (notIn xs) (makeNames "abcdefghijklmnopqrstuvwxyz"))
-  where notIn [] x = True
-        notIn ((n,y):ys) x = if x==(root y) then False else notIn ys x
-        root (c:cs) | not(isAlpha c) = root cs
-        root cs = cs
+intDI:: DispInfo Int
+intDI = initDI
+
+newDI xs = DI(xs,map snd xs,makeNames "abcdefghijklmnopqrstuvwxyz")
 
 -- We define a function "makeNames" which can be used to generate
 -- an infinite list of distinct names based on some list of initial Chars
@@ -151,21 +162,63 @@ disp5 xs0 (w,x,y,z,a) = (xs5,sw,sx,sy,sz,sa)
         (xs5,sa) = disp xs4 a
 
 
-useDisplay :: Eq a => a -> (String -> String) -> DispInfo a -> (DispInfo a,String)
-useDisplay uniq newname (info@(DI(xs,n:ns))) =
+useDisplay :: Eq a => (String -> String) -> DispInfo a -> a -> (DispInfo a,String)
+useDisplay newnamef (info@(DI(xs,bad,supply))) uniq =
   case lookup uniq xs of
     Just y -> (info,y)
-    Nothing -> (DI((uniq,name):xs,ns),name)
-  where name = newname n
+    Nothing -> let (m,supply2) = next bad supply
+                   name = newnamef m
+               in (DI((uniq,name):xs,bad,supply2),name)
+
+next bad (x:xs) = if notIn bad x then (x,xs) else next bad xs
+  where notIn [] x = True
+        notIn (y:ys) x = if (root x)==(root y) then False else notIn ys x
+        root (c:cs) | not(isAlpha c) = root cs
+        root cs = cs
+
+{-  SOME TESTS to turn into Unit Tests
+d0 = newDI [(1::Int,"b"),(2,"c")]
+ans = displays d1 [Ds "A",Df f 1, Df f 0, Df f 2, Df f 3, Df f 4,Df f 1,Ds "Z",Df f 3]
+
+f::  DispInfo Int -> Int -> (DispInfo Int,String)
+f = useDisplay (\ x -> x)
+d1 :: DispInfo Int
+d1 = newDI []
+(d2,_) = tryDisplay 0 "a" 1 id d1
+(d3,_) = tryDisplay 0 "b" 2 id d2
+(d4,_) = tryDisplay 0 "a" 3 id d3
+(d5,_) = tryDisplay 0 "x" 4 id d4
+d6 = displays d5 [Ds "[",Df f 1,Df f 2,Df f 3, Df f 4,Df f 5,Ds "]"]
+-}
+
+-- Here we suggest a name "x" for a variable "uniq", if "uniq" isn't
+-- already mapped to some other name. If it is still not mapped we
+-- use "x" if it is still available, "x1", or "x2", or "x3" etc if
+-- "x" is already in use.
+
+tryDisplay n firstx x uniq newf (info@(DI(xs,bad,supply))) =
+  case lookup uniq xs of
+    Just y -> (info,y)
+    Nothing -> case find alreadyInUse xs of
+                Nothing -> (DI((uniq,name):xs,name:bad,supply),name)
+                       where name = newf x
+                Just _ -> tryDisplay (n+1) firstx (next firstx) uniq newf info
+ where next x = x++show n
+       alreadyInUse (a,nm) = nm== newf x
 
 
+
+{-
 mergeDisp :: DispInfo a -> DispInfo a -> DispInfo a
-mergeDisp (DI(map1,src1)) (DI(map2,src2)) = DI(map3,src3)
+mergeDisp (DI(map1,bad1,src1)) (DI(map2,bad2,src2)) = DI(map3,bad3,src3)
   where src3 = if length map1 > length map2 then src1 else src2
-        map3 = map2++map2
+        map3 = map1++map2
+        bad3 = union bad1 bad2
+-}
+
 
 instance Show a => Show (DispInfo a) where
-  show (DI(xs,names)) = "(DI "++show xs++" "++show(take 6 names)++")"
+  show (DI(xs,bad,names)) = "(DI "++show xs++" "++show bad++" "++show(take 6 names)++")"
 
 data DispElem a
   = forall x . (Display x a) =>  Dd x
@@ -181,8 +234,8 @@ drI:: DispInfo z -> [DispElem z] -> DispElem z
 drI _ xs = Dr xs
 
 
-dlf2:: (DispInfo z -> x -> DispElem z) -> [x] -> String -> DispElem z
-dlf2 f xs sep = Dlf (\ d x -> displays d [f d x]) xs sep
+dlfI:: (DispInfo z -> x -> DispElem z) -> [x] -> String -> DispElem z
+dlfI f xs sep = Dlf (\ d x -> displays d [f d x]) xs sep
 
 displays :: DispInfo a -> [DispElem a] -> (DispInfo a,String)
 displays d xs = help d (reverse xs) "" where

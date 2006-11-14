@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Oct 12 08:42:26 Pacific Daylight Time 2006
--- Omega Interpreter: version 1.2.1
+-- Mon Nov 13 16:07:17 Pacific Standard Time 2006
+-- Omega Interpreter: version 1.3
 
 -----------------------------------------------------------
 -- Daan Leijen (c) 1999, daan@cs.uu.nl
@@ -14,7 +14,7 @@ module StdTokenDef (TokenDef(..)
                    ,haskellStyle, javaStyle
                    ,emptyStyle
                    ,haskell, haskellExt
-                   ,mondrian,oneOf
+                   ,mondrian
                    ) where
 
 import Parser
@@ -23,7 +23,7 @@ import CommentDef
 -----------------------------------------------------------
 -- TokenDef
 -----------------------------------------------------------
-data TokenDef  = TokenDef 
+data TokenDef  = TokenDef
                { commentStart   :: String
                , commentEnd     :: String
                , commentLine    :: String
@@ -35,42 +35,42 @@ data TokenDef  = TokenDef
                , reservedNames  :: [String]
                , reservedOpNames:: [String]
                , caseSensitive  :: Bool
-               }                           
-           
+               }
+
 -----------------------------------------------------------
 -- Styles: haskellStyle, javaStyle
------------------------------------------------------------               
-haskellStyle= emptyStyle                      
+-----------------------------------------------------------
+haskellStyle= emptyStyle
                 { identStart     = letter
-                , identLetter	 = alphaNum <|> oneOf "_'"
-                , opStart	 = opLetter haskell
-                , opLetter	 = oneOf ":!#$%&*+./<=>?@\\^|-~"              
+                , identLetter    = alphaNum <|> oneOf "_'"
+                , opStart        = opLetter haskell
+                , opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
                 , reservedOpNames= []
                 , reservedNames  = []
-                , caseSensitive  = True                                   
-                }         
-                           
+                , caseSensitive  = True
+                }
+
 javaStyle   = emptyStyle
-		{ identStart	 = letter
-		, identLetter	 = alphaNum <|> oneOf "_'"
-		-- fixed set of operators: use 'symbol'
-		, reservedNames  = []
-		, reservedOpNames= []	
-                , caseSensitive  = False				  
-		}
+                { identStart     = letter
+                , identLetter    = alphaNum <|> oneOf "_'"
+                -- fixed set of operators: use 'symbol'
+                , reservedNames  = []
+                , reservedOpNames= []
+                , caseSensitive  = False
+                }
 
 -----------------------------------------------------------
 -- Haskell
------------------------------------------------------------               
+-----------------------------------------------------------
 haskellExt  = haskell
-	        { identLetter	 = identLetter haskell <|> char '#'
-	        , reservedNames	 = reservedNames haskell ++ 
-    				   ["foreign","import","export","primitive"
-    				   ,"_ccall_","_casm_"
-    				   ,"forall"
-    				   ]
+                { identLetter    = identLetter haskell <|> char '#'
+                , reservedNames  = reservedNames haskell ++
+                                   ["foreign","import","export","primitive"
+                                   ,"_ccall_","_casm_"
+                                   ,"forall"
+                                   ]
                 }
-			    
+
 haskell     = haskellStyle
                 { reservedOpNames= ["::","..","=","\\","|","<-","->","@","~","=>"]
                 , reservedNames  = ["let","in","case","of","if","then","else",
@@ -81,25 +81,25 @@ haskell     = haskellStyle
                                     "primitive"
                                     -- "as","qualified","hiding"
                                    ]
-                }         
-                
-                
+                }
+
+
 -----------------------------------------------------------
 -- Mondrian
------------------------------------------------------------               
+-----------------------------------------------------------
 mondrian    = javaStyle
-		{ reservedNames = [ "case", "class", "default", "extends"
-				  , "import", "in", "let", "new", "of", "package"
-				  ]	
-                , caseSensitive  = True				  
-		}
+                { reservedNames = [ "case", "class", "default", "extends"
+                                  , "import", "in", "let", "new", "of", "package"
+                                  ]
+                , caseSensitive  = True
+                }
 
-				
+
 -----------------------------------------------------------
 -- minimal token definition
------------------------------------------------------------                
+-----------------------------------------------------------
 emptyStyle
-            = TokenDef 
+            = TokenDef
                { commentStart   = cStart
                , commentEnd     = cEnd
                , commentLine    = cLine
@@ -112,4 +112,4 @@ emptyStyle
                , reservedNames  = []
                , caseSensitive  = True
                }
-                
+
