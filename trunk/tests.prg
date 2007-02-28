@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 import "LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
@@ -638,6 +638,38 @@ data M :: Latice ~> *0 ~> *0 where
   Unit2 :: a -> M i a
   Bind :: forall i j k a b . Lub i j k => M i a -> (a -> M j b) -> M k b 
 
+------------------------------------------------------
+-- type functions and narrowing
+
+data Li :: *0 ~> Nat ~> *0 where
+  N :: Li a Z
+  C :: a -> Li a n -> Li a (S n)
+
+plus:: Nat ~> Nat ~> Nat
+{plus Z x} = x
+{plus (S y) x} = S {plus y x}
+
+app :: Li a n -> Li a m -> Li a {plus n m}
+app N ys = ys
+app (C x xs) ys = C x (app xs ys)
+
+flip p a b = p b a
+
+##test "Rigid gets bound"
+  flipApp :: Li a n -> Li a m -> Li a {plus m n}
+  flipApp xs (ys@N) = N
+  flipApp xs (C y ys) = C y (flipApp xs ys)
+  
+##test "Need plus commutes"
+  flipAppend :: Li a n -> Li a m -> Li a {plus n m}
+  flipAppend = flip app
+
+##test "Need theorem for rev"
+  -- This will need some kind of theorem?
+  rev :: Li a n -> Li a n
+  rev N = N
+  rev (C x xs) = app (rev xs) (C x N)
+
 -------------------------------------------------------
 -- exercising the unreachable clause
 
@@ -672,39 +704,24 @@ transP x y =
   trans4 :: LE a b -> LE b c -> LE a c
   trans4 x y = case (x,y) of (Step z,Base) -> undefined
 
-------------------------------------------------------
--- type functions and narrowing
+##test "Is really reachable"
+  ppZ:: Nat' n -> Equal {plus n m} Z -> (Equal n Z,Equal m Z)
+  ppZ (x@Z) (y@Eq) = unreachable
 
-data Li :: *0 ~> Nat ~> *0 where
-  N :: Li a Z
-  C :: a -> Li a n -> Li a (S n)
+pow2 :: Nat ~> Nat
+{pow2 Z} = S Z
+{pow2 (S x)} = {plus {pow2 x} {pow2 x}}
 
-plus:: Nat ~> Nat ~> Nat
-{plus Z x} = x
-{plus (S y) x} = S {plus y x}
+notZpow2 :: Nat' n -> exists m . Equal {pow2 n} (S m)
+notZpow2 Z = Ex Eq
+notZpow2 (S n) = (Ex Eq)
+ where theorem indHyp = (notZpow2 n)
 
-app :: Li a n -> Li a m -> Li a {plus n m}
-app N ys = ys
-app (C x xs) ys = C x (app xs ys)
-
-flip p a b = p b a
-
-##test "Rigid gets bound"
-  flipApp :: Li a n -> Li a m -> Li a {plus m n}
-  flipApp xs (ys@N) = N
-  flipApp xs (C y ys) = C y (flipApp xs ys)
-  
-##test "Need plus commutes"
-  flipAppend :: Li a n -> Li a m -> Li a {plus n m}
-  flipAppend = flip app
-
-##test "Need theorem for rev"
-  -- This will need some kind of theorem?
-  rev :: Li a n -> Li a n
-  rev N = N
-  rev (C x xs) = app (rev xs) (C x N)
-
-
+##test "Unreachable, not enough theorems" 
+  lemma :: Nat' x -> Equal {plus {pow2 x} {pow2 x}} #2 -> Equal x Z
+  lemma Z Eq = Eq
+  lemma (S n) Eq = unreachable
+    -- where theorem notZpow2,plusS
 ---------------------------------------------------
 -- Tests of Simon's Algorithm for GADTS
 

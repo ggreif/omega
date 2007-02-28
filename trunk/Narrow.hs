@@ -2,10 +2,10 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
-module Narrow(narr,defTree,Check(..)) where
+module Narrow(narr,defTree,Check(..),matches) where
 
 import List(union,find,partition)
 import Auxillary(maybeM,plistf,plist,DispElem(..),displays
@@ -23,6 +23,7 @@ class (TyCh m) => Check m where
   rewNestedEqual :: (Tau,Tau) -> m (Maybe (Tau,Unifier))
   getDefTree :: NName -> m(DefTree TcTv Tau)
   tryRewriting :: Tau -> m(Maybe (Tau,Unifier))
+  normalizeTau :: Tau -> m (Tau,Unifier)
 
 --------------------------------------------------
 -- Unifiers and substitutions
@@ -31,13 +32,13 @@ subProb u (EqP(x,y)) = EqP(subTau u x,subTau u y)
 subProb u (AndP rs) = AndP (map (subProb u) rs)
 subProb u (TermP x) = TermP(subTau u x)
 
-composeUn :: Unifier -> Unifier -> Unifier
-composeUn s1 s2 = ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
+--composeUn :: Unifier -> Unifier -> Unifier
+--composeUn s1 s2 = ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 
-o new old = composeUn new old
+--o new old = composeUn new old
 
 pushUnifier u1 [] = []
-pushUnifier u1 ((exp,u2):xs) = (exp,composeUn u2 u1):pushUnifier u1 xs
+pushUnifier u1 ((exp,u2):xs) = (exp,u2 `o` u1):pushUnifier u1 xs
 
 --------------------------------------------------
 -- Values, variables or a constructor applied to all values
@@ -69,6 +70,7 @@ tooMany (nsteps,nsolution,disp,_) =  (nsteps,nsolution,disp,True)
 ------------------------------------------------------------
 -- Tracing a narrowing computation
 
+{-
 traceSteps (steps,count,d,exceeded) truths ys =
   do { verbose <- getMode "narrowing"
      ; d1 <- whenP verbose d
@@ -79,7 +81,7 @@ traceSteps (steps,count,d,exceeded) truths ys =
      ; when verbose (wait "narrowing")
      ; return (steps,count,d1,exceeded)
      }
-
+-}
 
 traceSteps2 (steps,count,d,exceeded) (problems@((ps,truths,us):_)) found =
   do { verbose <- getMode "narrowing"
@@ -133,9 +135,10 @@ stepProb s (prob@(EqP(x,y))) truths =
          (\ u1 -> do { truths2 <- subRels u1 truths
                      ; return([(TermP success,truths2,u1)],s)})
          (case truths `implies` (x,y) of
-            Just u1 -> do { warnP [Ds "\nWhile narrowing, the term:\n   "
-                                  ,dProb prob, Ds "\nis implied by the truths: "
-                                  ,dRel truths]
+            Just u1 -> do { verbose <- getMode "narrowing"
+                          ; whenM verbose
+                              [Ds "\nWhile narrowing, the term:\n   "
+                              ,dProb prob, Ds "\nis implied by the truths, deriving ",dUn u1]
                           ; truths2 <- subRels u1 truths
                           ; return([(TermP success,truths2,u1)],s)}
             Nothing -> stepEq s (x,y) truths)
@@ -146,14 +149,16 @@ stepProb s (AndP [p]) truths = stepProb s p truths
 stepProb (s@(nstep,nsol,d0,ex)) (AndP (p:ps)) truths =
   do { let (d1,cntxt) = displays d0 [dProb p]
            newS = (20,2,d1,False)
-     ; (ans,s1@(_,_,d2,_)) <- narr ("And sub-problem\n  "++cntxt) newS [(p,truths,[])] []
-     ; let nextS = (nstep -1,nsol,d2,ex)
+     ; (ans,s1@(_,_,d2,exceed)) <- narr ("And sub-problem\n  "++cntxt) newS [(p,truths,[])] []
+     ; if exceed
+          then return ([],s1)
+          else do { let nextS = (nstep -1,nsol,d2,ex)
      ; case ans of
          [] -> return([],nextS)
          [(TermP x,ts1,u1)] | x==success ->
             return([(andP(map (subProb u1) ps),ts1,u1)],nextS)
          new -> let add (p,ts,u1) = (andP(map (subProb u1) ps++[p]),ts,u1)
-                in return(map add new,nextS)}
+                in return(map add new,nextS)}}
 
 stepEq:: Check m => ST Z -> (Tau,Tau) -> Rel Tau -> m(Sol,ST Z)
 stepEq s0 (a,b) truths =
@@ -176,41 +181,54 @@ stepEq s0 (a,b) truths =
        ; truths2 <- subRels u truths
        ; return([(EqP (subTau u a,subTau u b),truths2,u)],s1)}
   (VarN s,FunN _ _) | False ->  -- not (occursN s b) ->
-    do { t1 <- nfTau b
+    do { (t1,_) <- normalizeTau b
        ; (u,s1) <- mguV s0 truths [(TcTv s,t1)]
        ; truths2 <- subRels u truths
        ; return([(TermP success,truths2,u)],s1)}
   (FunN _ _,VarN s) | False -> -- not (occursN s a) ->
-    do { t1 <- nfTau a
+    do { (t1,_) <- normalizeTau a
        ; (u,s1) <- mguV s0 truths [(TcTv s,t1)]
        ; truths2 <- subRels u truths
        ; return([(TermP success,truths2,u)],s1)}
   (FunN _ _,FunN _ _) | a==b -> return([(TermP success,truths,[])],s0)
+
   (FunN nm args,FunN nm2 args2) ->
-    do { (ansA,s1) <- stepTerm s0 a truths
-       ; (ansB,s2) <- stepTerm s1 b truths
-       ; let extra = []
-           {- if nm /= nm2
-                    then []
-                    else case mguN (zip args args2) of
-                          Nothing -> []
-                          Just u -> [(TermP success,subRels u truths,u)]
-           -}
+    handleM 4
+    (do { (ansA,s1) <- stepTerm s0 a truths
+        ; (ansB,s2) <- stepTerm s1 b truths
        -- we are only going to pursue one path, so choose one
        ; case fewestVar ansA a ansB b of
-           (bool,ans,term) -> return(extra ++ map (buildQ bool term) ans,s2)}
-  (FunN nm args, _) ->
-    do { (ans,s1) <- stepTerm s0 a truths
-       ; return(map (buildQ True b) ans,s1)}
-  (_,FunN nm args) ->
-    do { (ans,s1) <- stepTerm s0 b truths
-       ; return(map (buildQ False a) ans,s1)}
+           (bool,ans,term) -> return(map (buildQ bool term) ans,s2)})
+    (\ s -> if nm /= nm2
+               then failM 3 [Ds s]
+               else case mgu (zip args args2) of
+                      Right _ -> failM 3 [Ds s]
+                      Left u -> do { ts <- subRels u truths
+                                   ; return([(TermP success,ts,u)],s0)})
+  (FunN nm args, rhs) ->
+    handleM 4 (do { (ans,s1) <- stepTerm s0 a truths
+                  ; return(map (buildQ True b) ans,s1)})
+              (failEq s0 truths a rhs)
+  (lhs,FunN nm args) ->
+    handleM 4 (do { (ans,s1) <- stepTerm s0 b truths
+                  ; return(map (buildQ False a) ans,s1)})
+              (failEq s0 truths b lhs)
   (ConN n xs,ConN m ys) | n /= m -> return([],s0)
   (t1@(ConN n xs),t2@(ConN m ys)) | n==m ->
     case (xs,ys) of
      ([],[]) -> return([(TermP success,truths,[])],s0)
      ([x],[y]) -> return([(EqP(x,y),truths,[])],s0)
      (_,_) -> return([(andP(zipWith (curry EqP) xs ys),truths,[])],s0)
+
+
+
+failEq s0 truths fun (VarN s) mess =
+  do { (u,s1) <- mguV s0 truths [(TcTv s,fun)]
+     ; truths2 <- subRels u truths
+     ; return([(TermP success,truths2,u)],s1)}
+failEq s0 truths fun other mess =
+  failM 3 [Ds  "\nWhile narrowing the equality:\n   ",Dd (eqf fun (inject other)),Ds mess]
+
 
 stepTerm:: Check m => ST Z -> Tau -> Rel Tau -> m(Sol,ST Z)
 stepTerm s0 term truths =
@@ -264,13 +282,17 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                         ; return(map (reBuild term path) ans,s2)}
                  other -> let newest = insertNewTermAtPath matched path new
                           in if newest==term
-                                 then noProgress initDI name term
+                                 then maybeM (tryRewriting term)
+                                             (\(t2,u2) -> return([(TermP t2,truths,u2 `o` mU)],s1))
+                                             (noProgress name term)
                                  else do { truths2 <- subRels mU truths
                                          ; return ([(TermP newest,truths2,mU)],s1)}}
 
-noProgress d0 name term =
-  failM 3 [Ds "\nWhile narrowing, the term:\n   ",Dd term
-          ,Ds ("\nNo rule for "++show name++" matched.\nEither the rules are incomplete, or a lemma is needed.")]
+noProgress name term =
+  failM 1
+        [Ds "\nNo progress can be made on the term:\n   ",Dd term
+        ,Ds ("\nNo rule for "++show name++" matched.\nEither the rules are incomplete, or a lemma is needed.")]
+
 
 
 -- In applyLfRule, We first match the term against lhs,
@@ -327,8 +349,8 @@ implies (AndR (r:rs)) (x,y) =
 
 
 subRels u (EqR(x,y)) =
-  do { a <- nfTau(subTau u x)
-     ; b <- nfTau(subTau u y)
+  do { (a,u1) <- normalizeTau(subTau u x)
+     ; (b,u2) <- normalizeTau(subTau u1 y)
      ; ans <- simpRel(EqR(a,b))
      ; return ans}
 subRels u (AndR rs) = do { ans <- mapM (subRels u) rs; return(AndR ans)}
@@ -365,11 +387,12 @@ mguV :: Check m => ST Z -> Rel Tau -> [(Tau,Tau)] -> m(Unifier,ST Z)
 mguV s0 truths pairs =
   case mgu pairs of
     Left u2 -> return(u2,s0)
-    Right ("Rigid",v,t) -> failM 3 [Ds "the supposedly polymorphic variable "
+    Right ("Rigid",v,t) -> failM 3 [Ds "The supposedly polymorphic type variable: ",Dd v
+                                   ,Ds "\narising from the pattern: "
                                    ,Ds name
-                                   ,Ds "\narising from a type signature at "
+                                   ,Ds ", from "
                                    ,Ds loc
-                                   ,Ds ", is forced by context to be\n  ", Dd t]
+                                   ,Ds ",\nis forced by context to be\n  ", Dd t]
        where (name,loc) = locInfo v
     Right (s,t1,t2) -> fail ("Unification of (var,term) failed, this is impossible\n"++show pairs)
 

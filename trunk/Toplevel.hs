@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 
 module Toplevel where
@@ -22,7 +22,7 @@ import List(partition,(\\),nub,find)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
 import Monad(when)
-import Infer2(TcEnv,completionEntry,lineEditReadln,initTcEnv
+import Infer2(TcEnv(sourceFiles),completionEntry,lineEditReadln,initTcEnv
              ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
              ,var_env,type_env,rules,runtime_env)
 import RankN(pprint,Z,failD,disp0,dispRef)
@@ -68,9 +68,10 @@ readEvalPrint commandTable sources tenv =
 topLoop commandTable sources env = tryAndReport
   (do { fio(hFlush stdout)
       ; fio(writeRef dispRef disp0)
-      ; env' <-  (readEvalPrint commandTable sources env)
-      ; topLoop commandTable sources env'
-      }) (report (topLoop commandTable sources env))
+      ; env' <-  (readEvalPrint commandTable sources init)
+      ; topLoop commandTable (sourceFiles env') env'
+      }) (report (topLoop commandTable (sourceFiles init) init))
+ where init = (env{sourceFiles=sources})
 
 ------------------------------------------------------------------
 -- Commands for load files, then going into the Toplevel loop
@@ -78,13 +79,14 @@ topLoop commandTable sources env = tryAndReport
 
 -- load just the prelude and then go into the toplevel loop
 main :: IO ()
-main = runFIO(do { writeln "loading the prelude (LangPrelude.prg)"
+main = runFIO(do { let sources = ["LangPrelude.prg"]
+                 ; writeln ("Loading source files = "++show sources)
                  ; fio $ hSetBuffering stdout NoBuffering
                  ; fio $ hSetBuffering stdin  NoBuffering
                  ; env1 <- tryAndReport (elabFile "LangPrelude.prg" initTcEnv)
-                             (report (return initTcEnv))
-                 ; let sources = ["LangPrelude.prg"]
-                 ; topLoop (commandF sources elabFile) sources env1
+                                        (report (return initTcEnv))
+                 ; let sources2 = sourceFiles env1
+                 ; topLoop (commandF elabFile) sources2 env1
                  ; return () }) errF
 
 
@@ -92,22 +94,26 @@ main = runFIO(do { writeln "loading the prelude (LangPrelude.prg)"
 go :: String -> IO ()
 go s =
   runFIO(do { writeln (version++"  --  Type ':?' for command line help."++"\n\n")
+            ; let sources = ["LangPrelude.prg",s]
+            ; writeln ("Loading source files = "++show sources)
             ; writeln "loading the prelude (LangPrelude.prg)"
             ; env <- tryAndReport (elabFile "LangPrelude.prg" initTcEnv)
-                            (report (return initTcEnv))
+                                 (report (return initTcEnv))
             ; env2 <- elabFile s env
-            ; let sources = [s,"LangPrelude.prg"]
-            ; topLoop (commandF sources elabFile) sources env2
+            ; let sources2 = sourceFiles env2
+            ; topLoop (commandF elabFile) sources2 env2
             ; return () }) errF
 
 
 -- Don't load the prelude, just load "s" then go into the toplevel loop.
 run :: String -> IO ()
 run s = runFIO(do { writeRef modes mode0
-                  ; writeln ("loading "++s)
-                  ; env1 <- tryAndReport (elabFile s initTcEnv)
-                                         (report (return initTcEnv))
-                  ; topLoop (commandF [s] elabFile) [s] env1
+                  ; writeln ("Loading source files = "++show [s])
+                  ; let init = (initTcEnv{sourceFiles = [s]})
+                  ; env1 <- tryAndReport (elabFile s init)
+                                         (report (return init))
+                  ; let sources2 = sourceFiles env1
+                  ; topLoop (commandF elabFile) sources2 env1
                   ; return () }) errF
 
 
@@ -209,6 +215,7 @@ parseDecs file =
 -- (no matter what namespace they appear in) are imported into the
 -- current environment. Usually "xx.prg" is a complete path as Omega's
 -- notion of current directory is quite primitive.
+-- import "xx.prg"  means import everything from "xx.prg"
 
 importP (Import s vs) = True
 importP _ = False
@@ -224,7 +231,7 @@ importFile (Import name vs) tenv =
      Nothing -> do { new <- elabFile name initTcEnv
                    ; return(importNames name vs new tenv) }
 
-importNames :: String -> [Var] -> TcEnv -> TcEnv -> TcEnv
+importNames :: String -> Maybe [Var] -> TcEnv -> TcEnv -> TcEnv
 importNames name vs new old =
   old { imports = (name,new):(imports old)
       , var_env = addListToFM (var_env old) (filter p (toList (var_env new)))
@@ -232,9 +239,11 @@ importNames name vs new old =
       , runtime_env = add (runtime_env new) (runtime_env old)
       , rules = appendFM2 (rules old) (filter p2 (toList (rules new)))
       }
- where p (x,y) = elem x vs
-       p2 (s,y) = elem (Global s) vs
-       q (str,tau,polyk) = elem (Global str) vs
+ where elemOf x Nothing = True
+       elemOf x (Just vs) = elem x vs
+       p (x,y) = elemOf x vs
+       p2 (s,y) = elemOf (Global s) vs
+       q (str,tau,polyk) = elemOf (Global str) vs
        add (Ev xs _) (Ev ys t) = Ev (filter p xs ++ ys) t
 
 
@@ -269,6 +278,11 @@ alltests =
 -- Some shortcuts to running the interpreter
 
 work = run "work.prg"
+ky = run "D:/IntelWork/Kyung2.prg"
+bad = run "D:/work/sheard/research/omega/badPrograms/shaped.prg"
+
+add = run "D:/IntelWork/adder.prg"
+
 temp = run "D:/IntelWork/temp.prg"
 circ = run "Examples/RecursiveCircuit.prg"
 parse = run "Examples/Parser.prg"

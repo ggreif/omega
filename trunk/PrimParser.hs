@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 module PrimParser (parserPairs) where
 
@@ -13,7 +13,7 @@ import Syntax(V(..),Var(..),Lit(..),Inj(..))
 import Monads(FIO(..),Exception(..))
 import System.IO.Unsafe(unsafePerformIO)
 import Value(pv,analyzeWith)
-
+import SyntaxExt(SynExt(..))
 
 intLit :: Parser Int
 intLit = natural >>= (return . fromInteger)
@@ -52,21 +52,21 @@ instance Encoding (Parser(V -> V -> V)) where
    from v = error ("Not a Parser: "++show v)
 
 instance Encoding (Operator V) where
-   to (Infix p x) = Vcon (Global "Infix") [to p,to x]
-   to (Prefix p) = Vcon (Global "Prefix") [to p]
-   to (Postfix p) = Vcon (Global "Postfix") [to p]
-   from (Vcon (Global "Infix") [p,x]) = Infix (from p) (from x)
-   from (Vcon (Global "Prefix") [p]) = Prefix (from p)
-   from (Vcon (Global "Postfix") [p]) = Postfix (from p)
+   to (Infix p x) = Vcon (Global "Infix",Ox) [to p,to x]
+   to (Prefix p) = Vcon (Global "Prefix",Ox) [to p]
+   to (Postfix p) = Vcon (Global "Postfix",Ox) [to p]
+   from (Vcon (Global "Infix",_) [p,x]) = Infix (from p) (from x)
+   from (Vcon (Global "Prefix",_) [p]) = Prefix (from p)
+   from (Vcon (Global "Postfix",_) [p]) = Postfix (from p)
    from v = error ("Not an Operator: "++(show v))
 
 instance Encoding Assoc where
-   to AssocLeft  = Vcon (Global "AssocLeft")  []
-   to AssocRight = Vcon (Global "AssocRight") []
-   to AssocNone  = Vcon (Global "AssocNone")  []
-   from (Vcon (Global "AssocLeft")  []) = AssocLeft
-   from (Vcon (Global "AssocRight")  []) = AssocRight
-   from (Vcon (Global "AssocNone")  []) = AssocNone
+   to AssocLeft  = Vcon (Global "AssocLeft",Ox)  []
+   to AssocRight = Vcon (Global "AssocRight",Ox) []
+   to AssocNone  = Vcon (Global "AssocNone",Ox)  []
+   from (Vcon (Global "AssocLeft",_)  []) = AssocLeft
+   from (Vcon (Global "AssocRight",_)  []) = AssocRight
+   from (Vcon (Global "AssocNone",_)  []) = AssocNone
    from v = error ("Not an Assoc: "++show v)
 
 ------------------------------------------------------------

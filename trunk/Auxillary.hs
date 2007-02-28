@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 module Auxillary where
 
@@ -225,6 +225,7 @@ data DispElem a
   | Ds String
   | forall x . (Display x a) => Dn x
   | forall x . (Display x a) => Dl [x] String
+  | forall x . (Display x a) => Dwrap Int String [x] String
   | forall x . Df (DispInfo a -> x -> (DispInfo a ,String)) x
   | forall x . Dlf (DispInfo a -> x -> (DispInfo a,String)) [x] String
   | forall x . Dlg (DispInfo a -> x -> (DispInfo a,String)) String [x] String String
@@ -249,6 +250,8 @@ displays d xs = help d (reverse xs) "" where
                Ds s -> (d,s)
                Dn y -> let (d2,s) = disp d y in (d2,s++"\n")
                Dl ys sep -> dispL disp d ys sep
+               Dwrap max prefix xs sep -> wrap 0 n max n xs sep [prefix,"\n"] d
+                  where n = length prefix
                Df f ys  -> f d ys
                Dlf f ys sep -> dispL f d ys sep
                Dlg f open [] sep close -> (d,"")
@@ -260,3 +263,18 @@ displays d xs = help d (reverse xs) "" where
 
 -- displays d [dv "x" 123]  --->  "x = 1233"
 dv s x = Dr [Ds ", ",Dd x,Ds (s++" = ")]
+
+wrap count current max indent [] sep ans info = (info,concat (reverse ans))
+wrap count current max indent (x:xs) sep ans info =
+  case disp info x of
+    (info2,str) -> let l = length str
+                       s = length sep
+                   in if (current+l <= max) || (count == 0)
+                         then wrap (count + 1) (current + l + s) max indent xs sep (sep:str:ans) info2
+                         else wrap 1 (l + indent) max indent xs sep
+                                   ([sep,str,spaces indent,"\n"]++ans) info2
+spaces n | n<= 0 = []
+spaces n = ' ': spaces (n-1)
+
+ns :: [Int]
+ns = [1 .. 50]

@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 module Cooper where
 
@@ -987,8 +987,8 @@ tauTerm env (TyFun "times" k [x,y]) =
    do { a <- tauTerm env x
       ; b <- tauTerm env y
       ; return(Fn("*",[a,b]))}
-tauTerm env (TyCon lev "Z" k) = return(mk_numeral 0)
-tauTerm env (TyApp (TyCon _ "S" k) x) =
+tauTerm env (TyCon sx lev "Z" k) = return(mk_numeral 0)
+tauTerm env (TyApp (TyCon sx _ "S" k) x) =
    do { x2 <- tauTerm env x
       ; case x2 of
           x | is_numeral x ->
@@ -999,10 +999,6 @@ tauTerm env (TyApp (TyCon _ "S" k) x) =
 tauTerm env x = Nothing
 
 predForm:: Map -> Pred -> Maybe Term
-predForm env (EqAssump x y) =
-  do { a <- tauTerm env x
-     ; b <- tauTerm env y
-     ; return(Fn("=",[a,b]))}
 predForm env (Equality x y) =
   do { a <- tauTerm env x
      ; b <- tauTerm env y
@@ -1018,14 +1014,14 @@ toF env (TyFun "and" _ [x,y]) =
   do { x' <- toF env x
      ; y' <- toF env y
      ; return(x' ++ y')}
-toF env (TyApp  (TyApp (TyCon _ "Equal" _) lhs) rhs) =
+toF env (TyApp  (TyApp (TyCon sx _ "Equal" _) lhs) rhs) =
   do { lhsterm <- tauTerm env lhs
      ; rhsterm <- tauTerm env rhs
      ; return [Atom(R("=",[lhsterm,rhsterm]))] }
 
 toFormula:: Map -> [(Tau,Tau)] -> Tau -> Maybe (Formula Fol,Formula Fol)
 toFormula env truths concl =
-  do { terms <- mapM (predForm env) (map (uncurry EqAssump) truths)
+  do { terms <- mapM (predForm env) (map (uncurry Equality) truths)
      ; fols <- mapM toForm terms
      ; let hyp = (map Atom fols)
      ; body <- toF env concl
