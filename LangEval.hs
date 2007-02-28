@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 module LangEval where
 
@@ -24,6 +24,7 @@ import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
+import SyntaxExt(SynExt(..))
 
 
 type Level = Int
@@ -51,7 +52,7 @@ genSym = gensym Tick
 -- Operations on runtime environments Ev
 
 empty = Ev [] (unit,bind,fail)
-  where (Vcon (Global "Monad") [unit,bind,fail]) = maybeMonad
+  where (Vcon (Global "Monad",oX) [unit,bind,fail]) = maybeMonad
 
 app (Ev xs m) (Ev as _) = Ev (xs ++ as) m
 
@@ -90,7 +91,7 @@ maybeMonad = unsafePerformIO (runFIO action (\ loc n s -> error s)) where
   action = do { b <- eval env0 bind
               ; u <- eval env0 unit
               ; f <- eval env0 fail
-              ; return(Vcon (Global "Monad") [u,b,f])}
+              ; return(Vcon (Global "Monad",Ox) [u,b,f])}
 
 
 ------------------------------------------------------------------------
@@ -267,8 +268,8 @@ ifV :: Monad a => a V -> a b -> a b -> a b
 ifV x y z =
   do { b <- x
      ; case b of
-         Vcon (Global "True") [] -> y
-         Vcon (Global "False") [] -> z
+         Vcon (Global "True",_) [] -> y
+         Vcon (Global "False",_) [] -> z
          v -> fail ("Non Bool in ifV: "++show v++"\n")
      }
 
@@ -300,7 +301,7 @@ mPatStrict prefix es p v = analyzeWith (mf p) v
         mf (Pcon (Global "[]") []) (VChrSeq _) = return Nothing
         -- ** End Special Case for Strings ** -}
 
-        mf (Pcon n ps) (Vcon c vs) =
+        mf (Pcon n ps) (Vcon (c,_) vs) =
            if n==c then mStrictPats prefix ps vs es else return Nothing
         mf p v = return Nothing
         --mf p v = fail ("At end of matchStrict: "++ show p++
@@ -371,14 +372,14 @@ matchPatLazy (pat@(Psum i p)) (val@(Vlazy _ _)) =
       ; return(Vsum i u1,xs)
       }
 matchPatLazy (Pcon c ps) (val@(Vlazy _ _)) =
-   do { let get i (v @ (Vcon m vs))
+   do { let get i (v @ (Vcon (m,exts) vs))
                  | c==m = return(vs !! i)
                  | True = fail ("\nMismatch on lazy pattern match of constructor, "++show c++" does not match "++show v)
             acc (p,v) (us,xs) = do { (u,x) <- matchPatLazy p v; return(u:us,x++xs)}
       ; vs <- mapM (\ i -> vlazy (analyzeWith (get i) val))
                    [0 .. length ps - 1]
       ; (us,xs) <- foldrM acc ([],[]) (zip ps vs)
-      ; return(Vcon c us,xs)
+      ; return(Vcon (c,Ox) us,xs)  ---EXT
       }
 matchPatLazy p v = fail ("Non lazy value passed to matchPatLazy\n"++show p++"\n"++show v)
 
@@ -395,7 +396,7 @@ pat2val env (Pann p t) = pat2val env p
 pat2val env (Plit l) = Vlit l
 pat2val env (Pprod x y) = Vprod (pat2val env x) (pat2val env y)
 pat2val env (Psum inj y) = Vsum inj (pat2val env y)
-pat2val env (Pcon nm ps) = Vcon nm (map (pat2val env) ps)
+pat2val env (Pcon nm ps) = Vcon (nm,Ox) (map (pat2val env) ps) ---EXT
 pat2val env (Pvar s) =
    case lookup s env of
      Nothing -> error ("Unknown var in pat evaluation: "++show s)
@@ -463,14 +464,16 @@ elab prefix magic init (Fun loc nm _ cs) =
            u = makeLam patterns caseExp [] [] magic
            free = getFreeTermVars newNames caseExp
      ; return (extendV [(nm,u)] init) }
-elab prefix magic init (Data loc b strata nm sig args constrs derivs) =
-  return(extendV xs init)
+elab prefix magic init (Data loc b strata nm sig args constrs derivs exts) =
+    return(extendV xs init)
  where xs = map f constrs
-       f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon cname) (length args) []))
-elab prefix magic init (GADT l p t k cs) = return(extendV xs init)
+       f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))
+elab prefix magic init (GADT l p t k cs ds exts) =
+   -- warnM [Ds "\nelab ",Ds (show t),Ds " ",Ds (show exts)] >>
+   return(extendV xs init)
  where xs = map f cs
        f (loc,cname,allv,preds,ty) =
-            (cname,(mkFun (show cname) (Vcon cname) (size ty) []))
+            (cname,(mkFun (show cname) (Vcon (cname,exts)) (size ty) []))
        size (Rarrow' x y) = 1 + size y
        size _ = 0
 
@@ -510,143 +513,6 @@ fixup n (Ev ((nm,v):vs) m) =
       ; (Ev us _) <- fixup (n-1) (Ev vs m)
       ; return(Ev ((nm,u):us) m) }
 
-{-
-
-
-
-applyV message {- env -} f v = analyzeWith apply f
-  where apply (Vprimfun s h) =  h v
-        apply (Vf f push swap) = f v
-        apply (Vpat nm g h) = applyV message {- env -} h v
-{-
-        apply (Vfun (p:ps) body env2) =
-          do { z <- mPatStrict Tick [] p v
-             ; case (z,ps) of
-                (Just frag3,[]) ->  eval (composeEnv env (extendV frag3 env2)) body
-                (Just frag3,(_:_)) -> return(Vfun ps body (extendV frag3 env2))
-                (Nothing,_) -> fail ("Pattern: "++show p++" does not match: "++show v++"\n")
-             }
--}
-        apply v = fail ("Bad thing applied as function: "++show v++"\nin "++ message)
-
-
-
-mkFun :: String -> ([V] -> V) -> Int -> [V] -> V
-mkFun s f 0 vs = f (reverse vs)
-mkFun s f n vs = Vprimfun s (\ v -> do { --writeln("in Constr with "++show v);
-                                         return(mkFun s f (n-1) (v:vs)) } )
-
-
------------------------------------------------------------------
--- To make the initial environment we must lift haskell objects
--- to values (V) and to their types (Ty r). To deal with polymorphism
--- we introduce several "faux" type variables which are really just
--- synomyms for V, A polymorphic function inside the interpreter just
--- manipulates V values without looking at them. So we make very simple
--- instances for them.
-
-newtype A = A V
-newtype B = B V
-newtype C = C V
-
-unsafeCast (A x) = B x
-
-instance Generic A where
-   typeOf x = lvar "a"
-instance Generic B where
-   typeOf x = lvar "b"
-instance Generic C where
-   typeOf x = lvar "c"
-
-instance Encoding A where
-  to (A x) = x
-  from = A
-instance Encoding B where
-  to (B x) = x
-  from = B
-instance Encoding C where
-  to (C x) = x
-  from = C
-
-instance Show A where
-  show (A x) = show x
-
--- to make a type scheme (Forall type) we collect the gvar's (introduced)
--- by A, B, and C, then abstract over them. It's up to the programmer
--- to use A,B,C in search order, since "genOf" collects them in search Order
-
-gen t = mkForAll (genOf t) t
-  where mkForAll [] t = t
-        mkForAll ns t = Forall (map f ns) t
-        f n = (star,n,Variable)
-
-
-
------------------------------------------------------------------
--- initial environment
-
-lvar s = Tv star (Lvar s)
-
-maybeBind (Just x) f = f x
-maybeBind Nothing f = Nothing
-
--- Primitive functions encode a string that can be printed.
--- When we constrruct a multi-argument primitive we build nested
--- Vprimfun values. The string that names the primitive "adds" extra
--- arguments as the primitive is applied to further arguments.
--- name1 and name2 help build these strings
-
-nam1 string value = "(" ++ string ++ " " ++ show value ++ ")"
-nam2 string v1 v2 = "(" ++ string ++ " " ++ show v1 ++ " " ++ show v2 ++ ")"
-
-traceV = Vprimfun "trace" (analyzeWith f)
-  where f s = outputString mess >> return (Vprimfun (nam1 "trace" mess) h)
-            where mess = from s
-                  h v = return v
-
-
-
-run = Vprimfun "run" (analyzeWith g) where
-  g (Vcode a xs) = eval xs a
-  g v = fail ("Non code object in run: "++show v)
-
-
-freshV = Vprimfun "fresh" (analyzeWith f)
-  where f (Vlit (Char c)) = do { nm <- fresh; return(mkSymbol nm) }
-        f v = fail ("Non char as argument to fresh: "++show v)
-
-swapV = Vprimfun "swap" (analyzeWith h)
-  where h (Vlit (Symbol s1)) = return(Vprimfun (nam1 "swap" s1) (analyzeWith g))
-          where g (Vlit (Symbol s2)) = return(Vprimfun (nam2 "swap" s1 s2) (downSwap [(s1,s2)] return))
-                g v = fail ("Non Name as argument to swap: "++show v)
-        h v = fail ("Non Name as argument to swap: "++show v)
-
-errorC = Vprimfun "error" (analyzeWith g) where
-  g v = fail(from v)
-
-
-mimic = Vprimfun "mimic" mim  -- Don't use analyzeWith here !!
-  where mim (Vpat nm g f)  = mim f
-        mim f = return(Vprimfun (nam1 "mimic" f) h)
-           where h (val@(Vlazy _ _)) = vlazy (analyzeWith (applyV (show f) f) val)
-                 h (Vswap cs u) = do {v <- h u; return(Vswap cs v)}
-                 h v = applyV (show f++" inside call to mimic") f v
-
-strict = Vprimfun "strict" (analyzeWith return)
-
-make x  = (to x,  gen(typeOf x))
-make1 x = (to1 x, gen(typeOf x))
-make2 x = (to2 x, gen(typeOf x))
-make3 x = (to3 x, gen(typeOf x))
-
-makeCon1 name x = (mkFun (show name) (Vcon name) 1 [], gen(typeOf x))
-makeCon2 name x = (mkFun (show name) (Vcon name) 2 [], gen(typeOf x))
-
-
-true,false :: V
-true = to True
-false = to False
--}
 
 -- The initial runtime environment
 env0 = extendV (map f vals) empty
@@ -658,8 +524,8 @@ make1 x = (to1 x, gen(typeOf x))
 make2 x = (to2 x, gen(typeOf x))
 make3 x = (to3 x, gen(typeOf x))
 
-makeCon1 name x = (mkFun (show name) (Vcon name) 1 [], gen(typeOf x))
-makeCon2 name x = (mkFun (show name) (Vcon name) 2 [], gen(typeOf x))
+makeCon1 (name@(nm,ext)) x = (mkFun (show nm) (Vcon (name)) 1 [], gen(typeOf x))
+makeCon2 (name@(nm,ext)) x = (mkFun (show nm) (Vcon (name)) 2 [], gen(typeOf x))
 
 
 mkFun :: String -> ([V] -> V) -> Int -> [V] -> V
@@ -713,15 +579,16 @@ vals =
  ,("True",make True)
  ,("False",make False)
 
- ,(":",makeCon2 (Global ":") ((:):: A -> [A] -> [A]))
+ ,(":",makeCon2 (Global ":",Lx("","[]",":")) ((:):: A -> [A] -> [A]))
  ,("null",make1 (null:: [A] -> Bool))
  ,("[]",make([]::[A]))
  ,("++",make2((++):: [A] -> [A] -> [A]))
+ ,("(,)",make2((,):: A -> B -> (A,B)))
 
  ,("undefined", (Vbottom,gen(typeOf(undefined :: A))))
 
  ,("Nothing",make(Nothing::(Maybe A)))
- ,("Just",makeCon1 (Global "Just") (Just::(A -> Maybe A)))
+ ,("Just",makeCon1 (Global "Just",Ox) (Just::(A -> Maybe A)))
 
  ,("show",make1(show :: A -> String))
  ,("unsafeCast",make1(unsafeCast:: A -> B))
@@ -782,8 +649,8 @@ listVals =
 nullV = lift1 "null" g
   where g (VChrSeq "") = return trueExp
         g (VChrSeq _) = return falseExp
-        g (Vcon (Global "[]") []) = return trueExp
-        g (Vcon (Global ":") [x,y]) = return falseExp
+        g (Vcon (Global "[]",_) []) = return trueExp
+        g (Vcon (Global ":",_) [x,y]) = return falseExp
         g v = fail ("Bad arg to null: "++show v)
 
 -- cons has to be lazy since it is a constructor function so it
@@ -792,36 +659,36 @@ nullV = lift1 "null" g
 consV = Vprimfun ":" g
   where g (Vlit (Char c)) = return(Vprimfun ("(:) "++show c) (charCons c))
         g v               = return(Vprimfun ("(:) "++show v) (f v))
-        f v vs = return(Vcon (Global ":") [v,vs])
+        f v vs = return(Vcon (Global ":",Lx("","[]",":")) [v,vs])
 
 charCons :: Char -> V -> FIO V
 charCons c (VChrSeq cs) = return(VChrSeq (c:cs))
-charCons c (Vcon (Global "[]") []) = return(VChrSeq [c])
-charCons c (v@(Vcon (Global ":") [_,_])) =
+charCons c (Vcon (Global "[]",_) []) = return(VChrSeq [c])
+charCons c (v@(Vcon (Global ":",_) [_,_])) =
      do { cs <- list2seq v; return(VChrSeq (c:cs))}
-charCons c vs = return(Vcon (Global ":") [Vlit (Char c),vs])
+charCons c vs = return(Vcon (Global ":",Lx("","[]",":")) [Vlit (Char c),vs])
 
 list2seq :: V -> FIO String
 list2seq v = analyzeWith f v
   where f (VChrSeq cs) = return cs
-        f (Vcon (Global "[]") []) = return ""
-        f (Vcon (Global ":") [c,cs]) =
+        f (Vcon (Global "[]",_) []) = return ""
+        f (Vcon (Global ":",_) [c,cs]) =
           do { Vlit(Char x) <- analyzeWith return c
              ; xs <- list2seq cs
              ; return(x:xs)}
 
 appendV = lift2 "++" g
   where g (VChrSeq xs) (VChrSeq cs) = return(VChrSeq (xs ++ cs))
-        g (VChrSeq xs) (Vcon (Global "[]") []) = return(VChrSeq xs)
-        g (VChrSeq xs) (v@(Vcon (Global ":") [_,_])) =
+        g (VChrSeq xs) (Vcon (Global "[]",_) []) = return(VChrSeq xs)
+        g (VChrSeq xs) (v@(Vcon (Global ":",_) [_,_])) =
               do { cs <- list2seq v; return(VChrSeq (xs ++ cs))}
-        g (Vcon (Global ":") [x,xs]) ys = analyzeWith h xs
+        g (Vcon (Global ":",_) [x,xs]) ys = analyzeWith h xs
            where h zs = case x of
                          Vlit (Char c) -> do { cs <- g zs ys; charCons c cs}
                          x -> cons x (g zs ys)
-        g (Vcon (Global "[]") []) ys = return ys
+        g (Vcon (Global "[]",_) []) ys = return ys
         g x y = fail ("Bad args to (++) "++show x++" and "++show y)
-        cons x xs = do { ys <- xs; return(Vcon (Global ":") [x,ys])}
+        cons x xs = do { ys <- xs; return(Vcon (Global ":",Lx("","[]",":")) [x,ys])}
 
 ----------------------------------------------------------------------
 
@@ -837,7 +704,7 @@ reify :: V -> Exp
 reify (Vlit x) = Lit x
 reify (Vsum j v) = Sum j (reify v)
 reify (Vprod x y) = Prod (reify x) (reify y)
-reify (Vcon c vs) = f (Var c) (map reify vs)
+reify (Vcon (c,_) vs) = f (Var c) (map reify vs)
   where f g [] = g
         f g (x:xs) = f (App g x) xs
 reify v = error ("Cannot reify: "++show v)
@@ -935,8 +802,8 @@ failIO = Vprimfun "failIO" f
                    ; return(Vfio [] (return (Left string))) }
           where stringV :: V -> FIO String
                 stringV v = analyzeWith help v where
-                   help (Vcon (Global "[]") []) = return []
-                   help (Vcon (Global ":") [Vlit (Char x),y]) =
+                   help (Vcon (Global "[]",Lx("","[]",":")) []) = return []
+                   help (Vcon (Global ":",Lx("","[]",":")) [Vlit (Char x),y]) =
                     do {xs <- stringV y; return(x:xs) }
                    help _ = fail ("Non String as arg to failIO: "++show arg)
 
@@ -962,8 +829,8 @@ fresh2 = Vfio [] (do { nm <- fresh; return(Right(mkSymbol nm)) })
 
 sameAtom = lift2 "sameAtom" f  where
   f (Vlit (Symbol s1)) (Vlit (Symbol s2)) =
-                  if s1 == s2 then return(Vcon (Global "Just") [Vcon (Global "Eq") []])
-                              else return(Vcon (Global "Nothing") [])
+                  if s1 == s2 then return(Vcon (Global "Just",Ox) [Vcon (Global "Eq",Ox) []])
+                              else return(Vcon (Global "Nothing",Ox) [])
   f (Vlit (Symbol s1)) v = fail ("Non Name as argument to sameAtom: "++show v)
   f v (Vlit (Symbol s1)) = fail ("Non Name as argument to sameAtom: "++show v)
 
@@ -992,8 +859,8 @@ symbolEqV = Vprimfun "symbolEq" (analyzeWith f) where
 labelEqV = Vprimfun "labelEq" (analyzeWith f) where
   f (Vlit (Tag s1)) = return(Vprimfun (nam1 "labelEq" s1) (analyzeWith (g s1)))
   g s1 (Vlit (Tag s2)) = if s1==s2
-                            then return(Vcon (Global "Just") [Vcon (Global "Eq") []])
-                            else return(Vcon (Global "Nothing") [])
+                            then return(Vcon (Global "Just",Ox) [Vcon (Global "Eq",Ox) []])
+                            else return(Vcon (Global "Nothing",Ox) [])
 
 
 fuse = lift2 "fuse" f where

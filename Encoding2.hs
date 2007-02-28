@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 module Encoding2 where
 
@@ -15,6 +15,7 @@ import Syntax
 import Value
 import List(union)
 import Bind
+import SyntaxExt(SynExt(..))
 
 type Symbol = Name
 
@@ -116,20 +117,20 @@ class Encoding t where
 
 
 consUp :: Encoding a => [a] -> V
-consUp [] = Vcon (Global "[]") []
-consUp (x:xs) = Vcon (Global ":") [(to x),(consUp xs)]
+consUp [] = Vcon (Global "[]",Lx("","[]",":")) []
+consUp (x:xs) = Vcon (Global ":",Lx("","[]",":")) [(to x),(consUp xs)]
 
 toStr :: String -> V
 toStr x = consUp x
 
 consDown :: Encoding a => V -> [a]
-consDown (Vcon (Global "[]") []) = []
-consDown (Vcon (Global ":") [x,xs]) = (from x) : (consDown xs)
+consDown (Vcon (Global "[]",Lx("","[]",":")) []) = []
+consDown (Vcon (Global ":",Lx("","[]",":")) [x,xs]) = (from x) : (consDown xs)
 consDown v = error ("Value not a list in from List: "++(show v))
 
 consDownf :: Encoding a => (V -> a) -> V -> [a]
-consDownf f (Vcon (Global "[]") []) = []
-consDownf f (Vcon (Global ":") [x,xs]) = (f x) : (consDown xs)
+consDownf f (Vcon (Global "[]",Lx("","[]",":")) []) = []
+consDownf f (Vcon (Global ":",Lx("","[]",":")) [x,xs]) = (f x) : (consDown xs)
 consDownf f v = error ("Value not a list in from List: "++(show v))
 
 lift1 name f = Vprimfun name (analyzeWith g)
@@ -221,17 +222,17 @@ instance Encoding Char where
     from v = error ("Value not an Char: "++(show v))
 
 instance Encoding Bool where
-    to True = (Vcon (Global "True") [])
-    to False = (Vcon (Global "False") [])
-    from (Vcon (Global "True") []) = True
-    from (Vcon (Global "False") []) = False
+    to True = (Vcon (Global "True",Ox) [])
+    to False = (Vcon (Global "False",Ox) [])
+    from (Vcon (Global "True",Ox) []) = True
+    from (Vcon (Global "False",Ox) []) = False
     from v = error ("Value not Bool: "++(show v))
 
 instance Encoding a => Encoding (Maybe a) where
-    to Nothing = Vcon (Global "Nothing") []
-    to (Just x) = Vcon (Global "Just") [to x]
-    from (Vcon (Global "Nothing") []) = Nothing
-    from (Vcon (Global "Just") [x]) = from x
+    to Nothing = Vcon (Global "Nothing",Ox) []
+    to (Just x) = Vcon (Global "Just",Ox) [to x]
+    from (Vcon (Global "Nothing",Ox) []) = Nothing
+    from (Vcon (Global "Just",Ox) [x]) = from x
     from v = error ("Value not a Maybe type: "++show v)
 
 instance (Encoding a,Encoding b) => Encoding (a,b) where

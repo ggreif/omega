@@ -2,14 +2,14 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Nov 13 16:07:17 Pacific Standard Time 2006
--- Omega Interpreter: version 1.3
+-- Tue Feb 27 21:04:24 Pacific Standard Time 2007
+-- Omega Interpreter: version 1.4
 
 module Commands (commands,dispatchColon,execExp,drawPatExp
                 ,letDec,commandF,notDup,foldF) where
 
-import Infer2(TcEnv,getVar,initTcEnv,getkind,parseAndKind,setCommand
-             ,getRules,predefined,narrowString,tcInFIO,wellTyped
+import Infer2(TcEnv(sourceFiles),getVar,initTcEnv,getkind,parseAndKind,setCommand
+             ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
              ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef)
 import RankN(pprint,warnM)
 import Syntax
@@ -20,7 +20,7 @@ import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
 import ParserDef(getInt,getBounds)
-import Auxillary(plist,plistf,DispElem(..))
+import Auxillary(plist,plistf,DispElem(..),prefix)
 import Monads(report,readRef)
 
 --------------------------------------------------------
@@ -41,9 +41,9 @@ tCom tenv x =
 envCom tenv s = envArg tenv s
 
 -- :r
-rCom elab sources tenv s =
-  do { n <- readInt (length sources) s
-     ; new <- elabManyFiles elab (take n sources) initTcEnv
+rCom elab tenv s =
+  do { let sources = sourceFiles tenv
+     ; new <- elabManyFiles elab sources (initTcEnv{sourceFiles = sources})
      ; return new }
 
 -- :v
@@ -66,7 +66,15 @@ kCom tenv x =
 -- :l file.prg
 lCom elabFile tenv file =
    do { writeln ("Loading file "++file)
-      ; elabFile file (tenv) }
+      ; env2 <- elabFile file initTcEnv
+      ; return (env2{sourceFiles = [file]}) }
+
+-- :also file.prg
+alsoCom elabFile tenv file =
+   do { writeln ("Loading file "++file)
+      ; env2 <- elabFile file (tenv)
+      ; return (env2{sourceFiles = file:(sourceFiles env2)}) }
+
 
 -- :set verbose
 setCom tenv mode = setCommand mode True tenv
@@ -82,6 +90,10 @@ bndCom tenv args =
                 Nothing -> fail ("Unknown bound '"++bound++"'")
      ; return tenv
      }
+-- :sources
+srcCom tenv args =
+  do { writeln ("Source files = "++show (sourceFiles tenv))
+     ; return tenv}
 
 -- :clear verbose
 clearCom tenv mode = setCommand mode False tenv
@@ -100,13 +112,18 @@ rulesCom tenv s =
         ; return tenv}
 
 -- :?
-questionCom tenv s  = writeln commands >> return tenv
+questionCom tenv s  =  writeln commands >>
+                       writeln ":x     where x is a prefix of a valid command also works.\n" >>
+                       return tenv
 
 -- :pre
 preCom tenv s = writeln predefined >> return tenv
 
 -- :n {plus n Z}
 nCom tenv x = tcInFIO tenv(narrowString tenv 5 x)
+
+-- :norm {plus (S x) y}
+normCom tenv x = tcInFIO tenv(normString tenv x)
 
 -------------------------------------------------------------
 -- Command interfaces for each of the kinds of interactive input
@@ -118,33 +135,36 @@ dispatchColon table tenv com str =
     case find (p com) table of
        Just (x,f,info) -> f tenv str
        Nothing -> fail ("Unknown command :"++str)
-  where p com (x,f,info) = x==com
+  where p com (x,f,info) = prefix com x
 
-commandF s f =
-  [("q",    qCom,    ":q           quit\n")
-  ,("t",    tCom,    ":t           display type of expression\n")
-  ,("env",  envCom,  ":env n       display info for first 'n' items\n" ++
-                     ":env str     display info for items with 'str' in their names\n")
-  ,("r",    rCom f s,":r file      reload file into system\n")
-  ,("v",    vCom,    ":v           display version info\n")
-  ,("k",    kCom,    ":k type      display kind of type expression\n")
-  ,("l",    lCom f,  ":l file      load file into system\n")
-  ,("set",  setCom,  ":set         list all the Mode variables and their settings\n" ++
-                     ":set mode    set the Mode variables X (where 'mode' is a prefix of X) to True\n")
-  ,("clear",clearCom,":clear mode  clear the Mode variables X (where 'mode' is a prefix of X) to False\n")
-  ,("e"    ,eCom,    ":e           reset system to initial configuration (flush definitions)\n")
-  ,("rules",rulesCom,":rules name  display rules for 'name'\n")
-  ,("pre",  preCom,  ":pre         display declarations for all predefined types\n")
-  ,("n",    nCom,    ":n type      narrow type expression\n")
-  ,("bounds",bndCom, ":bounds X n  set the resource bound X to n\n")
-  ,("?",questionCom, ":?           display list of legal commands (this message)\n")
+commandF f =
+  [("quit",    qCom,    ":quit        quit\n")
+  ,("type",    tCom,    ":type        display type of expression\n")
+  ,("env",     envCom,  ":env n       display info for first 'n' items\n" ++
+                        ":env str     display info for items with 'str' in their names\n")
+  ,("reload",  rCom f,  ":reload file reload file into system\n")
+  ,("version", vCom,    ":version     display version info\n")
+  ,("kind",    kCom,    ":kind type   display kind of type expression\n")
+  ,("load",    lCom f,  ":load file   load file into system. Start with fresh, empty environment\n")
+  ,("also", alsoCom f,  ":also file   load file into system, extending current environment\n")
+  ,("set",  setCom,     ":set         list all the Mode variables and their settings\n" ++
+                        ":set mode    set the Mode variable X (where 'mode' is a prefix of X) to True\n")
+  ,("clear",clearCom,   ":clear mode  clear the Mode variable X (where 'mode' is a prefix of X) to False\n")
+  ,("init"    ,eCom,    ":init        reset system to initial configuration (flush definitions)\n")
+  ,("rules",rulesCom,   ":rules name  display rules for 'name' (if name is omitted, displays all rules)\n")
+  ,("pre",  preCom,     ":pre         display declarations for all predefined types\n")
+  ,("narrow",  nCom,    ":narrow type narrow type expression\n")
+  ,("norm", normCom,    ":norm type   normalize type expression (use function definitions and rewrites)\n")
+  ,("bounds",bndCom,    ":bounds X n  set the resource bound X to n\n")
+  ,("sources",srcCom,   ":sources     list the source files currently loaded\n")
+  ,("?",questionCom,    ":?           display list of legal commands (this message)\n")
   ]
 
 commands = concat ([
   "let v = e    bind 'v' to 'e' in interactive loop\n",
   "v <- e       evaluate IO expression 'e' and bind to 'v'\n",
   "exp          read-typecheck-eval-print 'exp'\n"
-  ] ++ map (\ (c,f,mess) -> mess) (commandF [] undefined))
+  ] ++ map (\ (c,f,mess) -> mess) (commandF undefined))
 
 
 -- (ExecCom e)
