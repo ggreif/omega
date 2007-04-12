@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 module Narrow(narr,defTree,Check(..),matches) where
 

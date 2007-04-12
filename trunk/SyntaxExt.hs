@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 module SyntaxExt where
 
@@ -66,6 +66,20 @@ data Extension t
   | Pairx [t] String            --  #(a,b,c)i
   | Cseqx String                --  #"abc"
 --  | Opx String                  --  #+, #<  etc.
+
+prefx "" = ""
+prefx x = "#"
+
+instance Show x => Show(Extension x) where
+  show (Listx ts Nothing tag) = plist (prefx tag ++ "[") ts "," ("]"++tag)
+  show (Listx ts (Just t) tag) = plist (prefx tag ++ "[") ts "," "; " ++ show t ++"]"++tag
+  show (Numx n Nothing tag) = "#"++show n++tag
+  show (Numx n (Just t) tag) = "#("++show n++"+"++show t++")"++tag
+  show (Pairx ts tag) = "#("++ help ts++ ")"++tag
+    where help [] = ""
+          help [x] = show x
+          help (x:xs) = show x++","++help xs
+  show (Cseqx s) = "#"++show s
 
 build (cons,nil,succ,zero,pair,inject) x =
   case x of

@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 module Syntax where
 
@@ -14,7 +14,8 @@ import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Auxillary
 import List(elem,nub,union,(\\),partition,find)
 import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
-            ,getMult,PPred(..),Pred(..),Quant(..),univLevelFromPTkind)
+            ,getMult,PPred(..),Pred(..),Quant(..)
+            ,definesValueConstr,short)
 
 import SyntaxExt(Extension(..),extList,extKey,extM,ppExt,extThread,SynExt(..))
 import Char(isLower,isUpper,ord,chr)
@@ -855,13 +856,13 @@ instance Binds Dec where
            (vs,constrs) = partition typVar tfs
   boundBy (Data l b 0 nm sig vs cs ders _) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (Constr loc skol c ts eqs) = c
-  boundBy (GADT loc isProp nm knd cs ders _)| univLevelFromPTkind knd==0  =
+  boundBy (GADT loc isProp nm knd cs ders _)| definesValueConstr knd  =
             bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (loc,c,free,preds,typ) = c
 
   boundBy (Data l b _ nm sig vs cs ders _) = bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (Constr loc skol c ts eqs) = c
-  boundBy (GADT loc isProp nm knd cs ders _) | univLevelFromPTkind knd==0  =
+  boundBy (GADT loc isProp nm knd cs ders _) | definesValueConstr knd  =
           bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (loc,c,free,preds,typ) = c
 
@@ -888,7 +889,7 @@ instance Vars Dec where
   vars bnd (Data loc b strata nm sig vs cs _ _) =
        underTs (map fst vs) (varsL bnd cs) . (varsL bnd (map snd vs)) . (vars bnd sig)
 
-  vars bnd (GADT loc isProp nm knd cs _ _) | univLevelFromPTkind knd==0 =
+  vars bnd (GADT loc isProp nm knd cs _ _) | definesValueConstr knd =
        vars bnd knd . varsL bnd cs
   -- where get (loc,c,free,preds,typ) = c
 
@@ -948,18 +949,20 @@ instance Vars PT where
   vars bnd (TyVar' s) = addFreeT [Global s]
   vars bnd (TyCon' s) = addFreeT [Global s]
   vars bnd (TyApp' x y) = vars bnd x . vars bnd y
+  vars bnd (Kinded x y) = vars bnd x . vars bnd y
   vars bnd (Rarrow' x y) = vars bnd x . vars bnd y
   vars bnd (Karrow' x y) = vars bnd x . vars bnd y
   vars bnd (TyFun' (TyVar' f :xs)) = addFree bnd (Global f) .  varsL bnd xs
   --vars bnd (TyFun' (TyCon' f :xs)) = addFree bnd (Global f) . varsL bnd xs
   vars bnd (w@(TyFun' (f :xs))) = error ("Bad type function: "++show f++" -- "++show w)
-  vars bnd (Star' _) = id
+  vars bnd (Star' _ _) = id
   vars bnd (Forallx q ss eqs t) = underTs args (vars bnd t) . underTs args (varsL bnd eqs)
     where args = (map (Global . fst3) ss)
           fst3 (a,b,c) = a
   vars bnd (Tlamx s t) = underTs [Global s] (vars bnd t)
   vars bnd (AnyTyp) = id
   vars bnd (Ext a) = depExt a . varsL bnd (extList a)
+  vars bnd (PolyLevel vs x) = underTs (map Global vs) (vars bnd x)
 
 instance Vars [(PT,PT)] where
   vars bnd [] = id
@@ -1248,15 +1251,7 @@ showM (v,AnyTyp) = ppVar v
 showM (v,pt) = PP.parens $ ppVar v <> text "::" <> ppPT pt
 
 ppVar (Global s) = text s
-ppVar (Alpha s1 n) = text (short (fromInteger(name2Int n)))
-  where charName n | n < 26 = chr(ord 'a' + n)
-        charName n = chr(ord '0' + (n - 26))
-        short n = charName (n `mod` 26) : digitize (n `div` 26)
-        digitize n =
-          case n `div` 36 of
-           0 -> [charName (n `mod` 36)]
-           m -> (digitize m) ++ [charName(n `mod` 36)]
-
+ppVar (Alpha s1 n) = text (short (name2Int n))
 
 ppPred (Equality' x y) = PP.hsep [ppPT x, text "=", ppPT y]
 ppPred (Rel' _ t) = ppPT t
@@ -1404,9 +1399,12 @@ ppPT x =
     TyApp' (TyCon' "[]") x -> PP.brackets (ppPT x)
     TyApp' f x | needsParens x -> (ppPT f) <+> (PP.parens (ppPT x))
     TyApp' f x -> (ppPT f) <+> (ppPT x)
+    Kinded f x -> text "(" <> (ppPT f) <> text "::" <+> (ppPT x) <> text ")"
     TyFun' xs -> PP.braces(PP.hsep (map ppPT xs))
     TyCon' s -> text s
-    Star' n -> text "*" <> PP.int n
+    Star' n Nothing -> text "*" <> PP.int n
+    Star' 0 (Just n) -> text "*" <> text n
+    Star' k (Just n) -> text "*(" <> PP.int k <> text ("+"++n++")")
     Forallx q [] [] t -> ppPT t
     Forallx q vs [] t ->
         ppQ q <+> PP.sep [PP.sep (ppV vs) <+> text ".", ppPT t]

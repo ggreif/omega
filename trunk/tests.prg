@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 import "LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
@@ -816,3 +816,31 @@ g5 (x,y) = Eq
         b = f5 y
         theorem a
         theorem b
+
+------------------------------------------
+-- level polymorphism
+
+prop Eqz:: level n. forall (t:: *(1+n)) .t ~> t ~> *0 where
+  E :: Eqz a a
+
+prop Eqw:: t ~> t ~> *0 where
+  Ew :: Eqw a a
+
+
+data M:: *1 where
+ F :: Int ~> M
+
+data Natural1:: level n . *n  where
+  Zero :: Natural1
+  Succ :: Natural1 ~> Natural1
+  
+##test "level too low"  
+ data Natural:: level n . *n  where
+   Zero :: Natural
+   Succ :: Natural ~> Natural
+   D :: Int ~> Natural
+  
+
+fe:: a -> Eqz a a
+fe x = E
+
