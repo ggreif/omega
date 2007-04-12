@@ -2,16 +2,16 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 module Commands (commands,dispatchColon,execExp,drawPatExp
                 ,letDec,commandF,notDup,foldF) where
 
 import Infer2(TcEnv(sourceFiles),getVar,initTcEnv,getkind,parseAndKind,setCommand
              ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
-             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef)
-import RankN(pprint,warnM)
+             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC)
+import RankN(pprint,warnM,showKinds)
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio,writeRef)
@@ -19,10 +19,11 @@ import Version(version,buildtime)
 import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
-import ParserDef(getInt,getBounds)
+import ParserDef(getInt,getBounds,expr,parseString)
 import Auxillary(plist,plistf,DispElem(..),prefix)
-import Monads(report,readRef)
+import Monads(report,readRef,tryAndReport)
 
+-- tryAndReport :: FIO a -> (Loc -> String -> FIO a) -> FIO a
 --------------------------------------------------------
 -- Build a table of    :com str    commands
 
@@ -34,8 +35,13 @@ tCom tenv x =
    case getVar (Global x) tenv of
      Just(sigma,mod,lev,exp) ->
        do { writeln (x++" :: "++(pprint sigma)) -- ++"\n"++sht t)
-          ; return (tenv) }
-     Nothing -> do { writeln ("Unknown name: "++x); return(tenv)}
+          ; return (tenv)
+          }
+     Nothing -> tryAndReport (do { Right(e,more) <- parseString expr x
+                                 ; (typ,_) <- wellTyped tenv e
+                                 ; writeln (x++" :: "++(pprint typ))
+                                 ; return tenv})
+                 (\ loc message -> do { writeln message; return(tenv)})
 
 -- :env map
 envCom tenv s = envArg tenv s

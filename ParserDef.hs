@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
                 pattern,expr,decl,
@@ -736,8 +736,8 @@ importDec =
 typeSig =
    do{ pos <- getPosition
      ; n <- (constructorName <|> name)
-     ; t <- typing
-     ; return $ TypeSig (loc pos) n t }
+     ; (levels,t) <- typing
+     ; return $ TypeSig (loc pos) n (polyLevel levels t) }
 
 typeSyn =
    do{ pos <- getPosition
@@ -762,8 +762,8 @@ primDec =
    do{ pos <- getPosition
      ; reserved "primitive"
      ; n <- (name <|> parens operator)
-     ; t <- typing
-     ; return $ Prim (loc pos) n t }
+     ; (levels,t) <- typing
+     ; return $ Prim (loc pos) n (polyLevel levels t) }
  where operator =
           do { cs <- many (opLetter tokenDef)
              ; return(Global cs) }
@@ -796,7 +796,7 @@ implicit b pos strata t =
   do{ args <- targs
     ; reservedOp "="
     ; let finish cs ds = Data (loc pos) b strata t Nothing args cs ds Ox
-          kindf [] = Star' strata
+          kindf [] = Star' strata Nothing
           kindf ((_,x):xs) = Karrow' x (kindf xs)
     ; (reserved "primitive" >> return(GADT (loc pos) b t (kindf args) [] [] Ox)) <|>
       (do { cs <- sepBy1 constrdec (symbol "|")
@@ -804,21 +804,24 @@ implicit b pos strata t =
           ; return(finish cs ds)})
     }
 
+polyLevel [] t = t
+polyLevel xs t = PolyLevel xs t
 
 explicit b pos tname =
-  do { symbol "::"
-     ; kind <- typN
+  do { (levels,kind) <- typing
      ; reserved "where"
      ; cs <- layout explicitConstr (return ())
      ; ds <- derive
-     ; let gadt = (GADT (loc pos) b tname kind cs ds Ox)
+     ; let gadt = (GADT (loc pos) b tname (polyLevel levels kind) cs ds Ox)
      ; return(gadt)
      }
+
+ww = parse2 typing ":: level n . *n where Zero :: Natural"
 
 explicitConstr =
   do { l <- getPosition
      ; c <- constructorName
-     ; (prefix,preds,body) <- typingHelp
+     ; (levels,prefix,preds,body) <- typingHelp  -- ### TODO LEVEL
      ; let format Nothing = []
            format (Just(q,kindings)) = map g kindings
            g (nm,kind,quant) = (nm,kind)
@@ -1178,3 +1181,5 @@ dd3 =  "data Nat :: *1 where\n"++
        "  Z :: Nat\n"++
        "  S :: Nat ~> Nat\n"++
        " deriving List(b)"
+
+Right (dd4,xsc) = pd "data Natural:: level n . *n where   Zero :: Natural"

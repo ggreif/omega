@@ -2,15 +2,15 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 -----------------------------------------------------------
 -- Daan Leijen (c) 1999, daan@cs.uu.nl
 --
 -- $version: 23 Feb 2000, release version 0.2$
 -----------------------------------------------------------
-module ParseToken( identifier, reserved, prefixIdentifier
+module ParseToken( identifier, ident, reserved, prefixIdentifier
                  , oper,operator, reservedOp, isReservedName
 
                  , charLiteral, stringLiteral

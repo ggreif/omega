@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Feb 27 21:04:24 Pacific Standard Time 2007
--- Omega Interpreter: version 1.4
+-- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.1
 
 module LangEval where
 
@@ -475,6 +475,7 @@ elab prefix magic init (GADT l p t k cs ds exts) =
        f (loc,cname,allv,preds,ty) =
             (cname,(mkFun (show cname) (Vcon (cname,exts)) (size ty) []))
        size (Rarrow' x y) = 1 + size y
+       size (Karrow' x y) = 1 + size y
        size _ = 0
 
 elab prefix magic init (TypeSig loc nm t) = return init
