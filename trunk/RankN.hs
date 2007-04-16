@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
 -- Omega Interpreter: version 1.4.1
 
 {-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
@@ -2690,6 +2690,13 @@ varsOfRho (Rpair x y) = union3 (varsOfSigma x) (varsOfSigma y)
 varsOfRho (Rsum x y) = union3 (varsOfSigma x) (varsOfSigma y)
 varsOfRho (Rtau x) = varsOfTau x
 
+varsOfExpectRho (Check r) = varsOfRho r
+varsOfExpectRho (Infer ref) = ([],[],[])
+
+varsOfPair f g (x,y) = (xs++ys, as++bs, ms++ns)
+  where (xs,as,ms) = f x
+        (ys,bs,ns) = g y
+
 tvsTau x = fst3(varsOfTau x)
 
 
@@ -2738,12 +2745,13 @@ mgu ((x,y):xs) = Right("No Match", x, y)
 
 
 mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either [(TcTv,Tau)] ([Char],Tau,Tau)
-mguVar x tau xs = if (elem x vs)
+mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
                      then Right("occurs check", TcTv x, tau)
                      else compose new2 (Left new1)
   where vs = tvsTau tau
         new1 = [(x,tau)]
-        new2 = mgu (subPairs new1 xs)
+        k2 = kindOf tau
+        new2 = mgu (subPairs new1 ((k,k2):xs))
 
 compose (Left s1) (Left s2) = Left ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 compose _ (Right x) = Right x
@@ -3592,10 +3600,11 @@ compStar (Right y) _ = Right y
 emitStar (x,y) (Left(sub,eqs)) = Left(sub,Equality x y :eqs)
 emitStar pair (Right x) = Right x
 
-mguStarVar beta x tau xs =
+mguStarVar beta (x@(Tv _ _ (MK k))) tau xs =
   do { let vs = tvsTau tau
            new1 = [(x,tau)]
-     ; new2 <- mguStar beta (subPairs new1 xs)
+     ; k2 <- kindOfM tau
+     ; new2 <- mguStar beta (subPairs new1 ((k,k2):xs))
      ; return(if (elem x vs)
                  then Right("occurs check", TcTv x, tau)
                  else composeStar new2 new1)}

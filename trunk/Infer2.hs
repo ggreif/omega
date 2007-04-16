@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Apr 12 15:30:57 Pacific Daylight Time 2007
+-- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
 -- Omega Interpreter: version 1.4.1
 
 module Infer2 where
@@ -40,7 +40,8 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,mgu,mostGenUnify,unify,morepolySS,morepolyRR,match,alpha,morepolySigmaRho
             ,sigmaPair,sigmaSum,unifyCode,unifyFun
             ,poly,simpleSigma,toSigma,toTau,toEqs,toRho,toPT,rho2PT,toL
-            ,windup,unsafeUnwind,unBindWith,unwind,varsOfTau,varsOfRho,varsOfSigma,varsOfPred
+            ,windup,unsafeUnwind,unBindWith,unwind
+            ,varsOfTau,varsOfRho,varsOfSigma,varsOfPred,varsOfPair,varsOfPoly,varsOfExpectRho
             ,getFree,getFreePredL,unionTwo,subPred,subpairs,disp0,lv,subst
             ,boolT,unitT,tlist,tpair,tunit',tsum,tcode,ioT,arrow,applyT,applyT',listT
             ,pairT,arrowT,kind4Atom,atomT,sumT,notEqKind,notEqT,propT,intT,charT
@@ -606,8 +607,10 @@ typeExp mod (Var v) expectRho =
         ; (polyk,mod,n,exp) <- lookupVar v
         ; when (n > m) (failD 2 [Ds (show v++" used at level "++show m++" but defined at level "++show n)])
 
-        ; when False -- (show v=="Eq")
+        ; when False -- (show v=="r")
             (do { truths <- getTruths
+                ; showKinds (varsOfPair varsOfPoly varsOfExpectRho) (polyk,expectRho)
+
                 ; warnM [Ds ("\nChecking variable "++show v)
                         ,Ds "\nSigma = ",Dd polyk
                         ,Ds "\nExpect = ", Dd expectRho
@@ -657,7 +660,6 @@ typeExp mod (e@(App fun arg)) expect =
             ,Ds "\narg type = ",Dd zz
             ,Ds "\nresult type = ",Dd ww
             ,Ds "\n expected type = ",Dd expect]
-
         ; ns4 <- morePoly e res_ty expect
         ; return(App f x) }
 typeExp mod (exp@(Lam ps e _)) (Check t) =
@@ -4094,6 +4096,7 @@ checkReadEvalPrint (hint,env) =
           (ExecCom exp) ->
              do { ((t,e2),oblig) <- collectPred (inferExp exp)
                 ; t2 <- zonk t
+                -- ; showKinds varsOfRho t2
                 ; obs <- zonk oblig
                 ; updateDisp
                 ; warnM [Ds(show exp ++ " :: "),Dd t2]
