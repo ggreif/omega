@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module Value where
 import Auxillary(plist,plistf)
@@ -13,7 +13,7 @@ import Monad
 import Syntax
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Bind
-import RankN(Z,postscript,prescript)
+import RankN(Z,postscript)
 import SyntaxExt(SynExt(..),synKey)
 -----------------------------------------------
 {- These are now defined in the Syntax file
@@ -187,11 +187,11 @@ instance Show Ev where
 
 
 showSynPair (Vcon (Global c,Px(key,pair)) [x,y]) | c==pair =
-   prescript key ++ "(" ++ show x ++","++show y++")"++postscript key
+   "(" ++ show x ++","++show y++")"++postscript key
 showSynPair v = showVcon v
 
-showSynList (Vcon (Global c,Lx(key,nil,cons)) []) | c==nil = prescript key ++ "[]" ++ postscript key
-showSynList (Vcon (Global c,Lx(key,nil,cons)) [x,xs]) = prescript key ++ "[" ++ show x ++ f xs
+showSynList (Vcon (Global c,Lx(key,nil,cons)) []) | c==nil = "[]" ++ postscript key
+showSynList (Vcon (Global c,Lx(key,nil,cons)) [x,xs]) = "[" ++ show x ++ f xs
     where f (Vlazy cs _) = " ...]"
           f (Vcon (Global c,Lx(key,nil,cons)) [x,xs])| c==cons = "," ++ show x ++ f xs
           f (Vcon (Global c,Lx(key,nil,cons)) []) | c==nil = "]" ++ postscript key
@@ -199,8 +199,19 @@ showSynList (Vcon (Global c,Lx(key,nil,cons)) [x,xs]) = prescript key ++ "[" ++ 
           f v = showVcon v
 showSynList v = showVcon v
 
-showSynNat (Vcon (Global c,Nx(key,zero,succ)) []) | c==zero = "#0" ++ postscript key
-showSynNat (Vcon (Global c,Nx(key,zero,succ)) [x])| c==succ = "#"++(f 1 x)++ postscript key
+
+showSynRecord (Vcon (Global c,Rx(key,nil,cons)) []) | c==nil = "{}" ++ postscript key
+showSynRecord (Vcon (Global c,Rx(key,nil,cons)) [tag,x,xs]) = "{" ++ show tag++"="++show x ++ f xs
+    where f (Vlazy cs _) = " ...}"
+          f (Vcon (Global c,Rx(key,nil,cons)) [tag,x,xs])| c==cons = "," ++ show tag++"="++show x ++ f xs
+          f (Vcon (Global c,Rx(key,nil,cons)) []) | c==nil = "}" ++ postscript key
+          f (Vswap cs u) = f (swaps cs u)
+          f v = showVcon v
+showSynRecord v = showVcon v
+
+
+showSynNat (Vcon (Global c,Nx(key,zero,succ)) []) | c==zero = "0" ++ postscript key
+showSynNat (Vcon (Global c,Nx(key,zero,succ)) [x])| c==succ = (f 1 x)++ postscript key
       where f n (Vcon (Global c,Nx(key,zero,succ)) []) | c==zero = show n
             f n (Vcon (Global c,Nx(key,zero,succ)) [x]) | c==succ = f (n+1) x
             f n (Vswap cs u) = f n (swaps cs u)
@@ -237,6 +248,7 @@ instance Show V where
   show (v@(Vcon (_,Px _) _)) = showSynPair v
   show (v@(Vcon (_,Nx _) _)) = showSynNat v
   show (v@(Vcon (_,Lx _) _)) = showSynList v
+  show (v@(Vcon (_,Rx _) _)) = showSynRecord v
   show (v@(Vcon (_,Ox  ) _)) = showVcon v
   show (Vcode e (Ev xs _)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
       where free = plistf show "" (map fst xs) "," ""
@@ -280,7 +292,7 @@ pv v = help v
        help (Vprimfun s _) = "(Vprimfun "++s++")"
        help (Vfun p body env) = "(fn)"
        help (Vf f push swap) = "(Vf f g h)"
-       help (Vcon (n,_) vs) = "(Vcon "++show n++plistf pv " " vs " " ")"
+       help (Vcon (n,ext) vs) = "(Vcon "++show n++plistf pv " " vs " " ")"++show ext
        help (Vpat n f g) = "(Vpat "++show n++")"
        help (Vcode e re) = "(Code "++show e++")"
        help (Vswap cs u) = "(Vswap "++show cs ++" "++ pv u++")"
@@ -410,6 +422,11 @@ instance Eq (Label tag)  where
 
 tagOfLabel :: Label t -> t
 tagOfLabel x = error "Someone pulled on tagOfLabel"
+
+data HiddenLabel = forall tag . Hidden (Label tag)
+
+instance Show HiddenLabel where
+ show (Hidden l) = "(Hidden "++show l++")"
 
 ------------------------------------------
 

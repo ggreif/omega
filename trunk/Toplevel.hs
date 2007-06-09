@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 
 module Toplevel where
@@ -24,7 +24,7 @@ import SCC(topSortR)
 import Monad(when)
 import Infer2(TcEnv(sourceFiles),completionEntry,lineEditReadln,initTcEnv
              ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
-             ,var_env,type_env,rules,runtime_env)
+             ,var_env,type_env,rules,runtime_env,syntaxExt)
 import RankN(pprint,Z,failD,disp0,dispRef)
 import System(getArgs)
 import Data.Map(Map,toList)
@@ -35,6 +35,7 @@ import System.IO.Error(try,ioeGetErrorString)
 import Monads(handleP)
 import Manual(makeManual)
 import Commands
+import SyntaxExt(synName,synKey)
 
 import System.Console.Readline(setCompletionEntryFunction)
 -- setCompletionEntryFunction :: Maybe (String -> IO [String]) -> IO ()
@@ -50,17 +51,20 @@ import System.Console.Readline(setCompletionEntryFunction)
 -- readEvalPrint :: [String] -> (TcEnv) -> FIO(TcEnv)
 readEvalPrint commandTable sources tenv =
   do { let tabExpandFun = completionEntry tenv
+           white c = elem c " \t\n"
      ; input <- lineEditReadln "prompt> " tabExpandFun
      ; z <- parseString pCommand input
      ; case z of
         Left s -> do {writeln s; return (tenv) }
-        Right(x,rest) ->
+        Right(x,rest) | all white rest ->
          case x of
           (ColonCom com str) -> dispatchColon commandTable tenv com str
           (ExecCom e) -> execExp tenv e
           (DrawCom p e) -> drawPatExp tenv p e
           (LetCom d) -> letDec elabDs tenv d
           (EmptyCom) -> return tenv
+        Right(x,rest) -> fail ("\nI parsed the command:\n "++show x++
+                               "\nBut there was some trailing text: "++rest)
      }
 
 
@@ -229,15 +233,17 @@ importFile (Import name vs) tenv =
   case lookup name (imports tenv) of
      Just previous -> return tenv
      Nothing -> do { new <- elabFile name initTcEnv
+                   ; unknownExt vs (syntaxExt new)
                    ; return(importNames name vs new tenv) }
 
-importNames :: String -> Maybe [Var] -> TcEnv -> TcEnv -> TcEnv
-importNames name vs new old =
+importNames :: String -> Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
+importNames name items new old =
   old { imports = (name,new):(imports old)
       , var_env = addListToFM (var_env old) (filter p (toList (var_env new)))
       , type_env = (filter q (type_env new)) ++ (type_env old)
       , runtime_env = add (runtime_env new) (runtime_env old)
       , rules = appendFM2 (rules old) (filter p2 (toList (rules new)))
+      , syntaxExt = addSyntax syntax (syntaxExt new) (syntaxExt old)
       }
  where elemOf x Nothing = True
        elemOf x (Just vs) = elem x vs
@@ -245,6 +251,26 @@ importNames name vs new old =
        p2 (s,y) = elemOf (Global s) vs
        q (str,tau,polyk) = elemOf (Global str) vs
        add (Ev xs _) (Ev ys t) = Ev (filter p xs ++ ys) t
+       accV (VarImport v) vs = v:vs
+       accV _ vs = vs
+       accSyn (SyntaxImport nm tag) vs = (nm,tag):vs
+       accSyn _ vs = vs
+       (vs,syntax) = case items of
+             Just zs -> (Just(foldr accV [] zs),foldr accSyn [] zs)
+             Nothing -> (Nothing,[])
+
+addSyntax imports new old = foldr acc old new
+  where acc ext old = if (synName ext,synKey ext) `elem` imports
+                         then ext:old else old
+
+unknownExt Nothing new = return ()
+unknownExt (Just []) new = return ()
+unknownExt (Just(VarImport x : xs)) new = unknownExt (Just xs) new
+unknownExt (Just(SyntaxImport nm tag : xs)) new =
+      if any good new
+         then unknownExt (Just xs) new
+         else fail ("\nImporting unknown extension: "++nm++"("++tag++")")
+   where good ext = synName ext == nm && synKey ext == tag
 
 
 

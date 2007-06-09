@@ -2,14 +2,14 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module Bind(Fresh(..),Freshen(..),Swap(..),Name,Perm
            ,Bind,bind
            ,swapM, swapsM, swapsMf
            ,M,runM
-           ,unsafeUnBind,reset,name1,name2,name3,name2Int,integer2Name) where
+           ,unsafeUnBind,reset,name1,name2,name3,name4,name5,name2Int,integer2Name) where
 
 -- import IOExts
 import Monads
@@ -53,6 +53,8 @@ instance (Freshen a,Freshen b) => Freshen (a,b) where
 name1 = Nm 1
 name2 = Nm 2
 name3 = Nm 3
+name4 = Nm 4
+name5 = Nm 5
 
 type Perm = [(Name,Name)]
 

@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module Manual where
 
@@ -61,15 +61,16 @@ itemize f h items =
 infixOperators = (concat (map f metaHaskellOps))
   where f x = case lookup x vals of
                  Nothing -> []
-                 Just (_,y) -> [(x,show y)]
+                 Just (_,y) -> [(x,showSigma y)]
 
 main2 = makeManual
+
 
 
 makeManual :: IO()
 makeManual = go
   where kindfile = "D:/work/papers/OmegaManual/kinds.tex"
-        prefixfile = "D:/work/papers/OmegaManual/types.tex"
+        prefixfile = "D:/work/papers/OmegaManual/infix.tex"
         comfile = "D:/work/papers/OmegaManual/commands.tex"
         modefile = "D:/work/papers/OmegaManual/modes.tex"
         prefile = "D:/work/papers/OmegaManual/predef.tex"
@@ -100,15 +101,21 @@ makeManual = go
 -- helper function
 
 showSigma:: Sigma -> String
-showSigma s = snd(exhibit disp0 s)
+showSigma s = scan (snd(exhibit disp0 s))
 showpoly (K lvs s) = showSigma s
+
+scan ('f':'o':'r':'a':'l':'l':xs) = dropWhile g (dropWhile f xs)
+  where f c = c /= '.'
+        g c = c `elem` ". "
+scan xs = xs
+
 
 
 f ("unsafeCast",_) = ""
 f ("undefined",_) = ""
 f (x,(y,z)) = (g x ++ " :: " ++ showSigma z ++ "\n")
 hf (x,y,z) = (g x ++ " :: " ++ showpoly z ++ "\n")
-hg (x,y) = "("++x++") :: " ++ show y ++ "\n"
+hg (x,y) = "("++x++") :: " ++ y ++ "\n"
 g [] = []
 g "[]" = "[]"
 g (s@(c:cs)) | isAlpha c = s         -- normal names

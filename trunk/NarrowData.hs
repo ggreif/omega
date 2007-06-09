@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module NarrowData where
 
@@ -232,7 +232,9 @@ andKind = poly (karr prop (karr prop prop))
 success = TyCon Ox (lv 1) "Success" (poly(MK propT))
 andName = NTyCon "and" Ox (lv 1) andKind
 varWild (Tv _ _ k) = TcTv(wild k)
-termWild t = TcTv (wild (MK(kindOf t)))
+termWild t = case kindOf t of
+               Just k -> TcTv (wild (MK k))
+               Nothing -> TcTv (wild star)
 
 equalP (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = True
 equalP _ = False
@@ -255,7 +257,10 @@ nAppend xs (Exceeded ys) = Exceeded(xs++ys)
 -- Making fresh copies of terms. I.e. replacing every
 -- var with a fresh var.
 
-termFresh t = newTau (MK(kindOf t))
+termFresh t = case kindOf t of
+                Just k -> newTau (MK k)
+                Nothing -> newTau star
+
 
 varFresh (Tv u f (MK k)) = do {k1 <- freshN k; newTau (MK k1)}
 

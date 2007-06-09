@@ -2,15 +2,15 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module Infer2 where
 
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 
-import Monad(when,foldM,liftM)
+import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
              ,Exception(..)
              ,FIO(..),fio,failP,fio2Mtc,runFIO
@@ -51,7 +51,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds)
-import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx)
+import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 --hiding (Level)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
@@ -60,9 +60,8 @@ import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backsp
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,ns)
 import LangEval(vals,env0,Prefix(..),elaborate)
-import ParserDef(pCommand,parseString,Command(..),getExp)
+import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import Char(isAlpha,isUpper)
-import ParserDef(parse2, program,pd)
 import System.IO.Unsafe(unsafePerformIO)
 -- import IOExts(unsafePerformIO)
 import SCC(topSortR)
@@ -231,7 +230,7 @@ data TcEnv
           }
 
 tcEnv0 = unsafePerformIO(runFIO (decMany preDefDec initEnv) errF)
-  where initEnv = TcEnv Map.empty toEnvX [] 0 Z [] [] Map.empty Map.empty env0 [] [] [] [listx,pairx]
+  where initEnv = TcEnv Map.empty toEnvX [] 0 Z [] [] Map.empty Map.empty env0 [] [] [] [listx,pairx,natx]
         errF loc n s = error ("While initializing "++show loc++"\n"++s)
 
 typeConstrEnv0 = type_env tcEnv0
@@ -607,7 +606,7 @@ typeExp mod (Var v) expectRho =
         ; (polyk,mod,n,exp) <- lookupVar v
         ; when (n > m) (failD 2 [Ds (show v++" used at level "++show m++" but defined at level "++show n)])
 
-        ; when False -- (show v=="r")
+        ; when False -- (show v=="Eq")
             (do { truths <- getTruths
                 ; showKinds (varsOfPair varsOfPoly varsOfExpectRho) (polyk,expectRho)
 
@@ -771,7 +770,8 @@ typeExp mod (ExtE x) expect =
      ; let lift0 (nm) = Var (Global nm)
            lift1 (nm) x = App (Var (Global nm)) x
            lift2 (nm) x y = App (App (Var (Global nm)) x) y
-     ; new <- buildExt (show loc) (lift0,lift1,lift2,return . Lit . ChrSeq) x exts
+           lift3 (nm) x y z = App (App (App (Var (Global nm)) x) y) z
+     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
      ; typeExp mod new expect
      }
 
@@ -1317,6 +1317,9 @@ inferPat rename k pat =
 
 exFree d x = displays d [Dd x, Ds " = ",Ds(shtt x)]
 
+removeSyn (Forall (Nil([],Rtau(TySyn _ _ _ _ x)))) = (Forall (Nil([],Rtau x)))
+removeSyn x = x
+
 checkPat :: Bool -> Mod -> Frag -> Sigma -> Pat -> TC(Frag,Pat)
 checkPat rename mod k t pat =
   case (pat,mod) of
@@ -1353,6 +1356,8 @@ checkPat rename mod k t pat =
           -- rhoC::    t1 -> t2 -> Ts s1 s2
           -- rhoExpect::           Tu u1 u2
           -- check that Tu==Ts, mguStar[(u1,s1),(u2,s2)]
+
+
           ; (pairs,tauC) <- constrRange c ps rhoC []
           ; tauExpect <- okRange c rhoExpect
           ; (us,_) <- get_tvs tauExpect
@@ -1395,7 +1400,8 @@ checkPat rename mod k t pat =
           ; let k2 = addEqs truths k1
           ; return(k2,Psum inj p1)}
     (z@(Pexists p),_) ->
-       case t of
+      do { expect <- applyTheta Rig k t;
+       case expect of
         Forall (Nil([],Rtau(TyEx zs))) ->
           do { loc <- getLoc
              ; (rigid,assump,tau) <- rigidInstanceL (show p) [] zs
@@ -1403,7 +1409,7 @@ checkPat rename mod k t pat =
              ; let k3 = addEqs assump k2
              ; let k4 = addPVS rigid k3
              ; return(k4,Pexists p2) }
-        _ -> failD 1 (nonRigidExists z)
+        _ -> failD 1 (nonRigidExists t z)}
     (Paspat var p,_) ->
        do { (k1,p1) <- checkPat rename mod k t p
           ; level <- getLevel
@@ -1430,8 +1436,8 @@ checkPat rename mod k t pat =
           ; let lift0 (nm) = Pcon (Global nm) []
                 lift1 (nm) x = Pcon (Global nm) [x]
                 lift2 (nm) x y = Pcon (Global nm) [x,y]
-                inject s =return(Plit(ChrSeq s))
-          ; new <- buildExt (show loc) (lift0,lift1,lift2,inject) x exts
+                lift3 (nm) x y z = Pcon (Global nm) [x,y,z]
+          ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
           ; checkPat rename mod k t new
           }
 
@@ -1463,9 +1469,10 @@ badRefine2 pat theta t s =
    ,Ds ".\nSometimes, when the type of one pattern depends on another,\nreordering the patterns might fix this.",Ds ("\n"++s)]
 
 
-nonRigidExists z =
+nonRigidExists t z =
   [Ds "Exists patterns cannot have their type inferred:\n  "
-  ,Dd z,Ds " Use a prototype signature with 'exists t . type[t]' "]
+  ,Dd z,Ds "\nUse a prototype signature with 'exists t . type[t]' to enable type checking."
+  ,Ds "\nThe current expected type is: ",Dd t,Ds ", which is not an existential."]
 
 -- helper functions
 
@@ -1477,7 +1484,8 @@ constrRange c (p:ps) t pairs =
 
 -- A range is Ok if its 1) a Tau type, 2) A TyCon type, 3) At Level 1
 okRange c (Rtau t) = help t
-  where help (TyCon synext level nm polykind) =
+  where help (TySyn _ _ _ _ x) = help x
+        help (TyCon synext level nm polykind) =
            do { unifyLevel level (LvSucc LvZero)
               ; return t }
         help (TyApp f x) = help f
@@ -1571,12 +1579,18 @@ checkDec mutRecFrag (mod,rho,Pat loc nm vs p,skols) = newLoc loc $
 checkDec frag (mod,rho,Reject s ds,skols) =
    handleM 7 (do { ((frag2,ds2),cs) <- collectPred (inferBndrForDecs "where" localRename ds)
                  ; when (not(null cs)) (failD 6 [Ds "Unresolved constraints"])
+                 ; tryToEval ds2
                  ; failD 8 [Ds ("\nReject test: '"++s++"' did not fail.")]}) errF
        -- Its is important the the inner fail have higher failure level (8) than
        -- the outer catching mechanism (7). Because if the decl doesn't fail we want to know.
  where errF n = do { outputString ("\n*** Negative test '"++ s ++ "' fails as expected.\n")
                    ; return (TypeSig Z (Global "##test") tunit')}
 checkDec frag (mod,rho,t,skols) = failD 2 [Ds "Illegal dec in value binding group: ", Ds (show t)]
+
+
+tryToEval decs = Tc(\ env ->
+  do { env2 <- elaborate None decs (runtime_env env)
+     ; return(env2,[])})
 
 ----------------------------------------------------------
 -- helper functions
@@ -2001,6 +2015,7 @@ constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strat
     case vars of
      -- The constr leaves the kinding of vars implicit.  C:: T a -> T a
      [] -> do { (nmMap,vars,ps,rho2) <- inferConSigma levels currentMap loc (preds,typ)
+              ; checkValuesDontUseKarr cname rho2 strata
               ; return(Forall(windup vars (ps,rho2)))}
      _  -> do { (_,rng) <- checkRng cname tname strata typ
               ; let bound = map (\ (nm,tau,kind) -> nm) currentMap
@@ -2017,6 +2032,16 @@ constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strat
               ; exts <- getSyntax
               ; (sigma,nmMap) <- toSigma (currentMap,loc,exts,levels) sigmaPT
               ; return sigma}
+
+checkValuesDontUseKarr cname (rho@(Rtau t)) LvZero | hasKarr t =
+  failM 2 [Ds "\n\nThe constructor: ",Dd cname
+          , Ds ", is supposed to be a value,\nbut it is classified by a kind arrow.\n"
+          ,Dd cname,Ds":: ",Dd rho]
+  where hasKarr (Karr x y) = True
+        hasKarr x = case arrowParts x of
+                     Just(dom,rng) -> hasKarr rng
+                     Nothing -> False
+checkValuesDontUseKarr cname x y = return()
 
 
 -------------------------------------------------------
@@ -2039,6 +2064,7 @@ checkSyn constrs [ext] =
         ([nilC,consC],Lx(key,_,_)) -> checkList key nilC consC
         ([zeroC,succC],Nx(key,_,_)) -> checkNat key zeroC succC
         ([pairC],Px(key,_)) -> checkPair key pairC
+        ([rnilC,rconsC],Rx(key,_,_)) -> checkRecord key rnilC rconsC
         (cs,z) -> failM 2 [Ds "\nWrong number of constructors for syntax extension: ",Ds (synKey z)
                           ,Ds ". ",Ds name,Ds " extensions expect ",Dd size,Ds "."]
            where (name,size) = nameSize z
@@ -2048,6 +2074,7 @@ nameSize :: SynExt a -> (String,Int)
 nameSize (Lx _) = ("List",2)
 nameSize (Nx _) = ("Nat",2)
 nameSize (Px _) = ("Pair",1)
+nameSize (Rx _) = ("Record",2)
 nameSize Ox = ("",0)
 
 count:: PT -> Int
@@ -2059,6 +2086,12 @@ checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b)
     | count a==0 && count b==2 = return (Lx(key,nil,cons))
 checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b) =
   tell "List" ("Nil",nil,a) 0 ("Cons",cons,b) 2
+
+
+checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b)
+   | count a==0 && count b==3 = return (Rx(key,rnil,rcons))
+checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b) =
+  tell "Record" ("Rnil",rnil,a) 0 ("Rcons",rcons,b) 3
 
 checkNat key (_,Global zero,_,_,a) (_,Global succ,_,_,b)
    | count a==0 && count b==1 = return (Nx(key,zero,succ))
@@ -3917,21 +3950,29 @@ predefined =
  "data Nat :: *1 where\n"++
  "  Z :: Nat\n"++
  "  S :: Nat ~> Nat\n"++
- " deriving Nat()\n"++
+ " deriving Nat(t)\n"++
  "prop Nat' :: Nat ~> *0 where\n"++
  "  Z:: Nat' Z\n"++
  "  S:: forall (a:: Nat) . Nat' a -> Nat' (S a)\n"++
- " deriving Nat()\n"++
+ " deriving Nat(v)\n"++
  --"data Equal a b = Eq where a=b\n"++
- "data Equal :: forall (a:: *1) . a ~> a ~> *0 where\n"++
- "  Eq:: forall (b:: *1) (x:: b) . Equal x x\n"++
+-- "data Equal :: forall (a:: *1) . a ~> a ~> *0 where\n"++
+-- "  Eq:: forall (b:: *1) (x:: b) . Equal x x\n"++
+
+ "data Equal:: a ~> a ~> *0 where\n"++
+ "  Eq:: Equal x x\n"++
+
  "data EqTag :: Tag ~> Tag ~> *0 where\n"++
  "  EqTag:: EqTag x x\n"++
- "data HasType :: *1 where\n"++
- "  Has :: Tag ~> *0 ~> HasType\n"++
- "data Row :: *1 ~> *1 where\n"++
- "  RCons :: x ~> (Row x) ~> Row x\n"++
- "  RNil :: Row x\n"++
+ "data HiddenLabel :: *0 where\n"++
+ "  Hidden:: Label t -> HiddenLabel\n"++
+ "data Row :: a ~> b ~> *1 where\n"++
+ "  RNil :: Row x y\n"++
+ "  RCons :: x ~> y ~> Row x y ~> Row x y\n deriving Record(r)\n"++
+ "data Record :: Row Tag *0 ~> *0 where\n"++
+ "   RecNil :: Record RNil\n"++
+ "   RecCons :: Label a -> b -> Record r -> Record (RCons a b r)\n"++
+ " deriving Record()\n"++
  "data Monad :: (*0 ~> *0) ~> *0 where\n"++
  "  Monad :: forall (m:: *0 ~> *0) .\n"++
  "                  ((forall a . a -> m a)) ->\n"++
@@ -4298,7 +4339,7 @@ shift n e = App (var "Sh") (shift (n-1) e)
 data TheoremSplit
   = Chain (String,[Pred],Tau)
   | LeftToRight ([(Name,Kind,Quant)],String,[Pred],Tau,Tau)
-  | NotATheorem
+  | NotATheorem [Tau]
 
 whatKind :: Maybe RuleClass -> Rho -> TC TheoremSplit
 whatKind thclass rho =
@@ -4313,7 +4354,8 @@ whatKind thclass rho =
          Nothing -> let (tname,propMaybe) = root thclass rng
                     in ifM (allM (isProp propMaybe) (rng:doms))
                            (return (Chain(tname,map makeRel doms,rng)))
-                           (return NotATheorem)
+                           (do { bad <- filterM (\ x -> isProp propMaybe x >>= return . not) (rng:doms)
+                               ; return (NotATheorem bad)})
      }
 
 baseIsEquality (TyEx zs) vs =
@@ -4332,6 +4374,7 @@ baseIsEquality x vs =
 
 root thClass rng =
    case rootT rng [] of
+     Nothing -> ("?",Nothing)
      Just(sx,lev,tname,kind,args) ->
               case thClass of
                 (Just Axiom) -> (tname,Just tname)
@@ -4370,8 +4413,9 @@ sigmaToRule rclass (name,sigma) =
               preCond = conds ++ (if (null free) then [] else doms)
               ans = [(key,RW name key thclass args2 preCond lhs rhs)]
           in return ans
-        NotATheorem -> (warnM [Ds "\nIn the theorem '",Ds name, Ds "' the type: " ,Dd rho
+        NotATheorem bad -> (warnM [Ds "\nIn the theorem '",Ds name, Ds "' the type:\n   " ,Dd rho
                               ,Ds "\nis neither a back-chaining or a left-to-right rewrite rule."
+                              ,Ds "\nbecause the following are not propositions:\n   ",Dl bad "\n   "
                               ,Ds "\nThus, no rule is added.\n"])
                         >> (return[])
 
@@ -4528,6 +4572,8 @@ arrowP (Rarrow _ _) = True
 arrowP (Rtau (TyApp (TyApp (TyCon sx l "(->)" k) x) y)) = True
 arrowP _ = False
 
+arrowParts (TyApp (TyApp (TyCon sx _ "(->)" k) x) y) = Just(x,y)
+arrowParts x = Nothing
 
 tcInFIO :: TcEnv -> TC x -> FIO x
 tcInFIO env e =

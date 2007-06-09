@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module Encoding2 where
 
@@ -13,7 +13,7 @@ import Monad (liftM)
 import RankN
 import Syntax
 import Value
-import List(union)
+import List(unionBy)
 import Bind
 import SyntaxExt(SynExt(..))
 
@@ -42,6 +42,9 @@ instance Generic Symbol where
 
 instance Generic a => Generic (Label a) where
   typeOf x = tlabel (typeOf (tagOfLabel x))
+
+instance Generic HiddenLabel where
+  typeOf x = TyCon Ox (LvSucc LvZero) "HiddenLabel" (poly star)
 
 instance (Generic a,Generic b) => Generic (Equal a b) where
   typeOf x = teq (typeOf (leftEqual x)) (typeOf (rightEqual x))
@@ -206,6 +209,11 @@ instance Encoding (Label tag) where
     from (Vlit (Tag s)) = Label s
     from v = error ("Value not a Label: "++(show v))
 
+instance Encoding HiddenLabel where
+    to (Hidden l) = Vcon (Global "Hidden",Ox) [to l]
+    from (Vcon (Global "Hidden",_) [l]) = Hidden (from l)
+    from v = error ("Value not a HiddenLabel: "++(show v))
+
 instance Encoding Int where
     to n = Vlit(Int n)
     from (Vlit(Int n)) = n
@@ -267,6 +275,8 @@ instance Encoding a => Encoding [a] where
 newtype A = A V
 newtype B = B V
 newtype C = C V
+newtype T1 = T1 V
+newtype T2 = T2 V
 
 unsafeCast (A x) = B x
 
@@ -279,6 +289,14 @@ instance Encoding B where
 instance Encoding C where
   to (C x) = x
   from = C
+instance Encoding T1 where
+  to (T1 x) = x
+  from = T1
+instance Encoding T2 where
+  to (T2 x) = x
+  from = T2
+
+zzz = gen(typeOf(T1 $ Vlit(Tag "z")))
 
 instance Generic A where
    typeOf x = TyVar name1 star
@@ -286,16 +304,22 @@ instance Generic B where
    typeOf x = TyVar name2 star
 instance Generic C where
    typeOf x = TyVar name3 star
+instance Generic T1 where
+   typeOf x = TyVar name4 (MK tagT)
+instance Generic T2 where
+   typeOf x = TyVar name5 (MK tagT)
 
-genOf :: Tau -> [Name]
-genOf (TyVar nm k) = [nm]
-genOf (TyApp x y) = union (genOf x) (genOf y) where f (x,_) (y,_) = x==y
+
+
+genOf :: Tau -> [(Name,Kind)]
+genOf (TyVar nm k) = [(nm,k)]
+genOf (TyApp x y) = unionBy f (genOf x) (genOf y) where f (x,_) (y,_) = x==y
 genOf _ = []
 
 gen :: Tau -> Sigma
 gen t = Forall (mk (genOf t) t)
   where mk [] t = Nil ([],Rtau t)
-        mk (n:ns) t =  Cons (star,All) (bind n (mk ns t))
+        mk ((n,k):ns) t =  Cons (k,All) (bind n (mk ns t))
 
 instance Show A where
   show (A x) = show x
