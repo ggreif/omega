@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 import "LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
@@ -490,19 +490,51 @@ f (Ap a b) = f a + f b
 tim :: Label `tim
 tim = `tim
 
+type Env = [exists t .(Label t,Int)]
+
+find:: Label t -> Env -> Maybe(Label t,Int)
+find t [] = Nothing
+find t ((Ex(s,n)):xs) = 
+  case labelEq t s of
+    Just (p@Eq) -> Just(t,n)
+    Nothing -> Nothing
+
+maybeM = (Monad Just bind fail)
+  where return x = Just x
+        fail s = Nothing
+        bind Nothing g = Nothing
+        bind (Just x) g = g x    
+
+ans = run [| let monad maybeM in do {return 42} |]
+
+(Just (proof @ Eq)) = labelEq `a `a
+
+##test "labels not equal"
+  (Just q) = labelEq `a `b
+
+testLabels = body
+  where monad ioM
+        ioM = Monad returnIO bindIO failIO
+        body :: IO String
+        body = do { Hidden l <- freshLabel
+                  ; case labelEq `a l of
+                      Nothing -> return "good news"
+                      Just Eq -> return "bad news" }
+                      
+         
 ------------------------------------------------------------
 -- HasType and Rows are predefined
 
 
--- kind HasType = Has Tag *0
--- Row :: *1 ~> *1
--- kind Row x = RCons x (Row x) | RNil
+kind HasType = Has Tag *0
+RowT :: *1 ~> *1
+kind RowT x = RConsT x (RowT x) | RNilT
 
-data Variable :: Row HasType ~> HasType ~> *0 where
-  V0 :: Variable (RCons (Has s t) env) (Has s t)
-  Vn :: Variable env t -> Variable (RCons s env) t
+data Variable :: RowT HasType ~> HasType ~> *0 where
+  V0 :: Variable (RConsT (Has s t) env) (Has s t)
+  Vn :: Variable env t -> Variable (RConsT s env) t
 
-data RowExp :: Row HasType ~> *0 ~> *0 where
+data RowExp :: RowT HasType ~> *0 ~> *0 where
   IntExp :: Int -> RowExp e Int
   Variable :: Label s -> (Variable env (Has s t)) -> RowExp env t
 
@@ -520,14 +552,14 @@ testf (Ex (a,f)) = f a
 
 kind Ctype = Comb | Seq (*0 ~> *0)
 
-data Var2 :: Row HasType ~> HasType ~> *0 where
-  Vz :: Var2 (RCons (Has s t) env) (Has s t)
-  Vm :: Var2 env t -> Var2 (RCons s env) t
+data Var2 :: RowT HasType ~> HasType ~> *0 where
+  Vz :: Var2 (RConsT (Has s t) env) (Has s t)
+  Vm :: Var2 env t -> Var2 (RConsT s env) t
 
-data Exp2 :: Ctype ~> Row HasType ~> *0 ~> *0 where
+data Exp2 :: Ctype ~> RowT HasType ~> *0 ~> *0 where
   Var :: Label s -> Var2 env (Has s t) -> Exp2 c env t
   
-data Decs2 :: Ctype ~> Row HasType ~> Row HasType ~> *0 ~> *0 where
+data Decs2 :: Ctype ~> RowT HasType ~> RowT HasType ~> *0 ~> *0 where
    In :: (Exp2 c all t) -> Decs2 c all all t
 --                                 ^   ^  Note duplicates!!!
 -- this causes us to miss some equations.
@@ -827,8 +859,8 @@ prop Eqw:: t ~> t ~> *0 where
   Ew :: Eqw a a
 
 
-data M:: *1 where
- F :: Int ~> M
+data Mx:: *1 where
+ F :: Int ~> Mx
 
 data Natural1:: level n . *n  where
   Zero :: Natural1

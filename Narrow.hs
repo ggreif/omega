@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module Narrow(narr,defTree,Check(..),matches) where
 
@@ -382,19 +382,37 @@ fewestVar xAns xterm yAns yterm =
         xn = sum(map count xAns)
         yn = sum(map count yAns)
 
+varsOf xs = foldr acc ([],[],[]) (map f xs)
+  where acc (a,b,c) (as,bs,cs) = (a++as,b++bs,c++cs)
+        f (x,y) = let (a,b,c) = varsOfTau x
+                      (m,n,p) = varsOfTau y
+                  in (a++m,b++n,c++p)
+
+varsOfRel f (EqR (x,y)) = union3 (f x) (f y)
+varsOfRel f (AndR []) = ([],[],[])
+varsOfRef f (AndR (r:rs)) = union3 (varsOfRel f r) (varsOfRel f (AndR rs))
 
 mguV :: Check m => ST Z -> Rel Tau -> [(Tau,Tau)] -> m(Unifier,ST Z)
 mguV s0 truths pairs =
-  case mgu pairs of
-    Left u2 -> return(u2,s0)
-    Right ("Rigid",v,t) -> failM 3 [Ds "The supposedly polymorphic type variable: ",Dd v
-                                   ,Ds "\narising from the pattern: "
-                                   ,Ds name
-                                   ,Ds ", from "
-                                   ,Ds loc
-                                   ,Ds ",\nis forced by context to be\n  ", Dd t]
-       where (name,loc) = locInfo v
-    Right (s,t1,t2) -> fail ("Unification of (var,term) failed, this is impossible\n"++show pairs)
+  do { maybe <- mguB pairs
+     ; case maybe of
+        Left u2 -> return(u2,s0)
+        Right ("Rigid",v,t) ->
+            (let (name,loc) = locInfo v
+             in failM 3 [Ds "The supposedly polymorphic type variable: ",Dd v
+                        ,Ds "\narising from the pattern: "
+                        ,Ds name
+                        ,Ds ", from "
+                        ,Ds loc
+                        ,Ds ",\nis forced by context to be\n  ", Dd t])
+        Right (s,t1,t2) ->
+          -- showKinds varsOf pairs >>
+          -- showKinds (varsOfRel varsOfTau) truths >>
+          -- warnM [Ds "\nPairs = ", Dl pairs ","] >>
+          -- warnM [Ds "\nt1 = ",Dd t1,Ds " t2 = ",Dd t2,Ds "\n truths =",Dd truths] >>
+          fail ("Unification of (var,term) failed, this should be impossible\n "++s++" "++shtt t1++" /= "++shtt t2)
+     }
+
 
 locInfo (TcTv (Tv un (Rigid q loc nm) k)) = (nm,show loc)
 locInfo _ = ("?","unknown")

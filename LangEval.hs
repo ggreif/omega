@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module LangEval where
 
@@ -114,18 +114,18 @@ evalVar env s =
     Just v -> return v
 
 eval env@(Ev xs m) x =
-   do { --writeln(">> "++show x ++ " with " ++ show (map fst (take 6 xs)));
+   do { -- writeln(">> "++show x ++ " with " ++ show (map fst (take 6 xs)));
         ans <- evalZ env x
-      --; writeln("<< "++show ans)
+      -- ; writeln("<< "++show ans)
       ; return ans }
 
 evalZ ::  Env -> Exp -> FIO V
 evalZ env (Var s) = evalVar env s
 evalZ env (Lit (ChrSeq s)) = return(VChrSeq s)
+evalZ env (Lit (CrossStage v)) = return v
 evalZ env (Lit x) = return(Vlit x)
 evalZ env (Sum inj x) = do { v <- eval env x; return(Vsum inj v) }
 evalZ env (Prod x y) =
-    --do { a <- vlazy(eval env x); b <- vlazy(eval env y); return(Vprod a b) }
     do { a <- eval env x; b <- eval env y; return(Vprod a b) }
 evalZ env (CheckT x) = eval env x
 evalZ env (Lazy x) = vlazy (eval env x)
@@ -136,15 +136,7 @@ evalZ env exp@(App f x) =
      ; y <- eval env x
      ; applyV (show exp) g y }
 evalZ env (Lam ps body xs) = return(makeLam ps body [] [] env)
-{-
-evalZ env term@(Lam ps body xs) =
-     do { --writeln ("free in eval is: "++show free++"\n")
-          --; writeln("env is "++showenv env)
-          --; writeln("env is "++showenv env2);
-         return(Vfun ps body env2) }
-  where env2 = extract (show term) free env
-        free = getFree [] term
--}
+
 evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
   where caseV ms env v [] = caseErr v (map (\(loc,p,b,ds)->p) ms)
         caseV ms env v ((loc,p,body,ds):ps) =
@@ -155,7 +147,7 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
                   do { let env1 = (extendV es env)
                      ; env2 <- elaborate Tick ds env1
                      ; evalBody env2 body (caseV ms env v ps) } }
-        caseErr v ps = fail(show v++" doesn't match any of the patterns:\n  "++
+        caseErr v ps = fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
                         plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
 evalZ env (Do stmts) =
@@ -605,8 +597,9 @@ vals =
  ,("fresh",(freshV,gen(typeOf(undefined :: Char -> Symbol))))
  ,("swap",(swapV,gen(typeOf(undefined :: Symbol -> Symbol -> A -> A))))
  ,("symbolEq",(symbolEqV,gen(typeOf(undefined :: Symbol -> Symbol -> Bool))))
- ,("labelEq",(labelEqV,gen(typeOf(undefined :: Label A -> Label B -> Maybe(Equal (Label A) (Label B))))))
-
+ ,("labelEq",(labelEqV,gen(typeOf(undefined :: Label T1 -> Label T2 -> Maybe(Equal T1 T2)))))
+ ,("freshLabel",(freshLabelV,gen(typeOf(undefined:: IO HiddenLabel))))
+ ,("newLabel",(newLabelV,gen(typeOf(undefined:: String -> HiddenLabel))))
 
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
  ,("run",(to run,runType))
@@ -699,20 +692,21 @@ run = lift1 "run" g where
 
 
 reifyV = lift1 "lift" f where
-  f x = return(Vcode (reify x) empty)
+  f x = do { v <- (reify x); return(Vcode v empty)}
 
-reify :: V -> Exp
-reify (Vlit x) = Lit x
-reify (Vsum j v) = Sum j (reify v)
-reify (Vprod x y) = Prod (reify x) (reify y)
-reify (Vcon (c,_) vs) = f (Var c) (map reify vs)
+reify :: Monad m => V -> m Exp
+reify (Vlit x) = return(Lit x)
+reify (Vsum j v) = do { x <- (reify v); return(Sum j x)}
+reify (Vprod x y) = do { a <- reify x; b <- reify y; return(Prod a b)}
+reify (Vcon (c,_) vs) = do { us <- (mapM reify vs); return(f (Var c) us)}
   where f g [] = g
         f g (x:xs) = f (App g x) xs
-reify v = error ("Cannot reify: "++show v)
+reify v = return(Lit(CrossStage v))
+-- reify v = fail ("\nRun-time error ******\nCannot reify: "++show v)
 
 freshV = lift1 "fresh" f
   where f (Vlit (Char c)) = do { nm <- fresh; return(mkSymbol nm) }
-        f v = fail ("Non char as argument to fresh: "++show v)
+        f v = fail ("\nRun-time error ******\nNon char as argument to fresh: "++show v)
 
 swapV = lift2 "swap" h
   where h (Vlit (Symbol s1)) (Vlit (Symbol s2)) = return(Vprimfun (nam2 "swap" s1 s2) (downSwap [(s1,s2)] return))
@@ -863,6 +857,11 @@ labelEqV = Vprimfun "labelEq" (analyzeWith f) where
                             then return(Vcon (Global "Just",Ox) [Vcon (Global "Eq",Ox) []])
                             else return(Vcon (Global "Nothing",Ox) [])
 
+freshLabelV = Vfio [] f where
+  f = do { n <- nextInteger ; return(Right(Vcon (Global "Hidden",Ox) [Vlit (Tag ("#"++short n))]))}
+
+newLabelV =  Vprimfun "newLabel" (analyzeWith f) where
+  f str = return(Vcon (Global "Hidden",Ox) [Vlit (Tag (from str))])
 
 fuse = lift2 "fuse" f where
   f a b = return(Vprod a b)

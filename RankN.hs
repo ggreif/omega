@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 {-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
 module RankN where
@@ -956,7 +956,7 @@ pruneV typ v =
 unify :: TyCh m => Tau -> Tau -> m ()
 unify x y =
      do { x1 <- prune x; y1 <- prune y
-        --; outputString("Unifying "++show x1++" =?= "++show y1)
+        -- ; warnM [Ds "\nUnifying ",Dd x1,Ds " =?= ",Dd y1]
         ; f x1 y1
         }
   where --f (t1@(TyVar n k1)) t2 =
@@ -1023,7 +1023,7 @@ unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
      ; return ()
      }
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (TcTv v@(Tv _ (Flexi _) _)) = unifyVar v (TcTv x)
-unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 r2 k2))      = unifyVar v (TcTv x)
+unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 (Flexi _) k2))      = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) = emit (TcTv x) y
 unifyVar v (x@(TyFun nm k _)) = emit (TcTv v) x
 unifyVar v t = matchErr "(V) different types" (TcTv v) t
@@ -1472,30 +1472,30 @@ mustBe (term,qual) t comput expect =
 -- generate new 'kind variables', so it must be monadic.
 -- We supply a pure function "kindOf" but it is inexact.
 
-kindOf :: Tau -> Tau
-kindOf (TcTv (Tv u r (MK k))) = k
+kindOf :: Tau -> Maybe Tau
+kindOf (TcTv (Tv u r (MK k))) = Just k
 kindOf (TyCon sx level_ s (K lvs (Forall xs))) =
    case (lvs,unsafeUnwind xs) of
-    ([],(vs,(_,Rtau k))) -> k
-    (lvs,(vs,(_,rho))) -> error ("Non Tau in kind of Type constructor: "++show rho)
-kindOf (Star n) = (Star (LvSucc n))
+    ([],(vs,(_,Rtau k))) -> Just k
+    (lvs,(vs,(_,rho))) -> Nothing -- error ("Non Tau in kind of Type constructor: "++show rho)
+kindOf (Star n) = Just (Star (LvSucc n))
 kindOf (Karr x y) = kindOf y
-kindOf (TyVar n (MK k)) = k
+kindOf (TyVar n (MK k)) = Just k
 kindOf (TyFun s (K lvs (Forall xs)) ts) =
    case (lvs,unsafeUnwind xs) of
      ([],(vs,(_,Rtau k))) ->  unwind ts k
-     (lvs,(vs,(_,rho))) -> error ("Non Tau in Type function kind: "++show rho)
- where unwind [] k = k
+     (lvs,(vs,(_,rho))) -> Nothing  -- error ("Non Tau in Type function kind: "++show rho)
+ where unwind [] k = Just k
        unwind (x:xs) (Karr a b) = unwind xs b
-       unwind _ k = error ("Non (~>) in Type function kind: "++show k)
+       unwind _ k = Nothing  -- error ("Non (~>) in Type function kind: "++show k)
 kindOf (TyApp ff x) =
   case kindOf ff of
-    (Karr a b) -> b
-    k -> error ("Non (~>) in Type application: "++show k)
+    (Just (Karr a b)) -> Just b
+    k -> Nothing -- error ("\nIn KindOf, Non (~>) in Type application: "++show (TyApp ff x)++"\nwhere the function, "++show ff++", has kind: "++show k)
 kindOf (TySyn nm n fs as b) = kindOf b
 kindOf (TyEx xs) =
     case unsafeUnwind xs of
-     (vs,(_,k)) -> k
+     (vs,(_,k)) -> Just k
 
 kindOfM :: TyCh m => Tau -> m Tau
 kindOfM (TcTv (Tv u r (MK k))) = return k
@@ -1769,7 +1769,8 @@ no_solution sigma rho skoRho s = failM 1
 ----------------------------------------------------------------
 
 instance TyCh m => Subsumption m Rho Rho where
- morepoly s x y = f x y where
+ morepoly s x y = -- warnM [Ds "\n Rho1 = ",Dd x,Ds " Rho2 = ",Dd y] >>
+                  f x y where
   f (Rarrow a b) x = do{(m,n) <- unifyFun x; morepoly s b n; morepoly s m a }
   f x (Rarrow m n) = do{(a,b) <- unifyFun x; morepoly s b n; morepoly s m a }
   f (Rpair m n) (Rpair a b) = do{ morepoly s m a; morepoly s n b }
@@ -1779,6 +1780,7 @@ instance TyCh m => Subsumption m Rho Rho where
   f (Rsum m n) x = do{(a,b) <- checkSum x; morepoly s m a; morepoly s n b}
   f x (Rsum a b) = do{(m,n) <- checkSum x; morepoly s m a; morepoly s n b}
   f (Rtau x) (Rtau y) = (unify x y)
+
 
 ---------------------------------------------------
 
@@ -2139,8 +2141,8 @@ readTau n env (Ext x) =
      ; let lift0 t = TyCon' t
            lift1 t x = TyApp' (TyCon' t) x
            lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
-           inject s = failM 2 [Ds ("\nChrSeq literals are not types: #\""++s++"\".")]
-     ; new <- buildExt (show loc) (lift0,lift1,lift2,inject) x exts
+           lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
+     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
      ; readTau n env new
      }
 
@@ -2163,6 +2165,8 @@ tunit' = TyCon' "()"
 
 prodT' = TyCon' "(,)"
 prod' x y = TyApp' (TyApp' prodT' x) y
+
+tprods' [] = tunit'
 tprods' [t] = t
 tprods' (x:xs) = prod' x (tprods' xs)
 
@@ -2196,21 +2200,35 @@ parse_tag inject =
                   ; return (c:cs)
                   } <?> "identifier"
 
+extToPT (Pairx xs "") = tprods' xs
+extToPT (Listx [x] Nothing "") = list' x
+extToPT x = Ext x
+
+conName = lexeme (try construct)
+  where construct = do{ c <- upper
+                      ; cs <- many (identLetter tokenDef)
+                      ; return (c:cs)}
+                    <?> "Constructor name"
+
+
 simpletyp ::Parser PT
 simpletyp =
-       (fmap TyCon' constructorName)                   -- T
+       fmap extToPT (extP typN)                        -- #"abc"   #[x,y : zs]i  #(a,b,c)i
+   <|> (fmap TyCon' conName)                           -- T
    <|> (parse_tag (\ s -> TyCon' ("`"++s)))            -- `abc
    <|> (fmap TyVar' identifier)                        -- x
    <|> parseStar                                       -- * *1 *2
-   <|> (do { x <- extP typN; return(Ext x)})           -- #"abc"   #[x,y : zs]i   #4i   #(2+x)i    #(a,b,c)i
+   <|> fmap extToPT natP                               -- #2  4t (2+x)i
    <|> try (fmap TyCon'(symbol "()" <|> symbol "[]"))  -- () and []
    <|> try (do { x <- parens(symbol "->" <|>           -- (->) (+) (,) and (==)
                              symbol "+"  <|>
                              symbol ","  <|>
                              symbol "==")
                ; return(TyCon' ("("++x++")"))})
-   <|> try(do {ts <- parens(sepBy1 typN (symbol ","))  -- (t,t,t)
-              ; return (tprods' ts)})
+
+--   <|> try(do {ts <- parens(sepBy1 typN (symbol ","))  -- (t,t,t)
+--              ; return (tprods' ts)})
+
    <|> try(do {ts <- parens(sepBy1 typN (symbol "+"))  -- (t+t+t)
               ; return (tsums' ts)})
    <|> try(parens(do { t <- typN; symbol "::"; k <- typN; return(Kinded t k)}))
@@ -2751,13 +2769,54 @@ mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
   where vs = tvsTau tau
         new1 = [(x,tau)]
         k2 = kindOf tau
-        new2 = mgu (subPairs new1 ((k,k2):xs))
+        new2 = case k2 of
+                 Just k3 -> mgu (subPairs new1 ((k,k3):xs))
+                 Nothing -> mgu (subPairs new1 xs)
 
 compose (Left s1) (Left s2) = Left ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 compose _ (Right x) = Right x
 compose (Right y) _ = Right y
 
 o s1 s2 = [(u,subTau s1 t) | (u,t) <- s2] ++ s1
+
+-------------------------------------------------------
+-- mguB is monadic, but it never binds variables
+-- it may generate fresh variables but only to get the kind
+-- of a term.
+
+mguB :: TyCh m => [(Tau,Tau)] -> m(Either [(TcTv,Tau)] (String,Tau,Tau))
+mguB [] = return(Left [])
+mguB ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mguB xs
+
+mguB ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = mguBVar x tau xs
+mguB ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguBVar x tau xs
+
+mguB ((TyApp x y,TyApp a b):xs) = mguB ((x,a):(y,b):xs)
+mguB ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mguB xs -- TODO LEVEL
+mguB ((Star n,Star m):xs) | n==m = mguB xs
+mguB ((Karr x y,Karr a b):xs) = mguB ((x,a):(y,b):xs)
+mguB ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
+  if f==g then mguB (zip ys zs ++ xs) else return(Right("TyFun doesn't match",x,y))
+mguB ((x@(TyVar s k),y):xs) = return(Right("No TyVar in MGUB", x, y))
+mguB ((y,x@(TyVar s k)):xs) = return(Right("No TyVar in MGUB", x, y))
+mguB ((TySyn nm n fs as x,y):xs) = mguB ((x,y):xs)
+mguB ((y,TySyn nm n fs as x):xs) = mguB ((y,x):xs)
+
+mguB ((TcTv (x@(Tv n (Rigid _ _ _) _)),tau):xs) = return(Right("Rigid",TcTv x,tau))
+mguB ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = return(Right("Rigid",TcTv x,tau))
+
+mguB ((x,y):xs) = return(Right("No Match", x, y))
+
+mguBVar :: TyCh m => TcTv -> Tau -> [(Tau,Tau)] -> m(Either [(TcTv,Tau)] ([Char],Tau,Tau))
+mguBVar (x@(Tv _ _ (MK k))) tau xs | elem x (tvsTau tau) = return(Right("occurs check", TcTv x, tau))
+mguBVar (x@(Tv _ _ (MK k))) tau xs =
+  do { let new1 = [(x,tau)]
+     ; k2 <- kindOfM tau
+     ; new2 <- mguB (subPairs new1 ((k,k2):xs))
+     ; return(compose new2 (Left new1))
+     }
+
+
 
 ----------------------------------------------------------------------
 -- While Matching, One assumes only variables on the left can match
@@ -2977,6 +3036,7 @@ exhibitpar xs z@(TyApp (TyCon sx _ "[]" _) x) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon (Lx _) _ _ _) _) _) = exhibit xs z
+exhibitpar xs z@(TyApp (TyApp (TyApp (TyCon (Rx _) _ _ _) _) _) _) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon (Px _) _ _ _) _) _) = exhibit xs z
 exhibitpar xs z@(TyApp (TyCon (Nx _) _ _ _) _) = exhibit xs z
 exhibitpar xs  z | isRow z = exhibit xs z
@@ -3080,27 +3140,41 @@ instance NameStore d => Exhibit d Kind where
 
 -----------------------------------------------
 -- Exhibiting Syntactic Extensions in Tau types
-prescript "" = ""
-prescript _ = "#"
+
 postscript "" = ""
 postscript a = a
 
 exSynNat d (TyApp (TyCon (Nx(key,zero,succ)) _ c k) x)| succ == c = f d 1 x
-  where f d n (TyCon (Nx(key,zero,succ)) _ c k)| zero == c = (d,"#"++show n++ postscript key)
+  where f d n (TyCon (Nx(key,zero,succ)) _ c k)| zero == c = (d,show n++ postscript key)
         f d n (TyApp (TyCon (Nx(key,zero,succ)) _ c k) x)| succ == c = f d (n+1) x
         f d n v = let (d2,ans) = exhibit d v
-                  in (d2,"#("++show n++"+"++ans++ ")" ++ postscript key)
+                  in (d2,"("++show n++"+"++ans++ ")" ++ postscript key)
 exSynNat d v = (d,"Ill-formed Natural number extension: "++shtt v)
 
+
+exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) tag) x) y))
+    | c1==cons =(d2,"{" ++ ans ++ "}"++postscript key)
+  where (d2,ans) = f d t
+        f d (TyCon (Rx(key,nil,cons)) _ c k)| nil == c = (d,"")
+        f d (TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) tag) x) y)| c1==cons =
+          let (d0,tags) = exhibit d tag
+              (d1,elem) = exhibit d0 x
+          in case y of
+              (TyCon (Rx(_,nil,_)) _ c2 _) | c2==nil -> (d1,tags++"="++elem)
+              (TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) _) _) _)| c1==cons -> (d2,ans)
+                where (d2,tail) = f d1 y
+                      ans = tags++"="++elem ++ "," ++ tail
+              other -> (d2,tags++"="++elem++"; "++ans)
+                where (d2,ans) = exhibit d1 other
+        f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
+exSynRecord d t = (d,"2Ill-formed Record extension: "++sht t)
+
+
+
 exSynList d (t@(TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y))
-    | c1==cons =(d2,prescript key ++ "[" ++ ans ++ "]"++postscript key)
+    | c1==cons =(d2,"[" ++ ans ++ "]"++postscript key)
   where (d2,ans) = f d t
         f d (TyCon (Lx(key,nil,cons)) _ c k)| nil == c = (d,"")
-        {-
-        f d (TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x)
-                   (TyCon (Lx(_,nil,_)) _ c2 _)) | c1==cons && c2==nil
-                   = exhibit d x
-        -}
         f d (TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y)| c1==cons =
           case y of
            (TyCon (Lx(_,nil,_)) _ c2 _) | c2==nil -> exhibit d x
@@ -3115,7 +3189,7 @@ exSynList d (t@(TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y))
 exSynList d t = (d,"2Ill-formed List extension: "++sht t)
 
 exSynPair d (t@(TyApp (TyApp (TyCon (Px(key,pair)) _ c1 _) x) y))
-    | c1==pair =(d2,prescript key ++ "(" ++ x' ++","++ y' ++ ")"++postscript key)
+    | c1==pair =(d2,"(" ++ x' ++","++ y' ++ ")"++postscript key)
   where (d1,x') = exhibit d x
         (d2,y') = exhibit d1 y
 
@@ -3131,9 +3205,13 @@ polyLevel x = True
 
 -- Tau
 instance NameStore d => Exhibit d Tau where
-  exhibit xs (t@(TyCon (Nx(k,z,s)) _ c _)) | c==z = (xs,"#0" ++ postscript k)
-  exhibit xs (t@(TyCon (Lx(k,n,c)) _ s _)) | s==n = (xs,prescript k++"[]"++postscript k)
+  exhibit xs (t@(TyCon (Nx(k,z,s)) _ c _)) | c==z = (xs,"0" ++ postscript k)
+  exhibit xs (t@(TyCon (Lx(k,n,c)) _ s _)) | s==n = (xs,"[]"++postscript k)
   exhibit xs (t@(TyApp (TyApp (TyCon (Lx _) _ _ _) _) _)) = exSynList xs t
+
+  exhibit xs (t@(TyCon (Rx(k,n,c)) _ s _)) | s==n = (xs,"{}"++postscript k)
+  exhibit xs (t@(TyApp (TyApp (TyApp (TyCon (Rx _) _ _ _) _) _) _)) = exSynRecord xs t
+
   exhibit xs (t@(TyApp (TyApp (TyCon (Px _) _ _ _) _) _)) = exSynPair xs t
   exhibit xs (t@(TyApp (TyCon (Nx _) _ _ _) x)) = exSynNat xs t
   exhibit xs (t@(TyCon sx (LvSucc LvZero) s k)) = (xs,s)
@@ -3629,7 +3707,7 @@ mguStar beta ((TcTv a,tau):xs) = mguStarVar beta a tau xs
 mguStar beta ((tau,TcTv a):xs) = mguStarVar beta a tau xs
 mguStar beta ((TyApp x y,TyApp a b):xs) = mguStar beta ((x,a):(y,b):xs)
 mguStar beta ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mguStar beta xs -- TODO LEVEL
-mguStar beta ((Star n,Star m):xs) | n==m = mguStar beta xs
+mguStar beta ((Star n,Star m):xs) = unifyLevel n m >> mguStar beta xs
 mguStar beta ((Karr x y,Karr a b):xs) = mguStar beta ((x,a):(y,b):xs)
 mguStar beta ((TySyn nm n fs as x,y):xs) = mguStar beta ((x,y):xs)
 mguStar beta ((y,TySyn nm n fs as x):xs) = mguStar beta ((y,x):xs)
@@ -3689,3 +3767,6 @@ morepolyRR s x y = f x y where
   f (Rsum m n) x = do{(a,b) <- checkSum x; morepolySS s m a `thenStar` morepolySS s n b}
   f x (Rsum a b) = do{(m,n) <- checkSum x; morepolySS s m a `thenStar` morepolySS s n b}
   f (Rtau x) (Rtau y) = mguStar s [(x,y)]
+
+
+-- showKinds

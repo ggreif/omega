@@ -2,8 +2,8 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module Syntax where
 
@@ -101,6 +101,7 @@ data Lit
   | ChrSeq String
   | Tag String
   | Float Float
+  | CrossStage V
 
 data Inj = L | R deriving (Eq,Show)
 
@@ -161,7 +162,7 @@ data Dec
   | Flag Var Var
   | Reject String [Dec]
   | AddTheorem Loc [(Var,Maybe Exp)]
-  | Import String (Maybe[Var])
+  | Import String (Maybe[ ImportItem ])
   | TypeSyn Loc String Targs PT
   | TypeFun Loc String (Maybe PT) [([PT],PT)]
 
@@ -169,6 +170,11 @@ data Dec
 data Constr = Constr Loc Targs Var [PT] (Maybe [PPred])
 type Strata = Int
 data Program = Program [ Dec ]
+
+data ImportItem
+   = VarImport Var
+   | SyntaxImport String String
+ deriving Eq
 
 monadDec location e = Val location pat (Normal e) []
   where pat = Pcon (Global "Monad")
@@ -182,6 +188,7 @@ ppDeriv (Syntax Ox) = text ""
 ppDeriv (Syntax (Lx(nm,_,_))) = text ("List("++nm++")")
 ppDeriv (Syntax (Nx(nm,_,_))) = text ("Nat("++nm++")")
 ppDeriv (Syntax (Px(nm,_))) = text ("Pair("++nm++")")
+ppDeriv (Syntax (Rx(nm,_,_))) = text ("Record("++nm++")")
 
 instance Show Derivation where
   show x = render(ppDeriv x)
@@ -191,12 +198,14 @@ instance Eq Derivation where
  (Syntax (Lx(n,_,_))) == (Syntax (Lx(m,_,_))) = n==m
  (Syntax (Nx(n,_,_))) == (Syntax (Nx(m,_,_))) = n==m
  (Syntax (Px(n,_))) == (Syntax (Px(m,_))) = n==m
+ (Syntax (Rx(n,_,_))) == (Syntax (Rx(m,_,_))) = n==m
  _ == _ = False
 
 bindsDeriv (Syntax Ox) = id
 bindsDeriv (Syntax (Lx(nm,_,_))) = addBind (Global ("#L"++nm))
 bindsDeriv (Syntax (Nx(nm,_,_))) = addBind (Global ("#N"++nm))
 bindsDeriv (Syntax (Px(nm,_))) = addBind (Global ("#P"++nm))
+bindsDeriv (Syntax (Rx(nm,_,_))) = addBind (Global("#R"++nm))
 
 bindDs [] = id
 bindDs (d:ds) = bindsDeriv d . bindDs ds
@@ -207,7 +216,8 @@ extPrefix :: Extension a -> String
 extPrefix ((Listx xs _ s)) = "#L"
 extPrefix ((Numx n x s)) = "#N"
 extPrefix ((Pairx xs s)) = "#P"
-extPrefix ((Cseqx s)) = ""
+extPrefix ((Recordx xs _ s)) = "#R"
+-- extPrefix ((Cseqx s)) = ""
 
 --------------------------------------------------
 typeStrata = 0 :: Strata
@@ -424,6 +434,7 @@ consExp x y = App (App (Var (Global ":")) x) y
 nilExp = (Var (Global "[]"))
 
 listExp = foldr consExp nilExp
+listExp2 xs nil = foldr consExp nil xs
 
 unitExp = Lit Unit
 
@@ -543,12 +554,21 @@ parThread alpha f (s:ss) =
      ; (ss2,f3) <- parThread alpha f2 ss
      ; return(s2:ss2,f3)}
 
+-- When rebuilding the pattern (Monad return bind fail) we do not
+-- want to rename "return" "bind" or "fail" because the do syntax
+-- depends upon these things having exactly those names.
+
+monadCase (Global "Monad") (Par patExt expExt inc esc) = ans
+  where ans = Par newExt expExt inc esc
+        newExt var = return(var,ans)
+monadCase c x = x
+
 -- Walk over a Pat building extended (Par m)
 parPat :: Monad m => Pat -> Par m -> m(Pat,Par m)
 parPat (Plit x) f = return(Plit x,f)
 parPat (Pvar v) f = do { (v',g) <- varExt f v; return(Pvar v',g)}
 parPat (Pprod p1 p2) f =
-  do {(p1',f1) <- parPat p1 f
+  do { (p1',f1) <- parPat p1 f
      ; (p2',f2) <- parPat p2 f1
      ; return (Pprod p1' p2',f2)}
 parPat (Pwild) f = return(Pwild,f)
@@ -559,7 +579,7 @@ parPat (Paspat v p) f =
      ; (p',f2) <- parPat p f1
      ; return(Paspat v' p',f2)}
 parPat (Pcon c ps) f =
-  do { (ps',f2) <- parThread parPat f ps; return(Pcon c ps',f2)}
+  do { (ps',f2) <- parThread parPat (monadCase c f) ps; return(Pcon c ps',f2)}
 parPat (Pann p t) f = do {(p',f1) <- parPat p f; return (Pann p' t,f1)}
 parPat (ExtP p) f = do { (p',f') <- extThread parPat f p; return(ExtP p',f')}
 
@@ -846,14 +866,15 @@ instance Binds Dec where
   boundBy (Pat loc nm nms p) = FX [nm] [] [] [] []
   boundBy (TypeSig loc v t) =
         if isTyCon v then FX [] [ ] [] (proto v :(nub binds)) [v]
-                     else FX [proto v] [v] [] (nub binds) []
-     where (FX _ _ _ tbs tfs) = vars [] t emptyF
+                     else FX [proto v] (v:ff) [] (nub binds) []
+     where (FX _ _ ff tbs tfs) = vars [] t emptyF
            (binds,free) = partition typVar tfs
            isTyCon (Global (x:xs)) = isUpper x
            isTyCon _ = False
   boundBy (Prim l nm t) = FX [nm] [] [] [] constrs
      where (FX _ _ _ tbs tfs) = vars [] t emptyF
            (vs,constrs) = partition typVar tfs
+
   boundBy (Data l b 0 nm sig vs cs ders _) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (Constr loc skol c ts eqs) = c
   boundBy (GADT loc isProp nm knd cs ders _)| definesValueConstr knd  =
@@ -862,7 +883,7 @@ instance Binds Dec where
 
   boundBy (Data l b _ nm sig vs cs ders _) = bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (Constr loc skol c ts eqs) = c
-  boundBy (GADT loc isProp nm knd cs ders _) | definesValueConstr knd  =
+  boundBy (GADT loc isProp nm knd cs ders _) | not(definesValueConstr knd)  =
           bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (loc,c,free,preds,typ) = c
 
@@ -1176,13 +1197,14 @@ ppWhere ds = text "where" <+> PP.vcat (map ppDec ds)
 ppClause (_,ps,b@(Guarded _) ,ds) = PP.sep [PP.sep [PP.hsep (map ppPat ps), ppBody b], PP.nest 2 $ ppWhere ds]
 ppClause (_,ps,b ,ds) = PP.vcat [PP.sep [PP.sep (map ppPat ps) <+> text "=", ppBody b], PP.nest 2 $ ppWhere ds]
 
+ppImport (VarImport v) = ppVar v
+ppImport (SyntaxImport s y) = text ("deriving "++s++"("++y++")")
 
 ppDec :: Dec -> Doc
 ppDec dec =
   case dec of
     Fun _ v Nothing ms -> PP.vcat $ map ((ppVar v) <+>) (map ppClause ms)
-    Fun _ v (Just pt) ms -> text "*" <> ppVar v <+> text "::" <+> ppPT pt <+>
-                            PP.vcat (map ((ppVar v) <+>) (map ppClause ms))
+    Fun _ v (Just pt) ms -> PP.vcat ((text "*" <> ppVar v <+> text "::" <+> ppPT pt):(map ((ppVar v) <+>) (map ppClause ms)))
     --Fun _ v Nothing ms -> (ppVar v) <+> (text "=") <+> PP.vcat (map ppMatch ms)
     Val _ p b ds -> PP.vcat [PP.sep [ppPat p <+> text "=", PP.nest 2 $ ppBody b], PP.nest 2 $ ppWhere ds]
     Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> text "=" <+> ppPat p
@@ -1206,7 +1228,7 @@ ppDec dec =
                    --PP.braces (myPP PP.vcat Back (text ";") (map ppDec ds))]
                    (myPP PP.vcat Back PP.empty (map ppDec ds))]
     Import s Nothing -> text "import" <+> PP.doubleQuotes (text s)
-    Import s (Just vs) -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back (text ",") (map ppVar vs))
+    Import s (Just vs) -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back (text ",") (map ppImport vs))
     TypeSyn _ s args pt -> PP.sep [text ("type "++s) <+> PP.hsep (map ppArg args) <+> text "=",ppPT pt]
     TypeFun _ s Nothing ms -> PP.vcat [text s <> text "::Nothing",f1 ms]
     TypeFun _ s (Just pt) ms -> text (s++" :: ") <> ppPT pt <+> f1 ms
@@ -1292,6 +1314,7 @@ ppLit l =
     ChrSeq s -> text "#" <> text s
     Tag s -> text "`" <> text s
     Float f -> PP.float f
+    CrossStage v -> text "%constant"
 
 ppBody b =
   case b of
@@ -1384,6 +1407,7 @@ ppAll x = ppPT x
 
 ppPT x =
   case x of
+    PolyLevel ns x -> text "level " <> PP.sep (map text ns) <> text " . " <> ppPT x
     TyVar' s -> text s
     Rarrow' x y -> PP.hsep [ ppAll x, text "->", ppAll y]
     Karrow' x y -> PP.parens $ PP.hsep [ ppPT x, text "~>", ppPT y]

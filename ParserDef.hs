@@ -2,12 +2,12 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Apr 16 10:51:51 Pacific Daylight Time 2007
--- Omega Interpreter: version 1.4.1
+-- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Omega Interpreter: version 1.4.2
 
 module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
                 pattern,expr,decl,
-                bind,program,parse2,parse,parseString,parseFile
+                program,parse2,parse,parseString,parseFile
                 ,parseHandle, Handle
                 ,Command(..),pCommand
                 ,d1)
@@ -16,17 +16,20 @@ module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
 
+import System.IO.Unsafe(unsafePerformIO)
+
 import ParserAll
 import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,Dec(..),Constr(..),Stmt(..),Var(..)
-             ,listExp,patTuple,ifExp,mergeFun,consExp,expTuple
+             ,listExp,listExp2,patTuple,ifExp,mergeFun,consExp,expTuple
              ,binop,opList,var,freshE,swp,dvars,evars,
              typeStrata,kindStrata,emptyF,Vars(..),freeOfDec
-             ,monadDec,Derivation(..))
+             ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
+import List(partition)
 import Monads
 import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
-            ,ptsub,getFree,parse_tag,props,typingHelp,typing)
-import SyntaxExt(Extension(..),extP,SynExt(..),buildNat,)
+            ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName)
+import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
 import Auxillary(Loc(..),plistf,plist)
 import Char(isLower)
 ---------------------------------------------------------
@@ -34,7 +37,7 @@ import Char(isLower)
 loc p = SrcLoc (sourceLine p) (sourceColumn p)
 
 -------------------------------------------------------------
-
+-- Parsers exported, and those defined for easy testing
 
 go s = parse expr "" s
 g s = parse pattern "" s
@@ -44,6 +47,10 @@ pe = parse2 expr
 pd = parse2 decl
 
 pds = parse2(layout decl (return ""))
+
+p2 p s = case parse2 p s of
+  Left s -> putStrLn s
+  Right (x,left) -> putStrLn (show x) >> putStrLn left
 
 pa = parse2 arm
 
@@ -64,38 +71,12 @@ getBounds failf s =
         message = "\nIllegal bounds argument. Should be something like\n  "++
                   ":bounds narrowing 25\nUse :bounds with no argument to see legal bounds arguments.\n\n"
 
-
-
 getExp :: Monad m => String -> m Exp
 getExp s = case pe s of
              Left s -> fail s
              Right(exp,rest) -> return exp
 
-test1 =
-  do { Right (Program p) <- pprog "work.prg"
-     ; putStrLn(plistf f "\n*******" p "\n" "\n******")
-     }
- where f x = show x++"\n"++show(freeOfDec x)
-
-
-bind :: Parser (Either (Pat,Exp) Exp) -- useful inside the Command loop
-bind = (try (do { x <- pattern; symbol "<-"; e <- expr; return(Left(x,e))})) <|>
-       (fmap Right expr)
-pb = parse2 bind
-
 pprog x = parseFromFile program x
-
-{-
-test =
-  do { s <- readFile "test.hs"
-     ; case parse2 vdecl s of
-         Left message -> putStrLn message
-         Right(d,_)   -> putStrLn(show d)
-     }
-
-testd = ppTC(parseFile program "test.hs")
--}
-
 
 ------------------------------------------------------------------
 
@@ -130,7 +111,6 @@ data Literal
   | LChrSeq String
   | LTag String
   | LFloat Double
--- EXT -- | LNat Int
 
 -- Map the temporary type to the Exp type.
 lit2Exp (LInt n) = Lit(Int n)
@@ -139,61 +119,88 @@ lit2Exp (LString s) = listExp (map (Lit . Char) s)
 lit2Exp (LChrSeq s) = Lit(ChrSeq s)
 lit2Exp (LFloat n) = Lit(Float (doubleToFloat n))
 lit2Exp (LTag n) = Lit(Tag n)
--- EXT -- lit2Exp (LNat n) = buildNat (Var(Global "Z")) sExp n
 
 doubleToFloat :: Double -> Float
 doubleToFloat n = encodeFloat a b
   where (a,b) = decodeFloat n
+
 -----------------------------------------------------------
--- Terminals of the grammar. I.e. Literals variables and constructors
+-- Terminals of the grammar. I.e. Literals, variables, and constructors
 -----------------------------------------------------------
 
-literal :: (Parser Literal) -> (Literal -> a) -> Parser a
-literal num fromLit =
-    do{ v <- num <|> chrLiteral <|> strLiteral <|> atomLiteral
-      ; return $ fromLit v
-      }
-    <?> "literal"
+literal :: (Literal -> a) -> (Extension a -> a) -> Parser a
+literal fromLit fromExt = lexeme
+   (try (fmap fromLit floatLit) <|>  -- float before natP or 123.45 leaves the .45
+    try (fmap fromExt natP) <|>
+    try (fmap fromLit (chrSeqLit <|> chrLit <|> strLit <|> atomLit ))
+    <?> "literal")
 
-chrLiteral  = do{ c <- charLiteral; return (LChar c) }
-strLiteral  = do{ s <- stringLiteral; return(LString s) }
-numLiteral = do { n <- naturalOrFloat
-                ; case n of
-                    Left i -> return (LInt (fromInteger i))
-                    Right r -> return(LFloat r)
-                }
-atomLiteral = parse_tag LTag
+chrSeqLit = do{ satisfy ('#'==); s <- stringLiteral; return(LChrSeq s)}
+chrLit  = do{ c <- charLiteral; return (LChar c) }
+strLit  = do{ s <- stringLiteral; return(LString s) }
+atomLit = parse_tag LTag
+floatLit = do { n <- float; return(LFloat n)}
+
+literalP = literal lit2Pat extToPat
+literalE = literal lit2Exp extToExp
+
+numLiteral =
+  do { n <- naturalOrFloat
+     ; case n of
+         Left i -> return (LInt (fromInteger i))
+         Right r -> return(LFloat r) }
 
 signedNumLiteral =
   do { let neg (LInt i) = (LInt(negate i))
            neg (LFloat i) = (LFloat(negate i))
      ; sign <- (char '-' >> return neg)<|>(char '+' >> return id)<|>(return id)
      ; n <- numLiteral
-     ; return(sign n)
-     }
+     ; return(sign n)}
 
-
-constructorName = lexeme (try construct)
-  where construct = do{ c <- upper
-                      ; cs <- many (identLetter tokenDef)
-                      ; return (Global (c:cs))
-                      }
-                    <?> "Constructor name"
 
 terminal p inject = do { v <- p; return (inject v)}
 
 expvariable,expconstructor :: Parser Exp
 expvariable = terminal identifier (Var . Global)
-expconstructor = terminal constructorName (\ s -> Var s)
+expconstructor = terminal conName (\ s -> Var (Global s))
 
 patvariable :: Parser Pat
 patvariable = terminal identifier (Pvar . Global)
 
 name,constructor :: Parser Var
-constructor = terminal constructorName id
+constructor = terminal conName Global
 name = terminal identifier Global
 
 -----------------------------------------------------------
+-- Syntactic Extensions
+-- They come with or without suffixes. Without suffixes they are
+-- the standard kind of syntactic sugar
+-- type     no-suffix   with suffix
+-- Numbers  23          9i   (2+n)i
+-- Lists    [2,3]       [3,4]i  [3,4,5; x]i
+-- Tuples   (2,True)    (2,True,"x")i
+-- Records              {a=4, b=True}i  {a=4, b=True; r}i
+
+-- If a syntacitc extension has the empty string as a suffix
+-- turn it into the normal kind of syntactic sugar
+
+extToExp (Pairx xs "") = expTuple xs
+extToExp (Listx xs Nothing "") = listExp xs
+extToExp (Listx xs (Just tail) "") = listExp2 xs tail
+extToExp (Numx n Nothing "") = Lit(Int n)
+extToExp (Numx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
+extToExp x = ExtE x
+
+extToPat (Pairx xs "") =  patTuple xs
+extToPat (Listx xs Nothing "") =  pConsUp patNil xs
+extToPat (Listx xs (Just tail) "") =  pConsUp tail xs
+extToPat (Numx n Nothing "") = Plit(Int n)
+extToPat x = ExtP x
+
+patNil = Pcon (Global "[]") []
+pConsUp pnil [] = pnil
+pConsUp pnil (p:ps) = Pcon (Global ":") [p,pConsUp pnil ps]
+
 -------------------------------------------------------------
 -- Pattern parsing
 
@@ -222,10 +229,9 @@ infixPattern =
 
 simplePattern :: Parser Pat
 simplePattern =
-        literal numLiteral lit2Pat
-    <|> (do { p <- extP pattern; return(ExtP p)})
+        literalP
+    <|> (do { p <- extP pattern; return(extToPat p)})
     <|> (try (fmap lit2Pat (parens signedNumLiteral)))
-    <|> try(around pPat aroundInfo)
     <|> (do { symbol "_"; return Pwild})
     <|> (do { nm <- constructor; return(Pcon nm []) })
     <|> patvariable
@@ -241,6 +247,8 @@ pcon (Global "R") [p] = Psum R p
 pcon (Global "Ex") [p] = Pexists p
 pcon n ps = Pcon n ps
 
+resOp x = reservedOp x >> return ""
+
 constrOper = lexeme $ try $
     (do{ c <- char ':'
        ; cs <- many (opLetter tokenDef)
@@ -253,139 +261,33 @@ lit2Pat (LChar c) = Plit(Char c)
 lit2Pat (LChrSeq s) = Plit(ChrSeq s)
 lit2Pat (LFloat n) = Plit(Float(doubleToFloat n))
 lit2Pat (LTag x) = Plit(Tag x)
-lit2Pat (LString s) = pConsUp (map (Plit . Char) s)
--- EXT -- lit2Pat (LNat n) = buildNat (Pcon (Global "Z")[]) s n
---  where s x = Pcon (Global "S") [x]
-
------------------------------------------------------------------------
--- Parsing Lists and Tuples of any size. E.g. [1,2,3] (3,4,5)
-
-listExpression p fromListP =
-  do { xs <- bracketList (symbol "[") (symbol "]") (symbol ",") p
-     ; return (fromListP xs)
-     }
-
-parensORtuple p fromListP =
-  do { xs <- bracketList (symbol "(") (symbol ")") (symbol ",") p
-     ; return (fromListP xs)
-     }
-
-bracketList open close sep p =
-  do{ open; x <- sepBy p sep; close; return x }
-
-----------------------------------------------------------
--- Parsers for things that are bracketed. We make it table
--- driven so that it is easy to add new syntactic sugar.
+lit2Pat (LString s) = pConsUp patNil (map (Plit . Char) s)
 
 
-aroundInfo :: Monad m => [(Parser String, Parser String,Parser String,[Exp] -> m Exp,[Pat] -> m Pat)]
-aroundInfo =
-  [( symbol "(",  symbol ")",  symbol ","
-     , return . expTuple, return . patTuple)
-  ,( try (symbol "["),  symbol "]",  symbol ","
-     , return . listExp,  return . pConsUp)
-  ,( resOp "[|", resOp "|]", symbol ","
-     , codeExp, codePat)
--- EXT ,( try(resOp "#["), symbol "]", symbol ","
---   , return . (foldr cAdd cEmpty),return . vecUp )
---  ,( try(resOp "#("), symbol ")", symbol ","
---   , prodTuple,patTuple2 )
-  ]
-
-{- EXT
-prodTuple [] = fail "No empty tuples: #()"
-prodTuple [p] = return (n_plus_x p)
-prodTuple [x,y] = return (prodPair x y)
-prodTuple (x:xs) = do { y <- prodTuple xs; return(prodPair x y)}
-
-patTuple2 [] = fail "No empty tuples: #()"
-patTuple2 [p] = return p
-patTuple2 [x,y] = return (prodp x y)
-patTuple2 (x:xs) = do { y <- patTuple2 xs; return(prodp x y)}
-
-prodPair x y = (App (App (Var (Global "Pair")) x) y)
-
-prodp x y = Pcon (Global "Pair") [x,y]
-
--}
-
-resOp x = reservedOp x >> return ""
-
-around pf [x] = pf x
-around pf (x:xs) = pf x <|> around pf xs
-
-pExp (open,close,sep,expf,patf) =
-     (try (open >> sep >> close >> return(Var (Global "(,)")))) <|>
-     (do { open; xs <- sepBy expr sep; close; expf xs})
-
-pPat (open,close,sep,expf,patf) =
-     do { open; xs <- sepBy pattern sep; close; patf xs}
-
-
-cAdd x y = (App (App (Var (Global "CAdd")) x) y)
-cEmpty = (Var (Global "CEmpty"))
-
-vecUp [] = Pcon (Global "CEmpty") []
-vecUp (p:ps) = Pcon (Global "CAdd") [p,vecUp ps]
-
-codeExp [] = fail "Code brackets cannot be empty."
-codeExp [x] = return(Bracket x)
-codeExp xs = fail ("Code brackets surround only one expression.\n  "++
-                   plist "[|" xs "," "|]")
-codePat ps = fail ("Code brackets cannot appear in patterns.\n  "++
-                   plist "[|" ps "," "|]")
-
-pConsUp [] = Pcon (Global "[]") []
-pConsUp (p:ps) = Pcon (Global ":") [p,pConsUp ps]
-
-------------------------------------------------------
-
-
-{- EXT
-hashLiteral = do { char '#';
-                   ; (do {s <- stringLiteral; return(LChrSeq s)}) <|>
-                     (do {n <- natural; return(LNat (fromInteger n))})}
-
-natLiteral :: (Var -> a) -> a -> (a -> a) -> Parser a
-natLiteral var z s = do{ symbol "#"; nplus }
-  where -- npat = do { n <- natural; return(buildNat z s n)}
-        -- This form handled in literals. See hashLiteral
-        nplus = parens(plus name natural f <|> plus natural name g)
-        plus p q f = do { x <- try p; symbol "+"; n <- q; f x n}
-        f name n = return(buildNat (var name) s n)
-        g n name = return(buildNat (var name) s n)
-
-
-natExp :: Parser Exp
-natExp = natLiteral Var z sExp
-  where z = (Var(Global "Z"))
-
-
-
-natPat :: Parser Pat
-natPat = natLiteral Pvar z s
-  where z = Pcon (Global "Z") []
-        s x = Pcon (Global "S") [x]
-
-
-sExp x = App (Var (Global "S")) x
-
-n_plus_x (App (App (Var (Global "+"))
-                   (Lit (Int n)))
-              (x@(Var (Global name)))) = buildNat x sExp n
-n_plus_x (App (App (Var (Global "+"))
-                   (x@(Var (Global name))))
-               (Lit (Int n))) = buildNat x sExp n
-n_plus_x term = term
-
--}
 -----------------------------------------------------------
 -- Expressions
 -----------------------------------------------------------
 
+-- simple expressions are one token, or surrounded by bracket-like things
+simpleExpression :: Parser Exp
+simpleExpression =
+        literalE                  -- "abc"   23.5   'x'   `d  123  #34 45n
+    <|> code                      -- [| 3 + x |]
+    <|> try escapeExp             -- $x  $(f 3)
+    <|> pairOper                  -- (,)
+    <|> section                   -- (+)
+    <|> caseExpression
+    <|> sumExpression             -- like (L x) or (R 3), Must precede expconstructor
+    <|> expconstructor            -- Node Cons
+    <|> fmap extToExp (extP expr) -- Syntax extensions, like
+                                  -- (2,True)p [3,4,5]l {`a=5,`b=True}r
+                                  -- see literalE (above) for things like #4 and 5i
+    <|> expvariable               -- names come last
+    <?> "simple expression"
+
+
 expr :: Parser Exp
-expr =
-        lambdaExpression
+expr =  lambdaExpression
     <|> letExpression
     <|> circExpression
     <|> ifExpression
@@ -401,6 +303,13 @@ expr =
     <|> infixExpression     --names last
     <?> "expression"
 
+-- 123  #34 45n
+num = lexeme(try (do { n <- natP; return(extToExp n)}))
+
+-- (,)
+pairOper = (try (string "(,)" >> return(Var (Global "(,)"))))
+
+
 checkExp =
     do { reserved "check"
        ; e <- expr
@@ -412,11 +321,6 @@ lazyExp =
        ; e <- expr
        ; return(Lazy e)
        }
-
-runExp  =
-    do { reserved "run"
-       ; e <- expr
-       ; return (Run e) }
 
 existExp =
     do { reserved "Ex"
@@ -451,7 +355,6 @@ ifExpression =
       ; return $ ifExp (loc l1,loc l2) e1 e2 e3
       }
 
-
 letExpression =
     do{ reserved "let"
       ; decls <- layout decl (reserved "in")
@@ -482,7 +385,6 @@ bodyP :: Parser a -> Parser (Body Exp)
 bodyP equal = (fmap Guarded (many1 guard)) <|>
               (equal >> ((reserved "unreachable" >> return Unreachable) <|>
                          (fmap Normal expr)))
-
    where guard = do { try (symbol "|")
                     ; x <- expr
                     ; equal
@@ -503,6 +405,49 @@ arm =
       ; ds <- whereClause
       ; return $ (loc pos,pat,e,ds)
       }
+
+sumExpression =
+  do { inj <- (reserved "R" >> return True) <|>
+              (reserved "L" >> return False)
+     ; x <- expr
+     ; let f True x = Sum R x
+           f False x = Sum L x
+     ; return (f inj x)
+     }
+
+section = try(do { symbol "("
+                 ; z <- oper
+                 ; symbol ")"
+                 ; return (Lam [Pvar (Global "x"),Pvar (Global "y")]
+                               (App (App (Var (Global z))
+                                    (Var (Global "x")))
+                                         (Var (Global "y"))) [])
+                 })
+
+
+draw = letD <|> bind <|> exp where
+ letD = do { pos <- getPosition
+           ; reserved "let"
+           ; decls <- layout decl (return ())
+           ; xs <- mergeFun decls
+           ; return(LetSt (loc pos) xs) }
+ bind = try $
+        do { pos <- getPosition
+           ; p <- pattern
+           ; symbol "<-"
+           ; e<-expr
+           ; return(BindSt (loc pos) p e)}
+ exp  = do { pos <- getPosition; e <- expr
+           ; return(NoBindSt (loc pos) e)}
+
+doexpr =
+  do { reserved "do"
+     ; zs <- layout draw (return ())
+     ; return(Do zs)
+     }
+
+----------------------------------------------------
+-- Infix operators
 
 {- The actual opList function is defined in Syntax
 opList prefix op left right none =
@@ -549,86 +494,44 @@ buildPrefix "#-" x = App (Var (Global "negateFloat")) x
 buildPrefix name x = App (Var (Global name)) x
 
 infixExpression =
-    buildExpressionParser ([[Infix p1 AssocLeft]] ++ operators) applyExpression
-      where p1 = try (do { whiteSpace; (char '`');
-                                v <- name;
-                                (char '`');whiteSpace;
-                                return (\x y -> App (App (Var  v) x) y) })
-                             <?> "quoted infix operator"
-
-
+    buildExpressionParser ([[Infix quotedInfix AssocLeft]] ++ operators) applyExpression
 
 applyExpression =
     do{ exprs <- many1 simpleExpression
       ; return (foldl1 App exprs)
       }
 
-simpleExpression :: Parser Exp
-simpleExpression =
-        literal numLiteral lit2Exp
-    <|> try(around pExp aroundInfo) -- things like [1,2,3] (1,2) [| x+1 |] (,)
-    <|> try escapeExp
-    <|> section
-    <|> caseExpression
-    <|> sumExpression -- like (L x) or (R 3), Must precede expconstructor
-    <|> try escapeExp
-    <|> expconstructor
-    <|> (do { e <- extP expr; return(ExtE e)})
-    <|> expvariable            -- names last
-    <?> "simple expression"
+-- `mem`  `elem`
+quotedInfix = try
+ ((do { whiteSpace
+      ; (char '`')
+      ; v <- name
+      ; (char '`')
+      ; whiteSpace;
+      ; return (\x y -> App (App (Var  v) x) y) }) <?> "quoted infix operator")
 
 -----------------------------------------------------------------------
+-- Syntax for building code
 
-escapeExp =
-     lexeme (do { nm <- try (prefixIdentifier '$')  -- $x where x is a variable
-                ; return(Escape(Var (Global nm)))})
- <|> (do { char '$'; char '('        -- $( ... ) where the $ and ( must be adjacent
-         ; whiteSpace
-         ; e <- expr; symbol ")"
-         ; return (Escape e) })
+escapeExp = escVar <|> escParen  where
+  escVar = do { nm <- (prefixIdentifier '$')  -- $x
+              ; return(Escape(Var (Global nm)))}
+  escParen = do { char '$'; char '('          -- $( ... )
+                ; whiteSpace                  -- where the $ and ( must be adjacent
+                ; e <- expr; symbol ")"
+                ; return (Escape e) }
 
-
-bracketExp =
-    do { reservedOp "[|"
+runExp  =
+    do { reserved "run"
        ; e <- expr
-       ; reservedOp "|]"
-       ; return (Bracket e) }
+       ; return (Run e) }
 
-
-sumExpression =
-  do { inj <- ((reserved "R" >> return True) <|> (reserved "L" >> return False))
-     ; x <- expr
-     ; let f True x = Sum R x
-           f False x = Sum L x
-     ; return (f inj x)
-     }
-
-section = try(do { symbol "("
-                 ; z <- oper
-                 ; symbol ")"
-                 ; return (Lam [Pvar (Global "x"),Pvar (Global "y")]
-                               (App (App (Var (Global z)) (Var (Global "x"))) (Var (Global "y"))) [])
-                 })
-
-
-draw =
- (do { pos <- getPosition
-     ; reserved "let"
-     ; decls <- layout decl (return ())
-     ; xs <- mergeFun decls
-     ; return(LetSt (loc pos) xs) }) <|>
- (try ( do { pos <- getPosition
-           ; p <- pattern
-           ; symbol "<-"
-           ; e<-expr
-           ; return(BindSt (loc pos) p e)})) <|>
- (do { pos <- getPosition; e <- expr; return(NoBindSt (loc pos) e)})
-
-doexpr =
-  do { reserved "do"
-     ; zs <- layout draw (return ())
-     ; return(Do zs)
-     }
+-- [| 3 + x |]
+code =
+  do { resOp "[|"
+     ; e <- expr
+     ; resOp "|]"
+     ; return(Bracket e)}
 
 -------------------------------------------------------------------------
 ----------------- Read eval printloop commands ------------
@@ -640,6 +543,13 @@ data Command =
   | ExecCom Exp              -- x + 4
   | EmptyCom
 
+
+instance Show Command where
+  show (ColonCom t x) = ":"++t++" "++x
+  show (LetCom d) = "let "++show d
+  show (DrawCom p e) = show p++" <- "++show e
+  show (ExecCom e) = show e
+  show EmptyCom = ""
 
 pCommand :: Parser Command    -- Parse a command
 pCommand =
@@ -659,7 +569,7 @@ pCommand =
 
 
 ----------------------------------------------------------------
--- the Parser for the haskell subset
+-- the Parser for Omega programs
 ----------------------------------------------------------------
 
 program =
@@ -700,9 +610,8 @@ theorem =
      ; term <- (try (do {reservedOp "="; e <- expr; return(Just e)})) <|> (return Nothing)
      ; return(v,term)}
 
-testSym = lexeme (string "##test")
 testDec =
-  do { testSym
+  do { lexeme (string "##test")
      ; s <- stringLiteral
      ; ds <- layout decl (return ())
      ; xs <- mergeFun ds
@@ -722,8 +631,11 @@ vdecl =
     ; ps <- many1 simplePattern
     ; e <- bodyP (reservedOp "=")
     ; ds <- whereClause
-    ; toDecl (loc pos) (ps,e,ds)
-    }
+    ; toDecl (loc pos) (ps,e,ds) }
+  where toDecl pos ((Pvar f : (args @ (p:ps))),body,ws) = return(Fun pos f Nothing [(pos,args,body,ws)])
+        toDecl pos ([p],b,ws) = return(Val pos p b ws)
+        toDecl pos ((Pcon c []):ps,b,ws) = return(Val pos (Pcon c ps) b ws)
+        toDecl pos (ps,b,ws) = fail ("Illegal patterns to start value decl:" ++(show ps))
 
 importDec =
   do { reserved "import"
@@ -731,18 +643,25 @@ importDec =
      ; args <- (fmap Just (parens (sepBy thing comma))) <|> (return Nothing)
      ; return(Import filename args)
      }
-  where thing = (name <|> (do { x <- parens operator;return(Global x)}))
+  where thing = (deriv <|> var <|> oper )
+        var =  do { n <- name; return(VarImport n)}
+        oper = do { x <- parens operator; return(VarImport (Global x))}
+        deriv = do { try(symbol "syntax")
+                   ; Global n <- name
+                   ; Global tag <- parens (name)
+                   ; return (SyntaxImport n tag)}
+
 
 typeSig =
    do{ pos <- getPosition
-     ; n <- (constructorName <|> name)
+     ; n <- (fmap Global conName <|> name)
      ; (levels,t) <- typing
      ; return $ TypeSig (loc pos) n (polyLevel levels t) }
 
 typeSyn =
    do{ pos <- getPosition
      ; reserved "type"
-     ; Global n <- constructorName
+     ; n <- conName
      ; args <- targs
      ; reservedOp "="
      ; t <- typN
@@ -771,11 +690,11 @@ primDec =
 patterndecl =
   do { pos <- getPosition
      ; symbol "pattern"
-     ; c <- constructorName
+     ; c <- conName
      ; xs <- many name
      ; reservedOp "="
      ; p <- pattern
-     ; return(Pat (loc pos) c xs p)}
+     ; return(Pat (loc pos) (Global c) xs p)}
 
 monaddecl =
    do{ pos <- getPosition
@@ -816,16 +735,14 @@ explicit b pos tname =
      ; return(gadt)
      }
 
-ww = parse2 typing ":: level n . *n where Zero :: Natural"
-
 explicitConstr =
   do { l <- getPosition
-     ; c <- constructorName
+     ; c <- conName
      ; (levels,prefix,preds,body) <- typingHelp  -- ### TODO LEVEL
      ; let format Nothing = []
            format (Just(q,kindings)) = map g kindings
            g (nm,kind,quant) = (nm,kind)
-     ; return(loc l,c,format prefix,preds,body)
+     ; return(loc l,Global c,format prefix,preds,body)
      }
 
 
@@ -843,20 +760,21 @@ derive =
   <|> (return [])
 
 extension =
-  do { name <- symbol "List" <|> symbol "Nat" <|> symbol "Pair"
-     ; arg <- parens(many lower)
+  do { name <- symbol "List" <|> symbol "Nat" <|> symbol "Pair" <|> symbol "Record"
+     ; arg <- parens(many (lower <|> char '\''))
      ; case name of
         "List" -> return(Syntax(Lx(arg,"","")))
         "Nat" -> return(Syntax(Nx(arg,"","")))
-        "Pair" -> return(Syntax(Px(arg,"")))}
+        "Pair" -> return(Syntax(Px(arg,"")))
+        "Record" -> return(Syntax(Rx(arg,"",""))) }
 
 constrdec =
  do{ pos <- getPosition
    ; exists <- forallP <|> (return [])
-   ; c <- constructorName
+   ; c <- conName
    ; domain <- many simpletyp
    ; eqs <- possible (reserved "where" >> sepBy1 proposition (symbol ","))
-   ; return (Constr (loc pos) exists c domain eqs)
+   ; return (Constr (loc pos) exists (Global c) domain eqs)
    }
 
 forallP =
@@ -866,148 +784,19 @@ forallP =
     ; return ns
     }
 
-
-toDecl pos ((Pvar f : (args @ (p:ps))),body,ws) = return(Fun pos f Nothing [(pos,args,body,ws)])
-toDecl pos ([p],b,ws) = return(Val pos p b ws)
-toDecl pos (ps,b,ws) = fail ("Illegal patterns to start value decl:" ++(show ps))
-
-
--------------------------------------------------------------
--- Unused stuff from the cannabalized parser
-{-
-protodecl =
-  do { nm <- name; symbol "::"; t <- typ; return(Proto nm t) }
-
-anddecl =
-  do { reserved "and"; return (Bndgrp[]) }
-
-splicedecl =
-  do { reserved "splice"
-     ; e <- expr
-     ; return(Splice e)
-     }
-
-
-patdecl =
-  do{ pos <- getPosition
-    ; pat <-  pattern
-    ; e <- bodyP (reservedOp "=")
-    ; ds <- whereClause
-    ; return (Val (loc pos) pat e ds)
-    }
-
-fundecl =
-  do{ pos <- getPosition
-    ; ms <- many1 matchp
-    ; return (Fun (loc pos) (fst(head ms)) Nothing (map snd ms))
-    }
-
-matchp =
-  do { pos <- getPosition
-     ; f <- name
-     ; ps <- many1 pattern
-     ; e <- bodyP (reservedOp "=")
-     ; ds <- whereClause
-     ; return (f,(loc pos,ps,e,ds))
-     }
-
-
-
------------------------------------------------------------
--- Expressions
------------------------------------------------------------
--- Uused expressions like do and comprehensions
-
-
------------------------------------------------------------
--- Infix expression
------------------------------------------------------------
-
-
-
-reifier = (reserved "line" >> return Line) <|>
-          (reserved "type" >> terminal name Typeof) <|>
-          (reserved "rep" >> terminal name Repof)
-
-
-
-
-codeExpression = (bracket "[|" "|]" Exclam expr) <|>
-                 (bracket "<." ".>" Period pattern) <|>
-                 (bracket "<$" "$>" Dollar decl) <|>
-                 (bracket "<*" "*>" Times typ) <|>
-                 (keyBr "e" Exclam expr) <|>
-                 (keyBr "d" Dollar decl) <|>
-                 (keyBr "p" Period pattern) <|>
-                 (keyBr "t" Times typ) <|>
-                 (keyBr "m" Match arm) <|>
-                 (keyBr "c" Clause (fmap snd matchp))
-  where bracket l r inject p =
-           try(between(reservedOp l)(reservedOp r)(fmap (Brack . inject) p))
-        keyBr key inject p =
-           try(between(reserved ("["++key++"|"))(symbol "|]")(fmap (Brack . inject) p))
-
-
-
-escExpression =
-  (do { symbol "$"
-      ; x <- expvariable <|> (parens expr) <|> codeExpression
-      ; return(Esc x) })
-
-
-
--------------------------------
--- Try and parse things that are surrounded by []'s like:
--- []
--- [1,2,3]
--- [ x | c <- y ]
--- [1..] or [1,2..] or [1..3] or [1,2..6]
-
--- expList (explicit List) is a finite state machine
-expList = do { try open; one }
-  where open = symbol "["
-        close = symbol "]"
-        bar = symbol "|"
-        dots = symbol ".."
-        one   = (do { try close; return nilE}) <|>
-                (do { e <- expr; two e })
-        two e = (do { try close; return(listExp[e])})
-            <|> (do { try comma; e2 <- expr; three e e2 })
-            <|> (do { try dots; four e })
-            <|> (do { try bar; ss <- rest comma draw []
-                    ; return(Comp(ss ++ [ NoBindSt e ]))})
-        three a b = (do { try comma; es <- rest comma expr [b,a]
-                        ; return(listExp es)})
-                <|> (do { try dots
-                        ; (try close >> return(ArithSeq(FromThen a b))) <|>
-                          (do { c <- expr; close
-                              ; return(ArithSeq(FromThenTo a b c))})
-                        })
-                <|> (try close >> return(listExp[a,b]))
-        four e = (try close >> return(ArithSeq(From e)))
-             <|> (do{ e2 <- expr; close; return(ArithSeq(FromTo e e2))})
-
--- look for:  p sep p sep p ]
-rest sep p xs =
-  (do { try (symbol "]"); return(reverse xs)}) <|>
-  (do { x <- p
-      ; (try (symbol "]") >> return(reverse(x:xs))) <|>
-        (do { sep; rest sep p (x:xs)})
-      })
-
-
---h ::  Int -> IO (Either ParseError [Dec])
-pf x = do { z <- parseFromFile program x
-          ; putStrLn (show z)
-          }
-
-h x = pf "testParser.tst"
-
-m () = parse2 expr "let x=4\n    f y = 3\n     in 3"
-
--}
-
 ------------------------------------------------------------------------
+-- Unit Tests
+------------------------------------------------------------------------
+testP p s =
+  case parse2 (do { ans <- p; whiteSpace; return ans}) s of
+   Left err -> Left("\n'"++s++"'"++" causes error\n  "++err)
+   Right (exp,[]) -> Right exp
+   Right (exp,cs) -> Left("\n"++s++"\n   leaves postfix: "++cs)
+
+testE = testP expr
+testD = testP decl
+testL = testP (many (literal lit2Exp extToExp))
+
 testdata = concat
         ["data Rep e t"
         ,"  = Int (Equal t Int)"
@@ -1019,106 +808,66 @@ testdata = concat
         ,"  | forall f . Univ (forall x . (Rep (P x e) (f x))) (Equal t (Poly f))"
         ]
 
-(Right(d1,_)) = pd testdata
+d1 = testD testdata
+d2 = testD "f = \\ n -> if n==0 then True else n * (fact (n-1))"
+d4 = testD "test :: forall a b . a -> (a,b)"
+d5 = testD "f x = do { y <- Just 3; return(y + x) }"
+d7 = testD "data Var:: *0 ~> *0 ~> *0 where \n  Z:: Var (w,x) w\n  S:: Var w x -> Var (y,w) x"
+d8 = testD "data Exp:: *0 ~> *0 ~> *0 ~> *0 ~> *0 where\n Const:: t -> Exp past now future t\n Run:: (forall n . Exp past now (n,future) (Cd n future t)) -> Exp past now future t"
+d9 = testD
+  ("data P1:: Set ~> *0 ~> *0 where\n"++
+   "  Pvar1 :: Label a -> P1 Univ t\n"++
+   "  Pnil1 :: P1 (Plus Univ (Empty `Cons)) [t]")
+d10 = testD "Bind :: Lub i j k => M i a -> (a -> M j b) -> M k b"
+d11 = testD "data L:: *0 where\n N :: L\n C :: Int -> L -> L\n   deriving List(i)"
+d12 = testD $
+       "data Nat :: *1 where\n"++
+       "  Z :: Nat\n"++
+       "  S :: Nat ~> Nat\n"++
+       " deriving List(b)"
+d13 = testD "data Natural:: level n . *n where   Zero :: Natural"
 
 
-d2 = pd "f = \\ n -> if n==0 then True else n * (fact (n-1))"
+p3 = testP program "id :: forall (k:: *1) (a:: *) . a -> a\nid x = x"
+p4 = testP program "v (f,_) = V f\nv r = Lam r e self"
+p5 = testP program ("le:: Nat ~> Boolean\n"++
+                     "{le Z (S n)} = T")
 
-d3 = pd "v (f,_) = V f\n\ngam r e = Lam r e self"
+e1 = testE "do { y <- tim; x <- poly ; x }"
+e2 = testE "do { y <- Just 3; return(y + x) }"
+e3 = testE "let {(u,v) = f x;(a,b) = g v } in u"
+b1 = testE "[| \\ x -> x |]"
+b2 = testE "[| \\ x -> x + 1 |]"
+b3 = testE "\\ f -> [| \\ y -> f y |]"
+b4 = testE "\\ f -> [| \\ y -> $f y |]"
+b5 = testE "\\ f -> [| \\ y -> \\ z -> $f y |]"
+b6 = testE "\\ f -> [| \\y -> $( (\\w -> [| $f $w |])   ( [| y + 1|] )) |]"
+b7 = testE "\\ f -> [| \\y -> $( (\\z -> [| \\ q -> $f $z |])   ( [| y |] )) |]"
+b8 = testE "let f x = \\ e -> if x==0 then e else [| let n = x in $(f (x-1) [| n + $e |]) |] in f 2"
 
-d4 = pd "test :: forall a b . a -> (a,b)"
+b9 = testE " {\"a\"=3,\"b\"=5}l "
+b10 = testE "\\ r -> { \"a\" =4; r}l "
+b11 = testE " { `a=5, `b=True}a "
+b12 = testE "( #3, 4n, \\ x -> (2+x)n )"
+b13 = testE "3.4 #+ 4.5"
 
-Right(e1,_) = pe "do { y <- tim; x <- poly ; x }"
+d14 = testD "g {a=x; r}l = (a,x,r)"
+d15 = testD "(C \"a\" x r) = (\"z\",x,r)"
+d16 = testD "f [x; r]i = (x,r)"
 
-prim1 :: Dec
-Right(prim1,_) = pd "f x = do { y <- Just 3; return(y + x) }"
+ls = testL " #\"abc\"  \"tim\" 'x' `d 123.4"
+ls2 = parse2 (many (extP expr))
+        " 123 #123 123n [x,y] [x,y;z] [a,b]l [a,b; c]l "
 
-Right(do1,_) = pe "do { y <- Just 3; return(y + x) }"
+dectests = mapM ok [d1,d2,d4,d5,d7,d8,d9,d10,d11,d12,d13,d14,d15,d16]
+progtests = mapM ok [p3,p4,p5]
+exptests = mapM ok [e1,e2,e3,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13]
+littests = mapM ok [ls]
 
-Just e2 = (getExp "let {(u,v) = f x;(a,b) = g v } in u")
-gete x = unJust(getExp x) where unJust(Just z) = z
+tests = dectests >> progtests >> exptests >> littests
 
-
-transvar :: Int -> [(Var,(Int,Int))] -> Var -> Exp
-transvar n sigma s =
-  case (n,lookup s sigma) of
-    (0,Nothing) -> Var s
-    (1,Nothing) -> App (var "Lit") (Var s)
-    (0,Just(0,delta)) -> lift s sigma (Var s)
-    (1,Just(0,delta)) -> App (var "Lit") (Var s)
-    (0,Just(1,delta)) -> error ("Var "++show s++" used too early")
-    (1,Just(1,delta)) -> App (var "V") (deBruijn delta)
- where deBruijn 0 = var "z"
-       deBruijn n = App (var "s") (deBruijn (n-1))
-       lift s [] exp = exp
-       lift s ((x,(lev,delta)):zs) exp =
-           if s==x then exp
-                   else if lev <= 0 then lift s zs exp
-                                    else lift s zs (App (var "liftExp") exp)
-
-
-extend s n zs = (s,(n,0)) : map f zs  where f(s,(lev,c)) = (s,(lev,c+1))
-
-test s = case getExp s of
-           Just e -> trans 0 [] e
-           Nothing -> error ("Parsing error for: "++s)
-
-trans 0 sigma x =
-  case x of
-    Var s -> transvar 0 sigma s
-    Lit v -> Lit v
-    Lam [Pvar s] b xs -> Lam [Pvar s] (trans 0 (extend s 0 sigma) b) xs
-    App x y -> App (trans 0 sigma x) (trans 0 sigma y)
-    Prod x y -> Prod (trans 0 sigma x) (trans 0 sigma y)
-    Let [Val loc (Pvar s) (Normal e) []] b ->
-      Let [Val loc (Pvar s) (Normal (trans 0 sigma e)) []] (trans 0 (extend s 0 sigma) b)
-    Let [Fun l1 nm h1 [(l2,[Pvar x],Normal e,[])]] w ->
-      Let [Fun l1 nm h1 [(l2,[Pvar x],Normal (trans 0 (extend x 0 (extend nm 0 sigma)) e),[])]]
-          (trans 0 (extend nm 0 sigma) w)
-    Case x [(l1,Pcon (Global "True") [],Normal y,[]),(l2,Pcon (Global "False") [],Normal z,[])] ->
-       Case (trans 0 sigma x)
-           [(l1,Pcon (Global "True") [],Normal (trans 0 sigma y),[])
-           ,(l2,Pcon (Global "False") [],Normal(trans 0 sigma z),[])]
-
-    Bracket e -> trans 1 sigma e
-    other -> error ("No translation at level 0 for "++(show x))
-trans 1 sigma x =
-  case x of
-    Var s -> transvar 1 sigma s
-    Lit (Int n) -> lit x
-    Lit (Char c) -> lit x
-    Lit Unit -> App (var "Unit") (var "self")
-    Lam [Pvar s] b  xs -> lam (trans 1 (extend s 1 sigma) b)
-    App (App (Var (Global "+")) x) y -> plus (trans 1 sigma x) (trans 1 sigma y)
-    App (App (Var (Global "*")) x) y -> times (trans 1 sigma x) (trans 1 sigma y)
-    App x y -> app (trans 1 sigma x) (trans 1 sigma y)
-    Prod x y -> prod (trans 1 sigma x) (trans 1 sigma y)
-    Let [Val loc (Pvar s) (Normal e) []] b -> mkLet (trans 1 sigma e) (trans 1 (extend s 1 sigma) b)
-    Case x [(_,Pcon (Global "True") _,Normal y,_),(_,Pcon (Global "False") _,Normal z,_)] ->
-        mkif (trans 1 sigma x) (trans 1 sigma y) (trans 1 sigma z)
-    --Escape(Var s) ->
-    Escape e -> trans 0 sigma e
-    other -> error ("No translation at level 1 for "++(show x))
- where lit x = apply[var "Lit", x]
-       app x y = apply [var "App",x,y]
-       lam body = apply [var "Abs",body,self]
-       mkLet e b = apply [var "Let",e,b]
-       mkif x y z = apply[var "Comp",var "==",x,y,z]
-       prod x y = apply [var "Pair",x,y,self]
-       plus x y = apply [var "Arith",var "+",x,y,self]
-       times x y = apply [var "Arith",var "*",x,y,self]
-       apply [x] = x
-       apply (f:x:xs) = apply (App f x : xs)
-       self = var "self"
-
-b1 = test "[| \\ x -> x |]"
-b2 = test "[| \\ x -> x + 1 |]"
-b3 = test "\\ f -> [| \\ y -> f y |]"
-b4 = test "\\ f -> [| \\ y -> $f y |]"
-b5 = test "\\ f -> [| \\ y -> \\ z -> $f y |]"
-b6 = test "\\ f -> [| \\y -> $( (\\w -> [| $f $w |])   ( [| y + 1|] )) |]"
-b7 = test "\\ f -> [| \\y -> $( (\\z -> [| \\ q -> $f $z |])   ( [| y |] )) |]"
-b8 = test "let f x = \\ e -> if x==0 then e else [| let n = x in $(f (x-1) [| n + $e |]) |] in f 2"
+ok (Right x) = putStrLn "ok"
+ok (Left s) = putStrLn s
 
 tr :: String -> IO ()
 tr s = case getExp s of
@@ -1129,57 +878,6 @@ tr s = case getExp s of
 ----------------------------------------------------
 
 
-z1 = pd
-  "id :: forall (k:: *1) (a:: *) . a -> a\nid x = x"
-
-z2 = parse2 (allTyp ) "forall (a:: * ) b . a -> (a,b)"
-
-
-Right(z4,_) = pd "data Var:: *0 ~> *0 ~> *0 where \n  Z:: Var (w,x) w\n  S:: Var w x -> Var (y,w) x"
-
-
-
---code for parsing an explicit without translation for debugging
-completeExplicit =
-  do { pos <- getPosition
-     ; reserved "data"
-     ; tname <- name
-     ; symbol "::"
-     ; kind <- typN
-     ; reserved "where"
-     ; cs <- layout explicitConstr (return ())
-     ; return (GADT (loc pos) False tname kind cs)
-     }
-
-s33  = "kind Shape:: Nat ~> *1 where\n"++
-       "  P:: Tag ~> n ~> Shape n\n" ++
-       "  D:: Q a => a ~> Shape a\n" ++
-       "  F:: forall a . Q a => Shape a\n"
-Right(e33,_) = parse2 completeExplicit s33
-
-
-Right(z3,_) = parse2 completeExplicit
-  ("data RepA :: forall (k:: *2)(t::k) . (k ~> Row HasKind ~> t ~> *0) where VarA  :: forall (ww:: *1) (l:: Tag) (env:: Row HasKind) (t:: ww) . Label l -> RepA ww (RCons (HK l ww t) env) t")
-
-
-Right(z5,_) = pd "data Exp:: *0 ~> *0 ~> *0 ~> *0 ~> *0 where\n Const:: t -> Exp past now future t\n Run:: (forall n . Exp past now (n,future) (Cd n future t)) -> Exp past now future t"
-
-
-zz = parse2 datadecl
-  ("data P1:: Set ~> *0 ~> *0 where\n"++
-   "  Pvar1 :: Label a -> P1 Univ t\n"++
-   "  Pnil1 :: P1 (Plus Univ (Empty `Cons)) [t]")
-
-zz2 = parse2 explicitConstr "Bind :: Lub i j k => M i a -> (a -> M j b) -> M k b"
-
-d8 = "data L:: *0 where\n N :: L\n C :: Int -> L -> L\n   deriving List(i)"
-
-dd2 = "le:: Nat ~> Boolean\n"++
-      "{le Z (S n)} = T"
-
-dd3 =  "data Nat :: *1 where\n"++
-       "  Z :: Nat\n"++
-       "  S :: Nat ~> Nat\n"++
-       " deriving List(b)"
-
-Right (dd4,xsc) = pd "data Natural:: level n . *n where   Zero :: Natural"
+Right(Program xxx) = unsafePerformIO(parseFile program "D:/work/sheard/research/omega/badPrograms/badDependency.prg")
+(TypeSig lc v t) = xxx !! 0
+(FX _ _ ff tbs tfs) = vars [] t emptyF
