@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Tue Jun 12 16:20:11 Pacific Daylight Time 2007
 -- Omega Interpreter: version 1.4.2
 
 module Syntax where
@@ -548,20 +548,14 @@ data Par m =
        , incP :: Par m            -- How (Par m) changes when under Bracket.
        , escFun :: Exp -> m Exp } -- What to do when walking under Escape.
 
+
 parThread alpha f [] = return ([],f)
 parThread alpha f (s:ss) =
   do { (s2,f2) <- alpha s f
      ; (ss2,f3) <- parThread alpha f2 ss
      ; return(s2:ss2,f3)}
 
--- When rebuilding the pattern (Monad return bind fail) we do not
--- want to rename "return" "bind" or "fail" because the do syntax
--- depends upon these things having exactly those names.
 
-monadCase (Global "Monad") (Par patExt expExt inc esc) = ans
-  where ans = Par newExt expExt inc esc
-        newExt var = return(var,ans)
-monadCase c x = x
 
 -- Walk over a Pat building extended (Par m)
 parPat :: Monad m => Pat -> Par m -> m(Pat,Par m)
@@ -578,8 +572,20 @@ parPat (Paspat v p) f =
   do { (v',f1) <- varExt f v
      ; (p',f2) <- parPat p f1
      ; return(Paspat v' p',f2)}
+
+-- When rebuilding the pattern (Monad return bind fail) we do not
+-- want to rename "return" "bind" or "fail" because the do syntax
+-- depends upon these things having exactly those names.
+
+parPat (pat@(Pcon (Global "Monad") [Pvar un,Pvar bnd,Pvar fl])) (Par vext vapp inc esc) =
+  let f x | x==un = return(Var un)
+      f x | x==bnd = return(Var bnd)
+      f x | x==fl  = return(Var fl)
+      f x = vapp x
+  in return(pat,Par vext f inc esc)
+
 parPat (Pcon c ps) f =
-  do { (ps',f2) <- parThread parPat (monadCase c f) ps; return(Pcon c ps',f2)}
+  do { (ps',f2) <- parThread parPat f ps; return(Pcon c ps',f2)}
 parPat (Pann p t) f = do {(p',f1) <- parPat p f; return (Pann p' t,f1)}
 parPat (ExtP p) f = do { (p',f') <- extThread parPat f p; return(ExtP p',f')}
 

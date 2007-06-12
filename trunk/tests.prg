@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Sat Jun  9 01:16:08 Pacific Daylight Time 2007
+-- Tue Jun 12 16:20:11 Pacific Daylight Time 2007
 -- Omega Interpreter: version 1.4.2
 
 import "LangPrelude.prg" 
