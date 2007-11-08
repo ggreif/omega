@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Jun 12 16:20:11 Pacific Daylight Time 2007
+-- Thu Nov  8 15:51:28 Pacific Standard Time 2007
 -- Omega Interpreter: version 1.4.2
 
 module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
@@ -23,7 +23,7 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,Dec(..),Constr(..),Stmt(..),Var(..)
              ,listExp,listExp2,patTuple,ifExp,mergeFun,consExp,expTuple
              ,binop,opList,var,freshE,swp,dvars,evars,
-             typeStrata,kindStrata,emptyF,Vars(..),freeOfDec
+             typeStrata,kindStrata,emptyF,Vars(..),freeOfDec,boundBy
              ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
 import List(partition)
 import Monads
@@ -878,6 +878,7 @@ tr s = case getExp s of
 ----------------------------------------------------
 
 
-Right(Program xxx) = unsafePerformIO(parseFile program "D:/work/sheard/research/omega/badPrograms/badDependency.prg")
-(TypeSig lc v t) = xxx !! 0
-(FX _ _ ff tbs tfs) = vars [] t emptyF
+Right(Program xxx) = unsafePerformIO(parseFile program "D:/work/sheard/research/omega/work.prg")
+
+--(TypeSig lc v t) = xxx !! 0
+--(FX _ _ ff tbs tfs) = vars [] t emptyF

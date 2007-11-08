@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Jun 12 16:20:11 Pacific Daylight Time 2007
+-- Thu Nov  8 15:51:28 Pacific Standard Time 2007
 -- Omega Interpreter: version 1.4.2
 
 module Auxillary where
@@ -230,6 +230,7 @@ data DispElem a
   | forall x . Dlf (DispInfo a -> x -> (DispInfo a,String)) [x] String
   | forall x . Dlg (DispInfo a -> x -> (DispInfo a,String)) String [x] String String
   | Dr [DispElem a]
+  | forall x . Dle (x -> [DispElem a]) [x] String
 
 drI:: DispInfo z -> [DispElem z] -> DispElem z
 drI _ xs = Dr xs
@@ -259,7 +260,10 @@ displays d xs = help d (reverse xs) "" where
                  let (d2,inner) = dispL f d ys sep
                  in (d2,open++inner++close)
 
-
+dle f xs sep = Dr(intersperse (map f xs))
+  where intersperse [] = []
+        intersperse [x] = x
+        intersperse (x:xs) = x ++ Ds sep : intersperse xs
 
 -- displays d [dv "x" 123]  --->  "x = 1233"
 dv s x = Dr [Ds ", ",Dd x,Ds (s++" = ")]
