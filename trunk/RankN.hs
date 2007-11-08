@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Jun 12 16:20:11 Pacific Daylight Time 2007
+-- Thu Nov  8 15:51:28 Pacific Standard Time 2007
 -- Omega Interpreter: version 1.4.2
 
 {-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
@@ -138,7 +138,8 @@ unifyLevel x y = do { a <- pruneLv x; b <- pruneLv y; walk (a,b)}
         walk (TcLv v,TcLv u) | u==v = return()
         walk (TcLv(v@(LvMut u r)),y) = writeRef r (Just y) -- unifyLvVar v y
         walk (y,TcLv(v@(LvMut u r))) = writeRef r (Just y) -- unifyLvVar v y
-        walk (x,y) = failD 1 [Ds "Levels don't match ",Dd x,Ds " =/= ",Dd y]
+        walk (x,y) = failD 1 [Ds "Levels don't match ",Dd x,Ds " =/= ",Dd y
+                             ,Ds ("\n  internal info "++show x++" =/= "++show y)]
 
 levelVars x = do { a <- pruneLv x; walk a }
   where walk (TcLv v) = return [v]
@@ -203,8 +204,17 @@ instance Show Level where
           f n (LvSucc l) = f (n+1) l
           f n l = "("++show n++"+"++show l++")"
   show (TcLv (LvMut uniq ref)) = "Level"++show uniq
-  show (TcLv (LvVar name)) = "Level"++show name
+  show (TcLv (LvVar name)) = "_Level"++show name
 
+
+instance Sht Level where
+  shtt LvZero = "0"
+  shtt (LvSucc l) = f 1 l
+    where f n LvZero = show n
+          f n (LvSucc l) = f (n+1) l
+          f n l = "("++show n++"+"++show l++")"
+  shtt (TcLv (LvMut uniq ref)) = "Mut"++show uniq
+  shtt (TcLv (LvVar name)) = "Var"++show name
 
 instance Show TcLv where
   show (LvVar n) = show n
@@ -222,7 +232,8 @@ instance Swap TcLv where
   swaps cs (LvMut u r) = LvMut u r
 
 instance NameStore d => Exhibit d TcLv where
-  exhibit env v = useStoreLevel v id env
+  exhibit env v = (env2,s) -- (env2,s++"("++show v++")")
+    where (env2,s) = useStoreLevel v id env
 
 instance NameStore d => Exhibit d Level where
   exhibit env (TcLv v) = (env2,str) -- ++"("++show v++")")
@@ -310,6 +321,7 @@ class (HasIORef m,Fresh m,HasNext m,Accumulates m Pred
   setTruths:: [Pred] -> m a -> m a
   currentLoc:: m Loc
   syntaxInfo:: m [SynExt String]
+  normTyFun :: Tau -> m (Maybe Tau)
 
 handleM n = handleK (const True) n
 
@@ -898,6 +910,16 @@ instance TyCh m => TypeLike m Char where
   get_tvs ts = return ([],[])
   --nf x = return x
 
+instance TyCh m => TypeLike m Quant where
+  sub env ts = return ts
+  zonk ts = return ts
+  get_tvs ts = return ([],[])
+
+instance TyCh m => TypeLike m Name where
+  sub env ts = return ts
+  zonk ts = return ts
+  get_tvs ts = return ([],[])
+
 -----------------------------------------------
 -- Quantify instances
 
@@ -976,18 +998,22 @@ unify x y =
         f t (TcTv x) = unifyVar x t
         f (x@(TyFun nm k _)) y = emit x y
         f y (x@(TyFun nm k _)) = emit x y
-
-        -- handled by unifyVar
-        --f (x@(TcTv(Tv u (Rigid _ _ _) k))) y = emit x y
-        --f y (x@(TcTv(Tv u (Rigid _ _ _) k))) = emit y x
         f (TyEx x) (TyEx y) = unifyEx x y
         f s t = matchErr "\nDifferent types" s t
 
 
-emit x y = do { a <- zonk x; b <- zonk y
-              ; verbose <- show_emit
+emit x y =
+  do { a <- zonk x; b <- zonk y
+     ; normM <- normTyFun a
+     ; case normM of
+         Just nonTyfun -> -- warnM [Ds "\nEmit Norm (",Dd a,Ds "=?=",Dd b
+                          --       ,Ds ")\n     ---> (",Dd nonTyfun,Ds "=?=",Dd b,Ds ")"] >>
+                          unify nonTyfun b
+         Nothing ->
+           do { verbose <- show_emit
               ; whenM verbose [Ds "\nGenerating predicate\n  ",Dd a, Ds " =?= ",dn b]
-              ; injectA " emitting " [equalRel a b]}
+              ; injectA " emitting " [equalRel a b]}}
+
 equalRel x y = Equality x y
 
 unifyEx x y =
@@ -1360,17 +1386,21 @@ levelOf x = do { y <- prune x; ans <- get y
         get (TyCon _ n _ _) = pruneLv n  -- don't use the kind, since instantiating
                                          -- will invent new level vars.
         get (Karr x y) = get y
-        get z = do { k <- kindOfM z; n <- levelOf k; predLev n }
+        get z = do { k <- kindOfM z
+                   ; n <- levelOf k
+                   ; predLev n }
 
 dName name = Dlf (\ d name -> useDisplay id d (ZInteger (name2Int name))) [name] ""
 
+predLev :: TyCh m => Level -> m Level
 predLev x = do { y <- pruneLv x; help y }
   where help (LvSucc x) = return x
         help LvZero = failM 1 [Ds "Cannot take the predecessor of level 0"]
         help (n@(TcLv(LvMut u r))) =
           do { m <- newLevel; unifyLevel n (LvSucc m); pruneLv m }
         help (TcLv (LvVar nm)) =
-          failM 1 [Ds "\nLevel '",dName nm,Ds "' is not polymorphic as declared (case 0)."]
+          failM 1 [Ds "\nLevel '",dName nm,Ds "' is not polymorphic as declared (case 0)."
+                  ,Ds "\nWe are trying to force it to be the successor of something."]
 
 freshLevels vs = mapM new vs
   where new s = do { n <- fresh ; return(s,n) }
@@ -1383,7 +1413,8 @@ levelLTE x y (LvSucc m) LvZero = notLTE 1 x y
 levelLTE x y (LvSucc m) v = do { u <- predLev v; levelLTE x y m u}
 levelLTE x y (TcLv v) (TcLv u) | u==v = return ()
 levelLTE x y (TcLv(v@(LvMut u r))) m = writeRef r (Just m) >> return ()
-levelLTE x y (TcLv (LvVar nm)) m = failM 1 [Ds "\nLevel '",dName nm,Ds "' is not polymorphic as declared (case 1)."]
+levelLTE x y (m@(TcLv (LvVar nm))) (TcLv(v@(LvMut u r))) =  writeRef r (Just m) >> return ()
+levelLTE x y (TcLv (LvVar nm)) m = failM 1 [Ds "\nLevel '",dName nm,Ds "' is not polymorphic as declared (case 1).",Ds (shtt m)]
 
 notLTE (n:: Int) (y1,yL) (x1,xL) =
    warnM [Ds "\n\n*** WARNING ***\n",Dd n, Ds " While infering the kind of: "
@@ -1394,7 +1425,10 @@ notLTE (n:: Int) (y1,yL) (x1,xL) =
 checkLevelsDescend x1 y1 =
  do { xL <- levelOf x1
     ; yL <- levelOf y1
-    ; levelLTE (y1,yL) (x1,xL) yL xL
+    ; handleM 2 (levelLTE (y1,yL) (x1,xL) yL xL)
+        (\ s -> failM 2 [Ds "We are kinding: ",Dd (Karr x1 y1),Ds ", where "
+                      ,Dd x1, Ds " has level ",Dd xL,Ds ", and ",Dd y1,Ds " has level ",Dd yL
+                      ,Ds "\nBut, levels don't descend.\n",Ds s])
     }
 
 -- Typable Tau
@@ -1424,12 +1458,17 @@ instance TyCh m => Typable m  Tau Tau where
         -- ; warnM [Ds"\ncheckAppCase ",Dd ff,Ds ":: ",Dd fk2,Dd "\n  ",Dd x
         --         ,Ds "\n",Dd arg_ty,Ds " ~> ",Dd res_ty]
         --          ; showKinds varsOfTau (TyApp fk2 (TyApp ff x))
-         ; let err mess = failM 2
-                [Ds "\nwhile checking the kind of ("
-                ,Dd t, Ds ")" {- , Ds (shtt t) -}
-                , Ds " we expected (",Dd x
-                ,Ds "::  ",Dd arg_ty,Ds ")\nbecause (",Dd ff
-                ,Ds ":: ",Dd fk2,Ds (") but "++mess)]
+         ; let err mess =
+                 do { (inferred::Tau,_) <- infer x
+                    ; let but = case kindOf arg_ty of
+                                  Nothing -> Ds ") but"
+                                  Just k -> Dr [ Ds ":: ",Dd k,Ds ") but"]
+                    ; failM 2
+                       [Ds "\nwhile checking the kind of ("
+                       ,Dd t, Ds ")" {- , Ds (shtt t) -}
+                       ,Ds "\nwe expected (", Dd x, Ds "::  ",Dd arg_ty,but
+                       ,Ds "\nwe inferred (", Dd x, Ds "::  ",Dd inferred,Ds ")\n"
+                       ,Ds mess]}
          ; b <- handleM 2 (check x arg_ty) err
          ; mustBe ("type","kind") t res_ty expect
          ; return (TyApp a b)}
@@ -2738,6 +2777,7 @@ mostGenUnify xs =
     Left ans -> return ans
     Right (s,x,y) -> fail s
 
+
 mgu :: [(Tau,Tau)] -> Either [(TcTv,Tau)] (String,Tau,Tau)
 mgu [] = Left []
 mgu ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mgu xs
@@ -2761,6 +2801,16 @@ mgu ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = Right("Rigid",TcTv x,tau)
 
 mgu ((x,y):xs) = Right("No Match", x, y)
 
+failIfInConsistent pat current extension xs =
+  case mgu xs of
+    Right ("No Match",x,y) ->
+        failK "bad refinement" 2
+           [Ds "in the scope of ",Ds pat,Ds "\nThe current refinement\n   "
+           ,Dl current ",",Ds "\nis inconsistent with the refinement extension\n   "
+           ,Dl extension "," ,Ds "\nbecause ",Dd x, Ds " =/= ",Dd y]
+    _ -> return (map (uncurry Equality) xs)
+
+
 
 mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either [(TcTv,Tau)] ([Char],Tau,Tau)
 mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
@@ -2778,6 +2828,21 @@ compose _ (Right x) = Right x
 compose (Right y) _ = Right y
 
 o s1 s2 = [(u,subTau s1 t) | (u,t) <- s2] ++ s1
+
+-- (compose new old) and (new `o` old) assume that the new refinement
+-- has a disjoint set of variables. This is the case in "mgu" because
+-- a variable is processed and removed from the rest of the term, so
+-- it never occurs again. But in some contexts this is not the case.
+-- in this situation one might have (compose [(x,5),(y,3)] [(x,f),(z,y)])
+-- Now we expect [(x,f),(z,3),(y,3)] and the equality [f == 5]
+
+extendref :: [(TcTv,Tau)] -> [(TcTv,Tau)] -> ([(TcTv,Tau)],[(Tau,Tau)])
+extendref new old = ([(u,subTau fresh t) | (u,t) <- old] ++ fresh,existing)
+  where (fresh,existing) = foldr acc ([],[]) new
+        acc (u,exp) (fresh,existing) =
+          case find (\ (v,term) -> u==v) old of
+            Just (v,term) -> (fresh,(exp,term):existing)
+            Nothing -> ((u,exp):fresh,existing)
 
 -------------------------------------------------------
 -- mguB is monadic, but it never binds variables
@@ -2953,7 +3018,7 @@ infiniteNames = makeNames "abcdefghijklmnopqrstuvwxyz"
 ---------------------------------------------------------
 -- NameStore instances
 
-useStoreLevel (LvMut uniq ref) f env = useStore uniq f env
+useStoreLevel (LvMut uniq ref) f env = useStore uniq ((++"L") . f) env
 useStoreLevel (LvVar name) f env = useStore (name2Int name) f env
 useStoreName name kind newname d = useStore (name2Int name) newname d
 useStoreTcTv (Tv uniq flavor kind) f d = useStore uniq f d
@@ -3279,7 +3344,7 @@ instance (NameStore d,Exhibit d x) => Exhibit d (Expected x) where
 instance NameStore d => Exhibit d Sigma where
   exhibit d1 (Forall args) = exhibitLdata All d1 args
 
--- PolyKind
+-- PolyKind $$
 instance (NameStore d,Exhibit d Name) => Exhibit d PolyKind where
   exhibit d1 (K lvs (Forall args)) = (d3,levels++s1)
    where (d2,s1) = exhibitLdata All d1 args

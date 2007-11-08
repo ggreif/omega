@@ -8,7 +8,7 @@ mv a.out omega.exe
 
 cd d:/work/sheard/research/omega
 -- Compile but No Profile and No opt
-ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
+c:/ghc/ghc-6.4.1/bin/ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
 
 
 -- Compile and Optimize

@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Jun 12 16:20:11 Pacific Daylight Time 2007
+-- Thu Nov  8 15:51:28 Pacific Standard Time 2007
 -- Omega Interpreter: version 1.4.2
 
 module LangEval where
@@ -24,7 +24,7 @@ import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
-import SyntaxExt(SynExt(..))
+import SyntaxExt(Extension(..),SynExt(..))
 
 
 type Level = Int
@@ -406,6 +406,7 @@ mapPat env (Paspat x p) = Paspat x (env p)
 mapPat env Pwild = Pwild
 mapPat env (Pcon n ps) = Pcon n (map env ps)
 mapPat env (Pann p t) = Pann (env p) t
+mapPat env (ExtP ep) = ExtP(fmap env ep)
 
 expandPat :: Env -> Pat -> Pat
 expandPat env (Pcon n ps) =
