@@ -51,7 +51,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,equalRel,parseIntThenType,parseType,showPred
-            ,prune,pprint,readName,exhibit2,injectA, showKinds)
+            ,prune,pprint,readName,exhibit2,injectA,showKinds,extToTpatLift)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 --hiding (Level)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
@@ -3348,11 +3348,12 @@ pTtoTpat (TyFun' (TyVar' s : xs)) e1 =
 pTtoTpat (Ext ext) e1 =
   do { exts <- syntaxInfo
      ; loc <- currentLoc
-     ; let lift0 t = TyCon' t
-           lift1 t x = TyApp' (TyCon' t) x
-           lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
-           lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
-     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) ext exts
+     ; --let lift0 t = TyCon' t
+       --    lift1 t x = TyApp' (TyCon' t) x
+       --    lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
+       --    lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
+     ; --new <- buildExt (show loc) (lift0,lift1,lift2,lift3) ext exts
+     ; new <- buildExt (show loc) extToTpatLift ext exts
      ; pTtoTpat new e1
      }
 pTtoTpat x e1 = fail ("The type: "++show x++" is not appropriate for the LHS of a type fun.")
