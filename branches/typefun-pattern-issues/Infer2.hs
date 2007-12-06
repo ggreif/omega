@@ -3348,11 +3348,6 @@ pTtoTpat (TyFun' (TyVar' s : xs)) e1 =
 pTtoTpat (Ext ext) e1 =
   do { exts <- syntaxInfo
      ; loc <- currentLoc
-     ; --let lift0 t = TyCon' t
-       --    lift1 t x = TyApp' (TyCon' t) x
-       --    lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
-       --    lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
-     ; --new <- buildExt (show loc) (lift0,lift1,lift2,lift3) ext exts
      ; new <- buildExt (show loc) extToTpatLift ext exts
      ; pTtoTpat new e1
      }
