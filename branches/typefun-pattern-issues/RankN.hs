@@ -2106,6 +2106,15 @@ nonCon x | x==infixEqName = True
 nonCon (x:xs) = isLower x
 nonCon x = False
 
+-- this quadruple is handy for building the Tpat equivalents
+-- of syntactic extensions
+
+extToTpatLift = (lift0,lift1,lift2,lift3)
+    where lift0 t = TyCon' t
+      	  lift1 t x = TyApp' (TyCon' t) x
+          lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
+          lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
+
 -- whenever we translate to a Tau we need a count of how many TyApp nodes
 -- we are under, because if we find a TySyn its arity must match the number
 -- of nodes we are under. The parameter "n" counts this number. Note how
@@ -2176,11 +2185,12 @@ readTau n env (t@(Tlamx s x)) = failM 1 [Ds "No lambda types in rankN: ",Dd t]
 readTau n env (Ext x) =
   do { exts <- syntaxInfo
      ; loc <- currentLoc
-     ; let lift0 t = TyCon' t
-           lift1 t x = TyApp' (TyCon' t) x
-           lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
-           lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
-     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
+     ; --let lift0 t = TyCon' t
+       --    lift1 t x = TyApp' (TyCon' t) x
+       --    lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
+       --    lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
+     ; --new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
+     ; new <- buildExt (show loc) extToTpatLift x exts
      ; readTau n env new
      }
 
