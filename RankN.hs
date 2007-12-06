@@ -490,15 +490,14 @@ notEqT =  TyCon Ox (lv 1) "(!=)" notEqKind
 
 declare (x@(TyCon _ _ name poly)) = (name,x,poly)
 
--- kind Tag = %name | %age | ... | for all legal symbols
--- data Label t = %name where t=%name | %age where t = %age | ...
+-- kind Tag = `name | `age | ... | for all legal symbols
+-- data Label t :: Tag ~> * where
+--  `name :: Label `name
+--  `age  :: Label `age
+--  ...
 tagT    = TyCon Ox (lv 2) "Tag" (poly star1)
 labelT  = TyCon Ox (lv 1) "Label" (poly (karr (MK tagT) star))
 tagKind = (K [] (simpleSigma tagT))
-
--- kind HasType = Has Tag *0
-hasTypeT = TyCon Ox (lv 1) "HasType" (poly star1)
-hasT     = TyCon Ox (lv 1) "Has" (poly ((MK tagT) `karr` (star `karr` (MK hasTypeT))))
 
 -- Row :: *1 ~> *1
 -- kind Row x = RCons x (Row x) | RNil

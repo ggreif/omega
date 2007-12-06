@@ -2710,12 +2710,29 @@ checkLhsMatch current sigma (ps,rhs) =
 -- need to build a ToEnv, so that we can correctly parse the RHS
 
 checkPTBndr :: ToEnv -> (Tpat,Tau) ->  TC ToEnv
-checkPTBndr current (Tvar s nm,k) =
+checkPTBndr _ (Tvar s nm,k) =
   return[(s,TyVar nm (MK k),poly (MK k))]
 checkPTBndr current (Tfun c xs,k) = checkPTBndr current (Tcon c xs,k)
-checkPTBndr current (y@(Tcon (tag@('`':cs)) xs),TyCon sx _ "Tag" _) = return[]
+checkPTBndr _ (y@(Tcon (tag@('`':cs)) xs),TyCon sx _ "Tag" _) = return[]
+checkPTBndr _ (y@(Tcon (tag@('`':cs)) xs),TcTv _) = return[] -- will be checked by unification, later
+checkPTBndr _ (y@(Tcon (tag@('`':cs)) xs),k) = do {outputString ("%+++%% " ++ show y ++ " :: " ++ sht k ++ " %%%%%"); return[]}
+
+{-
+-- kind constructor
+checkPTBndr current (y@(Tcon c xs),k@(TyApp (TyApp c1@(TyCon se1 l1 nam1 _) c2@(TyCon se2 l2 nam2 _)) s3@(Star l3))) =
+  do { whenM True [Dd y,Ds " :: ",Dd k,Ds " is cool! ",Ds (sht c1),Ds " <<<>>> ",Ds (sht c2)]
+     ; let (x1:x2:[]) = xs
+     ; env1 <- checkPTBndr current (x1,c2)
+     ; checkPTBndr env1 (x2,s3)
+     }
+--checkPTBndr current (y@(Tcon c xs),k@(TyApp c1@(TyCon se1 l1 nam1 _) c2@(TyCon se2 l2 nam2 _))) =
+--  failD 1 [Dd y,Ds " :: ",Dd k,Ds " is not well formed for a lhs.",Ds (sht c1),Ds " <<<>>> ",Ds (sht c2)]
+-}
+-- other kind
 checkPTBndr current (y@(Tcon c xs),k) =
   do {(tau,kind@(K lvs sigma)) <- getInfo y current c
+     ; outputString ("%%% " ++ show y ++ " :: " ++ sht k ++ " %%%%%")
+     ; outputString ("%%+ " ++ show kind ++ " %%%%%")
      ; let check1 [] rng = return(rng,[])
            check1 (x:xs) (Karr m n) =
              do { env1 <- checkPTBndr current (x,m)
