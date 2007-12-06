@@ -3345,7 +3345,16 @@ pTtoTpat (Star' k (Just s)) env =
 pTtoTpat (TyFun' (TyVar' s : xs)) e1 =
   do { (e2,ys) <- thrd e1 pTtoTpat xs
      ; return(e2,Tfun s ys) }
-pTtoTpat (Ext ext) e1 = fail ("The type: "++show ext++" is an extension.")
+pTtoTpat (Ext ext) e1 =
+  do { exts <- syntaxInfo
+     ; loc <- currentLoc
+     ; let lift0 t = TyCon' t
+           lift1 t x = TyApp' (TyCon' t) x
+           lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
+           lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
+     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) ext exts
+     ; pTtoTpat new e1
+     }
 pTtoTpat x e1 = fail ("The type: "++show x++" is not appropriate for the LHS of a type fun.")
 
 thrd e1 f [] = return(e1,[])
