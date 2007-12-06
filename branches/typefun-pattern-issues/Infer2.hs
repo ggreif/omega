@@ -1495,7 +1495,7 @@ constrRange c (p:ps) t pairs =
    do { (dom,rng) <- unifyFun t
       ; constrRange c ps rng ((p,dom):pairs)}
 
--- A range is Ok if its 1) a Tau type, 2) A TyCon type, 3) At Level 1
+-- A range is Ok if it's 1) a Tau type, 2) A TyCon type, 3) At Level 1
 okRange c (Rtau t) = help t
   where help (TySyn _ _ _ _ x) = help x
         help (TyCon synext level nm polykind) =
@@ -1507,6 +1507,9 @@ okRange c (Rtau t) = help t
              ; case (un,ps) of
                 ([],[]) -> do { warnM [Ds "\nTYFUN\n ",Dd new ]; help new}
                 _ -> fail "TyFun in okRange" }
+        help (TcTv (Tv _ _ (MK (Star level)))) =
+          do { unifyLevel level LvZero
+             ; return t }
         help t = failD 2 [Ds "\nNon type constructor: ",Dd t,Ds " as range of constructor: ",Dd c]
 okRange c rho = failD 2 [Ds "\nNon tau type: ",Dd rho
                         ,Ds " as range of constructor: ",Dd c]
@@ -1524,7 +1527,7 @@ checkPats rename k ((p,sig,mod):xs) =
 
 ---------------------------------------------------------------
 -- A [Dec] is a TypableBinder
--- We assume the [Dec] has already been patitioned into
+-- We assume the [Dec] has already been partitioned into
 -- small mutually recursive lists. This is done by "inferBndrForDecs"
 
 
