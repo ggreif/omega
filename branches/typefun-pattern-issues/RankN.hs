@@ -2111,9 +2111,9 @@ nonCon x = False
 
 extToTpatLift = (lift0,lift1,lift2,lift3)
     where lift0 t = TyCon' t
-      	  lift1 t x = TyApp' (TyCon' t) x
-          lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
-          lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
+          lift1 t x = TyApp' (lift0 t) x
+          lift2 t x y = TyApp' (lift1 t x) y
+          lift3 t x y z = TyApp' (lift2 t x y) z
 
 -- whenever we translate to a Tau we need a count of how many TyApp nodes
 -- we are under, because if we find a TySyn its arity must match the number
