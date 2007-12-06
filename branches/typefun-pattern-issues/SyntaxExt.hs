@@ -73,9 +73,9 @@ ppExt f((Numx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"
 ppExt f((Numx n Nothing s)) = PP.hcat [PP.int n,text s]
 ppExt f((Pairx xs s)) = text "(" <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
 ppExt f((Recordx xs (Just x) s)) = PP.sep ((text "{"):(map g xs)++[text ";",f x,text ("}"++s)])
-  where g (x,y) = f x <> text ":" <> f y
+  where g (x,y) = f x <> text "=" <> f y
 ppExt f((Recordx xs Nothing s)) = PP.sep ((text "{"):(map g xs)++[text ("}"++s)])
-  where g (x,y) = f x <> text ":" <> f y
+  where g (x,y) = f x <> text "=" <> f y
 
 -------------------------------------------------------
 -- map and fold-like operations
