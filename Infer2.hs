@@ -3345,6 +3345,7 @@ pTtoTpat (Star' k (Just s)) env =
 pTtoTpat (TyFun' (TyVar' s : xs)) e1 =
   do { (e2,ys) <- thrd e1 pTtoTpat xs
      ; return(e2,Tfun s ys) }
+pTtoTpat (Ext ext) e1 = fail ("The type: "++show ext++" is an extension.")
 pTtoTpat x e1 = fail ("The type: "++show x++" is not appropriate for the LHS of a type fun.")
 
 thrd e1 f [] = return(e1,[])
