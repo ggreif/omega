@@ -3236,7 +3236,7 @@ exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) tag) x) y)
               other -> (d2,tags++"="++elem++"; "++ans)
                 where (d2,ans) = exhibit d1 other
         f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
-exSynRecord d t = (d,"2Ill-formed Record extension: "++sht t)
+exSynRecord d t = (d,"Ill-formed Record extension: "++sht t)
 
 
 
@@ -3255,7 +3255,7 @@ exSynList d (t@(TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y))
              where (d1,elem) = exhibit d x
                    (d2,ans) = exhibit d1 other
         f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
-exSynList d t = (d,"2Ill-formed List extension: "++sht t)
+exSynList d t = (d,"Ill-formed List extension: "++sht t)
 
 exSynPair d (t@(TyApp (TyApp (TyCon (Px(key,pair)) _ c1 _) x) y))
     | c1==pair =(d2,"(" ++ x' ++","++ y' ++ ")"++postscript key)
@@ -3642,7 +3642,9 @@ fst3 (x,y,z) = x
 splitClass (TcTv (Tv un (Skol _) k)) any = Hard
 splitClass any (TcTv (Tv un (Skol _) k)) = Hard
 splitClass (TcTv x) (y@(TyFun _ _ _)) | all (/=x) (fst3 (varsOfTau y)) = MutSolve
+splitClass (TcTv _) (TyFun _ _ _) = Hard
 splitClass (y@(TyFun _ _ _)) (TcTv x) | all (/=x) (fst3 (varsOfTau y)) = MutSolve
+splitClass (TyFun _ _ _) (TcTv _) = Hard
 splitClass (TcTv x) any = MutSolve
 splitClass any (TcTv x) = MutSolve
 splitClass _ _ = Hard
