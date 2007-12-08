@@ -496,10 +496,6 @@ tagT    = TyCon Ox (lv 2) "Tag" (poly star1)
 labelT  = TyCon Ox (lv 1) "Label" (poly (karr (MK tagT) star))
 tagKind = (K [] (simpleSigma tagT))
 
--- kind HasType = Has Tag *0
-hasTypeT = TyCon Ox (lv 1) "HasType" (poly star1)
-hasT     = TyCon Ox (lv 1) "Has" (poly ((MK tagT) `karr` (star `karr` (MK hasTypeT))))
-
 -- Row :: *1 ~> *1
 -- kind Row x = RCons x (Row x) | RNil
 rowT     = TyCon Ox (lv 2) "Row" (poly (karr star1 star1))
@@ -3292,9 +3288,6 @@ instance NameStore d => Exhibit d Tau where
         let (e2,mid) = exhibitL exhibit e xs ","
             (e3,end) = exhibit e2 dot
         in (e3,"{"++mid++"; "++end++"}")
-  exhibit e (TyApp (TyApp (TyCon sx _ "Has" _) x) y) = (e2,x1 ++":"++y1)
-    where (e1,x1) = exhibit e x
-          (e2,y1) = exhibit e1 y
   exhibit e (TyApp (TyCon sx _ "[]" _) x) = (ys,"[" ++ ans ++ "]")
     where (ys,ans) = exhibit e x
   exhibit e (TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = (zs,"(" ++ a ++ ","++ b++")")
