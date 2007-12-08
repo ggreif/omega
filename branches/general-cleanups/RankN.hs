@@ -540,7 +540,6 @@ tmaybe x = TyApp maybeT x
 tmonad x = TyApp monadT x
 tpair x y = TyApp (TyApp pairT x) y
 tsum x y = TyApp (TyApp sumT x) y
---tcode x = TyApp codeT x
 tcode (Rtau x) = Rtau(TyApp codeT x)
 tstring = tlist charT
 tio x = TyApp ioT x
@@ -856,7 +855,7 @@ instance TypeLike m t => TypeLike m (Maybe t) where
 
 -- Infer objects are sometime populated with 'doNotPullOnMe'
 -- so we never want to pull on them, unless we know
--- they have been over written.
+-- they have been overwritten.
 
 
 instance TypeLike m t => TypeLike m (Expected t) where
@@ -1240,7 +1239,7 @@ unBindWithL lvs new b = f b []
 -- than Rho. Quantification abstracts over each free TcTv as All Quant
 -- variables. Ex Quant vars in Forall's come only from Existential types
 -- in data defs. Eg.     data Dyn = exists t . Dyn (Rep t) t
--- so quantify  will never produce one.
+-- so quantify will never produce one.
 
 quantify :: (TypeLike m t,Quantify m t) => [TcLv] -> [TcTv] -> t -> m ([(TcLv,Level)],PolyKind)
 quantify lvs tvs ty =
@@ -1413,7 +1412,7 @@ levelLTE x y (m@(TcLv (LvVar nm))) (TcLv(v@(LvMut u r))) =  writeRef r (Just m) 
 levelLTE x y (TcLv (LvVar nm)) m = failM 1 [Ds "\nLevel '",dName nm,Ds "' is not polymorphic as declared (case 1).",Ds (shtt m)]
 
 notLTE (n:: Int) (y1,yL) (x1,xL) =
-   warnM [Ds "\n\n*** WARNING ***\n",Dd n, Ds " While infering the kind of: "
+   warnM [Ds "\n\n*** WARNING ***\n",Dd n, Ds " While inferring the kind of: "
          ,Dd (Karr x1 y1)
          ,Ds "\nWe find that the level of ",Dd x1,Ds "(", Dd xL,Ds ")"
          ,Ds " is not >= to the level of ",Dd y1,Ds "(",Dd yL,Dd ")\n"] >> return ()
@@ -1428,7 +1427,7 @@ checkLevelsDescend x1 y1 =
     }
 
 -- Typable Tau
--- first show that each can be infered to have a Tau type.
+-- first show that each can be inferred to have a Tau type.
 instance TyCh m => Typable m  Tau Tau where
   tc tau expect = do { -- warnM [Ds "\nCheck ",Dd tau, Ds ":?: ",Dd expect];
                        r <- prune tau;  f r expect }
@@ -1497,9 +1496,9 @@ mustBe (term,qual) t comput expect =
 
 
 
--- "infer" and "check" walk over a type infering type information
+-- "infer" and "check" walk over a type inferring type information
 -- from the structure of the type and information in the type
--- environment. They placing kind annotations
+-- environment. They are placing kind annotations
 -- at the leaves (in variables), "kindOf" and "kindOfM"
 -- walk over an annotated tree and compute the kind of the
 -- type. This could be a pure function, except for the
@@ -1591,7 +1590,7 @@ unifyKindFun term x@(TcTv (Tv unq _ k)) =
       --; outputString "IN UNifyKindFun"
       ; return (a1,b1) }
 unifyKindFun term x = failM 1
-         [Ds "\nWhile infering the kind of the type\n   ",Dd term
+         [Ds "\nWhile inferring the kind of the type\n   ",Dd term
          ,Ds "\nWe expected a kind arrow (_ ~> _),\n but inferred: "
          ,Dd x,Ds " instead"]
 
@@ -1770,7 +1769,7 @@ instance (TyCh m) => Subsumption m Sigma Rho where
 morepolySigmaRho s (Forall(Nil([],rho1))) rho2 = morepoly s rho1 rho2
 morepolySigmaRho s (sigma1@(Forall sig)) rho2 =
      do { ts <- getTruths
-        ; whenM False [Ds "Entering moreploy\n Sigma = "
+        ; whenM False [Ds "Entering morepoly\n Sigma = "
                ,Dd sigma1,Ds "\n Rho = ",Dd rho2
                ,Ds "\n truths = ",Dl ts ", "]
         ; (vs,preds,rho1) <- instanL [] sig
@@ -2620,7 +2619,7 @@ instance Eq Pred where
 
 ---------------------------------------------------------------
 -----------------------------------------------------------
--- Side-effect Free subsitution. Usually you must zonk
+-- Side-effect free subsitution. Usually you must zonk
 -- before calling this function.
 
 subKind :: [(TcTv,Tau)] -> Kind -> Kind
@@ -2754,7 +2753,7 @@ tvsTau x = fst3(varsOfTau x)
 
 
 ---------------------------------------------------------------
--- Computing most general unifiers. Done in a side effect free way
+-- Computing most general unifiers. Done in a side-effect free way.
 -- Note that Flexi vars might be bound in the unifer returned.
 -- A computational pass can force these to be unified later if
 -- necessary. See the function "mutVarSolve" and "mguM"
@@ -3185,7 +3184,7 @@ exhibitLdata quant d1 args =  (d4,prefix ++ eqsS ++ rhoS)
 
 ---------------------------------------------------------------
 -- Now some instances for exhibiting different type like things
--- All these are paramterized by "d" being a NameStore
+-- All these are parameterized by "d" being a NameStore
 
 instance NameStore d => Exhibit d Int where
   exhibit d n = (d,show n)
@@ -3438,7 +3437,7 @@ pprint x = s
  where (d2,s) = exhibit (disp0:: DispInfo Z) x
 
 ------------------------------------------------------------
--- Turn types into PT inorder to render them with indentation
+-- Turn types into PT in order to render them with indentation
 
 toPT :: Exhibit a Tau => a -> Tau -> (a,PT)
 toPT d (TyVar nm k) = (d2,TyVar' s) where (d2,s) = useStoreName nm k ("'"++) d
@@ -3585,21 +3584,21 @@ test12 = (TcTv a1,f)
 -------------------------------------------------------
 -------------------------------------------------------
 -- Split a list of Predicates into 1 of four classes
--- 1) Equality  that are Mutvar solvable,
+-- 1) Equalities that are Mutvar solvable,
 -- 2) Equalities that are Easy narrowing (it looks easy at least),
--- 3) Equalities that are hard to narrow
+-- 3) Equalities that are hard to narrow,
 -- 4) Other kinds of predicates.
 --
--- 1) Mutvar solvalble look like (Equal x type),
+-- 1) Mutvar solvable look like (Equal x type),
 -- where on side is a variable, except where x = skol
 -- or y={plus y z}, ie. a TyFun where the var (y) occurs
 -- in the other side, like the y in  {plus y z}.
 --
--- 2) Easy ones include  (Equal Z {plus n n}) where one
+-- 2) Easy ones include (Equal Z {plus n n}) where one
 -- side is a ground term. They look easy, but they might be hard.
 -- One can't tell without trying, but it is worth trying.
 --
--- 3) Hard is all other equalites like (Equal x {plus a b})
+-- 3) Hard is all other equalities like (Equal x {plus a b})
 -- or {Equal {plus Z a} {plus a b}), or any other predicate.
 --
 -- 4) Other predicates like (Rel x) etc.
