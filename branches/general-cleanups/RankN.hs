@@ -482,7 +482,6 @@ eqT =     TyCon Ox (lv 1) "Equal" kind4Eq
 hiddenT = TyCon Ox (lv 1) "Hidden" kind4Hidden
 chrSeqT = TyCon Ox (lv 1) "ChrSeq" (poly star)
 floatT =  TyCon Ox (lv 1) "Float" (poly star)
-bindT =   TyCon Ox (lv 1) "Bind" (poly (karr star (star_star)))
 stringT = TyApp        listT charT
 propT =   TyCon Ox (lv 1) "Prop" (poly star1)
 natT =    TyCon Ox (lv 1) "Nat" (poly star1)

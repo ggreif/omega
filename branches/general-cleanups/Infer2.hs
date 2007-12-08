@@ -3994,7 +3994,6 @@ predefined =
  "data Parser (x::*0) = primitive\n"++
  "kind Tag = primitive\n"++
  "data Label (t :: Tag) = primitive\n"++
- "data Bind (x::*0) (y::*0) = primitive\n"++
  "data Bool:: *0 where\n"++
  "  True:: Bool\n"++
  "  False:: Bool\n"++
