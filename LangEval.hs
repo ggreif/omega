@@ -510,16 +510,17 @@ fixup n (Ev ((nm,v):vs) m) =
 
 -- The initial runtime environment
 env0 = extendV (map f vals) empty
-  where f (name,(value,typ)) = (Global name,value)
+  where f (name,maker) = g (name,maker name)
+        g (name,(value,typ)) = (Global name,value)
 
 
-make x  = (to x,  gen(typeOf x))
-make1 x = (to1 x, gen(typeOf x))
-make2 x = (to2 x, gen(typeOf x))
-make3 x = (to3 x, gen(typeOf x))
+make x _ = (to x,  gen(typeOf x))
+make1 x name = (to1 name x, gen(typeOf x))
+make2 x name = (to2 name x, gen(typeOf x))
+make3 x name = (to3 name x, gen(typeOf x))
 
-makeCon1 (name@(nm,ext)) x = (mkFun (show nm) (Vcon (name)) 1 [], gen(typeOf x))
-makeCon2 (name@(nm,ext)) x = (mkFun (show nm) (Vcon (name)) 2 [], gen(typeOf x))
+makeCon1 (name@(nm,ext)) x _ = (mkFun (show nm) (Vcon (name)) 1 [], gen(typeOf x))
+makeCon2 (name@(nm,ext)) x _ = (mkFun (show nm) (Vcon (name)) 2 [], gen(typeOf x))
 
 
 mkFun :: String -> ([V] -> V) -> Int -> [V] -> V
@@ -528,7 +529,7 @@ mkFun s f n vs = Vprimfun s (\ v -> return(mkFun s f (n-1) (v:vs)) )
 
 
 
-vals :: [(String,(V,Sigma))]
+vals :: [(String,String->(V,Sigma))]
 vals =
  [("+",make2 ((+)::Int -> Int -> Int))
  ,("*",make2 ((*)::Int -> Int -> Int))
@@ -579,15 +580,15 @@ vals =
  ,("++",make2((++):: [A] -> [A] -> [A]))
  ,("(,)",make2((,):: A -> B -> (A,B)))
 
- ,("undefined", (Vbottom,gen(typeOf(undefined :: A))))
+ ,("undefined", \ _ -> (Vbottom,gen(typeOf(undefined :: A))))
 
  ,("Nothing",make(Nothing::(Maybe A)))
  ,("Just",makeCon1 (Global "Just",Ox) (Just::(A -> Maybe A)))
 
  ,("show",make1(show :: A -> String))
  ,("unsafeCast",make1(unsafeCast:: A -> B))
-
- ,("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
+ ] ++ map (\(name, x) -> (name, \ _ -> x)) [
+  ("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
 
 -- ,(".",make2(($)::(A -> B) -> A -> B))
