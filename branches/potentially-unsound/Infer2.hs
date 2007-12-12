@@ -743,24 +743,24 @@ typeExp mod s@(Do ss) expect =
 typeExp mod (CheckT e) expect =
      do { ts <- getBindings
         ; refinement <- zonk ts
-        ; assumptions <- getAssume
+        --; assumptions <- getAssume
         ; raffinesse <- recursiveRefinementToPred refinement
+        --; env <- tcEnv
+        --; let env2 = env{assumptions = assumptions ++ raffinesse}
+        ; injectA " emitting " raffinesse
+        ; rules <- getAllTheorems
+        ; assumptions <- getAssume
+        ; (ass2,_,_) <- nfPredL assumptions
+        ; typ <- zonk expect
+        ; warnM [Ds ("\n\n*** Checking: " ++ (take 62 (show e)))
+                    ,Ds "\n*** expected type: ",Dd typ
+                    ,Dwrap 80 "***    refinement: " refinement ", "
+                    ,Dwrap 80 "***   assumptions: " ass2 ", "
+                    ,Dwrap 80 "***      theorems: " (map ruleName(filter (not . axiom) rules)) ","]
         ; env <- tcEnv
-        ; let env2 = env{assumptions = assumptions ++ raffinesse}
-        ; inEnv env2 (do
-                      { rules <- getAllTheorems
-                      ; assumptions <- getAssume
-                      ; (ass2,_,_) <- nfPredL assumptions
-                      ; typ <- zonk expect
-                      ; warnM [Ds ("\n\n*** Checking: " ++ (take 62 (show e)))
-                              ,Ds "\n*** expected type: ",Dd typ
-                              ,Dwrap 80 "***    refinement: " refinement ", "
-                              ,Dwrap 80 "***   assumptions: " ass2 ", "
-                              ,Dwrap 80 "***      theorems: " (map ruleName(filter (not . axiom) rules)) ","]
-                      ; env <- tcEnv
-                      ; checkLoop typ env
-                      ; x <- typeExp mod e expect
-                      ; return(CheckT x)})}
+        ; checkLoop typ env
+        ; x <- typeExp mod e expect
+        ; return(CheckT x)}
 typeExp mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
 typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
      do { (vs,preds,tau) <- instanL [] xs  -- ## WHAT DO WE DO WITH THE PREDS?
