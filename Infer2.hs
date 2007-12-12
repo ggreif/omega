@@ -135,7 +135,7 @@ instance TyCh (Mtc TcEnv Pred) where
            }
    getBindings = getBs
    getDisplay = readRef dispRef
-   solveSomeEqs p preds = do { env <- tcEnv; (u,ps,_,_) <- solveConstraints p env preds; return(ps,u)}
+   solveSomeEqs p preds = do { env <- tcEnv; outputString "###>>>>EEE>>"; (u,ps,_,_) <- solveConstraints p env preds; return(ps,u)}
    show_emit = getMode "predicate_emission"
    getTruths = getAssume
    setTruths = setAssumptions
@@ -595,11 +595,27 @@ instance Typable (Mtc TcEnv Pred) Lit Rho where
   tc x@(Tag s) expect = zap x (Rtau (tlabel(ttag ('`':s)))) expect
 
 
+------ PLAYGROUND
+
+--recursiveRefinementToPred :: [(TcTv, Tau)] -> TC [Pred]
+recursiveRefinementToPred :: Unifier -> TC [Pred]
+recursiveRefinementToPred [] = return []
+--recursiveRefinementToPred (v,tau):rs = 
+recursiveRefinementToPred (((x@(Tv _ _ _)), (y@(TyFun _ _ _))):rs) =
+    if all (/=x) vs
+    then recursiveRefinementToPred rs
+    else do { outputString (show x ++ " ==== " ++ sht y)
+	    ; more <- recursiveRefinementToPred rs
+	    ; return (Equality (TcTv x) y:more)
+	    }
+  where (vs, _, _) = varsOfTau y
+recursiveRefinementToPred (_:rs) = recursiveRefinementToPred rs
+
 ----------------------------------------------------------------
 -- The main workhorse which does Exp. This is modelled after the
 -- function in "Practical type inference for arbitrary-rank types"
 -- by Simon Peyton Jones and Mark Shields, modified to accomodate
--- "Simple Unification-based Type Inference for GADTS" by Simon
+-- "Simple Unification-based Type Inference for GADTs" by Simon
 -- Peyton Jones, Stephanie Weirich, and Dimitrios Vytiniotis
 
 instance Typable (Mtc TcEnv Pred) Exp Rho where
@@ -726,19 +742,23 @@ typeExp mod (CheckT e) expect =
      do { ts <- getBindings
         ; refinement <- zonk ts
         ; assumptions <- getAssume
-        ; (ass2,_,_) <- nfPredL assumptions
-        ; rules <- getAllTheorems
-
-        ; typ <- zonk expect
-        ; warnM [Ds ("\n\n*** Checking: " ++ (take 62 (show e)))
-                ,Ds "\n*** expected type: ",Dd typ
-                ,Dwrap 80 "***    refinement: " refinement ", "
-                ,Dwrap 80 "***   assumptions: " ass2 ", "
-                ,Dwrap 80 "***      theorems: " (map ruleName(filter (not . axiom) rules)) ","]
-        ; env <- tcEnv
-        ; checkLoop typ env
-        ; x <- typeExp mod e expect
-        ; return(CheckT x)}
+	; raffinesse <- recursiveRefinementToPred refinement
+	; env <- tcEnv
+	; let env2 = env{assumptions = assumptions ++ raffinesse}
+	; inEnv env2 (do
+		      { rules <- getAllTheorems
+		      ; assumptions <- getAssume
+		      ; (ass2,_,_) <- nfPredL assumptions
+		      ; typ <- zonk expect
+		      ; warnM [Ds ("\n\n*** Checking: " ++ (take 62 (show e)))
+			      ,Ds "\n*** expected type: ",Dd typ
+			      ,Dwrap 80 "***    refinement: " refinement ", "
+			      ,Dwrap 80 "***   assumptions: " ass2 ", "
+			      ,Dwrap 80 "***      theorems: " (map ruleName(filter (not . axiom) rules)) ","]
+		      ; env <- tcEnv
+		      ; checkLoop typ env
+		      ; x <- typeExp mod e expect
+		      ; return(CheckT x)})}
 typeExp mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
 typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
      do { (vs,preds,tau) <- instanL [] xs  -- ## WHAT DO WE DO WITH THE PREDS?
@@ -1642,6 +1662,7 @@ badOblig oblig oblig2 pat assump truths =
 solveDecObligations nm rho assump oblig =
  do { env <- tcEnv
     ; let truths = (assumptions env)
+     ; outputString "###>>>>DDD>>"
     ; (u,oblig2,_,_) <- solveConstraints (nm,rho) (env{assumptions = assump++truths}) oblig
     ; when (not (null oblig2)) (badOblig oblig oblig2 nm assump truths)}
 
@@ -2480,12 +2501,17 @@ under frag (p@(nm,rho)) comp =
        frag2@(Frag _ patVars _ eqs _ _ _) <- zonk frag
      ; env0 <- tcEnv
      ; (envVars,envTrip) <- getVarsFromEnv    -- Get vars before adding frag, for escape check
-     ; env <- (addFragC nm frag2 env0)        -- Add frag info to get new env
+     ; env1 <- (addFragC nm frag2 env0)       -- Add frag info to get new env
 
      -- Run the computation (in the new env) and collect the predicates
-     ; let u0 = bindings env
+     ; let u0 = bindings env1
+     ; refinement <- zonk u0 -- NEEDED???
+     ; assumptions <- getAssume
+     ; additionalAssumptions <- recursiveRefinementToPred refinement
+     ; let env = env1{assumptions = assumptions ++ additionalAssumptions}
      ;  (answer,collected) <- handleM 3 (collectPred (inEnv env (comp u0)))
                                         (underErr1 patVars)
+     ; outputString "###>>>>CCC>>"
      ; (u5,unsolved,truths,need) <- solveConstraints p env (subPred u0 collected)
      ; equalityVarsGetBound u5 eqs
      ; rigidVarsEscape u5 eqs
@@ -3122,7 +3148,7 @@ normUnder truths terms =
 -- Here we assume the truths and the questions have already been normalized
 
 solveByNarrowing :: (Int,Int) ->(String,Rho) -> [Pred] -> [(Tau,Tau)] -> TC [(TcTv,Tau)]
-solveByNarrowing (nsol,nsteps) context truths [] = return []
+solveByNarrowing (nsol,nsteps) context normTruths [] = return []
 solveByNarrowing (nsol,nsteps) context@(s,_) normTruths tests =
     do { verbose <- getMode "narrowing"
        ; (free,levs) <- zonk (map (uncurry TyApp) tests) >>= get_tvs
@@ -3719,8 +3745,10 @@ solveConstraints (nm,rho) env collected =
      ; let (oblig,residual) = splitR collected ([],[])
            assump = assumptions env -- Truths stored in the extended environment
            rules = getRules "" env
+     ; outputString ("###>>>>assump>>" ++ show assump)
      ; (truths1,u0,_) <- inEnv env (liftNf normPredL assump)
      ; let oblig2 = foldr pred2Pair [] (subPred u0 oblig)
+     ; outputString ("###>>>>truths1>>" ++ show truths1)
      ; (normOblig,u1,normTruths) <- inEnv env (normUnder truths1 oblig2)
      ; steps <- getBound "narrow" 25
      ; u2 <- handleM 2
@@ -4567,6 +4595,7 @@ checkDecs env ds =
 checkAndCatchGroundPred ds =
   do {((ds2,env),ground::[Pred]) <- extractAccum(checkBndGroup ds)
      ; let message = "Solving toplevel ground terms"
+     ; outputString "###>>>>BBB>>"
      ; (u,unsolved,_,_) <- solveConstraints (message,starR) env ground
      ; injectA " checkAndCatch " unsolved
      ; return(ds2,env)
@@ -4649,6 +4678,7 @@ wellTyped env e = tcInFIO env
       -- ; warnM [Ds "Obligations at top level are: ",Dd oblig]
       ; (oblig2,_,_) <- liftNf normPredL solvePs
       ; env <- tcEnv
+      ; outputString "###>>>>AAA>>"
       ; (u,oblig3,_,_) <- solveConstraints (show e,t) env oblig2
       ; (typ,_,_) <- liftNf normRho t
       ; when (not(null oblig3) && not(arrowP typ))
