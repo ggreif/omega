@@ -743,10 +743,7 @@ typeExp mod s@(Do ss) expect =
 typeExp mod (CheckT e) expect =
      do { ts <- getBindings
         ; refinement <- zonk ts
-        --; assumptions <- getAssume
         ; raffinesse <- recursiveRefinementToPred refinement
-        --; env <- tcEnv
-        --; let env2 = env{assumptions = assumptions ++ raffinesse}
         ; injectA " emitting " raffinesse
         ; rules <- getAllTheorems
         ; assumptions <- getAssume
@@ -2508,9 +2505,9 @@ under frag (p@(nm,rho)) comp =
      -- Run the computation (in the new env) and collect the predicates
      ; let u0 = bindings env1
      ; refinement <- zonk u0 -- NEEDED???
+     ; raffinesse <- recursiveRefinementToPred refinement
      ; assumptions <- getAssume
-     ; additionalAssumptions <- recursiveRefinementToPred refinement
-     ; let env = env1{assumptions = assumptions ++ additionalAssumptions}
+     ; let env = env1{assumptions = assumptions ++ raffinesse}
      ;  (answer,collected) <- handleM 3 (collectPred (inEnv env (comp u0)))
                                         (underErr1 patVars)
      ; outputString "###>>>>CCC>>"
@@ -2533,6 +2530,7 @@ under frag (p@(nm,rho)) comp =
            triples = envTrip ++ uTrip
      ; let bad = nub(filter (`elem` vars) patVars)
      ; when (not (null bad)) (escapes triples bad)
+     ; outputString ("###>>>>CCCpassOn>>" ++ show passOn)
      ; injectA (" under "++nm++" ") passOn
      ; mutVarSolve u5  -- Permanently Bind any Flexi vars in the unifier
      ; return answer
