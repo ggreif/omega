@@ -9,6 +9,7 @@ module Infer2 where
 
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
+import IO(hIsEOF,hFlush,stdin,stdout)
 
 import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
@@ -51,7 +52,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,equalRel,parseIntThenType,parseType,showPred
-            ,prune,pprint,readName,exhibit2,injectA, showKinds)
+            ,prune,pprint,readName,exhibit2,injectA,showKinds,extToTpatLift)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 --hiding (Level)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
@@ -69,6 +70,8 @@ import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
 
 import qualified System.Console.Readline as Readline
+import System.Posix.Terminal(queryTerminal)
+import System.Posix(stdInput)
 
 import qualified Data.Map as Map
    -- (Map,empty,member,insertWith,union  ,fromList,toList,lookup)
@@ -239,7 +242,8 @@ typeConstrEnv0 = type_env tcEnv0
 initTcEnv = addFrag frag0 tcEnv0
 
 frag0 = Frag (map f vals) [] [] [] [] [] []
-  where f (nm,(v,sigma)) = (Global nm,(K [] sigma,Rig,0,Var (Global nm)),LetBnd)
+  where f (nm,maker) = g (nm,maker nm)
+        g (nm,(v,sigma)) = (Global nm,(K [] sigma,Rig,0,Var (Global nm)),LetBnd)
 
 -- Used for adding simple Frags, where we don't expect things like theorems etc.
 addFrag (Frag pairs rigid tenv eqs theta rs exts) env =
@@ -772,10 +776,10 @@ typeExp mod (Reify s v) expect = error ("Unexpected reified value: "++s)
 typeExp mod (ExtE x) expect =
   do { exts <- getSyntax
      ; loc <- getLoc
-     ; let lift0 (nm) = Var (Global nm)
-           lift1 (nm) x = App (Var (Global nm)) x
-           lift2 (nm) x y = App (App (Var (Global nm)) x) y
-           lift3 (nm) x y z = App (App (App (Var (Global nm)) x) y) z
+     ; let lift0 nm = Var (Global nm)
+           lift1 nm x = App (lift0 nm) x
+           lift2 nm x y = App (lift1 nm x) y
+           lift3 nm x y z = App (lift2 nm x y) z
      ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
      ; typeExp mod new expect
      }
@@ -1446,10 +1450,10 @@ checkPat rename mod k t pat =
     (ExtP x,_) ->
        do { exts <- getSyntax
           ; loc <- getLoc
-          ; let lift0 (nm) = Pcon (Global nm) []
-                lift1 (nm) x = Pcon (Global nm) [x]
-                lift2 (nm) x y = Pcon (Global nm) [x,y]
-                lift3 (nm) x y z = Pcon (Global nm) [x,y,z]
+          ; let lift0 nm = Pcon (Global nm) []
+                lift1 nm x = Pcon (Global nm) [x]
+                lift2 nm x y = Pcon (Global nm) [x,y]
+                lift3 nm x y z = Pcon (Global nm) [x,y,z]
           ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
           ; checkPat rename mod k t new
           }
@@ -1495,7 +1499,7 @@ constrRange c (p:ps) t pairs =
    do { (dom,rng) <- unifyFun t
       ; constrRange c ps rng ((p,dom):pairs)}
 
--- A range is Ok if its 1) a Tau type, 2) A TyCon type, 3) At Level 1
+-- A range is Ok if it's 1) a Tau type, 2) A TyCon type, 3) At Level 1
 okRange c (Rtau t) = help t
   where help (TySyn _ _ _ _ x) = help x
         help (TyCon synext level nm polykind) =
@@ -1507,6 +1511,9 @@ okRange c (Rtau t) = help t
              ; case (un,ps) of
                 ([],[]) -> do { warnM [Ds "\nTYFUN\n ",Dd new ]; help new}
                 _ -> fail "TyFun in okRange" }
+        help (TcTv (Tv _ _ (MK (Star level)))) =
+          do { unifyLevel level LvZero
+             ; return t }
         help t = failD 2 [Ds "\nNon type constructor: ",Dd t,Ds " as range of constructor: ",Dd c]
 okRange c rho = failD 2 [Ds "\nNon tau type: ",Dd rho
                         ,Ds " as range of constructor: ",Dd c]
@@ -1524,7 +1531,7 @@ checkPats rename k ((p,sig,mod):xs) =
 
 ---------------------------------------------------------------
 -- A [Dec] is a TypableBinder
--- We assume the [Dec] has already been patitioned into
+-- We assume the [Dec] has already been partitioned into
 -- small mutually recursive lists. This is done by "inferBndrForDecs"
 
 
@@ -2710,10 +2717,12 @@ checkLhsMatch current sigma (ps,rhs) =
 -- need to build a ToEnv, so that we can correctly parse the RHS
 
 checkPTBndr :: ToEnv -> (Tpat,Tau) ->  TC ToEnv
-checkPTBndr current (Tvar s nm,k) =
+checkPTBndr _ (Tvar s nm,k) =
   return[(s,TyVar nm (MK k),poly (MK k))]
 checkPTBndr current (Tfun c xs,k) = checkPTBndr current (Tcon c xs,k)
-checkPTBndr current (y@(Tcon (tag@('`':cs)) xs),TyCon sx _ "Tag" _) = return[]
+checkPTBndr _ (y@(Tcon (tag@('`':cs)) xs),TyCon sx _ "Tag" _) = return[]
+checkPTBndr _ (y@(Tcon (tag@('`':cs)) xs),TcTv _) = return[] -- will be checked by unification, later
+checkPTBndr _ (y@(Tcon (tag@('`':cs)) xs),k) = do {outputString ("%+++%% " ++ show y ++ " :: " ++ sht k ++ " %%%%%"); return[]}
 checkPTBndr current (y@(Tcon c xs),k) =
   do {(tau,kind@(K lvs sigma)) <- getInfo y current c
      ; let check1 [] rng = return(rng,[])
@@ -3343,6 +3352,12 @@ pTtoTpat (Star' k (Just s)) env =
 pTtoTpat (TyFun' (TyVar' s : xs)) e1 =
   do { (e2,ys) <- thrd e1 pTtoTpat xs
      ; return(e2,Tfun s ys) }
+pTtoTpat (Ext ext) e1 =
+  do { exts <- syntaxInfo
+     ; loc <- currentLoc
+     ; new <- buildExt (show loc) extToTpatLift ext exts
+     ; pTtoTpat new e1
+     }
 pTtoTpat x e1 = fail ("The type: "++show x++" is not appropriate for the LHS of a type fun.")
 
 thrd e1 f [] = return(e1,[])
@@ -4075,13 +4090,20 @@ interactiveLoop f env = handleM 3
 
 lineEditReadln :: String -> (String -> [String]) -> FIO String
 lineEditReadln prompt expandTabs = fio body
- where body = do { Readline.setCompletionEntryFunction(Just (return . expandTabs))
+ where dear = do { Readline.setCompletionEntryFunction(Just (return . expandTabs))
                  ; s <- Readline.readline prompt
                  ; let addHist Nothing = return ""
                        addHist (Just "") = return ""
                        addHist (Just s) = (Readline.addHistory s)>>(return s)
                  ; addHist s
                  }
+       cheap = do { putStr prompt
+                  ; hFlush stdout
+                  ; s <- getLine
+                  ; eof <-  if null s then hIsEOF stdin else return False
+                  ; if eof then error "EOF received" else return s }
+       body = do { tty <- queryTerminal stdInput
+		 ; if tty then dear else cheap }
 
 setCommand "" value tenv =
     do { ms <- readRef modes

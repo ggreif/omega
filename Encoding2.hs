@@ -184,16 +184,16 @@ instance (Encoding a,Encoding b) => Encoding (a -> FIO b) where
 -- but its impossible to pull functions back from V with those types. Here
 -- are three functions for the forward path
 
-to1 :: (Encoding a, Encoding b) => (a -> b) -> V
-to2 :: (Encoding a, Encoding b, Encoding c) => (a -> c -> b) -> V
-to3 :: (Encoding a, Encoding b, Encoding c, Encoding d) => (a -> d -> b -> c) -> V
+to1 :: (Encoding a, Encoding b) => String -> (a -> b) -> V
+to2 :: (Encoding a, Encoding b, Encoding c) => String -> (a -> c -> b) -> V
+to3 :: (Encoding a, Encoding b, Encoding c, Encoding d) => String -> (a -> d -> b -> c) -> V
 
-lazy_to1 f = Vprimfun "lazy1" (return . to  . f . from)
-lazy_to2 f = Vprimfun "lazy2" (return . lazy_to1  . f . from)
+lazy_to1 name f = Vprimfun name (return . to  . f . from)
+lazy_to2 name f = Vprimfun name (return . (lazy_to1 (name ++ "#"))  . f . from)
 
-to1 f = Vprimfun "to1" (analyzeWith(return . to  . f . from))  -- (a -> b) -> V
-to2 f = Vprimfun "to2" (analyzeWith(return . to1 . f . from))  -- (a -> b -> c) -> V
-to3 f = Vprimfun "to3" (analyzeWith(return . to2 . f . from))  -- (a -> b -> c -> d) -> V
+to1 name f = Vprimfun name (analyzeWith(return . to . f . from))  -- (a -> b) -> V
+to2 name f = Vprimfun name (analyzeWith(return . (to1 (name ++ "#")) . f . from))  -- (a -> b -> c) -> V
+to3 name f = Vprimfun name (analyzeWith(return . (to2 (name ++ "#")) . f . from))  -- (a -> b -> c -> d) -> V
 
 instance Encoding V where
     to x = x

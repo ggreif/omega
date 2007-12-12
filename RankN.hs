@@ -490,15 +490,14 @@ notEqT =  TyCon Ox (lv 1) "(!=)" notEqKind
 
 declare (x@(TyCon _ _ name poly)) = (name,x,poly)
 
--- kind Tag = %name | %age | ... | for all legal symbols
--- data Label t = %name where t=%name | %age where t = %age | ...
+-- kind Tag = `name | `age | ... | for all legal symbols
+-- data Label t :: Tag ~> * where
+--  `name :: Label `name
+--  `age  :: Label `age
+--  ...
 tagT    = TyCon Ox (lv 2) "Tag" (poly star1)
 labelT  = TyCon Ox (lv 1) "Label" (poly (karr (MK tagT) star))
 tagKind = (K [] (simpleSigma tagT))
-
--- kind HasType = Has Tag *0
-hasTypeT = TyCon Ox (lv 1) "HasType" (poly star1)
-hasT     = TyCon Ox (lv 1) "Has" (poly ((MK tagT) `karr` (star `karr` (MK hasTypeT))))
 
 -- Row :: *1 ~> *1
 -- kind Row x = RCons x (Row x) | RNil
@@ -2107,6 +2106,15 @@ nonCon x | x==infixEqName = True
 nonCon (x:xs) = isLower x
 nonCon x = False
 
+-- this quadruple is handy for building the Tpat equivalents
+-- of syntactic extensions
+
+extToTpatLift = (lift0,lift1,lift2,lift3)
+    where lift0 t = TyCon' t
+          lift1 t x = TyApp' (lift0 t) x
+          lift2 t x y = TyApp' (lift1 t x) y
+          lift3 t x y z = TyApp' (lift2 t x y) z
+
 -- whenever we translate to a Tau we need a count of how many TyApp nodes
 -- we are under, because if we find a TySyn its arity must match the number
 -- of nodes we are under. The parameter "n" counts this number. Note how
@@ -2177,11 +2185,7 @@ readTau n env (t@(Tlamx s x)) = failM 1 [Ds "No lambda types in rankN: ",Dd t]
 readTau n env (Ext x) =
   do { exts <- syntaxInfo
      ; loc <- currentLoc
-     ; let lift0 t = TyCon' t
-           lift1 t x = TyApp' (TyCon' t) x
-           lift2 t x y = TyApp' (TyApp' (TyCon' t) x) y
-           lift3 t x y z = TyApp' (TyApp' (TyApp' (TyCon' t) x) y) z
-     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
+     ; new <- buildExt (show loc) extToTpatLift x exts
      ; readTau n env new
      }
 
@@ -3232,7 +3236,7 @@ exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) tag) x) y)
               other -> (d2,tags++"="++elem++"; "++ans)
                 where (d2,ans) = exhibit d1 other
         f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
-exSynRecord d t = (d,"2Ill-formed Record extension: "++sht t)
+exSynRecord d t = (d,"Ill-formed Record extension: "++sht t)
 
 
 
@@ -3251,7 +3255,7 @@ exSynList d (t@(TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y))
              where (d1,elem) = exhibit d x
                    (d2,ans) = exhibit d1 other
         f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
-exSynList d t = (d,"2Ill-formed List extension: "++sht t)
+exSynList d t = (d,"Ill-formed List extension: "++sht t)
 
 exSynPair d (t@(TyApp (TyApp (TyCon (Px(key,pair)) _ c1 _) x) y))
     | c1==pair =(d2,"(" ++ x' ++","++ y' ++ ")"++postscript key)
@@ -3638,7 +3642,9 @@ fst3 (x,y,z) = x
 splitClass (TcTv (Tv un (Skol _) k)) any = Hard
 splitClass any (TcTv (Tv un (Skol _) k)) = Hard
 splitClass (TcTv x) (y@(TyFun _ _ _)) | all (/=x) (fst3 (varsOfTau y)) = MutSolve
+splitClass (TcTv _) (TyFun _ _ _) = Hard
 splitClass (y@(TyFun _ _ _)) (TcTv x) | all (/=x) (fst3 (varsOfTau y)) = MutSolve
+splitClass (TyFun _ _ _) (TcTv _) = Hard
 splitClass (TcTv x) any = MutSolve
 splitClass any (TcTv x) = MutSolve
 splitClass _ _ = Hard
