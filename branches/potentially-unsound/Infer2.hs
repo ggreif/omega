@@ -597,17 +597,19 @@ instance Typable (Mtc TcEnv Pred) Lit Rho where
 
 ------ PLAYGROUND
 
---recursiveRefinementToPred :: [(TcTv, Tau)] -> TC [Pred]
 recursiveRefinementToPred :: Unifier -> TC [Pred]
 recursiveRefinementToPred [] = return []
---recursiveRefinementToPred (v,tau):rs = 
 recursiveRefinementToPred (((x@(Tv _ _ _)), (y@(TyFun _ _ _))):rs) =
     if all (/=x) vs
     then recursiveRefinementToPred rs
-    else do { outputString (show x ++ " ==== " ++ sht y)
-	    ; more <- recursiveRefinementToPred rs
-	    ; return (Equality (TcTv x) y:more)
-	    }
+    else do { verbose <- show_emit
+            ; let a = TcTv x
+            ; whenM verbose [Ds "\nGenerating recursive predicate\n  ",Dd a, Ds " =?= ",Dn y]
+            ; more <- recursiveRefinementToPred rs
+            ; return (equalRel a y:more)
+            -- see: emit x y in RankN.hs!
+            --; injectA " emitting " [equalRel a b]}}
+            }
   where (vs, _, _) = varsOfTau y
 recursiveRefinementToPred (_:rs) = recursiveRefinementToPred rs
 
@@ -742,23 +744,23 @@ typeExp mod (CheckT e) expect =
      do { ts <- getBindings
         ; refinement <- zonk ts
         ; assumptions <- getAssume
-	; raffinesse <- recursiveRefinementToPred refinement
-	; env <- tcEnv
-	; let env2 = env{assumptions = assumptions ++ raffinesse}
-	; inEnv env2 (do
-		      { rules <- getAllTheorems
-		      ; assumptions <- getAssume
-		      ; (ass2,_,_) <- nfPredL assumptions
-		      ; typ <- zonk expect
-		      ; warnM [Ds ("\n\n*** Checking: " ++ (take 62 (show e)))
-			      ,Ds "\n*** expected type: ",Dd typ
-			      ,Dwrap 80 "***    refinement: " refinement ", "
-			      ,Dwrap 80 "***   assumptions: " ass2 ", "
-			      ,Dwrap 80 "***      theorems: " (map ruleName(filter (not . axiom) rules)) ","]
-		      ; env <- tcEnv
-		      ; checkLoop typ env
-		      ; x <- typeExp mod e expect
-		      ; return(CheckT x)})}
+        ; raffinesse <- recursiveRefinementToPred refinement
+        ; env <- tcEnv
+        ; let env2 = env{assumptions = assumptions ++ raffinesse}
+        ; inEnv env2 (do
+                      { rules <- getAllTheorems
+                      ; assumptions <- getAssume
+                      ; (ass2,_,_) <- nfPredL assumptions
+                      ; typ <- zonk expect
+                      ; warnM [Ds ("\n\n*** Checking: " ++ (take 62 (show e)))
+                              ,Ds "\n*** expected type: ",Dd typ
+                              ,Dwrap 80 "***    refinement: " refinement ", "
+                              ,Dwrap 80 "***   assumptions: " ass2 ", "
+                              ,Dwrap 80 "***      theorems: " (map ruleName(filter (not . axiom) rules)) ","]
+                      ; env <- tcEnv
+                      ; checkLoop typ env
+                      ; x <- typeExp mod e expect
+                      ; return(CheckT x)})}
 typeExp mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
 typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
      do { (vs,preds,tau) <- instanL [] xs  -- ## WHAT DO WE DO WITH THE PREDS?
@@ -4131,7 +4133,7 @@ lineEditReadln prompt expandTabs = fio body
                   ; eof <-  if null s then hIsEOF stdin else return False
                   ; if eof then error "EOF received" else return s }
        body = do { tty <- queryTerminal stdInput
-		 ; if tty then dear else cheap }
+                 ; if tty then dear else cheap }
 
 setCommand "" value tenv =
     do { ms <- readRef modes
