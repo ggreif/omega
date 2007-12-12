@@ -72,7 +72,7 @@ readEvalPrint commandTable sources tenv =
 topLoop commandTable sources env = tryAndReport
   (do { fio(hFlush stdout)
       ; fio(writeRef dispRef disp0)
-      ; env' <-  (readEvalPrint commandTable sources init)
+      ; env' <- readEvalPrint commandTable sources init
       ; topLoop commandTable (sourceFiles env') env'
       }) (report (topLoop commandTable (sourceFiles init) init))
  where init = (env{sourceFiles=sources})

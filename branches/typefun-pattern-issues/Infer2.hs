@@ -9,6 +9,7 @@ module Infer2 where
 
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
+import IO(hIsEOF,hFlush,stdin,stdout)
 
 import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
@@ -69,6 +70,8 @@ import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
 
 import qualified System.Console.Readline as Readline
+import System.Posix.Terminal(queryTerminal)
+import System.Posix(stdInput)
 
 import qualified Data.Map as Map
    -- (Map,empty,member,insertWith,union  ,fromList,toList,lookup)
@@ -4087,13 +4090,20 @@ interactiveLoop f env = handleM 3
 
 lineEditReadln :: String -> (String -> [String]) -> FIO String
 lineEditReadln prompt expandTabs = fio body
- where body = do { Readline.setCompletionEntryFunction(Just (return . expandTabs))
+ where dear = do { Readline.setCompletionEntryFunction(Just (return . expandTabs))
                  ; s <- Readline.readline prompt
                  ; let addHist Nothing = return ""
                        addHist (Just "") = return ""
                        addHist (Just s) = (Readline.addHistory s)>>(return s)
                  ; addHist s
                  }
+       cheap = do { putStr prompt
+                  ; hFlush stdout
+                  ; s <- getLine
+                  ; eof <-  if null s then hIsEOF stdin else return False
+                  ; if eof then error "EOF received" else return s }
+       body = do { tty <- queryTerminal stdInput
+		 ; if tty then dear else cheap }
 
 setCommand "" value tenv =
     do { ms <- readRef modes
