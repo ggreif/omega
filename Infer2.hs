@@ -4179,7 +4179,10 @@ commandString =
  ":rules     list rules in scope\n"++
  ":h         hint. What is the current expected type\n"++
  ":k t       print the kind of 't'\n"++
- ":t e       print the type of 'e'\n"++
+ ":norm e    infer type of expression 'e' and normalize it\n"++
+ ":e         print the assumptions\n"++
+ ":o e       print the type of 'e'\n"++
+ ":t v       print the type of variable 'v'\n"++
  ":try e     match the type of 'e' against the expected type\n"
 
 checkReadEvalPrint :: (Expected Rho,TcEnv) -> TC Bool
@@ -4227,6 +4230,14 @@ checkReadEvalPrint (hint,env) =
                 ; t1 <- zonk t
                 ; updateDisp
                 ; warnM [Ds (show exp ++ " :: "),Dd t1]
+                ; return (True)
+                }
+          (ColonCom "norm" e) ->
+             do { exp <- getExp e
+                ; (Rtau t,exp2) <- inferExp exp
+		; (refinement,ps) <- refine [] [(tauToPred t)] []
+		; warnM [Ds"\n   ",Dd t,Ds "\nNormalizes to:\n  ",Dl ps "\n  "
+			,Ds "\nRefinement:\n  ",Dl refinement "\n  "]
                 ; return (True)
                 }
           (ColonCom "try" e) ->
