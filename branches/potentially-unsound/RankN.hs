@@ -1055,7 +1055,7 @@ unifyVar v t = matchErr "(V) different types" (TcTv v) t
 
 
 matchErr s t1 t2 = failM 0
-   [Ds (s++"\n   "),Dd t1,Ds "   !=   ",Dd t2,Ds "\n",Ds (show(t1,t2))]
+   [Ds (s++"\n   "),Dd t1,Ds "   !=   ",Dd t2,Ds "\n",Ds (show(t1,t2)),Ds " ????? ", Ds (shtt t2)]
 
 kinderr t k u1 s =
    failM 0
@@ -3750,11 +3750,14 @@ emitStar (x,y) (Left(sub,eqs)) = Left(sub,Equality x y :eqs)
 emitStar pair (Right x) = Right x
 
 mguStarVar beta (x@(Tv _ _ (MK k))) tau xs =
-  do { let vs = tvsTau tau
+  do { let --vs = tvsTau tau
            new1 = [(x,tau)]
      ; k2 <- kindOfM tau
      ; new2 <- mguStar beta (subPairs new1 ((k,k2):xs))
-     ; return(if (elem x vs)
+     ; outputString ("mguStarVar: " ++ show new2 ++ "         0000000>" ++ sht tau ++ "\n\n\n         x>" ++ sht (TcTv x))
+     ; let infinite (TyFun _ _ _) = False
+           infinite _ = elem x (tvsTau tau)
+     ; return(if {-(elem x vs)-}infinite tau
                  then Right("occurs check", TcTv x, tau)
                  else composeStar new2 new1)}
 
