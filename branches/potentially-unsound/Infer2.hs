@@ -1760,7 +1760,8 @@ checkPT loc pt =
      ; rho2 <- sub (nameMap,[],[],[]) rho          -- make fresh Rho
      ; eqn2 <- sub (nameMap,[],[],[]) eqns         -- and fresh equations
      ; return (s,(rho2,eqn2,skol))}
- where  rigid ((s,nm):xs) ((nm2,k,q):ys) subst =
+ where  rigid (snMap@((_,nm):_)) ((nm2,_,_):ys) subst | nm /= nm2 = rigid snMap ys subst
+        rigid ((s,nm):xs) ((_,k,q):ys) subst =
             do { k2 <- sub (subst,[],[],[]) k   -- in explicit foralls, earlier may bind
                ; v <- newRigidTyVar q loc s k2  -- later, so we need to apply subst to k
                ; subst2 <- compX [(nm,TcTv v)] subst
