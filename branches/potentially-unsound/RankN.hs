@@ -2988,6 +2988,7 @@ sht (TcTv (Tv n (Rigid _ _ _) k))  =
     "(Rigid " ++ show n ++":"++shtt k++")"
 sht (TyFun nm k xs) = "{TyFun ("++nm ++ "::"++shtt k++")"++plistf sht " " xs " " "}"
 sht (TySyn nm n fs as t) = "{Syn "++nm++(plistf sht " " as " " " = ")++sht t++"}"
+sht (x@(TyEx _)) = show x
 -- sht x = show x
 
 shtR (Rarrow x y) = "("++shtS x++" r-> "++shtR y++")"
