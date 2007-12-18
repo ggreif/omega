@@ -1495,7 +1495,7 @@ badRefine pat t s x y =
   failK "bad refinement" 2
           [Ds "\nWhile infering the type of the pattern: ",Dd pat
           ,Ds "\nwe expected it to have type: ",Dd t
-          ,Ds "\nbut, the current refinement fails because ",Dd x,Ds " != ",Dd y
+          ,Ds "\nbut, the current refinement fails (",Ds s,Ds ") because ",Dd x,Ds " != ",Dd y
           ,Ds ".\nSometimes reordering the patterns can fix this."]
 
 badRefine2 pat theta t s =
