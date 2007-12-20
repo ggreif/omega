@@ -1040,12 +1040,15 @@ unifyVar (x@(Tv u1 r1 k1)) (t@(TcTv (Tv u2 r2 k2))) | u1==u2 = return ()
 unifyVar (x@(Tv u1 (Flexi _) _)) (TcTv(y@(Tv u2 (Flexi _) _)))
   | u1 < u2 = unifyVar y (TcTv x)
 unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
-  do { (vs,level_) <- get_tvs t
-     ; t2 <- zonk t
-     ; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
-     ; (new_t) <- handleM 1 (check t k) (kinderr t k u1)
-     ; writeRef r1 (Just t2)
-     ; return ()
+  do { (vs,_) <- get_tvs t
+     ; let occurs (TyFun _ _ _) True = emit (TcTv x) t
+           occurs _ selfref = do { t2 <- zonk t
+                                 ; when selfref (matchErr "Occurs check" (TcTv x) t2)
+                                 ; new_t <- handleM 1 (check t k) (kinderr t k u1)
+                                 ; writeRef r1 (Just t2)
+                                 ; return ()
+                                 }
+     ; occurs t (any (==x) vs)
      }
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (TcTv v@(Tv _ (Flexi _) _)) = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 (Flexi _) k2))      = unifyVar v (TcTv x)
