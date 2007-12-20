@@ -1054,6 +1054,11 @@ unifyVar (x@(Tv _ (Rigid _ _ _) _)) (TcTv v@(Tv _ (Flexi _) _)) = unifyVar v (Tc
 unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 (Flexi _) k2))      = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) = emit (TcTv x) y
 unifyVar v (x@(TyFun nm k _)) = emit (TcTv v) x
+unifyVar (x@(Tv _ (Rigid _ _ _) _)) (t@(TyApp _ _)) =
+    do { (vs,_) <- get_tvs t
+       ; when (any (==x) vs) (do { t2 <- zonk t; matchErr "Occurs check" (TcTv x) t2} )
+       ; emit (TcTv x) t
+       }
 unifyVar v t = matchErr "(V) different types" (TcTv v) t
 
 
