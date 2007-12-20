@@ -135,7 +135,7 @@ instance TyCh (Mtc TcEnv Pred) where
            }
    getBindings = getBs
    getDisplay = readRef dispRef
-   solveSomeEqs p preds = do { env <- tcEnv; outputString "###>>>>EEE>>"; (u,ps,_,_) <- solveConstraints p env preds; return(ps,u)}
+   solveSomeEqs p preds = do { env <- tcEnv; (u,ps,_,_) <- solveConstraints p env preds; return(ps,u)}
    show_emit = getMode "predicate_emission"
    getTruths = getAssume
    setTruths = setAssumptions
@@ -1661,7 +1661,6 @@ badOblig oblig oblig2 pat assump truths =
 solveDecObligations nm rho assump oblig =
  do { env <- tcEnv
     ; let truths = (assumptions env)
-     ; outputString "###>>>>DDD>>"
     ; (u,oblig2,_,_) <- solveConstraints (nm,rho) (env{assumptions = assump++truths}) oblig
     ; when (not (null oblig2)) (badOblig oblig oblig2 nm assump truths)}
 
@@ -2511,7 +2510,6 @@ under frag (p@(nm,rho)) comp =
      ; let env = env1{assumptions = assumptions ++ raffinesse}
      ;  (answer,collected) <- handleM 3 (collectPred (inEnv env (comp u0)))
                                         (underErr1 patVars)
-     ; outputString "###>>>>CCC>>"
      ; (u5,unsolved,truths,need) <- solveConstraints p env (subPred u0 collected)
      ; equalityVarsGetBound u5 eqs
      ; rigidVarsEscape u5 eqs
@@ -2531,7 +2529,6 @@ under frag (p@(nm,rho)) comp =
            triples = envTrip ++ uTrip
      ; let bad = nub(filter (`elem` vars) patVars)
      ; when (not (null bad)) (escapes triples bad)
-     ; outputString ("###>>>>CCCpassOn>>" ++ show passOn)
      ; injectA (" under "++nm++" ") passOn
      ; mutVarSolve u5  -- Permanently Bind any Flexi vars in the unifier
      ; return answer
@@ -3746,10 +3743,8 @@ solveConstraints (nm,rho) env collected =
      ; let (oblig,residual) = splitR collected ([],[])
            assump = assumptions env -- Truths stored in the extended environment
            rules = getRules "" env
-     ; outputString ("###>>>>assump>>" ++ show assump)
      ; (truths1,u0,_) <- inEnv env (liftNf normPredL assump)
      ; let oblig2 = foldr pred2Pair [] (subPred u0 oblig)
-     ; outputString ("###>>>>truths1>>" ++ show truths1)
      ; (normOblig,u1,normTruths) <- inEnv env (normUnder truths1 oblig2)
      ; steps <- getBound "narrow" 25
      ; u2 <- handleM 2
@@ -4236,9 +4231,9 @@ checkReadEvalPrint (hint,env) =
           (ColonCom "norm" e) ->
              do { exp <- getExp e
                 ; (Rtau t,exp2) <- inferExp exp
-		; (refinement,ps) <- refine [] [(tauToPred t)] []
-		; warnM [Ds"\n   ",Dd t,Ds "\nNormalizes to:\n  ",Dl ps "\n  "
-			,Ds "\nRefinement:\n  ",Dl refinement "\n  "]
+                ; (refinement,ps) <- refine [] [(tauToPred t)] []
+                ; warnM [Ds"\n   ",Dd t,Ds "\nNormalizes to:\n  ",Dl ps "\n  "
+                        ,Ds "\nRefinement:\n  ",Dl refinement "\n  "]
                 ; return (True)
                 }
           (ColonCom "try" e) ->
@@ -4607,7 +4602,6 @@ checkDecs env ds =
 checkAndCatchGroundPred ds =
   do {((ds2,env),ground::[Pred]) <- extractAccum(checkBndGroup ds)
      ; let message = "Solving toplevel ground terms"
-     ; outputString "###>>>>BBB>>"
      ; (u,unsolved,_,_) <- solveConstraints (message,starR) env ground
      ; injectA " checkAndCatch " unsolved
      ; return(ds2,env)
@@ -4690,7 +4684,6 @@ wellTyped env e = tcInFIO env
       -- ; warnM [Ds "Obligations at top level are: ",Dd oblig]
       ; (oblig2,_,_) <- liftNf normPredL solvePs
       ; env <- tcEnv
-      ; outputString "###>>>>AAA>>"
       ; (u,oblig3,_,_) <- solveConstraints (show e,t) env oblig2
       ; (typ,_,_) <- liftNf normRho t
       ; when (not(null oblig3) && not(arrowP typ))
