@@ -5,7 +5,8 @@
 -- Thu Nov  8 15:51:28 Pacific Standard Time 2007
 -- Omega Interpreter: version 1.4.2
 
-module LangEval where
+module LangEval(env0,vals,elaborate,Prefix(..),
+                Env,eval,mPatStrict,extendV) where
 
 import Auxillary
 import Syntax
