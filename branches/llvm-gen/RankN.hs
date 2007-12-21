@@ -6,10 +6,38 @@
 -- Omega Interpreter: version 1.4.2
 
 {-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
-module RankN where
+module RankN(PT(TyVar',Rarrow',Karrow',TyApp',Kinded,TyFun',TyCon',Star',Forallx,Tlamx,AnyTyp,Ext,PolyLevel)
+	    ,Tau(..),Pred(..),warnM,TcTv(..)
+	    ,showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub,getMult
+	    ,PPred(..),Quant(..),definesValueConstr,short,typN,simpletyp,proposition
+	    ,pt,allTyp,parse_tag,props,typingHelp,typing,conName,Z(..),postscript
+	    ,applyT,listT,pairT,arrowT,atomT,sumT,notEqT,chrSeqT,hiddenT,stringT,ioT
+	    ,unitT,intT,charT,floatT,boolT,symbolT,tagT,rootT,propT,tlabel,Level(..),poly,star
+	    ,teq,tpair,tprods,tlist,tarr,tio,tptr,thidden,tmaybe,Kind(..)
+	    ,Sigma(..),L(..),Rho(..),runType,generType,liftType,sigma4Eq,sigma4Hide
+	    ,ToEnv,star_star,TypeLike(..),Flavor(..),unionP,binaryLift,Exhibit(..)
+	    ,exhibitVT,kindOf,TyCh(..),PolyKind(..),unsafeUnwind,windup,newTau,subTau
+	    ,Unifier,lv,karr,o,whenP,whenM,handleM,failM,mgu,match,mostGenUnify,varsOfTau
+	    ,union3,mguB,Sht(..),Expected(..),Typable(..),Subsumption(..),NameStore(..)
+	    ,failD,failK,useStoreName,makeRel,equalPartsM,dispRef,subRho,subSigma
+	    ,extendref,failIfInConsistent,mguStar,star1,starR,newKind,newSigma
+	    ,newFlexiTyVar,newRigidTyVar,newRigid,newRho,newflexi,newStar
+	    ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL
+	    ,newSkolem,instanTy,instanPatConstr,checkArgs,unify,morepolySS,morepolyRR
+	    ,alpha,morepolySigmaRho,sigmaPair,sigmaSum,unifyCode,unifyFun
+	    ,simpleSigma,toSigma,toTau,toEqs,toRho,toPT,rho2PT,toL
+	    ,arrow,kind4Atom,notEqKind,ttag,kind4Hidden,equalKind,infixEqName
+	    ,tvsTau,subPairs,equalityP,pred2Tau,argsToEnv,expecting,bindtype
+	    ,failtype,zap,rootTau,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
+	    ,parsePT,mutVarSolve,compose,equalRel,parseIntThenType,parseType
+	    ,showPred,prune,pprint,readName,exhibit2,injectA,showKinds
+	    ,sht,univLevelFromPTkind,ForAllArgs,MGU,TcLv(..),newLevel,unifyLevel
+	    ,pruneLv,freshLevels,incLev,shtP,unBindWith,unwind
+	    ,varsOfRho,varsOfSigma,varsOfPred,varsOfPair,varsOfPoly,varsOfExpectRho
+	    ,unionTwo,subPred,subpairs,disp0,subst,tunit',tsum,tcode
+	    ) where
 
 import Bind
--- import IOExts
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 import Monads
@@ -532,6 +560,10 @@ kind4Atom = K [] (Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
 runType = Forall (Cons (star,All)
            (bind name1 (Nil ([],arrow (Forall (Nil ([],tcode a))) a))))
    where a = (Rtau(TyVar name1 star))
+
+generType = Forall (Cons (star,All)
+		    (bind name1 (Nil ([],arrow (Forall (Nil ([],tcode a))) (Rtau tstring)))))
+    where a = (Rtau(TyVar name1 star))
 
 liftType = Forall (Cons (star,All)
            (bind name1 (Nil ([],arrow (Forall (Nil ([],a))) (tcode a)))))

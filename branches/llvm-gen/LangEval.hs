@@ -15,9 +15,8 @@ import Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..))
 import Value
-import RankN --(Sigma,runType,liftType, sigma4Eq,sigma4Hide,ToEnv,
-             -- star,star_star,poly,intT)
-import RankN(Z)
+import RankN (Sigma,runType,generType,liftType, sigma4Eq,sigma4Hide,ToEnv,
+              star,star_star,poly,intT,PT(..),Z,short)
 import Char(chr,ord)
 
 import ParserDef(pe)
@@ -26,6 +25,7 @@ import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
 import SyntaxExt(Extension(..),SynExt(..))
+import GenLLVM(genLLVM)
 
 
 type Level = Int
@@ -605,6 +605,7 @@ vals =
 
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
  ,("run",(to run,runType))
+ ,("gener",(to gener,generType))
  ,("lift",(reifyV,liftType))
 
  ,("returnIO",(returnIO,gen(typeOf(undefined :: A -> IO A))))
@@ -692,6 +693,9 @@ run = lift1 "run" g where
   g (Vcode a xs) = eval xs a
   g v = fail ("Non code object in run: "++show v)
 
+gener = lift1 "gener" g where
+  g (Vcode a xs) = genLLVM xs a
+  g v = fail ("Non code object in gener: "++show v)
 
 reifyV = lift1 "lift" f where
   f x = do { v <- (reify x); return(Vcode v empty)}
