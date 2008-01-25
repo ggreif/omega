@@ -54,8 +54,9 @@ data Instr :: * -> * -> * where
   Unwind :: Instr a Term
   Branch :: BasicBlock -> Instr a Term
   Return :: Value -> Instr Cabl Term
---  Switch :: Value (LInt bits) -> BasicBlock t Normal d1 -> [(Value a, BasicBlock t Normal d2)] -> Instr t n RNil
-  Unreachable :: Instr a Term
+  --Switch :: Value {-(LInt bits)-} -> BasicBlock {-t Normal d1-} -> [(Value, BasicBlock {-t Normal d2-})] -> Instr a Term
+  Switch :: [(Value, BasicBlock)] -> Instr Cabl Term
+  Unreachable :: Instr Cabl Term
   -- Value generators
   Add :: Value -> Value -> Instr Cabl Cabl
   Sub :: Value -> Value -> Instr Cabl Cabl
