@@ -55,7 +55,7 @@ data Instr :: * -> * -> * where
   Branch :: BasicBlock -> Instr a Term
   Return :: Value -> Instr Cabl Term
   --Switch :: Value {-(LInt bits)-} -> BasicBlock {-t Normal d1-} -> [(Value, BasicBlock {-t Normal d2-})] -> Instr a Term
-  Switch :: [(Value, BasicBlock)] -> Instr Cabl Term
+  Switch :: Value -> [(Value, BasicBlock)] -> Instr Cabl Term
   Unreachable :: Instr Cabl Term
   -- Value generators
   Add :: Value -> Value -> Instr Cabl Cabl
@@ -70,7 +70,7 @@ data Instr :: * -> * -> * where
 type LType = String
 
 data BasicBlock :: * where
-  BB :: Name -> Thrist Instr a Term -> BasicBlock
+  BB :: Name -> Thrist Instr Cabl Term -> BasicBlock
 
 data Value :: * where
   LLit :: Lit -> Value
@@ -95,8 +95,29 @@ subComp lab (Case e ms) = subCase lab e ms
 subComp lab e = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
 
 
-subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIO (Thrist Instr Cabl Cabl, Value)
-subCase lab _ _ = return (Cons (Def lab $ Phi []) Nil, Ref "typ" lab)
+caseArm :: BasicBlock -> Match Pat Exp Dec -> FIO (Value, Either BasicBlock Value)
+caseArm cont (_, Plit (i@(Int _)), Normal (Lit (j@(Int _))), decs) = return (LLit i, Right (LLit j))
+
+mapFIO :: (a -> FIO b) -> [a] -> FIO [b]
+mapFIO f [] = return []
+mapFIO f (a:as) = do { fa <- f a; fas <- mapFIO f as; return (fa:fas) }
+
+zipWithFIO :: (a -> b -> FIO c) -> [a] -> [b] -> FIO [c]
+zipWithFIO f (a:as) (b:bs) = do { fc <- f a b; fcs <- zipWithFIO f as bs; return (fc:fcs) }
+zipWithFIO _ _ _ = return []
+
+splitArms :: [Match Pat Exp Dec] -> FIO [(Value, BasicBlock)]
+splitArms matches = do { arms' <- arms; landings' <- landings; zipWithFIO assembleStartLand arms' landings' }
+    where arms = mapFIO (caseArm phi) matches
+	  phi = do { bb <- fresh; landings <- landings; return $ Phi landings }
+	  landings = mapFIO buildLanding arms
+	  buildLanding (val, Right res) = do { n <- fresh; return (res, BB n (Cons (Branch phi) Nil)) }
+	  assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
+
+subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIO (Thrist Instr Cabl Term, Value)
+--subCase lab _ _ = return (Cons (Def lab $ Phi []) Nil, Ref "typ" lab)
+--subCase lab (Lit (n@(Int _))) cases = return (Case (LLit n) (map caseArm cases))
+subCase lab (Lit (n@(Int _))) cases = do { arms <- splitArms cases; return (Cons (Switch (LLit n) arms) Nil, Ref "i32" lab) }
 
 subApplication :: Name -> Exp -> [Exp] -> FIO (Thrist Instr Cabl Cabl, Value)
 subApplication lab (Reify s (Vlit c)) args = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
