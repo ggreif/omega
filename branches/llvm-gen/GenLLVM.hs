@@ -64,7 +64,7 @@ data Instr :: * -> * -> * where
   Div :: Value -> Value -> Instr Cabl Cabl
   Icmp :: Oper -> Value -> Value -> Instr Cabl Cabl
   -- Special values
-  Phi :: [(Value, BasicBlock)] -> Instr a Cabl
+  Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
 
 type LType = String
@@ -91,7 +91,7 @@ toLLVM something = fail ("cannot toLLVM: " ++ show something)
 subComp :: Name -> Exp -> FIO (Thrist Instr Cabl Cabl, Value)
 subComp _ (Lit x) = return (Nil, LLit x)
 subComp lab (App f x) = subApplication lab f [x]
-subComp lab (Case e ms) = subCase lab e ms
+--subComp lab (Case e ms) = subCase lab e ms
 subComp lab e = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
 
 
@@ -108,10 +108,12 @@ zipWithFIO _ _ _ = return []
 
 splitArms :: [Match Pat Exp Dec] -> FIO [(Value, BasicBlock)]
 splitArms matches = do { arms' <- arms; landings' <- landings; zipWithFIO assembleStartLand arms' landings' }
-    where arms = mapFIO (caseArm phi) matches
-	  phi = do { bb <- fresh; landings <- landings; return $ Phi landings }
-	  landings = mapFIO buildLanding arms
-	  buildLanding (val, Right res) = do { n <- fresh; return (res, BB n (Cons (Branch phi) Nil)) }
+    where arms = do { phiBB <- phiBB; mapFIO (caseArm phiBB) matches }
+	  phi = do { landings <- landings; return $ Phi landings }
+	  phiBB :: FIO BasicBlock
+	  phiBB = do { n <- fresh; phi' <- phi; return $ BB n (Cons phi' (Cons GenLLVM.Unreachable Nil)) }
+	  landings = do { arms <- arms; mapFIO buildLanding arms }
+	  buildLanding (val, Right res) = do { phiBB <- phiBB; n <- fresh; return (res, BB n (Cons (Branch phiBB) Nil)) }
 	  assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
 
 subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIO (Thrist Instr Cabl Term, Value)
