@@ -81,18 +81,19 @@ data Value :: * where
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
 toLLVM (Lit x) = return (Cons (Return $ LLit x) Nil)
 toLLVM (App f x) = do
-		   (thr, val) <- subApplication name1 f [x]
-		   return (appendThrist thr $ Cons (Return $ val) Nil)
-toLLVM c@(Case _ _) = do
-		      (thr, val) <- subComp name1 c
-		      return (appendThrist thr $ Cons (Return $ val) Nil)
+		   let cont = \val -> return $ Cons (Return $ val) Nil
+		   subApplication name1 f [x] cont
+toLLVM c@(Case _ _) = subComp name1 c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM something = fail ("cannot toLLVM: " ++ show something)
 
-subComp :: Name -> Exp -> FIO (Thrist Instr Cabl Cabl, Value)
-subComp _ (Lit x) = return (Nil, LLit x)
-subComp lab (App f x) = subApplication lab f [x]
+type FIOTerm = FIO (Thrist Instr Cabl Term)
+type FIOTermCont = Value -> FIOTerm
+
+subComp :: Name -> Exp -> (Value -> FIO (Thrist Instr Cabl Term)) -> FIO (Thrist Instr Cabl Term)
+subComp _ (Lit x) cont = cont $ LLit x
+--subComp lab (App f x) = subApplication lab f [x]
 --subComp lab (Case e ms) = subCase lab e ms
-subComp lab e = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
+subComp lab e cont = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
 
 
 caseArm :: BasicBlock -> Match Pat Exp Dec -> FIO (Value, Either BasicBlock Value)
@@ -121,38 +122,36 @@ subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIO (Thrist Instr Cabl Term, Va
 --subCase lab (Lit (n@(Int _))) cases = return (Case (LLit n) (map caseArm cases))
 subCase lab (Lit (n@(Int _))) cases = do { arms <- splitArms cases; return (Cons (Switch (LLit n) arms) Nil, Ref "i32" lab) }
 
-subApplication :: Name -> Exp -> [Exp] -> FIO (Thrist Instr Cabl Cabl, Value)
-subApplication lab (Reify s (Vlit c)) args = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
-subApplication lab (Reify s v) args = subPrimitive lab s args v
+subApplication :: Name -> Exp -> [Exp] -> FIOTermCont -> FIOTerm
+subApplication lab (Reify s (Vlit c)) args _ = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
+subApplication lab (Reify s v) args cont = subPrimitive lab s args v cont
 --subApplication lab (Lit (CrossStage v)) args = subPrimitive lab v args
-subApplication lab (App f x) args = subApplication lab f (x:args)
-subApplication lab fun args = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
+subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
+subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
 
-subPrimitive :: Name -> String -> [Exp] -> V -> FIO (Thrist Instr Cabl Cabl, Value)
-subPrimitive lab "<" [a1, a2] _ = binaryPrimitive lab (Icmp OLt) "i1" a1 a2
-subPrimitive lab "<=" [a1, a2] _ = binaryPrimitive lab (Icmp OLe) "i1" a1 a2
-subPrimitive lab ">=" [a1, a2] _ = binaryPrimitive lab (Icmp OGe) "i1" a1 a2
-subPrimitive lab ">" [a1, a2] _ = binaryPrimitive lab (Icmp OGt) "i1" a1 a2
-subPrimitive lab "==" [a1, a2] _ = binaryPrimitive lab (Icmp OEq) "i1" a1 a2
-subPrimitive lab "/=" [a1, a2] _ = binaryPrimitive lab (Icmp ONe) "i1" a1 a2
+subPrimitive :: Name -> String -> [Exp] -> V -> FIOTermCont -> FIOTerm
+subPrimitive lab "<" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLt) "i1" a1 a2 cont
+subPrimitive lab "<=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLe) "i1" a1 a2 cont
+subPrimitive lab ">=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGe) "i1" a1 a2 cont
+subPrimitive lab ">" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGt) "i1" a1 a2 cont
+subPrimitive lab "==" [a1, a2] _ cont = binaryPrimitive lab (Icmp OEq) "i1" a1 a2 cont
+subPrimitive lab "/=" [a1, a2] _ cont = binaryPrimitive lab (Icmp ONe) "i1" a1 a2 cont
 
-subPrimitive lab "+" [a1, a2] _ = binaryPrimitive lab Add "i32" a1 a2
-subPrimitive lab "-" [a1, a2] _ = binaryPrimitive lab Sub "i32" a1 a2
-subPrimitive lab "*" [a1, a2] _ = binaryPrimitive lab Mul "i32" a1 a2
-subPrimitive lab "div" [a1, a2] _ = binaryPrimitive lab Div "i32" a1 a2
+subPrimitive lab "+" [a1, a2] _ cont = binaryPrimitive lab Add "i32" a1 a2 cont
+subPrimitive lab "-" [a1, a2] _ cont = binaryPrimitive lab Sub "i32" a1 a2 cont
+subPrimitive lab "*" [a1, a2] _ cont = binaryPrimitive lab Mul "i32" a1 a2 cont
+subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div "i32" a1 a2 cont
 
-subPrimitive lab prim args (Vprimfun s f) = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
-subPrimitive lab prim args v = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
+subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
+subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
 
-binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType -> Exp -> Exp -> FIO (Thrist Instr Cabl Cabl, Value)
-binaryPrimitive lab former typ a1 a2 = do
+binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType
+		-> Exp -> Exp -> FIOTermCont -> FIOTerm
+binaryPrimitive lab former typ a1 a2 cont = do
 				       l1 <- fresh
 				       l2 <- fresh
-				       (c1, v1) <- subComp l1 a1
-				       (c2, v2) <- subComp l2 a2
-				       let c = appendThrist c1 c2
-				       return (appendThrist c (Cons (Def lab (former v1 v2)) Nil), Ref typ lab)
-
+				       --(c1, v1) <- subComp l1 a1 (\ val -> return $ Cons (Def lab (former v1 v2)) (cont $ Ref typ lab))
+				       subComp l2 a2 (\v2 -> do { tail <- cont $ Ref typ lab; return $ Cons (Def lab $ former v2 v2) tail})
 
 
 showThrist :: Thrist Instr a Term -> FIO String
