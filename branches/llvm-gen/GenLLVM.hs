@@ -20,8 +20,8 @@ data Thrist :: (* -> * -> *)  -> * -> * -> * where
 -- Thrist appending
 
 appendThrist :: Thrist b c d ->
-		Thrist b d e ->
-		Thrist b c e
+                Thrist b d e ->
+                Thrist b c e
 
 appendThrist Nil a = a
 appendThrist (Cons b r) a = Cons b (appendThrist r a)
@@ -30,9 +30,9 @@ appendThrist (Cons b r) a = Cons b (appendThrist r a)
 
 genLLVM :: Ev -> Exp -> FIO V
 genLLVM geh ex = do
-		 tree <- toLLVM ex
-		 text <- showThrist tree
-		 return (to text)
+                 tree <- toLLVM ex
+                 text <- showThrist tree
+                 return (to text)
 
 
 -- declare some phantoms
@@ -81,8 +81,8 @@ data Value :: * where
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
 toLLVM (Lit x) = return (Cons (Return $ LLit x) Nil)
 toLLVM (App f x) = do
-		   let cont = \val -> return $ Cons (Return $ val) Nil
-		   subApplication name1 f [x] cont
+                   let cont = \val -> return $ Cons (Return $ val) Nil
+                   subApplication name1 f [x] cont
 toLLVM c@(Case _ _) = subComp name1 c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM something = fail ("cannot toLLVM: " ++ show something)
 
@@ -110,12 +110,12 @@ zipWithFIO _ _ _ = return []
 splitArms :: [Match Pat Exp Dec] -> FIO [(Value, BasicBlock)]
 splitArms matches = do { arms' <- arms; landings' <- landings; zipWithFIO assembleStartLand arms' landings' }
     where arms = do { phiBB <- phiBB; mapFIO (caseArm phiBB) matches }
-	  phi = do { landings <- landings; return $ Phi landings }
-	  phiBB :: FIO BasicBlock
-	  phiBB = do { n <- fresh; phi' <- phi; return $ BB n (Cons phi' (Cons GenLLVM.Unreachable Nil)) }
-	  landings = do { arms <- arms; mapFIO buildLanding arms }
-	  buildLanding (val, Right res) = do { phiBB <- phiBB; n <- fresh; return (res, BB n (Cons (Branch phiBB) Nil)) }
-	  assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
+          phi = do { landings <- landings; return $ Phi landings }
+          phiBB :: FIO BasicBlock
+          phiBB = do { n <- fresh; phi' <- phi; return $ BB n (Cons phi' (Cons GenLLVM.Unreachable Nil)) }
+          landings = do { arms <- arms; mapFIO buildLanding arms }
+          buildLanding (val, Right res) = do { phiBB <- phiBB; n <- fresh; return (res, BB n (Cons (Branch phiBB) Nil)) }
+          assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
 
 subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIO (Thrist Instr Cabl Term, Value)
 --subCase lab _ _ = return (Cons (Def lab $ Phi []) Nil, Ref "typ" lab)
@@ -146,27 +146,27 @@ subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vpr
 subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
 
 binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType
-		-> Exp -> Exp -> FIOTermCont -> FIOTerm
+                -> Exp -> Exp -> FIOTermCont -> FIOTerm
 binaryPrimitive lab former typ a1 a2 cont = do
-				       l1 <- fresh
-				       l2 <- fresh
-				       subComp l1 a1 (\v1 ->
-						      subComp l2 a2 (\v2 -> do
-								     tail <- cont $ Ref typ lab
-								     return $ Cons (Def lab $ former v1 v2) tail))
+                                       l1 <- fresh
+                                       l2 <- fresh
+                                       subComp l1 a1 (\v1 ->
+                                                      subComp l2 a2 (\v2 -> do
+                                                                     tail <- cont $ Ref typ lab
+                                                                     return $ Cons (Def lab $ former v1 v2) tail))
 
 
 showThrist :: Thrist Instr a Term -> FIO String
 showThrist Nil = return ""
 showThrist (Cons (Def l i) r) = do
-				humpti <- showThrist (Cons i r)
-				return (" %" ++ show l ++ " =" ++ humpti)
+                                humpti <- showThrist (Cons i r)
+                                return (" %" ++ show l ++ " =" ++ humpti)
 showThrist (Cons Unwind r) = do
-			     humpti <- showThrist r
-			     return (" unwind\n" ++ humpti)
+                             humpti <- showThrist r
+                             return (" unwind\n" ++ humpti)
 showThrist (Cons (Return v) r) = do
-				 humpti <- showThrist r
-				 return (" return " ++ show v ++ "\n" ++ humpti)
+                                 humpti <- showThrist r
+                                 return (" return " ++ show v ++ "\n" ++ humpti)
 
 showThrist (Cons i@(Add v1 v2) r) = showBinaryArithmetic "add" v1 v2 i r
 showThrist (Cons i@(Sub v1 v2) r) = showBinaryArithmetic "sub" v1 v2 i r
@@ -174,14 +174,14 @@ showThrist (Cons i@(Mul v1 v2) r) = showBinaryArithmetic "mul" v1 v2 i r
 showThrist (Cons i@(Div v1 v2) r) = showBinaryArithmetic "div" v1 v2 i r
 showThrist (Cons i@(Icmp o v1 v2) r) = showBinaryArithmetic ("icmp " ++ show o) v1 v2 i r
 showThrist (Cons (Phi _) r) = do
-			      humpti <- showThrist r
-			      return (" phi xxxx" ++ "\n" ++ humpti)
+                              humpti <- showThrist r
+                              return (" phi xxxx" ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
 
 showBinaryArithmetic :: String -> Value -> Value -> Instr a b -> Thrist Instr b Term -> FIO String
 showBinaryArithmetic op v1 v2 _ r = do
-				    humpti <- showThrist r
-				    return (" " ++ op ++ " " ++ show v1 ++ " " ++ show v2 ++ "\n" ++ humpti)
+                                    humpti <- showThrist r
+                                    return (" " ++ op ++ " " ++ show v1 ++ " " ++ show v2 ++ "\n" ++ humpti)
 
 instance Show Value where
   show (LLit (Int i)) = "i32 " ++ show i
