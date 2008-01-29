@@ -89,9 +89,9 @@ toLLVM something = fail ("cannot toLLVM: " ++ show something)
 type FIOTerm = FIO (Thrist Instr Cabl Term)
 type FIOTermCont = Value -> FIOTerm
 
-subComp :: Name -> Exp -> (Value -> FIO (Thrist Instr Cabl Term)) -> FIO (Thrist Instr Cabl Term)
+subComp :: Name -> Exp -> FIOTermCont -> FIOTerm
 subComp _ (Lit x) cont = cont $ LLit x
---subComp lab (App f x) = subApplication lab f [x]
+subComp lab (App f x) cont = subApplication lab f [x] cont
 --subComp lab (Case e ms) = subCase lab e ms
 subComp lab e cont = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
 
@@ -145,18 +145,15 @@ subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div "i32" a1 a2 con
 subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
 subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
 
-
-chain :: (FIOTermCont -> FIOTerm) -> FIOTermCont -> FIOTermCont
-chain a cont = \val -> a cont
-
 binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType
 		-> Exp -> Exp -> FIOTermCont -> FIOTerm
 binaryPrimitive lab former typ a1 a2 cont = do
 				       l1 <- fresh
 				       l2 <- fresh
-				       --subComp l1 a1 `chain` (\v1 -> subComp l2 a2 `chain` (\v2 -> do { tail <- cont $ Ref typ lab; return $ Cons (Def lab $ former v1 v2) tail}))
-				       let c1 v1 = subComp l2 a2 (\v2 -> do { tail <- cont $ Ref typ lab; return $ Cons (Def lab $ former v1 v2) tail})
-				       subComp l1 a1 c1
+				       subComp l1 a1 (\v1 ->
+						      subComp l2 a2 (\v2 -> do
+								     tail <- cont $ Ref typ lab
+								     return $ Cons (Def lab $ former v1 v2) tail))
 
 
 showThrist :: Thrist Instr a Term -> FIO String
