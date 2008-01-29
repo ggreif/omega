@@ -92,7 +92,7 @@ type FIOTermCont = Value -> FIOTerm
 subComp :: Name -> Exp -> FIOTermCont -> FIOTerm
 subComp _ (Lit x) cont = cont $ LLit x
 subComp lab (App f x) cont = subApplication lab f [x] cont
---subComp lab (Case e ms) = subCase lab e ms
+subComp lab (Case e ms) cont = subCase lab e ms cont
 subComp lab e cont = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
 
 
@@ -107,20 +107,29 @@ zipWithFIO :: (a -> b -> FIO c) -> [a] -> [b] -> FIO [c]
 zipWithFIO f (a:as) (b:bs) = do { fc <- f a b; fcs <- zipWithFIO f as bs; return (fc:fcs) }
 zipWithFIO _ _ _ = return []
 
-splitArms :: [Match Pat Exp Dec] -> FIO [(Value, BasicBlock)]
-splitArms matches = do { arms' <- arms; landings' <- landings; zipWithFIO assembleStartLand arms' landings' }
+splitArms :: [Match Pat Exp Dec] -> FIOTermCont -> FIO [(Value, BasicBlock)]
+splitArms matches cont = do { arms' <- arms; landings' <- landings; zipWithFIO assembleStartLand arms' landings' }
     where arms = do { phiBB <- phiBB; mapFIO (caseArm phiBB) matches }
           phi = do { landings <- landings; return $ Phi landings }
           phiBB :: FIO BasicBlock
-          phiBB = do { n <- fresh; phi' <- phi; return $ BB n (Cons phi' (Cons GenLLVM.Unreachable Nil)) }
+          phiBB = do
+		  n <- fresh
+		  phi' <- phi
+		  vn <- fresh
+		  let def = (Def vn phi')
+		  tail <- cont $ Ref "i32" vn
+		  return $ BB n (Cons def tail)
           landings = do { arms <- arms; mapFIO buildLanding arms }
           buildLanding (val, Right res) = do { phiBB <- phiBB; n <- fresh; return (res, BB n (Cons (Branch phiBB) Nil)) }
           assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
 
-subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIO (Thrist Instr Cabl Term, Value)
+subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
 --subCase lab _ _ = return (Cons (Def lab $ Phi []) Nil, Ref "typ" lab)
 --subCase lab (Lit (n@(Int _))) cases = return (Case (LLit n) (map caseArm cases))
-subCase lab (Lit (n@(Int _))) cases = do { arms <- splitArms cases; return (Cons (Switch (LLit n) arms) Nil, Ref "i32" lab) }
+subCase lab (Lit (n@(Int _))) cases cont = do
+                                           arms <- splitArms cases cont
+					   --tail <- cont $ Ref "i32" lab
+                                           return $ Cons (Switch (LLit n) arms) Nil
 
 subApplication :: Name -> Exp -> [Exp] -> FIOTermCont -> FIOTerm
 subApplication lab (Reify s (Vlit c)) args _ = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
