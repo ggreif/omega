@@ -12,6 +12,11 @@ import Encoding2(to)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..))
 import Bind
+import Control.Monad.Fix
+
+instance MonadFix FIO where
+  mfix = fixFIO
+
 
 data Thrist :: (* -> * -> *)  -> * -> * -> * where
   Nil :: Thrist k a a
@@ -107,20 +112,22 @@ zipWithFIO :: (a -> b -> FIO c) -> [a] -> [b] -> FIO [c]
 zipWithFIO f (a:as) (b:bs) = do { fc <- f a b; fcs <- zipWithFIO f as bs; return (fc:fcs) }
 zipWithFIO _ _ _ = return []
 
+
+
 splitArms :: [Match Pat Exp Dec] -> FIOTermCont -> FIO [(Value, BasicBlock)]
-splitArms matches cont = do { arms' <- arms; landings' <- landings; zipWithFIO assembleStartLand arms' landings' }
-    where arms = do { phiBB <- phiBB; mapFIO (caseArm phiBB) matches }
-          phi = do { landings <- landings; return $ Phi landings }
-          phiBB :: FIO BasicBlock
-          phiBB = do
+splitArms matches cont = do { (arms, landings) <- phiBB; zipWithFIO assembleStartLand arms landings }
+    where phiBB :: FIO ([(Value, Either BasicBlock Value)], [(Value, BasicBlock)])
+          phiBB = mdo
 		  n <- fresh
-		  phi' <- phi
+                  arms <- mapFIO (caseArm bb) matches
+                  landings <- mapFIO (buildLanding bb) arms
+		  let phi = Phi landings
 		  vn <- fresh
-		  let def = (Def vn phi')
+		  let def = Def vn phi
 		  tail <- cont $ Ref "i32" vn
-		  return $ BB n (Cons def tail)
-          landings = do { arms <- arms; mapFIO buildLanding arms }
-          buildLanding (val, Right res) = do { phiBB <- phiBB; n <- fresh; return (res, BB n (Cons (Branch phiBB) Nil)) }
+                  let bb = BB n (Cons def tail)
+		  return (arms, landings)
+          buildLanding bb (val, Right res) = do { n <- fresh; return (res, BB n (Cons (Branch bb) Nil)) }
           assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
 
 subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
@@ -185,6 +192,14 @@ showThrist (Cons i@(Icmp o v1 v2) r) = showBinaryArithmetic ("icmp " ++ show o) 
 showThrist (Cons (Phi _) r) = do
                               humpti <- showThrist r
                               return (" phi xxxx" ++ "\n" ++ humpti)
+showThrist (Cons (Switch v fan) r) = do
+                              humpti <- showThrist r
+                              let showFan (_, BB n thr) = do { thrText <- showThrist thr; return ("%" ++ show n ++ ": " ++ thrText) }
+                              fans <- mapFIO showFan fan
+                              return (" switch " ++ show v ++ " --> " ++ show fan ++ "\n" ++ concat fans ++ humpti)
+showThrist (Cons (Branch to) r) = do
+                              humpti <- showThrist r
+                              return (" branch " ++ show to ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
 
 showBinaryArithmetic :: String -> Value -> Value -> Instr a b -> Thrist Instr b Term -> FIO String
@@ -198,4 +213,5 @@ instance Show Value where
   show (Ref t l) = t ++ " %" ++ show l
   show (Lab r) = "label %" ++ show r
 
-
+instance Show BasicBlock where
+  show (BB n _) = show (Lab n)
