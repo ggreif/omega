@@ -101,8 +101,15 @@ subComp lab (Case e ms) cont = subCase lab e ms cont
 subComp lab e cont = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
 
 
-caseArm :: BasicBlock -> Match Pat Exp Dec -> FIO (Value, Either BasicBlock Value)
-caseArm cont (_, Plit (i@(Int _)), Normal (Lit (j@(Int _))), decs) = return (LLit i, Right (LLit j))
+caseArm :: BasicBlock -> Match Pat Exp Dec -> FIO (Value, Either (Value, BasicBlock) Value)
+caseArm _ (_, Plit (i@(Int _)), Normal (Lit (j@(Int _))), decs) = return (LLit i, Right (LLit j))
+caseArm next (_, Plit (i@(Int _)), Normal exp, decs) = do
+        n <- fresh
+        let cont v = return $ Cons (Branch next) Nil
+        thr <- subComp n exp cont
+        bbn <- fresh
+        let bb = BB bbn thr
+        return (LLit i, Left (Ref "i32" n, bb))
 
 mapFIO :: (a -> FIO b) -> [a] -> FIO [b]
 mapFIO f [] = return []
@@ -116,7 +123,7 @@ zipWithFIO _ _ _ = return []
 
 splitArms :: [Match Pat Exp Dec] -> FIOTermCont -> FIO [(Value, BasicBlock)]
 splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStartLand arms landings }
-    where magic :: FIO ([(Value, Either BasicBlock Value)], [(Value, BasicBlock)])
+    where magic :: FIO ([(Value, Either (Value, BasicBlock) Value)], [(Value, BasicBlock)])
           magic = mdo
                   arms <- mapFIO (caseArm bb) matches
                   landings <- mapFIO (buildLanding bb) arms
@@ -127,7 +134,8 @@ splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStar
                   let bb = BB n (Cons (Def vn phi) tail)
 		  return (arms, landings)
           buildLanding bb (val, Right res) = do { n <- fresh; return (res, BB n (Cons (Branch bb) Nil)) }
-          assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
+          buildLanding bb (val, Left pad) = return pad
+          assembleStartLand (v, _) (_, land) = return (v, land)
 
 subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
 subCase lab (Lit (n@(Int _))) cases cont = do
