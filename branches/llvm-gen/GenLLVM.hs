@@ -115,27 +115,23 @@ zipWithFIO _ _ _ = return []
 
 
 splitArms :: [Match Pat Exp Dec] -> FIOTermCont -> FIO [(Value, BasicBlock)]
-splitArms matches cont = do { (arms, landings) <- phiBB; zipWithFIO assembleStartLand arms landings }
-    where phiBB :: FIO ([(Value, Either BasicBlock Value)], [(Value, BasicBlock)])
-          phiBB = mdo
-		  n <- fresh
+splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStartLand arms landings }
+    where magic :: FIO ([(Value, Either BasicBlock Value)], [(Value, BasicBlock)])
+          magic = mdo
                   arms <- mapFIO (caseArm bb) matches
                   landings <- mapFIO (buildLanding bb) arms
 		  let phi = Phi landings
 		  vn <- fresh
-		  let def = Def vn phi
 		  tail <- cont $ Ref "i32" vn
-                  let bb = BB n (Cons def tail)
+		  n <- fresh
+                  let bb = BB n (Cons (Def vn phi) tail)
 		  return (arms, landings)
           buildLanding bb (val, Right res) = do { n <- fresh; return (res, BB n (Cons (Branch bb) Nil)) }
           assembleStartLand (v, Right _) (LLit _, land) = return (v, land)
 
 subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
---subCase lab _ _ = return (Cons (Def lab $ Phi []) Nil, Ref "typ" lab)
---subCase lab (Lit (n@(Int _))) cases = return (Case (LLit n) (map caseArm cases))
 subCase lab (Lit (n@(Int _))) cases cont = do
                                            arms <- splitArms cases cont
-					   --tail <- cont $ Ref "i32" lab
                                            return $ Cons (Switch (LLit n) arms) Nil
 
 subApplication :: Name -> Exp -> [Exp] -> FIOTermCont -> FIOTerm
@@ -189,17 +185,18 @@ showThrist (Cons i@(Sub v1 v2) r) = showBinaryArithmetic "sub" v1 v2 i r
 showThrist (Cons i@(Mul v1 v2) r) = showBinaryArithmetic "mul" v1 v2 i r
 showThrist (Cons i@(Div v1 v2) r) = showBinaryArithmetic "div" v1 v2 i r
 showThrist (Cons i@(Icmp o v1 v2) r) = showBinaryArithmetic ("icmp " ++ show o) v1 v2 i r
-showThrist (Cons (Phi _) r) = do
+showThrist (Cons (Phi fan) r) = do
                               humpti <- showThrist r
-                              return (" phi xxxx" ++ "\n" ++ humpti)
+                              return (" phi " ++ show fan ++ "\n" ++ humpti)
 showThrist (Cons (Switch v fan) r) = do
                               humpti <- showThrist r
                               let showFan (_, BB n thr) = do { thrText <- showThrist thr; return ("%" ++ show n ++ ": " ++ thrText) }
                               fans <- mapFIO showFan fan
                               return (" switch " ++ show v ++ " --> " ++ show fan ++ "\n" ++ concat fans ++ humpti)
-showThrist (Cons (Branch to) r) = do
+showThrist (Cons (Branch (to@(BB _ thr))) r) = do
                               humpti <- showThrist r
-                              return (" branch " ++ show to ++ "\n" ++ humpti)
+                              taste <- showThrist thr
+                              return (" branch " ++ show to ++ ";;; " ++ taste ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
 
 showBinaryArithmetic :: String -> Value -> Value -> Instr a b -> Thrist Instr b Term -> FIO String
