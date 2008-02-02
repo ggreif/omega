@@ -68,6 +68,10 @@ data Instr :: * -> * -> * where
   Mul :: Value -> Value -> Instr Cabl Cabl
   Div :: Value -> Value -> Instr Cabl Cabl
   Icmp :: Oper -> Value -> Value -> Instr Cabl Cabl
+  -- Allocation
+  Malloc :: LType -> Value -> Instr Cabl Cabl
+  Load :: Value -> Instr Cabl Cabl
+  Store :: Value -> Value -> Instr Cabl Cabl
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
@@ -162,6 +166,15 @@ subPrimitive lab "-" [a1, a2] _ cont = binaryPrimitive lab Sub "i32" a1 a2 cont
 subPrimitive lab "*" [a1, a2] _ cont = binaryPrimitive lab Mul "i32" a1 a2 cont
 subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div "i32" a1 a2 cont
 
+subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
+             l <- fresh
+             subComp l arg (\v -> do
+                           let ref = Ref "Just*" lab
+                           tail <- cont ref
+                           return $ Cons (Def lab $ Malloc "i32" (LLit $ Int 1))
+                                         (Cons (Store v ref) tail))
+-- constructorPrimitive
+
 subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
 subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
 
@@ -193,6 +206,15 @@ showThrist (Cons i@(Sub v1 v2) r) = showBinaryArithmetic "sub" v1 v2 i r
 showThrist (Cons i@(Mul v1 v2) r) = showBinaryArithmetic "mul" v1 v2 i r
 showThrist (Cons i@(Div v1 v2) r) = showBinaryArithmetic "div" v1 v2 i r
 showThrist (Cons i@(Icmp o v1 v2) r) = showBinaryArithmetic ("icmp " ++ show o) v1 v2 i r
+showThrist (Cons i@(Malloc t v) r) = do
+                                    humpti <- showThrist r
+                                    return (" malloc " ++ t ++ ", " ++ show v ++ "\n" ++ humpti)
+showThrist (Cons i@(Store v p) r) = do
+                                    humpti <- showThrist r
+                                    return (" store " ++ show v ++ ", " ++ show p ++ "\n" ++ humpti)
+showThrist (Cons i@(Load p) r) = do
+                                    humpti <- showThrist r
+                                    return (" store " ++ show p ++ "\n" ++ humpti)
 showThrist (Cons (Phi fan) r) = do
                               humpti <- showThrist r
                               return (" phi " ++ show fan ++ "\n" ++ humpti)
