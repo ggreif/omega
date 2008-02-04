@@ -82,7 +82,7 @@ type LType = String
 data Gap :: * -> * where
   StopGap :: Gap a
   PtrGap :: LType' [a] -> Value -> Gap a -> Gap [a]
-  StructGap :: LType' (LStruct (a, b)) -> Either (Gap b) (Gap (LStruct a)) -> Gap (LStruct (a, b))
+  StructGap :: LType' (LStruct (a, b)) -> Either (Gap a) (Gap (LStruct b)) -> Gap (LStruct (a, b))
 
 data LStruct a
 
@@ -91,7 +91,7 @@ data LType' :: * -> * where
   LPtr :: LType' a -> LType' [a]
   -- Structs
   LEmpty :: LType' (LStruct ())
-  LExtend :: LType' (LStruct a) -> LType' b -> LType' (LStruct (a, b))
+  LExtend :: LType' a -> LType' (LStruct b) -> LType' (LStruct (a, b))
 
 data BasicBlock :: * where
   BB :: Name -> Thrist Instr Cabl Term -> BasicBlock
@@ -130,6 +130,14 @@ caseArm next (_, Plit (i@(Int _)), Normal exp, decs) = do
         let bb = BB bbn thr
         return (LLit i, Left (Ref "i32" n, bb))
 
+caseArm next (_, Pcon (Global "Nothing") [], Normal exp, decs) = do
+        n <- fresh
+        let cont v = return $ Cons (Branch next) Nil
+        thr <- subComp n exp cont
+        bbn <- fresh
+        let bb = BB bbn thr
+        return (LLit $ Int 0, Left (Ref "i32" n, bb))
+
 mapFIO :: (a -> FIO b) -> [a] -> FIO [b]
 mapFIO f [] = return []
 mapFIO f (a:as) = do { fa <- f a; fas <- mapFIO f as; return (fa:fas) }
@@ -156,6 +164,10 @@ splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStar
           buildLanding bb (val, Left pad) = return pad
           assembleStartLand (v, _) (_, land) = return (v, land)
 
+
+justStru = LExtend (LInt 8) (LExtend (LInt 32) LEmpty)
+justPtr = LPtr justStru
+
 subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
 subCase lab (Lit (n@(Int _))) cases cont = do
                                            arms <- splitArms cases cont
@@ -166,9 +178,11 @@ subCase lab (stuff@(Reify s v)) cases cont = do
 subCase lab (stuff@(App s v)) cases cont = do
         le <- fresh
         subComp le stuff (\v -> do
+                          let gep = Gep justPtr (PtrGap justPtr (LLit $ Int 0) (StructGap justStru (Left StopGap))) v
+                          dn <- fresh
+                          let dv = Def dn gep
                           arms <- splitArms cases cont
-                          return $ Cons (Switch v arms) Nil)
-        fail ("subCase (App): " ++ show stuff)
+                          return $ Cons dv $ Cons (Switch (Ref "i32" dn) arms) Nil)
 subCase lab stuff cases cont = do
         fail ("subCase: " ++ show stuff)
 
