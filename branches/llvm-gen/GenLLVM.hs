@@ -181,8 +181,10 @@ subCase lab (stuff@(App s v)) cases cont = do
                           let gep = Gep justPtr (PtrGap justPtr (LLit $ Int 0) (StructGap justStru (Left StopGap))) v
                           dn <- fresh
                           let dv = Def dn gep
+                          ln <- fresh
+                          let load = Def ln $ Load (Ref "i8*" dn)
                           arms <- splitArms cases cont
-                          return $ Cons dv $ Cons (Switch (Ref "i32" dn) arms) Nil)
+                          return $ Cons dv $ Cons load $ Cons (Switch (Ref "i8" ln) arms) Nil)
 subCase lab stuff cases cont = do
         fail ("subCase: " ++ show stuff)
 
@@ -254,7 +256,7 @@ showThrist (Cons i@(Store v p) r) = do
                                     return (" store " ++ show v ++ ", " ++ show p ++ "\n" ++ humpti)
 showThrist (Cons i@(Load p) r) = do
                                     humpti <- showThrist r
-                                    return (" store " ++ show p ++ "\n" ++ humpti)
+                                    return (" load " ++ show p ++ "\n" ++ humpti)
 showThrist (Cons (Phi fan) r) = do
                               humpti <- showThrist r
                               return (" phi " ++ show fan ++ "\n" ++ humpti)
