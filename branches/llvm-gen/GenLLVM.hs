@@ -75,8 +75,23 @@ data Instr :: * -> * -> * where
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
+  Gep :: LType' a -> Gap a -> Instr Cabl Cabl
 
 type LType = String
+
+data Gap :: * -> * where
+  StopGap :: Gap a
+  PtrGap :: LType' [a] -> Int -> Gap a -> Gap [a]
+  StructGap :: LType' (LStruct (a, b)) -> Either (Gap a) (Gap (LStruct a)) -> Gap (LStruct (a, b))
+
+data LStruct a
+
+data LType' :: * -> * where
+  LInt :: Int -> LType' Int
+  LPtr :: LType' a -> LType' [a]
+  -- Structs
+  LEmpty :: LType' (LStruct ())
+  LExtend :: LType' (LStruct a) -> LType' b -> LType' (LStruct (a, b))
 
 data BasicBlock :: * where
   BB :: Name -> Thrist Instr Cabl Term -> BasicBlock
