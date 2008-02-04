@@ -75,14 +75,14 @@ data Instr :: * -> * -> * where
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
-  Gep :: LType' a -> Gap a -> Instr Cabl Cabl
+  Gep :: LType' a -> Gap a -> Value -> Instr Cabl Cabl
 
 type LType = String
 
 data Gap :: * -> * where
   StopGap :: Gap a
-  PtrGap :: LType' [a] -> Int -> Gap a -> Gap [a]
-  StructGap :: LType' (LStruct (a, b)) -> Either (Gap a) (Gap (LStruct a)) -> Gap (LStruct (a, b))
+  PtrGap :: LType' [a] -> Value -> Gap a -> Gap [a]
+  StructGap :: LType' (LStruct (a, b)) -> Either (Gap b) (Gap (LStruct a)) -> Gap (LStruct (a, b))
 
 data LStruct a
 
@@ -242,7 +242,20 @@ showThrist (Cons (Branch (to@(BB _ thr))) r) = do
                               humpti <- showThrist r
                               taste <- showThrist thr
                               return (" branch " ++ show to ++ ";;; " ++ taste ++ "\n" ++ humpti)
+showThrist (Cons (Gep t g v) r) = do
+                              humpti <- showThrist r
+                              return (" getelementpointer " ++ show v ++ showGap g ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
+
+showGap :: Gap a -> String
+showGap StopGap = ""
+showGap (PtrGap _ offs r) = ", " ++ show offs ++ showGap r
+showGap (StructGap _ e) = countdown 0 e
+    where countdown :: Int -> Either (Gap b) (Gap (LStruct a)) -> String
+          countdown n (Left r) = ", i32 " ++ show n ++ showGap r
+	  countdown n (Right (StructGap _ d)) = countdown (n + 1) d
+	  --countdown n (Right d) = countdown (n + 1) (d
+
 
 showBinaryArithmetic :: String -> Value -> Value -> Instr a b -> Thrist Instr b Term -> FIO String
 showBinaryArithmetic op v1 v2 _ r = do
