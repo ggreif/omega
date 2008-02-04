@@ -161,6 +161,17 @@ subCase lab (Lit (n@(Int _))) cases cont = do
                                            arms <- splitArms cases cont
                                            return $ Cons (Switch (LLit n) arms) Nil
 
+subCase lab (stuff@(Reify s v)) cases cont = do
+        fail ("subCase (Reify): " ++ show stuff)
+subCase lab (stuff@(App s v)) cases cont = do
+        le <- fresh
+        subComp le stuff (\v -> do
+                          arms <- splitArms cases cont
+                          return $ Cons (Switch v arms) Nil)
+        fail ("subCase (App): " ++ show stuff)
+subCase lab stuff cases cont = do
+        fail ("subCase: " ++ show stuff)
+
 subApplication :: Name -> Exp -> [Exp] -> FIOTermCont -> FIOTerm
 subApplication lab (Reify s (Vlit c)) args _ = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
 subApplication lab (Reify s v) args cont = subPrimitive lab s args v cont
