@@ -44,6 +44,11 @@ genLLVM geh ex = do
 
 data Term -- terminator
 data Cabl -- continuable
+
+data Z
+data S n
+
+-- comparison codes
 data Oper = OLt | OLe | OGt | OGe | OEq | ONe
 
 instance Show Oper where
@@ -75,14 +80,22 @@ data Instr :: * -> * -> * where
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
-  Gep :: LType' a -> Gap a -> Value -> Instr Cabl Cabl
+  --Gep :: LType' a -> Gap a -> Value -> Instr Cabl Cabl
+  Gepu :: LType' a -> Thrist Gup a b -> Value {-a-} -> Instr Cabl Cabl
 
 type LType = String
 
-data Gap :: * -> * where
+{-data Gap :: * -> * where
   StopGap :: Gap a
   PtrGap :: LType' [a] -> Value -> Gap a -> Gap [a]
   StructGap :: LType' (LStruct (a, b)) -> Either (Gap a) (Gap (LStruct b)) -> Gap (LStruct (a, b))
+-}
+
+-- thrist based Gep: eat our own dogfood
+data Gup :: * -> * -> * where
+  Deref :: Value -> Gup [a] a
+  Skip :: Gup (LStruct (a, b)) (LStruct b)
+  Drill :: Gup (LStruct (a, b)) a
 
 data LStruct a
 
@@ -178,7 +191,8 @@ subCase lab (stuff@(Reify s v)) cases cont = do
 subCase lab (stuff@(App s v)) cases cont = do
         le <- fresh
         subComp le stuff (\v -> do
-                          let gep = Gep justPtr (PtrGap justPtr (LLit $ Int 0) (StructGap justStru (Left StopGap))) v
+                          --let gep = Gep justPtr (PtrGap justPtr (LLit $ Int 0) (StructGap justStru (Left StopGap))) v
+                          let gep = Gepu justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Skip Nil) v
                           dn <- fresh
                           let dv = Def dn gep
                           ln <- fresh
@@ -269,11 +283,15 @@ showThrist (Cons (Branch (to@(BB _ thr))) r) = do
                               humpti <- showThrist r
                               taste <- showThrist thr
                               return (" branch " ++ show to ++ ";;; " ++ taste ++ "\n" ++ humpti)
-showThrist (Cons (Gep t g v) r) = do
+--showThrist (Cons (Gep t g v) r) = do
+--                              humpti <- showThrist r
+--                              return (" getelementpointer " ++ show v ++ showGap g ++ "\n" ++ humpti)
+showThrist (Cons (Gepu t g v) r) = do
                               humpti <- showThrist r
-                              return (" getelementpointer " ++ show v ++ showGap g ++ "\n" ++ humpti)
+                              return (" getelementpointer " ++ show v ++ showGup g ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
 
+{-
 showGap :: Gap a -> String
 showGap StopGap = ""
 showGap (PtrGap _ offs r) = ", " ++ show offs ++ showGap r
@@ -282,6 +300,12 @@ showGap (StructGap _ e) = countdown 0 e
           countdown n (Left r) = ", i32 " ++ show n ++ showGap r
 	  countdown n (Right (StructGap _ d)) = countdown (n + 1) d
 	  --countdown n (Right d) = countdown (n + 1) (d
+-}
+
+showGup :: Thrist Gup a b -> String
+showGup Nil = ""
+showGup (Cons (Deref offs) r) = ", " ++ show offs ++ showGup r
+showGup (Cons Drill r) = ", " ++ show 0 ++ showGup r
 
 
 showBinaryArithmetic :: String -> Value -> Value -> Instr a b -> Thrist Instr b Term -> FIO String
