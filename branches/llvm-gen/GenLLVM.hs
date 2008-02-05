@@ -80,16 +80,9 @@ data Instr :: * -> * -> * where
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
-  --Gep :: LType' a -> Gap a -> Value -> Instr Cabl Cabl
-  Gepu :: LType' a -> Thrist Gup a b -> Value {-a-} -> Instr Cabl Cabl
+  Gep :: LType' a -> Thrist Gup a b -> Value {-a-} -> Instr Cabl Cabl
 
 type LType = String
-
-{-data Gap :: * -> * where
-  StopGap :: Gap a
-  PtrGap :: LType' [a] -> Value -> Gap a -> Gap [a]
-  StructGap :: LType' (LStruct (a, b)) -> Either (Gap a) (Gap (LStruct b)) -> Gap (LStruct (a, b))
--}
 
 -- thrist based Gep: eat our own dogfood
 data Gup :: * -> * -> * where
@@ -283,10 +276,7 @@ showThrist (Cons (Branch (to@(BB _ thr))) r) = do
                               humpti <- showThrist r
                               taste <- showThrist thr
                               return (" branch " ++ show to ++ ";;; " ++ taste ++ "\n" ++ humpti)
---showThrist (Cons (Gep t g v) r) = do
---                              humpti <- showThrist r
---                              return (" getelementpointer " ++ show v ++ showGap g ++ "\n" ++ humpti)
-showThrist (Cons (Gepu t g v) r) = do
+showThrist (Cons (Gep t g v) r) = do
                               humpti <- showThrist r
                               return (" getelementpointer " ++ show v ++ showGup g ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
@@ -306,6 +296,10 @@ showGup :: Thrist Gup a b -> String
 showGup Nil = ""
 showGup (Cons (Deref offs) r) = ", " ++ show offs ++ showGup r
 showGup (Cons Drill r) = ", " ++ show 0 ++ showGup r
+showGup (Cons Skip r) = countdown 1 r
+    where countdown :: Int -> Thrist Gup a b -> String
+          countdown n (Cons Drill r) = ", i32 " ++ show n ++ showGup r
+          countdown n (Cons Skip r) = countdown (n + 1) r
 
 
 showBinaryArithmetic :: String -> Value -> Value -> Instr a b -> Thrist Instr b Term -> FIO String
