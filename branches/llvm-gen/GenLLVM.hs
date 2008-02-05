@@ -184,8 +184,7 @@ subCase lab (stuff@(Reify s v)) cases cont = do
 subCase lab (stuff@(App s v)) cases cont = do
         le <- fresh
         subComp le stuff (\v -> do
-                          --let gep = Gep justPtr (PtrGap justPtr (LLit $ Int 0) (StructGap justStru (Left StopGap))) v
-                          let gep = Gepu justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Skip Nil) v
+                          let gep = Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Skip $ Cons Drill Nil) v
                           dn <- fresh
                           let dv = Def dn gep
                           ln <- fresh
@@ -281,16 +280,6 @@ showThrist (Cons (Gep t g v) r) = do
                               return (" getelementpointer " ++ show v ++ showGup g ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
 
-{-
-showGap :: Gap a -> String
-showGap StopGap = ""
-showGap (PtrGap _ offs r) = ", " ++ show offs ++ showGap r
-showGap (StructGap _ e) = countdown 0 e
-    where countdown :: Int -> Either (Gap b) (Gap (LStruct a)) -> String
-          countdown n (Left r) = ", i32 " ++ show n ++ showGap r
-	  countdown n (Right (StructGap _ d)) = countdown (n + 1) d
-	  --countdown n (Right d) = countdown (n + 1) (d
--}
 
 showGup :: Thrist Gup a b -> String
 showGup Nil = ""
