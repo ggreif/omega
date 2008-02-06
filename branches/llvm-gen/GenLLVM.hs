@@ -74,7 +74,7 @@ data Instr :: * -> * -> * where
   Div :: Value -> Value -> Instr Cabl Cabl
   Icmp :: Oper -> Value -> Value -> Instr Cabl Cabl
   -- Allocation
-  Malloc :: LType -> Value -> Instr Cabl Cabl
+  Malloc :: LType' a -> Value -> Instr Cabl Cabl
   Load :: Value -> Instr Cabl Cabl
   Store :: Value -> Value -> Instr Cabl Cabl
   -- Special values
@@ -113,7 +113,7 @@ data BasicBlock :: * where
 
 data Value :: * where
   LLit :: Lit -> Value
-  Undef :: LType -> Value
+  Undef :: LType' a -> Value
   Ref :: LType -> Name -> Value
   Ref' :: LType' a -> Name -> Value
   Lab :: Name -> Value
@@ -229,7 +229,7 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              subComp l arg (\v -> do
                            let ref = Ref "Just*" lab
                            tail <- cont ref
-                           return $ Cons (Def lab $ Malloc "i32" (LLit $ Int 1))
+                           return $ Cons (Def lab $ Malloc i32 (LLit $ Int 1))
                                          (Cons (Store v ref) tail))
 -- constructorPrimitive
 
@@ -266,7 +266,7 @@ showThrist (Cons i@(Div v1 v2) r) = showBinaryArithmetic "div" v1 v2 i r
 showThrist (Cons i@(Icmp o v1 v2) r) = showBinaryArithmetic ("icmp " ++ show o) v1 v2 i r
 showThrist (Cons i@(Malloc t v) r) = do
                                     humpti <- showThrist r
-                                    return (" malloc " ++ t ++ ", " ++ show v ++ "\n" ++ humpti)
+                                    return (" malloc " ++ show t ++ ", " ++ show v ++ "\n" ++ humpti)
 showThrist (Cons i@(Store v p) r) = do
                                     humpti <- showThrist r
                                     return (" store " ++ show v ++ ", " ++ show p ++ "\n" ++ humpti)
@@ -311,7 +311,7 @@ showBinaryArithmetic op v1 v2 _ r = do
 
 instance Show Value where
   show (LLit (Int i)) = show i32 ++ " " ++ show i
-  show (Undef t) = t ++ " undef"
+  show (Undef t) = show t ++ " undef"
   show (Ref t l) = t ++ " %" ++ show l
   show (Ref' t l) = show t ++ " %" ++ show l
   show (Lab r) = "label %" ++ show r
