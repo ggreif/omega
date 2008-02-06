@@ -82,8 +82,6 @@ data Instr :: * -> * -> * where
   Def :: Name -> Instr a b -> Instr a b
   Gep :: LType a -> Thrist Gup (a, S Z) (b, Z) -> Value {-a-} -> Instr Cabl Cabl
 
-type LType' = String
-
 -- thrist based Gep: eat our own dogfood
 data Gup :: * -> * -> * where
   Deref :: Value -> Gup ([a], S d) (a, Z)
@@ -113,7 +111,6 @@ data BasicBlock :: * where
 data Value :: * where
   LLit :: Lit -> Value
   Undef :: LType a -> Value
-  Ref' :: LType' -> Name -> Value
   Ref :: LType a -> Name -> Value
   Lab :: Name -> Value
 
@@ -169,12 +166,12 @@ splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStar
           magic = mdo
                   arms <- mapFIO (caseArm bb) matches
                   landings <- mapFIO (buildLanding bb) arms
-		  let phi = Phi landings
-		  vn <- fresh
-		  tail <- cont $ Ref i32 vn
-		  n <- fresh
+                  let phi = Phi landings
+                  vn <- fresh
+                  tail <- cont $ Ref i32 vn
+                  n <- fresh
                   let bb = BB n (Cons (Def vn phi) tail)
-		  return (arms, landings)
+                  return (arms, landings)
           buildLanding bb (val, Right res) = do { n <- fresh; return (res, BB n (Cons (Branch bb) Nil)) }
           buildLanding bb (val, Left pad) = return pad
           assembleStartLand (v, _) (_, land) = return (v, land)
@@ -228,7 +225,7 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              subComp l arg (\v -> do
                            let ref = Ref justPtr lab
                            tail <- cont ref
-                           return $ Cons (Def lab $ Malloc i32 (LLit $ Int 1))
+                           return $ Cons (Def lab $ Malloc justStru (LLit $ Int 1))
                                          (Cons (Store v ref) tail))
 -- constructorPrimitive
 
@@ -311,7 +308,6 @@ showBinaryArithmetic op v1 v2 _ r = do
 instance Show Value where
   show (LLit (Int i)) = show i32 ++ " " ++ show i
   show (Undef t) = show t ++ " undef"
-  show (Ref' t l) = t ++ " %" ++ show l
   show (Ref t l) = show t ++ " %" ++ show l
   show (Lab r) = "label %" ++ show r
 
@@ -324,12 +320,8 @@ instance Show (LType a) where
   show (LPtr a) = show a ++ "*"
   show (LEmpty) = "{}"
   show (ext@(LExtend _ _)) = "{" ++ descend ext
-      where descend :: LType (LStruct b) -> String
-	    descend (LExtend a LEmpty) = show a ++ "}"
-	    descend (LExtend a more@(LExtend _ _)) = show a ++ ", " ++ descend more
-  --  show (LExtend a r) = "{" ++ descend a r
-  --      where descend :: LType a -> LType (LStruct b) -> String
-  --	    descend f LEmpty = show f ++ "}"
-  --	    descend f (LExtend a r) = show f ++ ", " ++ descend a r
+      where descend :: LType (LStruct (b, c)) -> String
+            descend (LExtend a LEmpty) = show a ++ "}"
+            descend (LExtend a more@(LExtend _ _)) = show a ++ ", " ++ descend more
   show (LArray a d) = "[" ++ show a ++ " x " ++ show d ++ "]"
   show (LNamed t n) = "%" ++ show n
