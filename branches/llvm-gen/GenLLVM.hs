@@ -74,15 +74,15 @@ data Instr :: * -> * -> * where
   Div :: Value -> Value -> Instr Cabl Cabl
   Icmp :: Oper -> Value -> Value -> Instr Cabl Cabl
   -- Allocation
-  Malloc :: LType' a -> Value -> Instr Cabl Cabl
+  Malloc :: LType a -> Value -> Instr Cabl Cabl
   Load :: Value -> Instr Cabl Cabl
   Store :: Value -> Value -> Instr Cabl Cabl
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
-  Gep :: LType' a -> Thrist Gup (a, S Z) (b, Z) -> Value {-a-} -> Instr Cabl Cabl
+  Gep :: LType a -> Thrist Gup (a, S Z) (b, Z) -> Value {-a-} -> Instr Cabl Cabl
 
-type LType = String
+type LType' = String
 
 -- thrist based Gep: eat our own dogfood
 data Gup :: * -> * -> * where
@@ -94,14 +94,14 @@ data Gup :: * -> * -> * where
 data LStruct a
 data LArray a
 
-data LType' :: * -> * where
-  LInt :: Int -> LType' Int
-  LPtr :: LType' a -> LType' [a]
+data LType :: * -> * where
+  LInt :: Int -> LType Int
+  LPtr :: LType a -> LType [a]
   -- Structs
-  LEmpty :: LType' (LStruct ())
-  LExtend :: LType' a -> LType' (LStruct b) -> LType' (LStruct (a, b))
-  LArray :: LType' a -> Int -> LType' (LArray a)
-  LNamed :: LType' a -> Name -> LType' a
+  LEmpty :: LType (LStruct ())
+  LExtend :: LType a -> LType (LStruct b) -> LType (LStruct (a, b))
+  LArray :: LType a -> Int -> LType (LArray a)
+  LNamed :: LType a -> Name -> LType a
 
 i1 = LInt 1
 i8 = LInt 8
@@ -113,9 +113,9 @@ data BasicBlock :: * where
 
 data Value :: * where
   LLit :: Lit -> Value
-  Undef :: LType' a -> Value
-  Ref :: LType -> Name -> Value
-  Ref' :: LType' a -> Name -> Value
+  Undef :: LType a -> Value
+  Ref' :: LType' -> Name -> Value
+  Ref :: LType a -> Name -> Value
   Lab :: Name -> Value
 
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
@@ -144,7 +144,7 @@ caseArm next (_, Plit (i@(Int _)), Normal exp, decs) = do
         thr <- subComp n exp cont
         bbn <- fresh
         let bb = BB bbn thr
-        return (LLit i, Left (Ref' i32 n, bb))
+        return (LLit i, Left (Ref i32 n, bb))
 
 caseArm next (_, Pcon (Global "Nothing") [], Normal exp, decs) = do
         n <- fresh
@@ -152,7 +152,7 @@ caseArm next (_, Pcon (Global "Nothing") [], Normal exp, decs) = do
         thr <- subComp n exp cont
         bbn <- fresh
         let bb = BB bbn thr
-        return (LLit $ Int 0, Left (Ref' i32 n, bb))
+        return (LLit $ Int 0, Left (Ref i32 n, bb))
 
 mapFIO :: (a -> FIO b) -> [a] -> FIO [b]
 mapFIO f [] = return []
@@ -172,7 +172,7 @@ splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStar
                   landings <- mapFIO (buildLanding bb) arms
 		  let phi = Phi landings
 		  vn <- fresh
-		  tail <- cont $ Ref' i32 vn
+		  tail <- cont $ Ref i32 vn
 		  n <- fresh
                   let bb = BB n (Cons (Def vn phi) tail)
 		  return (arms, landings)
@@ -198,9 +198,9 @@ subCase lab (stuff@(App s v)) cases cont = do
                           dn <- fresh
                           let dv = Def dn gep
                           ln <- fresh
-                          let load = Def ln $ Load (Ref "i8*" dn)
+                          let load = Def ln $ Load (Ref' "i8*" dn)
                           arms <- splitArms cases cont
-                          return $ Cons dv $ Cons load $ Cons (Switch (Ref' i8 ln) arms) Nil)
+                          return $ Cons dv $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
 subCase lab stuff cases cont = do
         fail ("subCase: " ++ show stuff)
 
@@ -227,7 +227,7 @@ subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div i32 a1 a2 cont
 subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
              subComp l arg (\v -> do
-                           let ref = Ref "Just*" lab
+                           let ref = Ref' "Just*" lab
                            tail <- cont ref
                            return $ Cons (Def lab $ Malloc i32 (LLit $ Int 1))
                                          (Cons (Store v ref) tail))
@@ -236,14 +236,14 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
 subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
 subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
 
-binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType' a
+binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType a
                 -> Exp -> Exp -> FIOTermCont -> FIOTerm
 binaryPrimitive lab former typ a1 a2 cont = do
                                        l1 <- fresh
                                        l2 <- fresh
                                        subComp l1 a1 (\v1 ->
                                                       subComp l2 a2 (\v2 -> do
-                                                                     tail <- cont $ Ref' typ lab
+                                                                     tail <- cont $ Ref typ lab
                                                                      return $ Cons (Def lab $ former v1 v2) tail))
 
 
@@ -312,15 +312,15 @@ showBinaryArithmetic op v1 v2 _ r = do
 instance Show Value where
   show (LLit (Int i)) = show i32 ++ " " ++ show i
   show (Undef t) = show t ++ " undef"
-  show (Ref t l) = t ++ " %" ++ show l
-  show (Ref' t l) = show t ++ " %" ++ show l
+  show (Ref' t l) = t ++ " %" ++ show l
+  show (Ref t l) = show t ++ " %" ++ show l
   show (Lab r) = "label %" ++ show r
 
 instance Show BasicBlock where
   show (BB n _) = show (Lab n)
 
 
-instance Show (LType' a) where
+instance Show (LType a) where
   show (LInt i) = "i" ++ show i
   show (LPtr a) = show a ++ "*"
   show (LArray a d) = "[" ++ show a ++ " x " ++ show d ++ "]"
