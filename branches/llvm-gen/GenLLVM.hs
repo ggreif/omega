@@ -190,9 +190,9 @@ subCase lab (stuff@(Reify s v)) cases cont = do
 subCase lab (stuff@(App s v)) cases cont = do
         le <- fresh
         subComp le stuff (\v -> do
-                          let gep = Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Skip $ Cons Drill Nil) v
+                          let tag = Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Drill Nil) v
                           dn <- fresh
-                          let dv = Def dn gep
+                          let dv = Def dn tag
                           ln <- fresh
                           let load = Def ln $ Load (Ref (LPtr i8) dn)
                           arms <- splitArms cases cont
@@ -225,8 +225,14 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              subComp l arg (\v -> do
                            let ref = Ref justPtr lab
                            tail <- cont ref
+                           mall <- fresh
+                           tag <- fresh
+                           slot <- fresh
                            return $ Cons (Def lab $ Malloc justStru (LLit $ Int 1))
-                                         (Cons (Store v ref) tail))
+                                     (Cons (Def tag $ Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Drill Nil) ref)
+                                      (Cons (Def slot $ Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Skip $ Cons Drill Nil) ref)
+                                       (Cons (Store (LLit $ Int 3) $ Ref (LPtr i8) tag)
+                                        (Cons (Store v $ Ref (LPtr i32) slot) tail)))))
 -- constructorPrimitive
 
 subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
@@ -293,7 +299,7 @@ showThrist (Cons x r) = return "cannot showThrist"
 showGup :: Thrist Gup a b -> String
 showGup Nil = ""
 showGup (Cons (Deref offs) r) = ", " ++ show offs ++ showGup r
-showGup (Cons Drill r) = ", " ++ show 0 ++ showGup r
+showGup (Cons Drill r) = ", " ++ show i32 ++ " " ++ show 0 ++ showGup r
 showGup (Cons Skip r) = countdown 1 r
     where countdown :: Int -> Thrist Gup a b -> String
           countdown n (Cons Drill r) = ", " ++ show i32 ++ " " ++ show n ++ showGup r
