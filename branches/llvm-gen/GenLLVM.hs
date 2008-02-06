@@ -89,8 +89,10 @@ data Gup :: * -> * -> * where
   Deref :: Value -> Gup ([a], S d) (a, Z)
   Skip :: Gup (LStruct (a, b), d) (LStruct b, Z)
   Drill :: Gup (LStruct (a, b), d) (a, Z)
+  Pick :: Value -> Gup (LArray a, d) (a, Z)
 
 data LStruct a
+data LArray a
 
 data LType' :: * -> * where
   LInt :: Int -> LType' Int
@@ -98,6 +100,13 @@ data LType' :: * -> * where
   -- Structs
   LEmpty :: LType' (LStruct ())
   LExtend :: LType' a -> LType' (LStruct b) -> LType' (LStruct (a, b))
+  LArray :: LType' a -> Int -> LType' (LArray a)
+  LNamed :: LType' a -> Name -> LType' a
+
+i1 = LInt 1
+i8 = LInt 8
+i32 = LInt 32
+
 
 data BasicBlock :: * where
   BB :: Name -> Thrist Instr Cabl Term -> BasicBlock
@@ -106,6 +115,7 @@ data Value :: * where
   LLit :: Lit -> Value
   Undef :: LType -> Value
   Ref :: LType -> Name -> Value
+  Ref' :: LType' a -> Name -> Value
   Lab :: Name -> Value
 
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
@@ -134,7 +144,7 @@ caseArm next (_, Plit (i@(Int _)), Normal exp, decs) = do
         thr <- subComp n exp cont
         bbn <- fresh
         let bb = BB bbn thr
-        return (LLit i, Left (Ref "i32" n, bb))
+        return (LLit i, Left (Ref' i32 n, bb))
 
 caseArm next (_, Pcon (Global "Nothing") [], Normal exp, decs) = do
         n <- fresh
