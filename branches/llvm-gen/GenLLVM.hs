@@ -212,17 +212,17 @@ subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
 subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
 
 subPrimitive :: Name -> String -> [Exp] -> V -> FIOTermCont -> FIOTerm
-subPrimitive lab "<" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLt) "i1" a1 a2 cont
-subPrimitive lab "<=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLe) "i1" a1 a2 cont
-subPrimitive lab ">=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGe) "i1" a1 a2 cont
-subPrimitive lab ">" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGt) "i1" a1 a2 cont
-subPrimitive lab "==" [a1, a2] _ cont = binaryPrimitive lab (Icmp OEq) "i1" a1 a2 cont
-subPrimitive lab "/=" [a1, a2] _ cont = binaryPrimitive lab (Icmp ONe) "i1" a1 a2 cont
+subPrimitive lab "<" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLt) i1 a1 a2 cont
+subPrimitive lab "<=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLe) i1 a1 a2 cont
+subPrimitive lab ">=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGe) i1 a1 a2 cont
+subPrimitive lab ">" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGt) i1 a1 a2 cont
+subPrimitive lab "==" [a1, a2] _ cont = binaryPrimitive lab (Icmp OEq) i1 a1 a2 cont
+subPrimitive lab "/=" [a1, a2] _ cont = binaryPrimitive lab (Icmp ONe) i1 a1 a2 cont
 
-subPrimitive lab "+" [a1, a2] _ cont = binaryPrimitive lab Add "i32" a1 a2 cont
-subPrimitive lab "-" [a1, a2] _ cont = binaryPrimitive lab Sub "i32" a1 a2 cont
-subPrimitive lab "*" [a1, a2] _ cont = binaryPrimitive lab Mul "i32" a1 a2 cont
-subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div "i32" a1 a2 cont
+subPrimitive lab "+" [a1, a2] _ cont = binaryPrimitive lab Add i32 a1 a2 cont
+subPrimitive lab "-" [a1, a2] _ cont = binaryPrimitive lab Sub i32 a1 a2 cont
+subPrimitive lab "*" [a1, a2] _ cont = binaryPrimitive lab Mul i32 a1 a2 cont
+subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div i32 a1 a2 cont
 
 subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
@@ -236,14 +236,14 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
 subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
 subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
 
-binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType
+binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType' a
                 -> Exp -> Exp -> FIOTermCont -> FIOTerm
 binaryPrimitive lab former typ a1 a2 cont = do
                                        l1 <- fresh
                                        l2 <- fresh
                                        subComp l1 a1 (\v1 ->
                                                       subComp l2 a2 (\v2 -> do
-                                                                     tail <- cont $ Ref typ lab
+                                                                     tail <- cont $ Ref' typ lab
                                                                      return $ Cons (Def lab $ former v1 v2) tail))
 
 
