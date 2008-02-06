@@ -324,9 +324,9 @@ instance Show (LType a) where
   show (LPtr a) = show a ++ "*"
   show (LEmpty) = "{}"
   show (ext@(LExtend _ _)) = "{" ++ descend ext
-      where descend :: LType a -> String
+      where descend :: LType (LStruct b) -> String
 	    descend (LExtend a LEmpty) = show a ++ "}"
-	    descend (LExtend a (more@(LExtend _ _))) = show a ++ ", " ++ show more
+	    descend (LExtend a more@(LExtend _ _)) = show a ++ ", " ++ descend more
   --  show (LExtend a r) = "{" ++ descend a r
   --      where descend :: LType a -> LType (LStruct b) -> String
   --	    descend f LEmpty = show f ++ "}"
