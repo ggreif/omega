@@ -152,7 +152,7 @@ caseArm next (_, Pcon (Global "Nothing") [], Normal exp, decs) = do
         thr <- subComp n exp cont
         bbn <- fresh
         let bb = BB bbn thr
-        return (LLit $ Int 0, Left (Ref "i32" n, bb))
+        return (LLit $ Int 0, Left (Ref' i32 n, bb))
 
 mapFIO :: (a -> FIO b) -> [a] -> FIO [b]
 mapFIO f [] = return []
@@ -172,7 +172,7 @@ splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStar
                   landings <- mapFIO (buildLanding bb) arms
 		  let phi = Phi landings
 		  vn <- fresh
-		  tail <- cont $ Ref "i32" vn
+		  tail <- cont $ Ref' i32 vn
 		  n <- fresh
                   let bb = BB n (Cons (Def vn phi) tail)
 		  return (arms, landings)
@@ -200,7 +200,7 @@ subCase lab (stuff@(App s v)) cases cont = do
                           ln <- fresh
                           let load = Def ln $ Load (Ref "i8*" dn)
                           arms <- splitArms cases cont
-                          return $ Cons dv $ Cons load $ Cons (Switch (Ref "i8" ln) arms) Nil)
+                          return $ Cons dv $ Cons load $ Cons (Switch (Ref' i8 ln) arms) Nil)
 subCase lab stuff cases cont = do
         fail ("subCase: " ++ show stuff)
 
@@ -300,7 +300,7 @@ showGup (Cons (Deref offs) r) = ", " ++ show offs ++ showGup r
 showGup (Cons Drill r) = ", " ++ show 0 ++ showGup r
 showGup (Cons Skip r) = countdown 1 r
     where countdown :: Int -> Thrist Gup a b -> String
-          countdown n (Cons Drill r) = ", i32 " ++ show n ++ showGup r
+          countdown n (Cons Drill r) = ", " ++ show i32 ++ " " ++ show n ++ showGup r
           countdown n (Cons Skip r) = countdown (n + 1) r
 
 
@@ -310,10 +310,18 @@ showBinaryArithmetic op v1 v2 _ r = do
                                     return (" " ++ op ++ " " ++ show v1 ++ " " ++ show v2 ++ "\n" ++ humpti)
 
 instance Show Value where
-  show (LLit (Int i)) = "i32 " ++ show i
+  show (LLit (Int i)) = show i32 ++ " " ++ show i
   show (Undef t) = t ++ " undef"
   show (Ref t l) = t ++ " %" ++ show l
+  show (Ref' t l) = show t ++ " %" ++ show l
   show (Lab r) = "label %" ++ show r
 
 instance Show BasicBlock where
   show (BB n _) = show (Lab n)
+
+
+instance Show (LType' a) where
+  show (LInt i) = "i" ++ show i
+  show (LPtr a) = show a ++ "*"
+  show (LArray a d) = "[" ++ show a ++ " x " ++ show d ++ "]"
+  show (LNamed t n) = "%" ++ show n
