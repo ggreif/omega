@@ -107,7 +107,6 @@ i1 = LInt 1
 i8 = LInt 8
 i32 = LInt 32
 
-
 data BasicBlock :: * where
   BB :: Name -> Thrist Instr Cabl Term -> BasicBlock
 
@@ -198,7 +197,7 @@ subCase lab (stuff@(App s v)) cases cont = do
                           dn <- fresh
                           let dv = Def dn gep
                           ln <- fresh
-                          let load = Def ln $ Load (Ref' "i8*" dn)
+                          let load = Def ln $ Load (Ref (LPtr i8) dn)
                           arms <- splitArms cases cont
                           return $ Cons dv $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
 subCase lab stuff cases cont = do
@@ -227,7 +226,7 @@ subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div i32 a1 a2 cont
 subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
              subComp l arg (\v -> do
-                           let ref = Ref' "Just*" lab
+                           let ref = Ref justPtr lab
                            tail <- cont ref
                            return $ Cons (Def lab $ Malloc i32 (LLit $ Int 1))
                                          (Cons (Store v ref) tail))
@@ -323,5 +322,14 @@ instance Show BasicBlock where
 instance Show (LType a) where
   show (LInt i) = "i" ++ show i
   show (LPtr a) = show a ++ "*"
+  show (LEmpty) = "{}"
+  show (ext@(LExtend _ _)) = "{" ++ descend ext
+      where descend :: LType a -> String
+	    descend (LExtend a LEmpty) = show a ++ "}"
+	    descend (LExtend a (more@(LExtend _ _))) = show a ++ ", " ++ show more
+  --  show (LExtend a r) = "{" ++ descend a r
+  --      where descend :: LType a -> LType (LStruct b) -> String
+  --	    descend f LEmpty = show f ++ "}"
+  --	    descend f (LExtend a r) = show f ++ ", " ++ descend a r
   show (LArray a d) = "[" ++ show a ++ " x " ++ show d ++ "]"
   show (LNamed t n) = "%" ++ show n
