@@ -80,15 +80,15 @@ data Instr :: * -> * -> * where
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
   Def :: Name -> Instr a b -> Instr a b
-  Gep :: LType' a -> Thrist Gup a b -> Value {-a-} -> Instr Cabl Cabl
+  Gep :: LType' a -> Thrist Gup (a, S Z) (b, Z) -> Value {-a-} -> Instr Cabl Cabl
 
 type LType = String
 
 -- thrist based Gep: eat our own dogfood
 data Gup :: * -> * -> * where
-  Deref :: Value -> Gup [a] a
-  Skip :: Gup (LStruct (a, b)) (LStruct b)
-  Drill :: Gup (LStruct (a, b)) a
+  Deref :: Value -> Gup ([a], S d) (a, Z)
+  Skip :: Gup (LStruct (a, b), d) (LStruct b, Z)
+  Drill :: Gup (LStruct (a, b), d) (a, Z)
 
 data LStruct a
 
@@ -280,6 +280,9 @@ showThrist (Cons (Gep t g v) r) = do
                               return (" getelementpointer " ++ show v ++ showGup g ++ "\n" ++ humpti)
 showThrist (Cons x r) = return "cannot showThrist"
 
+
+-- forbidden gups:
+-- g1 = Cons Drill $ Cons (Deref (LLit $ Int 0)) Nil
 
 showGup :: Thrist Gup a b -> String
 showGup Nil = ""
