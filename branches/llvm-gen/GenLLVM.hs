@@ -34,8 +34,8 @@ appendThrist (Cons b r) a = Cons b (appendThrist r a)
 -- Thrist extending
 
 extendThrist :: Thrist b c d ->
-		b d e ->
-		Thrist b c e
+                b d e ->
+                Thrist b c e
 
 extendThrist Nil a = Cons a Nil
 extendThrist (Cons b r) a = Cons b $ extendThrist r a
@@ -231,31 +231,31 @@ type AllocAndInitHeap = Thrist Initer () (LStruct ())
 fillSlots :: LType [LStruct (a, b)] -> InitHeap (LStruct (a, b)) -> Value -> FIOTermCont -> FIOTerm
 fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ fill obj cont
     where gepAndStore :: LType (LStruct c)
-		      -> Thrist Gup ([LStruct (a, b)], S Z) (LStruct c, Z)
-		      -> LType [LStruct (a, b)]
-		      -> Thrist Initer d (LStruct ())
-		      -> Value
-		      -> FIOTermCont -> FIOTerm
+                      -> Thrist Gup ([LStruct (a, b)], S Z) (LStruct c, Z)
+                      -> LType [LStruct (a, b)]
+                      -> Thrist Initer d (LStruct ())
+                      -> Value
+                      -> FIOTermCont -> FIOTerm
           gepAndStore LEmpty thr typ Nil obj cont = do
               cont obj
           gepAndStore (LExtend here more) thr typ (Cons (ISlot val) rest) obj cont = do
-	      let gep = Gep typ (extendThrist thr Drill) obj
-	      let store = Store val $ Grab gep
+              let gep = Gep typ (extendThrist thr Drill) obj
+              let store = Store val $ Grab gep
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
-	      return $ Cons gep $ Cons store tail
+              return $ Cons gep $ Cons store tail
           gepAndStore (LExtend here more) thr typ (Cons (ITag tag) rest) obj cont = do
-	      let gep = Gep typ (extendThrist thr Drill) obj
-	      let store = Store (LLit $ Int tag) $ Grab gep
+              let gep = Gep typ (extendThrist thr Drill) obj
+              let store = Store (LLit $ Int tag) $ Grab gep
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
-	      return $ Cons gep $ Cons store tail
+              return $ Cons gep $ Cons store tail
 
 {- this *should* work
 allocSlots :: Name -> AllocAndInitHeap -> FIOTermCont -> FIOTerm
 allocSlots lab (Cons (IMake typ) fill) cont = do
-	let ptyp = LPtr typ
-	    ref = Ref ptyp lab
-	tail <- fillSlots ptyp fill ref cont
-	return $ Cons (Def lab $ Malloc typ singleObj) tail
+        let ptyp = LPtr typ
+            ref = Ref ptyp lab
+        tail <- fillSlots ptyp fill ref cont
+        return $ Cons (Def lab $ Malloc typ singleObj) tail
 -}
 
 justTag = 3
@@ -282,8 +282,8 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
              subComp l arg (\v -> do
                            let ref = Ref justPtr lab
-			   tail <- fJust v ref cont
-			   return $ Cons (Def lab $ Malloc justStru singleObj) tail)
+                           tail <- fJust v ref cont
+                           return $ Cons (Def lab $ Malloc justStru singleObj) tail)
 
 -- constructorPrimitive
 
@@ -321,7 +321,9 @@ showThrist (Cons i@(Div v1 v2) r) = showBinaryArithmetic "div" v1 v2 i r
 showThrist (Cons i@(Icmp o v1 v2) r) = showBinaryArithmetic ("icmp " ++ show o) v1 v2 i r
 showThrist (Cons i@(Malloc t v) r) = do
                                     humpti <- showThrist r
-                                    return (" malloc " ++ show t ++ ", " ++ show v ++ "\n" ++ humpti)
+                                    let elems (LLit (Int 1)) = ""
+                                        elems _ = ", " ++ show v
+                                    return (" malloc " ++ show t ++ elems v ++ "\n" ++ humpti)
 showThrist (Cons i@(Store v p) r) = do
                                     humpti <- showThrist r
                                     return (" store " ++ show v ++ ", " ++ show p ++ "\n" ++ humpti)
