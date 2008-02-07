@@ -258,7 +258,11 @@ allocSlots lab (Cons (IMake typ) fill) cont = do
 	return $ Cons (Def lab $ Malloc typ singleObj) tail
 -}
 
-fJust a = fillSlots justPtr $ Cons (ITag 3) $ Cons (ISlot a) Nil
+justTag = 3
+makeJust :: Value -> AllocAndInitHeap
+makeJust a = Cons (IMake justStru) $ Cons (ITag justTag) $ Cons (ISlot a) Nil
+
+fJust a = fillSlots justPtr $ Cons (ITag justTag) $ Cons (ISlot a) Nil
 singleObj = LLit $ Int 1
 
 subPrimitive :: Name -> String -> [Exp] -> V -> FIOTermCont -> FIOTerm
