@@ -31,6 +31,16 @@ appendThrist :: Thrist b c d ->
 appendThrist Nil a = a
 appendThrist (Cons b r) a = Cons b (appendThrist r a)
 
+-- Thrist extending
+
+extendThrist :: Thrist b c d ->
+		b d e ->
+		Thrist b c e
+
+extendThrist Nil a = Cons a Nil
+extendThrist (Cons b r) a = Cons b $ extendThrist r a
+
+
 
 
 genLLVM :: Ev -> Exp -> FIO V
@@ -229,12 +239,10 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
           gepAndStore LEmpty thr typ Nil obj cont = do
               cont obj
           gepAndStore (LExtend here more) thr typ (Cons (ITag tag) rest) obj cont = do
-	      let gep = Gep typ (Cons deref0 $ Cons Drill Nil) obj
+	      let gep = Gep typ (extendThrist thr Drill) obj
 	      let store = Store (LLit $ Int tag) $ Grab gep
-              tail <- cont obj
+              tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
 	      return $ Cons gep $ Cons store tail
-
--- fillSlots _ fill obj cont = cont obj
 
 
 fJust a = fillSlots justPtr (Cons (ITag 3) $ Cons (ISlot a) Nil)
