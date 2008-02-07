@@ -221,12 +221,12 @@ subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
 subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
 
 data Initer :: * -> * -> * where
-  IMake :: LType (LStruct a) -> Initer () [LStruct a]
+  IMake :: LType (LStruct (a, b)) -> Initer () [LStruct (a, b)]
   ITag :: Int -> Initer [LStruct (a, b)] (LStruct b)
   ISlot :: Value -> Initer (LStruct (b, c)) (LStruct c)
 
 type InitHeap a = Thrist Initer [a] (LStruct ())
-type AllocAndInitHeap a = Thrist Initer () (LStruct ())
+type AllocAndInitHeap = Thrist Initer () (LStruct ())
 
 fillSlots :: LType [LStruct (a, b)] -> InitHeap (LStruct (a, b)) -> Value -> FIOTermCont -> FIOTerm
 fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ fill obj cont
@@ -249,6 +249,14 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
 	      return $ Cons gep $ Cons store tail
 
+{- this *should* work
+allocSlots :: Name -> AllocAndInitHeap -> FIOTermCont -> FIOTerm
+allocSlots lab (Cons (IMake typ) fill) cont = do
+	let ptyp = LPtr typ
+	    ref = Ref ptyp lab
+	tail <- fillSlots ptyp fill ref cont
+	return $ Cons (Def lab $ Malloc typ singleObj) tail
+-}
 
 fJust a = fillSlots justPtr $ Cons (ITag 3) $ Cons (ISlot a) Nil
 singleObj = LLit $ Int 1
