@@ -221,7 +221,7 @@ subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
 subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
 
 data Initer :: * -> * -> * where
-  IMake :: LType (LStruct a) -> Initer () (LStruct a)
+  IMake :: LType (LStruct a) -> Initer () [LStruct a]
   ITag :: Int -> Initer [LStruct (a, b)] (LStruct b)
   ISlot :: Value -> Initer (LStruct (b, c)) (LStruct c)
 
@@ -250,8 +250,8 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
 	      return $ Cons gep $ Cons store tail
 
 
-fJust a = fillSlots justPtr (Cons (ITag 3) $ Cons (ISlot a) Nil)
-
+fJust a = fillSlots justPtr $ Cons (ITag 3) $ Cons (ISlot a) Nil
+singleObj = LLit $ Int 1
 
 subPrimitive :: Name -> String -> [Exp] -> V -> FIOTermCont -> FIOTerm
 subPrimitive lab "<" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLt) i1 a1 a2 cont
@@ -271,19 +271,8 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              subComp l arg (\v -> do
                            let ref = Ref justPtr lab
 			   tail <- fJust v ref cont
-			   return $ Cons (Def lab $ Malloc justStru (LLit $ Int 1)) tail)
+			   return $ Cons (Def lab $ Malloc justStru singleObj) tail)
 
-{-
-                           tail <- cont ref
-                           mall <- fresh
-                           tag <- fresh
-                           slot <- fresh
-                           return $ Cons (Def lab $ Malloc justStru (LLit $ Int 1))
-                                     (Cons (Def tag $ Gep justPtr (Cons deref0 $ Cons Drill Nil) ref)
-                                      (Cons (Def slot $ Gep justPtr (Cons deref0 $ Cons Skip $ Cons Drill Nil) ref)
-                                       (Cons (Store (LLit $ Int 3) $ Ref (LPtr i8) tag)
-                                        (Cons (Store v $ Ref (LPtr i32) slot) tail)))))
--}
 -- constructorPrimitive
 
 
