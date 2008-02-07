@@ -209,6 +209,18 @@ subApplication lab (Reify s v) args cont = subPrimitive lab s args v cont
 subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
 subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
 
+data Initer :: * -> * -> * where
+  ITag :: Int -> Initer [LStruct (a, b)] (LStruct b)
+  ISlot :: Value -> Initer (LStruct (b, c)) (LStruct c)
+
+type InitHeap a = Thrist Initer [a] (LStruct ())
+
+fillSlots :: LType [a] -> InitHeap a -> Value -> FIOTermCont -> FIOTerm
+fillSlots _ fill obj cont = cont obj
+
+fJust a = fillSlots justPtr (Cons (ITag 3) $ Cons (ISlot a) Nil)
+
+
 subPrimitive :: Name -> String -> [Exp] -> V -> FIOTermCont -> FIOTerm
 subPrimitive lab "<" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLt) i1 a1 a2 cont
 subPrimitive lab "<=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLe) i1 a1 a2 cont
@@ -236,6 +248,7 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
                                        (Cons (Store (LLit $ Int 3) $ Ref (LPtr i8) tag)
                                         (Cons (Store v $ Ref (LPtr i32) slot) tail)))))
 -- constructorPrimitive
+
 
 subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
 subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
