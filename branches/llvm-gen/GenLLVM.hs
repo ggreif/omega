@@ -259,10 +259,10 @@ allocSlots lab (Cons (IMake typ) fill) cont = do
 
 
 justTag = 3
-makeJust :: Value -> AllocAndInitHeap
-makeJust a = Cons (IMake justStru) $ Cons (ITag justTag) $ Cons (ISlot a) Nil
+justAllocator :: Value -> AllocAndInitHeap
+justAllocator a = Cons (IMake justStru) $ Cons (ITag justTag) $ Cons (ISlot a) Nil
 
-makeJust' lab a cont = allocSlots lab (makeJust a) cont
+makeJust lab a cont = allocSlots lab (justAllocator a) cont
 
 fJust a = fillSlots justPtr $ Cons (ITag justTag) $ Cons (ISlot a) Nil
 singleObj = LLit $ Int 1
@@ -283,9 +283,7 @@ subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div i32 a1 a2 cont
 subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
              subComp l arg (\v -> do
-                           let ref = Ref justPtr lab
-                           tail <- fJust v ref cont
-                           return $ Cons (Def lab $ Malloc justStru singleObj) tail)
+                            makeJust lab v cont)
 
 -- constructorPrimitive
 
