@@ -238,6 +238,11 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
 		      -> FIOTermCont -> FIOTerm
           gepAndStore LEmpty thr typ Nil obj cont = do
               cont obj
+          gepAndStore (LExtend here more) thr typ (Cons (ISlot val) rest) obj cont = do
+	      let gep = Gep typ (extendThrist thr Drill) obj
+	      let store = Store val $ Grab gep
+              tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
+	      return $ Cons gep $ Cons store tail
           gepAndStore (LExtend here more) thr typ (Cons (ITag tag) rest) obj cont = do
 	      let gep = Gep typ (extendThrist thr Drill) obj
 	      let store = Store (LLit $ Int tag) $ Grab gep
@@ -265,6 +270,10 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
              subComp l arg (\v -> do
                            let ref = Ref justPtr lab
+			   tail <- fJust v ref cont
+			   return $ Cons (Def lab $ Malloc justStru (LLit $ Int 1)) tail)
+
+{-
                            tail <- cont ref
                            mall <- fresh
                            tag <- fresh
@@ -274,6 +283,7 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
                                       (Cons (Def slot $ Gep justPtr (Cons deref0 $ Cons Skip $ Cons Drill Nil) ref)
                                        (Cons (Store (LLit $ Int 3) $ Ref (LPtr i8) tag)
                                         (Cons (Store v $ Ref (LPtr i32) slot) tail)))))
+-}
 -- constructorPrimitive
 
 
@@ -357,6 +367,7 @@ instance Show Value where
   show (LLit (Int i)) = show i32 ++ " " ++ show i
   show (Undef t) = show t ++ " undef"
   show (Ref t l) = show t ++ " %" ++ show l
+  show (Grab _) = "%^^"
   show (Lab r) = "label %" ++ show r
 
 instance Show BasicBlock where
