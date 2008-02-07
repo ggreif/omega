@@ -219,11 +219,17 @@ type InitHeap a = Thrist Initer [a] (LStruct ())
 type AllocAndInitHeap a = Thrist Initer () (LStruct ())
 
 fillSlots :: LType [LStruct (a, b)] -> InitHeap (LStruct (a, b)) -> Value -> FIOTermCont -> FIOTerm
-fillSlots typ fill obj cont = gepAndStore 0 typ fill obj cont
-    where gepAndStore :: Int -> LType [LStruct (a, b)] -> InitHeap (LStruct (a, b)) -> Value -> FIOTermCont -> FIOTerm
-          gepAndStore mem typ (Cons (ITag tag) rest) obj cont = do
-	      let gep = buildGep mem -- Gep typ (Cons deref0 $ Cons Drill Nil) ref)
-		  buildGep 0 = undefined
+fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ fill obj cont
+    where gepAndStore :: LType (LStruct c)
+		      -> Thrist Gup ([LStruct (a, b)], S Z) (LStruct c, Z)
+		      -> LType [LStruct (a, b)]
+		      -> Thrist Initer d (LStruct ())
+		      -> Value
+		      -> FIOTermCont -> FIOTerm
+          gepAndStore LEmpty thr typ Nil obj cont = do
+              cont obj
+          gepAndStore (LExtend here more) thr typ (Cons (ITag tag) rest) obj cont = do
+	      let gep = Gep typ (Cons deref0 $ Cons Drill Nil) obj
 	      let store = Store (LLit $ Int tag) $ Grab gep
               tail <- cont obj
 	      return $ Cons gep $ Cons store tail
