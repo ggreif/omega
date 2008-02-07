@@ -1,6 +1,5 @@
 -- Copyright (c) Gabor Greif
--- OGI School of Science & Engineering, Oregon Health & Science University
--- Maseeh College of Engineering, Portland State University
+-- email ggreif gmail com
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
 -- Tue Nov 7 15:20:11 Middle European Time 2007
 -- Omega Interpreter: version 1.4.2+
@@ -282,8 +281,7 @@ subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div i32 a1 a2 cont
 
 subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
-             subComp l arg (\v -> do
-                            makeJust lab v cont)
+             subComp l arg (\v -> makeJust lab v cont)
 
 -- constructorPrimitive
 
