@@ -14,7 +14,7 @@ module Bind(Fresh(..),Freshen(..),Swap(..),Name,Perm
 -- import IOExts
 import Monads
 
-class Monad m => Fresh m where
+class (Monad m, HasNext m) => Fresh m where
   fresh :: m Name
 
 class Freshen b where
