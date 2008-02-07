@@ -89,6 +89,8 @@ data Gup :: * -> * -> * where
   Drill :: Gup (LStruct (a, b), d) (a, Z)
   Pick :: Value -> Gup (LArray a, d) (a, Z)
 
+deref0 = Deref (LLit $ Int 0)
+
 data LStruct a
 data LArray a
 
@@ -190,7 +192,7 @@ subCase lab (stuff@(Reify s v)) cases cont = do
 subCase lab (stuff@(App s v)) cases cont = do
         le <- fresh
         subComp le stuff (\v -> do
-                          let tag = Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Drill Nil) v
+                          let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
                           dn <- fresh
                           let dv = Def dn tag
                           ln <- fresh
@@ -229,8 +231,8 @@ subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
                            tag <- fresh
                            slot <- fresh
                            return $ Cons (Def lab $ Malloc justStru (LLit $ Int 1))
-                                     (Cons (Def tag $ Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Drill Nil) ref)
-                                      (Cons (Def slot $ Gep justPtr (Cons (Deref (LLit $ Int 0)) $ Cons Skip $ Cons Drill Nil) ref)
+                                     (Cons (Def tag $ Gep justPtr (Cons deref0 $ Cons Drill Nil) ref)
+                                      (Cons (Def slot $ Gep justPtr (Cons deref0 $ Cons Skip $ Cons Drill Nil) ref)
                                        (Cons (Store (LLit $ Int 3) $ Ref (LPtr i8) tag)
                                         (Cons (Store v $ Ref (LPtr i32) slot) tail)))))
 -- constructorPrimitive
@@ -294,7 +296,7 @@ showThrist (Cons x r) = return "cannot showThrist"
 
 
 -- forbidden gups:
--- g1 = Cons Drill $ Cons (Deref (LLit $ Int 0)) Nil
+-- g1 = Cons Drill $ Cons deref0 Nil
 
 showGup :: Thrist Gup a b -> String
 showGup Nil = ""
