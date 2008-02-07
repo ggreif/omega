@@ -249,18 +249,20 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
               return $ Cons gep $ Cons store tail
 
-{- this *should* work
+{- this *should* work -- it actually does with ghc 6.6.1 -}
 allocSlots :: Name -> AllocAndInitHeap -> FIOTermCont -> FIOTerm
 allocSlots lab (Cons (IMake typ) fill) cont = do
         let ptyp = LPtr typ
             ref = Ref ptyp lab
         tail <- fillSlots ptyp fill ref cont
         return $ Cons (Def lab $ Malloc typ singleObj) tail
--}
+
 
 justTag = 3
 makeJust :: Value -> AllocAndInitHeap
 makeJust a = Cons (IMake justStru) $ Cons (ITag justTag) $ Cons (ISlot a) Nil
+
+makeJust' lab a cont = allocSlots lab (makeJust a) cont
 
 fJust a = fillSlots justPtr $ Cons (ITag justTag) $ Cons (ISlot a) Nil
 singleObj = LLit $ Int 1
