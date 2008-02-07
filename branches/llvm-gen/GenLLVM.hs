@@ -79,7 +79,7 @@ data Instr :: * -> * -> * where
   Store :: Value -> Value -> Instr Cabl Cabl
   -- Special values
   Phi :: [(Value, BasicBlock)] -> Instr Cabl Cabl
-  Def :: Name -> Instr a b -> Instr a b
+  Def :: Name -> Instr a b -> Instr a b   -- name instruction result
   Gep :: LType a -> Thrist Gup (a, S Z) (b, Z) -> Value {-a-} -> Instr Cabl Cabl
 
 -- thrist based Gep: eat our own dogfood
@@ -113,7 +113,8 @@ data BasicBlock :: * where
 data Value :: * where
   LLit :: Lit -> Value
   Undef :: LType a -> Value
-  Ref :: LType a -> Name -> Value
+  Ref :: LType a -> Name -> Value  -- refer to named result
+  Grab :: Instr Cabl Cabl -> Value -- grab anonymous result
   Lab :: Name -> Value
 
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
@@ -210,13 +211,25 @@ subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
 subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
 
 data Initer :: * -> * -> * where
+  IMake :: LType (LStruct a) -> Initer () (LStruct a)
   ITag :: Int -> Initer [LStruct (a, b)] (LStruct b)
   ISlot :: Value -> Initer (LStruct (b, c)) (LStruct c)
 
 type InitHeap a = Thrist Initer [a] (LStruct ())
+type AllocAndInitHeap a = Thrist Initer () (LStruct ())
 
-fillSlots :: LType [a] -> InitHeap a -> Value -> FIOTermCont -> FIOTerm
-fillSlots _ fill obj cont = cont obj
+fillSlots :: LType [LStruct (a, b)] -> InitHeap (LStruct (a, b)) -> Value -> FIOTermCont -> FIOTerm
+fillSlots typ fill obj cont = gepAndStore 0 typ fill obj cont
+    where gepAndStore :: Int -> LType [LStruct (a, b)] -> InitHeap (LStruct (a, b)) -> Value -> FIOTermCont -> FIOTerm
+          gepAndStore mem typ (Cons (ITag tag) rest) obj cont = do
+	      let gep = buildGep mem -- Gep typ (Cons deref0 $ Cons Drill Nil) ref)
+		  buildGep 0 = undefined
+	      let store = Store (LLit $ Int tag) $ Grab gep
+              tail <- cont obj
+	      return $ Cons gep $ Cons store tail
+
+-- fillSlots _ fill obj cont = cont obj
+
 
 fJust a = fillSlots justPtr (Cons (ITag 3) $ Cons (ISlot a) Nil)
 
