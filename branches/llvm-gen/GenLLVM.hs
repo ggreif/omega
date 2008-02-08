@@ -123,7 +123,6 @@ data Value :: * where
   LLit :: Lit -> Value
   Undef :: LType a -> Value
   Ref :: LType a -> Name -> Value  -- refer to named result
-  Grab :: Instr Cabl Cabl -> Value -- grab anonymous result
   Lab :: Name -> Value
 
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
@@ -242,21 +241,23 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
           gepAndStore LEmpty thr typ Nil obj cont = do
               cont obj
           gepAndStore (LExtend here more) thr typ (Cons (ISlot val) rest) obj cont = do
-              let gep = Gep typ (extendThrist thr Drill) obj
-              let store = Store val $ Grab gep
+              l <- fresh
+              let gep = Def l $ Gep typ (extendThrist thr Drill) obj
+              let store = Store val $ Ref typ l -- ###
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
               return $ Cons gep $ Cons store tail
           gepAndStore (LExtend here more) thr typ (Cons (ITag tag) rest) obj cont = do
-              let gep = Gep typ (extendThrist thr Drill) obj
-              let store = Store (LLit $ Int tag) $ Grab gep
+              l <- fresh
+              let gep = Def l $ Gep typ (extendThrist thr Drill) obj
+              let store = Store (LLit $ Int tag) $ Ref typ l -- ###
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
               return $ Cons gep $ Cons store tail
 
-allocSlots :: Name -> AllocAndInitHeap -> FIOTermCont -> FIOTerm
-allocSlots lab (Cons (IMake typ) fill) cont = do
+allocSlots :: AllocAndInitHeap -> FIOTermCont -> FIOTerm
+allocSlots (Cons (IMake typ) fill) cont = do
         let ptyp = LPtr typ
-            ref = Ref ptyp lab
-        tail <- fillSlots ptyp fill ref cont
+        lab <- fresh
+        tail <- fillSlots ptyp fill (Ref ptyp lab) cont
         return $ Cons (Def lab $ Malloc typ singleObj) tail
 
 
@@ -264,12 +265,12 @@ justTag = 3
 justAllocator :: Value -> AllocAndInitHeap
 justAllocator a = Cons (IMake justStru) $ Cons (ITag justTag) $ Cons (ISlot a) Nil
 
-makeJust lab a cont = allocSlots lab (justAllocator a) cont
+makeJust a cont = allocSlots (justAllocator a) cont
 
 
 nothingTag = 2
 nothingAllocator = Cons (IMake tagStru) $ Cons (ITag nothingTag) Nil
-makeNothing cont = allocSlots name1 nothingAllocator cont
+makeNothing cont = allocSlots nothingAllocator cont
 
 singleObj = LLit $ Int 1
 
@@ -287,8 +288,7 @@ subPrimitive "*" [a1, a2] _ cont = binaryPrimitive Mul i32 a1 a2 cont
 subPrimitive "div" [a1, a2] _ cont = binaryPrimitive Div i32 a1 a2 cont
 
 subPrimitive "Just" [arg] (Vprimfun "Just" f) cont = do
-             lab <- fresh
-             subComp arg (\v -> makeJust lab v cont)
+             subComp arg (\v -> makeJust v cont)
 
 subPrimitive "Nothing" [] (Vprimfun "Nothing" f) cont = makeNothing cont
 
@@ -376,7 +376,6 @@ instance Show Value where
   show (LLit (Int i)) = show i32 ++ " " ++ show i
   show (Undef t) = show t ++ " undef"
   show (Ref t l) = show t ++ " %" ++ show l
-  show (Grab _) = "%^^"
   show (Lab r) = "label %" ++ show r
 
 instance Show BasicBlock where
