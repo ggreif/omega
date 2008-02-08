@@ -206,25 +206,15 @@ subCase (Lit (n@(Int _))) cases cont = do
                                        arms <- splitArms cases cont
                                        return $ Cons (Switch (LLit n) arms) Nil
 
-subCase (stuff@(Reify s v)) cases cont = do
+subCase stuff cases cont = do
         subComp stuff (\v -> do
-                          let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
-                          ln <- fresh
-                          dn <- fresh
-                          let load = Def ln $ Load (Ref (LPtr i8) dn)
-                          arms <- splitArms cases cont
-                          return $ Cons (Def dn tag) $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
+                       let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
+                       ln <- fresh
+                       dn <- fresh
+                       let load = Def ln $ Load (Ref (LPtr i8) dn)
+                       arms <- splitArms cases cont
+                       return $ Cons (Def dn tag) $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
 
---        fail ("subCase (Reify): " ++ show stuff)
-subCase (stuff@(App s v)) cases cont = do
-        subComp stuff (\v -> do
-                          let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
-                          dn <- fresh
-                          let dv = Def dn tag
-                          ln <- fresh
-                          let load = Def ln $ Load (Ref (LPtr i8) dn)
-                          arms <- splitArms cases cont
-                          return $ Cons dv $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
 subCase stuff cases cont = do
         fail ("subCase: " ++ show stuff)
 
@@ -303,7 +293,6 @@ subPrimitive "div" [a1, a2] _ cont = binaryPrimitive Div i32 a1 a2 cont
 subPrimitive "Just" [arg] (Vprimfun "Just" f) cont = do
              subComp arg (\v -> makeJust v cont)
 
---- subPrimitive "Nothing" [] (Vprimfun "Nothing" f) cont = makeNothing cont
 
 -- constructorPrimitive
 
