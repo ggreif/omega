@@ -128,9 +128,9 @@ data Value :: * where
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
 --toLLVM c@(Lit (CrossStage _)) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM (Lit x) = return (Cons (Return $ LLit x) Nil)
-toLLVM (App f x) = do
-                   let cont = \val -> return $ Cons (Return $ val) Nil
-                   subApplication f [x] cont
+toLLVM c@(App _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil) -- do
+                 --  let cont = \val -> return $ Cons (Return $ val) Nil
+                 --  subApplication f [x] cont
 toLLVM c@(Case _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM c@(Reify s v) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM something = fail ("cannot toLLVM: " ++ show something)
@@ -141,7 +141,7 @@ type FIOTermCont = Value -> FIOTerm
 subComp :: Exp -> FIOTermCont -> FIOTerm
 subComp (Lit x) cont = cont $ LLit x
 subComp (App f x) cont = subApplication f [x] cont
-subComp (Case e ms) cont = subCase e ms cont
+subComp (Case e ms) cont = subCase (heuristicsMatch e ms) e ms cont
 subComp (Reify s (Vcon (Global "Nothing", _) [])) cont = makeNothing cont
 subComp (Reify s (Vcon (Global n, _) _)) cont = fail ("cannot subComp (Reify Vcon): " ++ show n)
 subComp (Reify s v) cont = fail ("cannot subComp (Reify): " ++ show s ++ "   " ++ show v)
@@ -201,12 +201,20 @@ tagPtr = LPtr tagStru
 justStru = LExtend (LInt 8) (LExtend (LInt 32) LEmpty)
 justPtr = LPtr justStru
 
-subCase :: Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
-subCase (Lit (n@(Int _))) cases cont = do
+
+data CannedLType :: * where
+  Canned :: LType a -> CannedLType
+
+heuristicsMatch :: forall a . Exp -> [Match Pat Exp Dec] -> CannedLType
+heuristicsMatch (Lit (Int _)) _ = Canned i32
+heuristicsMatch _ _ = Canned $ LPtr undefined
+
+subCase :: CannedLType -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
+subCase (Canned (LInt 32)) (Lit (n@(Int _))) cases cont = do
                                        arms <- splitArms cases cont
                                        return $ Cons (Switch (LLit n) arms) Nil
 
-subCase stuff cases cont = do
+subCase _ stuff cases cont = do
         subComp stuff (\v -> do
                        let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
                        ln <- fresh
@@ -215,8 +223,8 @@ subCase stuff cases cont = do
                        arms <- splitArms cases cont
                        return $ Cons (Def dn tag) $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
 
-subCase stuff cases cont = do
-        fail ("subCase: " ++ show stuff)
+--subCase stuff cases cont = do
+--        fail ("subCase: " ++ show stuff)
 
 subApplication :: Exp -> [Exp] -> FIOTermCont -> FIOTerm
 subApplication (Reify s (Vlit c)) args _ = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
