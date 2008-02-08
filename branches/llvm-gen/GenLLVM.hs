@@ -131,6 +131,7 @@ toLLVM (Lit x) = return (Cons (Return $ LLit x) Nil)
 toLLVM c@(App _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM c@(Case _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM c@(Reify s v) = subComp c (\val -> return $ Cons (Return $ val) Nil)
+toLLVM c@(Let _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM something = fail ("cannot toLLVM: " ++ show something)
 
 type FIOTerm = FIO (Thrist Instr Cabl Term)
@@ -143,8 +144,16 @@ subComp (Case e ms) cont = subCase (heuristicsMatch e ms) e ms cont
 subComp (Reify s (Vcon (Global "Nothing", _) [])) cont = makeNothing cont
 subComp (Reify s (Vcon (Global n, _) _)) cont = fail ("cannot subComp (Reify Vcon): " ++ show n)
 subComp (Reify s v) cont = fail ("cannot subComp (Reify): " ++ show s ++ "   " ++ show v)
+subComp (Let ds e) cont = subLet ds e cont
 subComp e cont = fail ("cannot subComp: " ++ show e)
 
+subLet (ds@(Val _ p body wh:rest)) e cont = do { assocs <- assocs; them <- zipWithFIO build assocs ds; subComp e cont }
+    where assocs = mapFIO assoc ds
+          assoc (Val _ (Pvar v) _ _) = do { l <- fresh; return (v, l) }
+          build (n, l) (Val _ p body wh) = return $ Cons GenLLVM.Unreachable Nil
+          
+-- fail ("cannot subLet: " ++ show ds)
+-- Val Loc Pat (Body Exp) [Dec]
 
 caseArm :: BasicBlock -> Match Pat Exp Dec -> FIO (Value, Either (Value, BasicBlock) Value)
 caseArm _ (_, Plit (i@(Int _)), Normal (Lit (j@(Int _))), decs) = return (LLit i, Right (LLit j))
