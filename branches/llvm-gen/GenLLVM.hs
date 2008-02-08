@@ -132,7 +132,7 @@ toLLVM (App f x) = do
                    let cont = \val -> return $ Cons (Return $ val) Nil
                    subApplication f [x] cont
 toLLVM c@(Case _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
-toLLVM c@(Reify s v) = subComp c (\val -> return $ Cons (Return $ val) Nil) -- fail ("cannot toLLVM (Reify): " ++ show v)
+toLLVM c@(Reify s v) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM something = fail ("cannot toLLVM: " ++ show something)
 
 type FIOTerm = FIO (Thrist Instr Cabl Term)
@@ -144,7 +144,7 @@ subComp (App f x) cont = subApplication f [x] cont
 subComp (Case e ms) cont = subCase e ms cont
 subComp (Reify s (Vcon (Global "Nothing", _) [])) cont = makeNothing cont
 subComp (Reify s (Vcon (Global n, _) _)) cont = fail ("cannot subComp (Reify Vcon): " ++ show n)
---subComp (Reify s v) cont = makeNothing cont
+subComp (Reify s v) cont = fail ("cannot subComp (Reify): " ++ show s ++ "   " ++ show v)
 subComp e cont = fail ("cannot subComp: " ++ show e)
 
 
@@ -207,7 +207,15 @@ subCase (Lit (n@(Int _))) cases cont = do
                                        return $ Cons (Switch (LLit n) arms) Nil
 
 subCase (stuff@(Reify s v)) cases cont = do
-        fail ("subCase (Reify): " ++ show stuff)
+        subComp stuff (\v -> do
+                          let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
+                          ln <- fresh
+                          dn <- fresh
+                          let load = Def ln $ Load (Ref (LPtr i8) dn)
+                          arms <- splitArms cases cont
+                          return $ Cons (Def dn tag) $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
+
+--        fail ("subCase (Reify): " ++ show stuff)
 subCase (stuff@(App s v)) cases cont = do
         subComp stuff (\v -> do
                           let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
@@ -295,7 +303,7 @@ subPrimitive "div" [a1, a2] _ cont = binaryPrimitive Div i32 a1 a2 cont
 subPrimitive "Just" [arg] (Vprimfun "Just" f) cont = do
              subComp arg (\v -> makeJust v cont)
 
-subPrimitive "Nothing" [] (Vprimfun "Nothing" f) cont = makeNothing cont
+--- subPrimitive "Nothing" [] (Vprimfun "Nothing" f) cont = makeNothing cont
 
 -- constructorPrimitive
 
@@ -349,10 +357,10 @@ showThrist (Cons (Switch v fan) r) = do
                               let showFan (_, BB n thr) = do { thrText <- showThrist thr; return ("%" ++ show n ++ ": " ++ thrText) }
                               fans <- mapFIO showFan fan
                               return (" switch " ++ show v ++ " --> " ++ show fan ++ "\n" ++ concat fans ++ humpti)
-showThrist (Cons (Branch (to@(BB _ thr))) r) = do
+showThrist (Cons (Branch (to@(BB n thr))) r) = do
                               humpti <- showThrist r
                               taste <- showThrist thr
-                              return (" branch " ++ show to ++ ";;; " ++ taste ++ "\n" ++ humpti)
+                              return (" branch " ++ show to ++ ";;; %" ++ show n ++ ": " ++ taste ++ "\n" ++ humpti)
 showThrist (Cons (Gep t g v) r) = do
                               humpti <- showThrist r
                               return (" getelementpointer " ++ show v ++ showGup g ++ "\n" ++ humpti)
