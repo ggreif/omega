@@ -9,7 +9,7 @@ module GenLLVM(genLLVM) where
 import Syntax
 import Encoding2(to)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
-              write,writeln,HasNext(..),HasOutput(..))
+              write,writeln,HasNext(..),HasOutput(..),HasIORef(..))
 import Bind
 import Control.Monad.Fix
 
@@ -130,37 +130,39 @@ toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
 toLLVM (Lit x) = return (Cons (Return $ LLit x) Nil)
 toLLVM (App f x) = do
                    let cont = \val -> return $ Cons (Return $ val) Nil
-                   subApplication name1 f [x] cont
-toLLVM c@(Case _ _) = subComp name1 c (\val -> return $ Cons (Return $ val) Nil)
+                   subApplication f [x] cont
+toLLVM c@(Case _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM something = fail ("cannot toLLVM: " ++ show something)
 
 type FIOTerm = FIO (Thrist Instr Cabl Term)
 type FIOTermCont = Value -> FIOTerm
 
-subComp :: Name -> Exp -> FIOTermCont -> FIOTerm
-subComp _ (Lit x) cont = cont $ LLit x
-subComp lab (App f x) cont = subApplication lab f [x] cont
-subComp lab (Case e ms) cont = subCase lab e ms cont
-subComp lab e cont = fail ("cannot subComp: " ++ show lab ++ " = " ++ show e)
+subComp :: Exp -> FIOTermCont -> FIOTerm
+subComp (Lit x) cont = cont $ LLit x
+subComp (App f x) cont = subApplication f [x] cont
+subComp (Case e ms) cont = subCase e ms cont
+subComp e cont = fail ("cannot subComp: " ++ show e)
 
 
 caseArm :: BasicBlock -> Match Pat Exp Dec -> FIO (Value, Either (Value, BasicBlock) Value)
 caseArm _ (_, Plit (i@(Int _)), Normal (Lit (j@(Int _))), decs) = return (LLit i, Right (LLit j))
 caseArm next (_, Plit (i@(Int _)), Normal exp, decs) = do
-        n <- fresh
-        let cont v = return $ Cons (Branch next) Nil
-        thr <- subComp n exp cont
+        capturer <- newRef Nothing
+        let cont v = do { () <- writeRef capturer $ Just v; return $ Cons (Branch next) Nil }
+        thr <- subComp exp cont
         bbn <- fresh
         let bb = BB bbn thr
-        return (LLit i, Left (Ref i32 n, bb))
+        Just captured <- readRef capturer
+        return (LLit i, Left (captured, bb))
 
 caseArm next (_, Pcon (Global "Nothing") [], Normal exp, decs) = do
-        n <- fresh
-        let cont v = return $ Cons (Branch next) Nil
-        thr <- subComp n exp cont
+        capturer <- newRef Nothing
+        let cont v = do { () <- writeRef capturer $ Just v; return $ Cons (Branch next) Nil }
+        thr <- subComp exp cont
         bbn <- fresh
         let bb = BB bbn thr
-        return (LLit $ Int 0, Left (Ref i32 n, bb))
+        Just captured <- readRef capturer
+        return (LLit $ Int nothingTag, Left (captured, bb))
 
 mapFIO :: (a -> FIO b) -> [a] -> FIO [b]
 mapFIO f [] = return []
@@ -189,19 +191,21 @@ splitArms matches cont = do { (arms, landings) <- magic; zipWithFIO assembleStar
           assembleStartLand (v, _) (_, land) = return (v, land)
 
 
+tagStru = LExtend (LInt 8) LEmpty
+tagPtr = LPtr tagStru
+
 justStru = LExtend (LInt 8) (LExtend (LInt 32) LEmpty)
 justPtr = LPtr justStru
 
-subCase :: Name -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
-subCase lab (Lit (n@(Int _))) cases cont = do
-                                           arms <- splitArms cases cont
-                                           return $ Cons (Switch (LLit n) arms) Nil
+subCase :: Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
+subCase (Lit (n@(Int _))) cases cont = do
+                                       arms <- splitArms cases cont
+                                       return $ Cons (Switch (LLit n) arms) Nil
 
-subCase lab (stuff@(Reify s v)) cases cont = do
+subCase (stuff@(Reify s v)) cases cont = do
         fail ("subCase (Reify): " ++ show stuff)
-subCase lab (stuff@(App s v)) cases cont = do
-        le <- fresh
-        subComp le stuff (\v -> do
+subCase (stuff@(App s v)) cases cont = do
+        subComp stuff (\v -> do
                           let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
                           dn <- fresh
                           let dv = Def dn tag
@@ -209,15 +213,15 @@ subCase lab (stuff@(App s v)) cases cont = do
                           let load = Def ln $ Load (Ref (LPtr i8) dn)
                           arms <- splitArms cases cont
                           return $ Cons dv $ Cons load $ Cons (Switch (Ref i8 ln) arms) Nil)
-subCase lab stuff cases cont = do
+subCase stuff cases cont = do
         fail ("subCase: " ++ show stuff)
 
-subApplication :: Name -> Exp -> [Exp] -> FIOTermCont -> FIOTerm
-subApplication lab (Reify s (Vlit c)) args _ = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
-subApplication _ (Reify s v) args cont = subPrimitive s args v cont
---subApplication lab (Lit (CrossStage v)) args = subPrimitive lab v args
-subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
-subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
+subApplication :: Exp -> [Exp] -> FIOTermCont -> FIOTerm
+subApplication (Reify s (Vlit c)) args _ = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
+subApplication (Reify s v) args cont = subPrimitive s args v cont
+--subApplication (Lit (CrossStage v)) args = subPrimitive v args
+subApplication (App f x) args cont = subApplication f (x:args) cont
+subApplication fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
 
 data Initer :: * -> * -> * where
   IMake :: LType (LStruct (a, b)) -> Initer () [LStruct (a, b)]
@@ -248,7 +252,6 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
               return $ Cons gep $ Cons store tail
 
-{- this *should* work -- it actually does with ghc 6.6.1 -}
 allocSlots :: Name -> AllocAndInitHeap -> FIOTermCont -> FIOTerm
 allocSlots lab (Cons (IMake typ) fill) cont = do
         let ptyp = LPtr typ
@@ -263,7 +266,11 @@ justAllocator a = Cons (IMake justStru) $ Cons (ITag justTag) $ Cons (ISlot a) N
 
 makeJust lab a cont = allocSlots lab (justAllocator a) cont
 
-fJust a = fillSlots justPtr $ Cons (ITag justTag) $ Cons (ISlot a) Nil
+
+nothingTag = 2
+nothingAllocator = Cons (IMake tagStru) $ Cons (ITag nothingTag) Nil
+makeNothing cont = allocSlots name1 nothingAllocator cont
+
 singleObj = LLit $ Int 1
 
 subPrimitive :: String -> [Exp] -> V -> FIOTermCont -> FIOTerm
@@ -280,9 +287,10 @@ subPrimitive "*" [a1, a2] _ cont = binaryPrimitive Mul i32 a1 a2 cont
 subPrimitive "div" [a1, a2] _ cont = binaryPrimitive Div i32 a1 a2 cont
 
 subPrimitive "Just" [arg] (Vprimfun "Just" f) cont = do
-             l <- fresh
              lab <- fresh
-             subComp l arg (\v -> makeJust lab v cont)
+             subComp arg (\v -> makeJust lab v cont)
+
+subPrimitive "Nothing" [] (Vprimfun "Nothing" f) cont = makeNothing cont
 
 -- constructorPrimitive
 
@@ -293,13 +301,11 @@ subPrimitive prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ " 
 binaryPrimitive :: (Value -> Value -> Instr Cabl Cabl) -> LType a
                 -> Exp -> Exp -> FIOTermCont -> FIOTerm
 binaryPrimitive former typ a1 a2 cont = do
-                                       l1 <- fresh
-                                       subComp l1 a1 (\v1 -> do
-                                                      l2 <- fresh
-                                                      subComp l2 a2 (\v2 -> do
-                                                                     lab <- fresh
-                                                                     tail <- cont $ Ref typ lab
-                                                                     return $ Cons (Def lab $ former v1 v2) tail))
+                                       subComp a1 (\v1 -> do
+                                                   subComp a2 (\v2 -> do
+                                                               lab <- fresh
+                                                               tail <- cont $ Ref typ lab
+                                                               return $ Cons (Def lab $ former v1 v2) tail))
 
 
 showThrist :: Thrist Instr a Term -> FIO String
