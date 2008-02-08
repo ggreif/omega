@@ -243,13 +243,13 @@ fillSlots (typ@(LPtr str)) fill obj cont = gepAndStore str (Cons deref0 Nil) typ
           gepAndStore (LExtend here more) thr typ (Cons (ISlot val) rest) obj cont = do
               l <- fresh
               let gep = Def l $ Gep typ (extendThrist thr Drill) obj
-              let store = Store val $ Ref typ l -- ###
+              let store = Store val $ Ref (LPtr here) l
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
               return $ Cons gep $ Cons store tail
           gepAndStore (LExtend here more) thr typ (Cons (ITag tag) rest) obj cont = do
               l <- fresh
               let gep = Def l $ Gep typ (extendThrist thr Drill) obj
-              let store = Store (LLit $ Int tag) $ Ref typ l -- ###
+              let store = Store (LLit $ Int tag) $ Ref (LPtr here) l
               tail <- gepAndStore more (extendThrist thr Skip) typ rest obj cont
               return $ Cons gep $ Cons store tail
 
