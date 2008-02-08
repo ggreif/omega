@@ -128,9 +128,7 @@ data Value :: * where
 toLLVM :: Exp -> FIO (Thrist Instr Cabl Term)
 --toLLVM c@(Lit (CrossStage _)) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM (Lit x) = return (Cons (Return $ LLit x) Nil)
-toLLVM c@(App _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil) -- do
-                 --  let cont = \val -> return $ Cons (Return $ val) Nil
-                 --  subApplication f [x] cont
+toLLVM c@(App _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM c@(Case _ _) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM c@(Reify s v) = subComp c (\val -> return $ Cons (Return $ val) Nil)
 toLLVM something = fail ("cannot toLLVM: " ++ show something)
@@ -205,17 +203,29 @@ justPtr = LPtr justStru
 data CannedLType :: * where
   Canned :: LType a -> CannedLType
 
-heuristicsMatch :: forall a . Exp -> [Match Pat Exp Dec] -> CannedLType
+boxed = Canned $ LPtr undefined
+
+heuristicsMatch :: Exp -> [Match Pat Exp Dec] -> CannedLType
 heuristicsMatch (Lit (Int _)) _ = Canned i32
-heuristicsMatch _ _ = Canned $ LPtr undefined
+heuristicsMatch _ arms = heuristicsUnboxedPats arms
+
+--heuristicsMatch _ _ = boxed
+
+heuristicsUnboxedPats :: [Match Pat Exp Dec] -> CannedLType
+heuristicsUnboxedPats [] = boxed
+heuristicsUnboxedPats ((_, Plit (Int _), _, _):_) = Canned i32
+heuristicsUnboxedPats (_:r) = heuristicsUnboxedPats r
 
 subCase :: CannedLType -> Exp -> [Match Pat Exp Dec] -> FIOTermCont -> FIOTerm
+
 subCase (Canned (LInt 32)) (Lit (n@(Int _))) cases cont = do
                                        arms <- splitArms cases cont
                                        return $ Cons (Switch (LLit n) arms) Nil
+subCase (Canned (LInt 32)) stuff cases cont = subComp stuff (\v -> do
+                                       arms <- splitArms cases cont
+                                       return $ Cons (Switch v arms) Nil)
 
-subCase _ stuff cases cont = do
-        subComp stuff (\v -> do
+subCase _ stuff cases cont = subComp stuff (\v -> do
                        let tag = Gep justPtr (Cons deref0 $ Cons Drill Nil) v
                        ln <- fresh
                        dn <- fresh
