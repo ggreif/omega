@@ -214,7 +214,7 @@ subCase lab stuff cases cont = do
 
 subApplication :: Name -> Exp -> [Exp] -> FIOTermCont -> FIOTerm
 subApplication lab (Reify s (Vlit c)) args _ = fail ("cannot subApplication: ReifyVlit " ++ show s ++ "  " ++ show c)
-subApplication lab (Reify s v) args cont = subPrimitive lab s args v cont
+subApplication _ (Reify s v) args cont = subPrimitive s args v cont
 --subApplication lab (Lit (CrossStage v)) args = subPrimitive lab v args
 subApplication lab (App f x) args cont = subApplication lab f (x:args) cont
 subApplication lab fun args _ = fail ("cannot subApplication: " ++ show fun ++ "   args: " ++ show args)
@@ -266,36 +266,38 @@ makeJust lab a cont = allocSlots lab (justAllocator a) cont
 fJust a = fillSlots justPtr $ Cons (ITag justTag) $ Cons (ISlot a) Nil
 singleObj = LLit $ Int 1
 
-subPrimitive :: Name -> String -> [Exp] -> V -> FIOTermCont -> FIOTerm
-subPrimitive lab "<" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLt) i1 a1 a2 cont
-subPrimitive lab "<=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OLe) i1 a1 a2 cont
-subPrimitive lab ">=" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGe) i1 a1 a2 cont
-subPrimitive lab ">" [a1, a2] _ cont = binaryPrimitive lab (Icmp OGt) i1 a1 a2 cont
-subPrimitive lab "==" [a1, a2] _ cont = binaryPrimitive lab (Icmp OEq) i1 a1 a2 cont
-subPrimitive lab "/=" [a1, a2] _ cont = binaryPrimitive lab (Icmp ONe) i1 a1 a2 cont
+subPrimitive :: String -> [Exp] -> V -> FIOTermCont -> FIOTerm
+subPrimitive "<" [a1, a2] _ cont = binaryPrimitive (Icmp OLt) i1 a1 a2 cont
+subPrimitive "<=" [a1, a2] _ cont = binaryPrimitive (Icmp OLe) i1 a1 a2 cont
+subPrimitive ">=" [a1, a2] _ cont = binaryPrimitive (Icmp OGe) i1 a1 a2 cont
+subPrimitive ">" [a1, a2] _ cont = binaryPrimitive (Icmp OGt) i1 a1 a2 cont
+subPrimitive "==" [a1, a2] _ cont = binaryPrimitive (Icmp OEq) i1 a1 a2 cont
+subPrimitive "/=" [a1, a2] _ cont = binaryPrimitive (Icmp ONe) i1 a1 a2 cont
 
-subPrimitive lab "+" [a1, a2] _ cont = binaryPrimitive lab Add i32 a1 a2 cont
-subPrimitive lab "-" [a1, a2] _ cont = binaryPrimitive lab Sub i32 a1 a2 cont
-subPrimitive lab "*" [a1, a2] _ cont = binaryPrimitive lab Mul i32 a1 a2 cont
-subPrimitive lab "div" [a1, a2] _ cont = binaryPrimitive lab Div i32 a1 a2 cont
+subPrimitive "+" [a1, a2] _ cont = binaryPrimitive Add i32 a1 a2 cont
+subPrimitive "-" [a1, a2] _ cont = binaryPrimitive Sub i32 a1 a2 cont
+subPrimitive "*" [a1, a2] _ cont = binaryPrimitive Mul i32 a1 a2 cont
+subPrimitive "div" [a1, a2] _ cont = binaryPrimitive Div i32 a1 a2 cont
 
-subPrimitive lab "Just" [arg] (Vprimfun "Just" f) cont = do
+subPrimitive "Just" [arg] (Vprimfun "Just" f) cont = do
              l <- fresh
+             lab <- fresh
              subComp l arg (\v -> makeJust lab v cont)
 
 -- constructorPrimitive
 
 
-subPrimitive lab prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
-subPrimitive lab prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
+subPrimitive prim args (Vprimfun s f) cont = fail ("cannot subPrimitive, Vprimfun: " ++ show prim ++ "   args: " ++ show args ++ "   s: " ++ s {-++ "   f: " ++ show f-})
+subPrimitive prim args v cont = fail ("cannot subPrimitive: " ++ show prim ++ "   args: " ++ show args ++ "   v: " ++ show v)
 
-binaryPrimitive :: Name -> (Value -> Value -> Instr Cabl Cabl) -> LType a
+binaryPrimitive :: (Value -> Value -> Instr Cabl Cabl) -> LType a
                 -> Exp -> Exp -> FIOTermCont -> FIOTerm
-binaryPrimitive lab former typ a1 a2 cont = do
+binaryPrimitive former typ a1 a2 cont = do
                                        l1 <- fresh
-                                       l2 <- fresh
-                                       subComp l1 a1 (\v1 ->
+                                       subComp l1 a1 (\v1 -> do
+                                                      l2 <- fresh
                                                       subComp l2 a2 (\v2 -> do
+                                                                     lab <- fresh
                                                                      tail <- cont $ Ref typ lab
                                                                      return $ Cons (Def lab $ former v1 v2) tail))
 
