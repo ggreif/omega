@@ -320,12 +320,11 @@ downSwap cs f Vbottom = fail "Error -- Something pulled on undefined"
 downSwap [] f v = f v
 downSwap cs f v = f (swaps cs v)
 
-v1 = Vprod (Vlit (Int 5)) (Vlit (Int 6))
 -------------------------------------------------------
 -- Here is how to deal with the lazy constructor of Values
 
 -- Make a value from a computation. Don't run the computation
--- until the vlaue is pulled on.
+-- until the value is pulled on.
 
 vlazy c = do { r <- fio(newIORef (Left c)); return(Vlazy [] r) }
 

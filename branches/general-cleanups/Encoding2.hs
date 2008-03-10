@@ -136,8 +136,7 @@ consDownf f (Vcon (Global "[]",Lx("","[]",":")) []) = []
 consDownf f (Vcon (Global ":",Lx("","[]",":")) [x,xs]) = (f x) : (consDown xs)
 consDownf f v = error ("Value not a list in from List: "++(show v))
 
-lift1 name f = Vprimfun name (analyzeWith g)
-  where g v = f v
+lift1 name f = Vprimfun name (analyzeWith f)
 
 lift2 name f = Vprimfun name (analyzeWith g)
   where g v = return(lift1 (name++" "++show v) (f v))
