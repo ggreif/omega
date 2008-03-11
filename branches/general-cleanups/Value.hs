@@ -9,7 +9,6 @@ module Value where
 import Auxillary(plist,plistf)
 import Monads(FIO,fio,HasNext(..))
 import Monad
---import Types(TName)
 import Syntax
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Bind
