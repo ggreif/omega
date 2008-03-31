@@ -1,4 +1,4 @@
-Copyright (c) 2002-2006, Tim Sheard, Oregon Health & Science
+Copyright (c) 2002-2008, Tim Sheard, Oregon Health & Science
 University (OGI School of Science & Engineering at OHSU), and
 Portland State University. All rights reserved.
 
