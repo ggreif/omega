@@ -1,5 +1,5 @@
 
-import "../LangPrelude.prg" (max,otherwise,snd)
+import "../src/LangPrelude.prg" (max,otherwise,snd)
 
 --------------------------------------------------------------------------------
 -- Typed Assembly Language

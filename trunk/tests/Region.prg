@@ -1,6 +1,6 @@
 -- These are examples from the GPCE paper
 
-import "../LangPrelude.prg" (Eq,foldr,foldl,map,compose,id)
+import "../src/LangPrelude.prg" (Eq,foldr,foldl,map,compose,id)
 
 ----------
 -- Units and Magnitudes (dimension analysis via type checking)
