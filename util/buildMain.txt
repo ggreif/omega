@@ -1,31 +1,16 @@
-cd ../res
--- Profile and no opt
-ghc Main.hs -prof -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
 
-mv a.out omega.exe
+-- Profile 
+d:/programs/ghc/ghc-6.8.2/bin/ghc Main.hs -prof -o omega.exe -auto-all --make -fglasgow-exts  -fallow-undecidable-instances
 
+-- Normal woring build
 
+cd d:/Omega/src
+d:/programs/ghc/ghc-6.8.2/bin/ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -fallow-undecidable-instances
 
-cd d:/work/sheard/research/omega
--- Compile but No Profile and No opt
-c:/ghc/ghc-6.4.1/bin/ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
-
-d:/programs/ghc/ghc-6.8.2/bin/ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -id:/work/sheard/Lib -fallow-undecidable-instances
-
-
--- Compile and Optimize
-ghc Main.hs -O -o omega.exe -auto-all --make -fglasgow-exts -id:/work/sheard/Lib/Parser -package lang -id:/work/sheard/Lib -fallow-undecidable-instances
 
 used when building the distribution
 
-./omega.exe -prim "D:/work/papers/OmegaManual/kinds.tex" "D:/work/papers/OmegaManual/infix.tex"
+./omega.exe -manual "D:/Omega/doc"
 
 
 
-
-ghc Main.hs -o omega.exe -auto-all --make -fglasgow-exts -package lang -fallow-undecidable-instances
-
-
-
--- Build the manual tables
-./omega.exe -prim D:/work/papers/OmegaManualkinds.tex D:/work/papers/OmegaManualinfix.tex

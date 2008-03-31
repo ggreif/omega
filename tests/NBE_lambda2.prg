@@ -1,5 +1,5 @@
 
-import "../LangPrelude.prg" (listM,Monad,compose,const)
+import "../src/LangPrelude.prg" (listM,Monad,compose,const)
 
 monad listM
 

@@ -135,12 +135,9 @@ omega =
      ; putStr "Type ':?' for command line help.\n"
      ; case args of
         [] -> run "LangPrelude.prg"
-        ("-tests" :_ ) -> alltests
+        ("-tests" : dir : _) -> alltests dir
         ("-manual" : dir : _) -> makeManual dir
-        (_ : _) -> let arg1 = head args
-                   in if arg1=="-tests"
-                         then alltests
-                         else run arg1
+        ( file : _) -> run file
      }
 
 -------------------------------------------------------------------------------
@@ -283,8 +280,8 @@ multDef ds names = if null dups then return () else fail (foldr report "" dups)
 -- to load all the files in the TestPrograms directory with
 -- extension ".prg"   It is used to exercise Omega.
 
-alltests =
-  do { setCurrentDirectory "./TestPrograms"
+alltests dir =
+  do { setCurrentDirectory dir
      ; files <- getDirectoryContents "."
      ; let ok x = case reverse x of { ('g':'r':'p':'.':_) -> True; _ -> False}
      ; print (filter ok files)

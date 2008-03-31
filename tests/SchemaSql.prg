@@ -1,5 +1,5 @@
 
-import "../langPrelude.prg" (map)
+import "../src/langPrelude.prg" (map)
 
 
 filter p [] = []

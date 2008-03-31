@@ -1,4 +1,4 @@
-import "../LangPrelude.prg" (Monad,maybeM,fst,snd)
+import "../src/LangPrelude.prg" (Monad,maybeM,fst,snd)
 
 monad maybeM
 

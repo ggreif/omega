@@ -5,7 +5,7 @@
 -- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.2
 
-import "LangPrelude.prg" 
+import "../src/LangPrelude.prg" 
   (head,tail,lookup,member,fst,snd,Monad,maybeM)
 
 --------------------------------------------------
