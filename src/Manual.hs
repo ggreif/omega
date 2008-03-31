@@ -1,10 +1,3 @@
--- Copyright (c) Tim Sheard
--- OGI School of Science & Engineering, Oregon Health & Science University
--- Maseeh College of Engineering, Portland State University
--- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
--- Omega Interpreter: version 1.4.2
-
 module Manual where
 
 import IO (openFile,hClose,IOMode(..),hPutStr,stdout)
@@ -19,6 +12,7 @@ import Syntax(metaHaskellOps)
 import Infer2(typeConstrEnv0,modes_and_doc,predefined)
 import Commands(commands)
 import RankN(Sigma,disp0,Exhibit(..),PolyKind(..))
+import Version(version,buildtime)
 
 -----------------------------------------
 -- LaTex-Like macros
@@ -63,17 +57,19 @@ infixOperators = (concat (map f metaHaskellOps))
                  Nothing -> []
                  Just (_,y) -> [(x,showSigma y)]
 
-main2 = makeManual
+main2 = makeManual "d:/Omega/doc"
 
 
-
-makeManual :: IO()
-makeManual = go
-  where kindfile = "D:/work/papers/OmegaManual/kinds.tex"
-        prefixfile = "D:/work/papers/OmegaManual/infix.tex"
-        comfile = "D:/work/papers/OmegaManual/commands.tex"
-        modefile = "D:/work/papers/OmegaManual/modes.tex"
-        prefile = "D:/work/papers/OmegaManual/predef.tex"
+makeManual :: String -> IO()
+makeManual dir = go
+  where kindfile = dir ++ "/kinds.tex"
+        prefixfile = dir ++ "/infix.tex"
+        comfile = dir ++ "/commands.tex"
+        modefile = dir ++ "/modes.tex"
+        prefile = dir ++ "/predef.tex"
+        versionfile = dir ++ "/version.tex"
+        licenseSrc = "../LICENSE.txt"
+        licensefile = dir ++ "/license.tex"
         go = do { putStrLn "Writing tables for Manual"
                 ; h <- openFile kindfile WriteMode
                 ; predefinedTypes h
@@ -93,6 +89,15 @@ makeManual = go
 
                 ; h <- openFile prefile WriteMode
                 ; verbatim h predefined
+                ; hClose h
+                
+                ; h <- openFile versionfile WriteMode
+                ; hPutStr h (version++"\\\\"++buildtime++"\\\\")
+                ; hClose h
+                
+                ; h <- openFile licensefile WriteMode
+                ; s <- readFile licenseSrc
+                ; verbatim h s
                 ; hClose h
                 }
 
