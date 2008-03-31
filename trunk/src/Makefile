@@ -24,14 +24,16 @@ hugs-%: %.hs
 
 clean:
 	rm -f *.hi *.o *.prof
+
 manual: all
-	./$(EXEC) -manual ../doc
-	cd ../doc && latex OmegaManual.tex
-	cd ../doc && bibtex.exe OmegaManual
-	cd ../doc && latex OmegaManual.tex && latex OmegaManual.tex
-	cd ../doc && dvips.exe OmegaManual
+	$(MAKE) -C ../doc -f ../src/Makefile OmegaManual.ps
+
+OmegaManual.ps:
+	../src/$(EXEC) -manual ../doc
+	latex OmegaManual.tex
+	bibtex.exe OmegaManual
+	latex OmegaManual.tex && latex OmegaManual.tex
+	dvips.exe OmegaManual
 
 
-
-
-
+.PHONY: all manual clean
