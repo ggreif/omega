@@ -142,7 +142,7 @@ omega =
      ; case args of
         [] -> run "LangPrelude.prg"
         ("-tests" :_ ) -> alltests
-        ("-prim" : _) -> makeManual
+        ("-manual" : dir : _) -> makeManual dir
         (_ : _) -> let arg1 = head args
                    in if arg1=="-tests"
                          then alltests
