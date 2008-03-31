@@ -31,7 +31,7 @@ import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
             ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName)
 import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
 import Auxillary(Loc(..),plistf,plist)
-import Char(isLower)
+import Char(isLower,isUpper)
 ---------------------------------------------------------
 
 loc p = SrcLoc (sourceLine p) (sourceColumn p)
@@ -213,10 +213,13 @@ pattern =
   <?> "pattern"
 
 asPattern =
-  do { x <- name
+  do { Pvar x <- patvariable
      ; symbol "@"
      ; p <- pattern
-     ; return (Paspat x p)
+     ; let (Global (patname@(init:_))) = x
+     ; if isUpper init
+       then fail ("@-style pattern bindings must be lowercase, but this is not: " ++ patname)
+       else return (Paspat x p)
      }
 
 infixPattern =
