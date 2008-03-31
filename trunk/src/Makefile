@@ -8,7 +8,7 @@ GHC_FLAGS_COMMON = -fglasgow-exts -fallow-undecidable-instances
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 
-.PHONY: all clean
+.PHONY: all clean manual
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
@@ -29,11 +29,9 @@ manual: all
 	$(MAKE) -C ../doc -f ../src/Makefile OmegaManual.ps
 
 OmegaManual.ps:
-	../src/$(EXEC) -manual ../doc
+	../src/$(EXEC) -manual `pwd`
 	latex OmegaManual.tex
 	bibtex.exe OmegaManual
 	latex OmegaManual.tex && latex OmegaManual.tex
 	dvips.exe OmegaManual
 
-
-.PHONY: all manual clean
