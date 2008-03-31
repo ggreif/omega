@@ -22,8 +22,16 @@ ghci-%: %.hs
 hugs-%: %.hs
 	$(HUGS) $(HUGS_FLAGS) $*
 
-clean :
+clean:
 	rm -f *.hi *.o *.prof
+manual: all
+	./$(EXEC) -manual ../doc
+	cd ../doc && latex OmegaManual.tex
+	cd ../doc && bibtex.exe OmegaManual
+	cd ../doc && latex OmegaManual.tex && latex OmegaManual.tex
+	cd ../doc && dvips.exe OmegaManual
+
+
 
 
 
