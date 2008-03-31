@@ -8,7 +8,7 @@ GHC_FLAGS_COMMON = -fglasgow-exts -fallow-undecidable-instances
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 
-.PHONY: all clean manual
+.PHONY: all tests clean manual
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
@@ -21,6 +21,9 @@ ghci-%: %.hs
 
 hugs-%: %.hs
 	$(HUGS) $(HUGS_FLAGS) $*
+
+tests: all
+	./$(EXEC) -tests ../tests
 
 clean:
 	rm -f *.hi *.o *.prof
