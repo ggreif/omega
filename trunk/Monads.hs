@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Nov  8 15:51:28 Pacific Standard Time 2007
+-- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.2
 
 module Monads where
@@ -12,6 +12,7 @@ import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
 import Auxillary(Loc(..),displays)
+import IO(hFlush,stdout)
 
 -------------------------------------------------------------
 
@@ -31,7 +32,7 @@ class Monad m => HasOutput m where
 class Monad m => HasFixpoint m where
   fixpoint :: (a -> m a) -> m a
 
-class HasIORef m where
+class Monad m => HasIORef m where
   newRef :: a -> m (IORef a)
   readRef :: IORef a -> m a
   writeRef :: IORef a -> a -> m ()
@@ -238,11 +239,17 @@ runFIO (FIO x) f = do { a <- x
                       ; case a of
                           Ok z -> return z
                           Fail loc n k s -> f loc n s }
-
+{-
 fixFIO :: (a -> FIO a) -> FIO a
 fixFIO f = FIO(fixIO (unFIO . f . unRight))
     where unRight (Ok x) = x
           unRight (Fail loc n k s) = error ("Failure in fixFIO: "++s)
+-}          
+
+fixFIO :: (a -> FIO a) -> FIO a
+fixFIO f = FIO(fixIO (unFIO . unRight f))
+  where unRight f ~(Ok x) = f x
+        unRight f other = FIO(return other)
 
 
 fio :: IO x -> FIO x
@@ -252,7 +259,7 @@ write = fio . putStr
 writeln = fio . putStrLn
 
 readln :: String -> FIO String
-readln prompt = fio (do {putStr prompt; getLine})
+readln prompt = fio (do {putStr prompt; hFlush stdout; getLine})
 
 instance HasFixpoint FIO where
   fixpoint = fixFIO
@@ -315,6 +322,15 @@ instance Monad (Mtc e n) where
                       ; (b,ns2) <- unTc (g a) env
                       ; return(b,ns1++ns2)}
 
+
+fixMtc :: (a -> Mtc env acc a) -> Mtc env acc a
+fixMtc inputf  = Tc f
+  where f env = fixFIO g
+          where g ~(a,acc) = 
+                  case inputf a of
+                    ~(Tc comp) -> do { ~(b,acc2) <- comp env
+                                     ; (return(b,acc++acc2))}
+          
 instance Functor (Mtc e n)  where
   fmap f x = do { a <- x; return(f a) }
 
@@ -329,6 +345,11 @@ fio2Mtc :: FIO a -> Mtc b c a
 fio2Mtc x = Tc h
   where h env = do { ans <- x; return(ans,[]) }
 
+io2Mtc :: IO x -> Mtc b c x
+io2Mtc x = Tc h
+  where h env = do { x <- fio x; return(x,[]) }
+  
+  
 -- Error reporting funcions in FIO
 
 -- Report an error then die.

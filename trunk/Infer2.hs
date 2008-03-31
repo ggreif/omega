@@ -2,22 +2,23 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Nov  8 15:51:28 Pacific Standard Time 2007
+-- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.2
 
 module Infer2 where
 
+-- import qualified System.Console.Readline as Readline
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 
 import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
-             ,Exception(..)
-             ,FIO(..),fio,failP,fio2Mtc,runFIO
+             ,Exception(..), fixMtc
+             ,FIO(..),fio,failP,fio2Mtc,runFIO,io2Mtc
              ,HasNext(..),outputString
              ,extractAccum,injectAccum
              ,readRef,newRef,writeRef,HasIORef()
-             ,writeln
+             ,writeln,readln
              )
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
@@ -28,8 +29,9 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,ForAllArgs,ToEnv,PPred,PT(..),MGU,Unifier,Z(..),Expected(..),L(..)
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
             ,newLevel,unifyLevel,pruneLv,freshLevels,incLev
-            ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..)
-            ,NameStore(..),useStoreName
+            ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..),Zonk(..)
+            , zonkRho, zonkSigma, zonkTau
+            ,NameStore(..),useStoreName, showMdisp
             , makeRel , equalPartsM
             ,failD,failK,failM,warnM,handleM,whenM
             ,dispRef,subTau,subRho,subSigma
@@ -51,7 +53,8 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,equalRel,parseIntThenType,parseType,showPred
-            ,prune,pprint,readName,exhibit2,injectA, showKinds)
+            ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2
+            ,subtermsTau,subtermsSigma,kindOfM)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 --hiding (Level)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
@@ -67,8 +70,6 @@ import System.IO.Unsafe(unsafePerformIO)
 -- import IOExts(unsafePerformIO)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
-
-import qualified System.Console.Readline as Readline
 
 import qualified Data.Map as Map
    -- (Map,empty,member,insertWith,union  ,fromList,toList,lookup)
@@ -117,6 +118,7 @@ instance Check (Mtc TcEnv Pred) where
   normalizeTau t = do { (ans,u,_) <- liftNf normTau t; return (ans,u)}
 
 
+
 ---------------------------------------------------------------------------------------
 -- In a similar fashion in order to instantiate the RankN code we must supply
 -- a few functions by supplying an instance for TyCh
@@ -139,6 +141,7 @@ instance TyCh (Mtc TcEnv Pred) where
    currentLoc = getLoc
    syntaxInfo = getSyntax
    normTyFun = normTyFunTau
+   fromIO = io2Mtc
 
 type TC a = Mtc TcEnv Pred a
 
@@ -315,6 +318,7 @@ modes_and_doc =
   ,("predicate_emission",False,"Reports the fact that a prediciate has been emitted. Predicates are collected at generalization sites, and are either solved, or abstracted into constrained types.")
   ,("narrowing",False,"Shows the steps taken when narrowing. Useful for debugging when narrowing does not return the result desired.")
   ,("theorem",False,"Reports when a lemma is added by a 'theorem' declaration, and when such a lemma is applicable.")
+  ,("kind",False,"Displays kinds of subterms when using the :k or :t commands")
   ]
 
 mode0 = map (\ (name,value,doc) -> (name,value)) modes_and_doc
@@ -364,6 +368,16 @@ markLambda  (Frag xs ys zs eqs theta rs exts) = Frag (map f xs) ys zs eqs theta 
 
 -- One can perform substitution and zonking on Frags
 
+instance Zonk (Mtc TcEnv Pred) Frag where
+  zonkG (Frag xs ys zs eqs theta rs exts) =
+    do { xs2 <- mapM f1 xs
+       ; eqs2 <- mapM zonkG eqs
+       ; rs2 <- mapM zonkG rs
+       ; theta2 <- zonkG theta
+       ; return(Frag xs2 ys zs eqs2 theta2 rs2 exts)}
+   where f1 (x,(y,mod,z,w),mode) = do { y' <- zonkG y; return(x,(y',mod,z,w),mode)}
+  tvs f = error "No way to get the type vars from a Frag"
+  
 instance TypeLike (Mtc TcEnv Pred) Frag where
   sub env (Frag xs ys zs eqs theta rs exts) =
      do { xs' <- mapM f xs;
@@ -375,15 +389,6 @@ instance TypeLike (Mtc TcEnv Pred) Frag where
     where f (v,(s,mod,lev,exp),mode) = do { s2 <- sub env s; return(v,(s2,mod,lev,exp),mode)}
           g (str,tau,kind) =
             do { t2 <- sub env tau; k2 <- sub env kind; return(str,t2,k2)}
-  zonk (Frag xs ys zs eqs theta rs exts) =
-    do { xs2 <- mapM f1 xs
-       ; eqs2 <- mapM zonk eqs
-       ; rs2 <- mapM zonk rs
-       ; theta2 <- zonk theta
-       ; return(Frag xs2 ys zs eqs2 theta2 rs2 exts)}
-   where f1 (x,(y,mod,z,w),mode) = do { y' <- zonk y; return(x,(y',mod,z,w),mode)}
-  get_tvs f = error "No way to get the type vars from a Frag"
-  --nf x = error "Can't put frags in normal form"
 
 composeM (env@(_,s1,_,_)) s2 =
  do { let f (v,t) = do { t2 <- sub env t; return(v,t2) }
@@ -522,7 +527,7 @@ getkind x env = f (type_env env) (tyfuns env)
 
 getVar :: Var -> TcEnv -> Maybe(PolyKind,Mod,CodeLevel,Exp)
 getVar nm env = Map.lookup nm (var_env env)
-
+    
 getRules :: String -> TcEnv -> [(RWrule)]
 getRules "" env = concat (map snd (Map.toList (rules env)))
 getRules nm env =
@@ -680,7 +685,7 @@ typeExp mod (exp@(Lam ps e _)) (Infer ref) =
         ; return(Lam ps2 e2 []) }
 typeExp mod term@(Ann body pt) exp_ty =
      do { loc <- getLoc
-        ; (ann_ty,_) <- checkPT loc pt
+        ; (ann_ty,_) <- checkPT (show body) loc pt
         ; exp <- check body ann_ty
         ; morePoly term ann_ty exp_ty
         ; return (Ann exp pt) }
@@ -804,6 +809,7 @@ resulterr e res_ty expect s =
   do { ex <- case expect of {Check t -> return t; Infer ref -> readRef ref }
      ; rt <- zonk res_ty
      ; ex2 <- zonk ex
+     ; kindelements <- showKinds2 (rt,ex)
      ; refinement <- getBindings
      ; truths <- getTruths
      ; failK "resulterr" 2
@@ -813,7 +819,8 @@ resulterr e res_ty expect s =
          ,Dn rt
          ,Ds "was not what was expected: "
          ,Dn ex
-         ,Ds "refinement: ",Dl refinement ", "
+         ,Dr kindelements
+         --,Ds "refinement: ",Dl refinement ", "
          ,Ds "\ntruths:\n  ",Dl truths "\n  "
          ,Ds ("\n"++s)
          -- ,Ds ("\n"++(shtt rt)++" =/= "++shtt ex)
@@ -838,11 +845,11 @@ test :: String -> String -> IO ()
 test s1 s2 = runTC tcEnv0
   ((case (parsePT s1,parsePT s2) of
     (a@(Forallx All xs _ x),b@(Forallx All ys _ y)) ->
-        do { (t1,_) <- checkPT Z a
-           ; (t2,_) <- checkPT Z b
+        do { (t1,_) <- checkPT s1 Z a
+           ; (t2,_) <- checkPT s2 Z b
            ; b <- morepoly "test" t1 t2; outputString (show b ++ "\n") }
     (a@(Forallx All xs _ x),y) ->
-        do { (t1,_) <- checkPT Z a
+        do { (t1,_) <- checkPT s1 Z a
            ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
            ; b <- morepoly "test"  t1 t2; outputString (show b ++ "\n") }
     (x,y) ->
@@ -872,8 +879,8 @@ fragForPs mod nm loc expectedTy pats whereDs =
 
 typeMatchPs:: Mod -> (String,Loc,[Pat],Body Exp,[Dec]) -> Expected Rho -> TC(String,Loc,[Pat],Body Exp,[Dec])
 typeMatchPs mod (x@(nm,loc,ps,Unreachable,ds)) (Check t) = newLoc loc $
-    (do ts <- getTruths
-        bs <- getBindings
+    (do -- ts <- getTruths
+        -- bs <- getBindings
         checkUnreachable (fragForPs mod nm loc t ps ds) (\ message -> return x))
 typeMatchPs mod (nm,loc,ps,body,ds) (Check t) = newLoc loc $
      do { (bodyFrag,ps1,ts,(patFrag,rng,ds2)) <- fragForPs mod nm loc t ps ds
@@ -1073,7 +1080,7 @@ typeMatch caseOblig mod (loc,p,body,ds) (Check t) = newLoc loc $
                       [Ds "\n*** Error type checking match ***\n"
                       ,Ds ("\n"++render((ppPat p)<+>(text "->")$$ PP.nest 3 (ppBody body)))
                       ,Ds  "\n\n***   type:\n",Ds typeString
-                      ,Ds  "\n\n***   vars: ",Dlf dispBind zs ", "
+                      ,Ds  "\n\n***   vars:\n   ",Dlf dispBind zs "\n   "
                       ,Dwrap 80 "*** truths: " (subPred binds truths) ", "
                       ,Ds ("\n"++s)]})
      -- check the clause
@@ -1135,7 +1142,7 @@ instance Typable (Mtc TcEnv Pred) Pat Rho where
   tc p@(Pcon c ps) expect =
      do { (polyk,mod,n,exp) <- lookupVar c
         ; loc <- getLoc
-        ; (rigid,assump,rho) <- instanPatConstr Ex loc (show p) polyk
+        ; (rigid,assump,rho) <- instanPatConstr (arisesPat p) Ex loc (show p) polyk
         ; ps2 <- checkArgs ps rho expect
         ; return (Pcon c ps2)
         }
@@ -1347,7 +1354,7 @@ checkPat rename mod k t pat =
           ; return(ans,Pvar v)}
     (Pcon c ps,Wob) ->
        do { (polyk,mod,n,exp) <- lookupVar c
-          ; (vs,assump,rho) <- existsInstance (show pat) polyk
+          ; (vs,assump,rho) <- existsInstance (arisesPat pat) (show pat) polyk
           ; (pairs,range) <- constrRange c ps rho []
           ; (_,emittedAssump) <- collectPred (morepolySigmaRho "wobbly constr pattern" t (Rtau range))
           ; (bc,_) <- get_tvs range
@@ -1364,13 +1371,13 @@ checkPat rename mod k t pat =
     (Pcon c ps,Rig) ->
        do { (polyk,mod,n,exp) <- lookupVar c
           ; expect <- applyTheta Rig k t
-          ; (vsC,assump,rhoC) <- rigidInstance (show pat) polyk
-          ; (vsExpect,oblig,rhoExpect) <- rigidInstance (show pat) (K [] expect)
+          ; name <- showMdisp [Dd pat] 
+          ; (vsC,assump,rhoC) <- rigidInstance (arisesPat pat) name polyk
+          ; (vsExpect,oblig,rhoExpect) <- rigidInstance (arises2 expect) name (K [] expect)
+          
           -- rhoC::    t1 -> t2 -> Ts s1 s2
           -- rhoExpect::           Tu u1 u2
           -- check that Tu==Ts, mguStar[(u1,s1),(u2,s2)]
-
-
           ; (pairs,tauC) <- constrRange c ps rhoC []
           ; tauExpect <- okRange c rhoExpect
           ; (us,_) <- get_tvs tauExpect
@@ -1380,7 +1387,8 @@ checkPat rename mod k t pat =
                 down (u@(TyCon sx _ tu _)) (s@(TyCon tx _ ts _)) | tu==ts = return []
                 down (var@(TcTv (Tv un (Rigid _ _ _) k))) typ = return [(var,typ)]
                 down (u@(TyCon sx _ tu _)) (s@(TyCon tx _ ts _)) =
-                  failD 2 [Ds ("\nWhile checking rigid pattern, expected constructor: "++tu++" doesn't match actual: "++ts)]
+                  failD 2 [Ds "\nWhile checking pattern: ",Dd pat
+                          ,Ds "\n   the expected type: ",Dd u,Ds "\n   doesn't match the inferred type: ",Dd s]
                 down (TyApp tu u) (TyApp ts s) =
                   do { ps <- down tu ts; return((u,s):ps) }
                 down x y = failD 2 [Ds "\nWhile checking rigid pattern: ",Dd pat
@@ -1392,7 +1400,7 @@ checkPat rename mod k t pat =
           ; thingsToUnify <- down tauExpect tauC
           ; eitherInfo <- mguStar vsC thingsToUnify
           ; case eitherInfo of
-             Right(s,x,y) -> badRefine pat t s x y
+             Right(s,x,y) -> badRefine pat tauExpect tauC s x y
              Left(psi,truths) ->
                do { k2 <- addUnifier psi (addPVS vsC k)
                   ; let k3 = addEqs (truths ++ subPred psi assump) k2
@@ -1417,7 +1425,7 @@ checkPat rename mod k t pat =
        case expect of
         Forall (Nil([],Rtau(TyEx zs))) ->
           do { loc <- getLoc
-             ; (rigid,assump,tau) <- rigidInstanceL (show p) [] zs
+             ; (rigid,assump,tau) <- rigidInstanceL (arisesPat p . Rtau) (show pat) [] zs
              ; (k2,p2) <- checkPat rename Rig k (Forall(Nil([],Rtau tau))) p
              ; let k3 = addEqs assump k2
              ; let k4 = addPVS rigid k3
@@ -1433,7 +1441,7 @@ checkPat rename mod k t pat =
     (Pann p ty,_) ->
        do { scopedEnv <- extendToEnv k
           ; loc <- getLoc
-          ; (sigma,_) <- inEnv scopedEnv (checkPT loc ty)
+          ; (sigma,_) <- inEnv scopedEnv (checkPT (show pat) loc ty)
           ; eitherInfo <- morepolySS [] t sigma
           ; case eitherInfo of
              Right(s,x,y) -> failD 2 [Ds "Annotation not polymorphic enough.\n"
@@ -1468,12 +1476,15 @@ tauToPred tau = Rel tau
 
 -- functions to make reasonable error reporting
 
-badRefine pat t s x y =
-  failK "bad refinement" 2
+badRefine pat expect computed s x y =
+  do { kindelems <- showKinds2 (expect,computed)
+     ; failK "bad refinement" 2
           [Ds "\nWhile infering the type of the pattern: ",Dd pat
-          ,Ds "\nwe expected it to have type: ",Dd t
+          ,Ds "\nwe expected it to have type: ",Dd expect
+          ,Ds "\nbut we computed type: ",Dd computed
+          ,Dr kindelems
           ,Ds "\nbut, the current refinement fails because ",Dd x,Ds " != ",Dd y
-          ,Ds ".\nSometimes reordering the patterns can fix this."]
+          ,Ds ".\nSometimes reordering the patterns can fix this."]}
 
 badRefine2 pat theta t s =
   failK "bad refinement" 2
@@ -1719,8 +1730,11 @@ compX new old = do { xs <- mapM f old; return(xs++new)}
 
 errX pt s = failD 2 [Ds "The prototype:  ",Dd pt,Ds "\ndoes not have kind *0, because ",Ds s]
 
-checkPT :: Loc -> PT -> TC(Sigma,(Rho,[Pred],[TcTv]))
-checkPT loc pt =
+
+
+        
+checkPT :: String -> Loc -> PT -> TC(Sigma,(Rho,[Pred],[TcTv]))
+checkPT name loc pt =
   do { tenv <- getTypeEnv
      ; (levels,sigma) <-
            case pt of
@@ -1731,14 +1745,19 @@ checkPT loc pt =
      ; handleM 2 (check s (Star LvZero)) (errX pt) -- check the translation has kind *0
      ; (nameMap,skol) <- rigid snMap names []      -- build the mappings
      ; rho2 <- sub (nameMap,[],[],[]) rho          -- make fresh Rho
+     ; mapM (arises6 name rho2) skol
      ; eqn2 <- sub (nameMap,[],[],[]) eqns         -- and fresh equations
+    -- ; warnM [Ds "\ncheckPT names = ",Dl names ", ",Ds "\n snMap = ",Dl snMap ", "
+    --         ,Ds "\n nameMap = ",Dl nameMap ", "]
      ; return (s,(rho2,eqn2,skol))}
- where  rigid ((s,nm):xs) ((nm2,k,q):ys) subst =
+  where rigid ((s,nm):xs) ((nm2,k,q):ys) subst =
             do { k2 <- sub (subst,[],[],[]) k   -- in explicit foralls, earlier may bind
-               ; v <- newRigidTyVar q loc s k2  -- later, so we need to apply subst to k
-               ; subst2 <- compX [(nm,TcTv v)] subst
-               ; (subst3,skols) <- rigid xs ys subst2
-               ; newname <- registerDisp s v    -- Update the Display to map the ridgid to the PT name
+               ; let syn = if nm==nm2 then s else (show nm2)
+               ; v <- newRigidTyVar q loc syn k2  -- later, so we need to apply subst to k
+               ; subst2 <- compX [(nm2,TcTv v)] subst
+                 -- the infered names (ys) my include types not in the explicit (xs) , skip over such
+               ; (subst3,skols) <- rigid (if nm==nm2 then xs else (s,nm):xs) ys subst2
+               ; newname <- registerDisp syn v    -- Update the Display to map the ridgid to the PT name
                ; return(subst3,v:skols)}
         rigid _ _ subst = return(subst,[])
         err s = failD 2 [Ds "The prototype:  ",Dd pt,Ds "\ndoes not have kind *0, because ",Ds s]
@@ -2276,7 +2295,7 @@ inferBndrForDecs letOrWhere renam ds =  many dss
 -- In a mutually recursive nest, these Frags are all (+++) together.
 
 frag4OneDeclsNames rename (d@(Val loc (Pann pat pt) body ds)) = newLoc loc $
-  do { (sigma,(rho,assump,skol)) <- checkPT loc pt    -- use the hint to get rho and display
+  do { (sigma,(rho,assump,skol)) <- checkPT (show pat) loc pt    -- use the hint to get rho and display
      ; (frag,pat2) <- checkBndr rename Rig nullFrag sigma pat
      ; return(addPred assump (addSkol skol frag),Rig,rho,Val loc pat2 body ds,skol)}
 frag4OneDeclsNames rename (Val loc pat body ds) = newLoc loc $
@@ -2298,7 +2317,7 @@ frag4OneDeclsNames rename (Fun loc nm Nothing ms) = newLoc loc $
      ; r1 <- zonk rho
      ; return(addPred assump frag,Wob,r1,Fun loc nm2 Nothing ms,[])}
 frag4OneDeclsNames rename (Fun loc (nm@(Global fname)) (Just pt) ms) = newLoc loc $
-  do { (sigma,(rho,assump,skol)) <- checkPT loc pt -- use the hint to get rho and display
+  do { (sigma,(rho,assump,skol)) <- checkPT fname loc pt -- use the hint to get rho and display
      ; s1 <- zonk sigma
      ; (frag,nm2) <- (checkBndr rename Rig nullFrag sigma nm)
      ; r1 <- zonk rho
@@ -2369,7 +2388,8 @@ guess pair _ = return (Nothing,Wob)
 -- should rigidify "u" and "a", but not "k"
 
 rigidTy :: TyCh m => Quant -> Loc -> String -> Sigma -> m([TcTv],[Pred],Rho)
-rigidTy q loc s sigma = unBindWith (newRigid loc s) sigma
+rigidTy q loc s sigma = unBindWith (arises4 s) (newRigid loc s) sigma
+ 
 
 bodyName pat (Normal e) = show pat
 bodyName pat (Guarded _) = "the guarded pattern: "++show pat
@@ -2408,19 +2428,23 @@ escapes trips bad = do { as <- getBindings
                        ; (display,lines) <- foldrM (f as) (d0,"") bad
                        ; writeRef dispRef display
                        ; failK "escapes" 2 [Ds lines] }
-  where f as (v@(Tv _ (Rigid All loc s) k)) (d1,str) =
+  where f as (v@(Tv _ (Rigid All loc (s,ref)) k)) (d1,str) =   
            (do { (d2,typing) <- get d1 v trips
+               ; comp <- readRef ref
+               ; www <- fromIO comp
                ; let elements = [Dlf fff trips ";",Ds "\nThe prototype gives a type where the variable: "
-                                ,Dd v,Ds ("\narising from the pattern "++s)
+                                ,Dd v,Ds ("\narising from the pattern "++www)
                                 ,Ds " is polymorphic.\nBut, this is not the case. "
                                 ,Ds "The context demands the typing ",Ds (typing++".")]
                ; return(displays d2 elements)})
-        f as (v@(Tv _ (Rigid Ex loc s) k)) (d1,str) =
+        f as (v@(Tv _ (Rigid Ex loc (s,ref)) k)) (d1,str) =   
           do { (d2,var) <- get d1 v trips
+             ; comp <- readRef ref
+             ; www <- fromIO comp
              ; return $
                 displays d2
                   [Ds "\nAn existential type var: ", Dd v
-                  ,Ds ("\narising from the pattern: "++s)
+                  ,Ds ("\narising from the pattern: "++www)
                   ,Ds (" at "++show loc)
                   ,Ds "\nescapes into the environment in the type of ",Dd var]}
         f as other (d1,str) = return(displays d1 [Ds "The type variable: ",Dd other,Ds (" escapes."++str)])
@@ -2507,6 +2531,53 @@ under frag (p@(nm,rho)) comp =
 -----------------------------------------------------------------
 -- helper functions
 
+-- arisesPat (Cons x xs) (Int -> [Int] -> [Int]) = an IO computation that returns
+-- "(Cons x xs)::[Int] where
+--    x::Int
+--    xs::[Int]"
+
+arisesPat :: Pat -> Rho -> IO String
+arisesPat pat rho = do { r <- zonkRho rho; d <- readRef dispRef 
+                       ; (c,args,d2) <- f pat r d []; writeRef dispRef d2
+                       ; return("the pattern: "++c++" where"++concat (map h args))}
+  where h s = "\n   "++s
+        f (Pcon v (p:ps)) (Rarrow dom rng) d args = f (Pcon v ps) rng d2 (arg:args)
+            where(d2,arg) = displays d [Dd p,Ds "::",Dd dom]
+        f (Pcon v (p:ps)) (Rtau (TyApp (TyApp (TyCon _ _ "(->)" _) dom) rng)) d args = f (Pcon v ps) (Rtau rng) d2 (arg:args)
+            where(d2,arg) = displays d [Dd p,Ds "::",Dd dom]
+        f p rho d args = return (c,reverse args,d2)
+            where (d2,c) = displays d [Dd pat,Ds "::",Dd rho]
+                    
+testTau = tarr intT (tarr (tlist intT) (tlist intT))
+
+ta = arisesPat (Pcon (Global "Cons") [Pvar (Global "x"),Pvar (Global "y")]) (Rtau testTau)
+
+arises2 :: Sigma -> Rho -> IO String
+arises2 expect rho = do { e <- zonkSigma expect; r <- zonkRho rho
+                        ; kindelements <- showKinds2 r
+                        ; disp <- readRef dispRef 
+                        ; let (d2,c) = displays disp [Ds "the expected type: ",Dd e,Ds " rigidifys to ",Dd r,Dr kindelements]  
+                        ; writeRef dispRef d2
+                        ; return c}
+                          
+arises4 :: String -> Rho -> IO String
+arises4 name rho = do { r <- zonkRho rho
+                      ; kindelements <- showKinds2 r
+                      ; disp <- readRef dispRef 
+                        ; let (d2,c) = displays disp [Ds ("the prototype: "++name++"::"),Dd r,Dr kindelements]  
+                        ; writeRef dispRef d2
+                        ; return c}
+                        
+arises6 name rho (t@(Tv unq (Rigid q loc (s,ref)) k)) = do { writeRef ref comp; return t}
+  where comp = do { r <- zonkG rho
+                  ; kindelements <- showKinds2 r
+                  ; disp <- readRef dispRef 
+                  ; let (d2,c) = displays disp [Ds ("the prototype: "++name++"::"),Dd r,Dr kindelements]  
+                  ; writeRef dispRef d2
+                  ; return c}
+arises6 name rho t = return t                       
+                        
+                        
 pred2Pair (Equality x y) ans = (x,y):ans
 pred2Pair (Rel t) ans = ans
 
@@ -2514,8 +2585,8 @@ underErr1 patvars message =
     do { (d1@(DI (pairs,bad,supply))) <- readRef dispRef
        ; failK "underErr1" 3 [Ds (newmessage pairs)]}
   where bad pairs = concat [ match dispv patv | dispv <- pairs, patv <- patvars]
-        --match (m,freshname) (Tv n (Rigid Ex loc s) k) | m==n = [(freshname,loc,s)]
-        match (ZTv (Tv m flav k),freshname) (Tv n (Rigid Ex loc s) k2)
+        --match (m,freshname) (Tv n (Rigid Ex loc (s,ref)) k) | m==n = [(freshname,loc,s)] 
+        match (ZTv (Tv m flav k),freshname) (Tv n (Rigid Ex loc (s,ref)) k2) -- USEREF
               | m==n = [(freshname,loc,s)]
         match _ _ = []
         newmessage pairs = message ++ concat(map report (bad pairs))
@@ -2569,7 +2640,7 @@ rigidVarsEscape unifier eqs = do { (free,_) <- get_tvs eqs; bad_rigid unifier (f
 
 uInfo unifier = map f unifier
   where f (v,tau) = (name v,simpleSigma tau,[v])
-        name (Tv _ (Rigid All loc s) k) = s
+        name (Tv _ (Rigid All loc (s,ref)) k) = s
         name v = show v
 
 
@@ -2677,7 +2748,7 @@ makeRule s k xs =
 checkLhsMatch :: ToEnv -> Sigma -> ([PT],PT) -> TC ([Tau],[Tpat],Tau)
 checkLhsMatch current sigma (ps,rhs) =
   do { -- Fresh Instance of the type for every clause
-       (vars,_,Rtau tau) <- unBindWith newflexi sigma
+       (vars,_,Rtau tau) <- unBindWith (\ x -> return "FlexVarsShouldNeverBackPatch6") newflexi sigma
      ; let down (Karr x y) xs = down y (xs++[x])
            down rng xs = (rng,xs)
            (range,ks) = down tau []
@@ -3385,6 +3456,14 @@ isRefinement (RW nm key _ vs pre lhs rhs) = False
 zonkRW (RW nm key cl vs pre lhs rhs) =
   do { a <- zonk pre; b <- zonk lhs; c <- zonk rhs; return(RW nm key cl vs a b c)}
 
+instance Zonk (Mtc TcEnv Pred) RWrule where
+  zonkG (RW name key rclass args preCond lhs rhs)=
+    do { let f (nm,k,q) = do { k2 <- zonkG k; return(nm,k2,q)}
+       ; a2 <- mapM f args; p2 <- zonkG preCond
+       ; l2 <- zonkG lhs; r2 <- zonkG rhs
+       ; return(RW name key rclass a2 p2 l2 r2)}
+  tvs f = error "No way to get the type vars from a RWrule"
+ 
 instance TypeLike (Mtc TcEnv Pred) RWrule where
   sub env (RW name key rclass args preCond lhs rhs) =
      do { (args2,env2) <- g args env; pre2 <- sub env2 preCond
@@ -3396,14 +3475,6 @@ instance TypeLike (Mtc TcEnv Pred) RWrule where
                ; let env2 = ((nm,TyVar nm k2):ns,vs,ss,level_)
                ; (ys,envN) <- g xs env2
                ; return((nm,k2,q):ys,envN)}
-  zonk (RW name key rclass args preCond lhs rhs)=
-    do { let f (nm,k,q) = do { k2 <- zonk k; return(nm,k2,q)}
-       ; a2 <- mapM f args; p2 <- zonk preCond
-       ; l2 <- zonk lhs; r2 <- zonk rhs
-       ; return(RW name key rclass a2 p2 l2 r2)}
-  get_tvs f = error "No way to get the type vars from a RWrule"
-  --nf x = error "Can't put RWrules in normal form"
-
 
 -- ======================================================================
 -- refinement lemma has one of the two the forms
@@ -4073,8 +4144,13 @@ interactiveLoop f env = handleM 3
 -- use the ReadLine library to enable line editing
 -- pass a prompt and a tab expansion function
 
+
+
 lineEditReadln :: String -> (String -> [String]) -> FIO String
-lineEditReadln prompt expandTabs = fio body
+lineEditReadln prompt expandTabs = readln prompt
+
+{-
+  =fio body
  where body = do { Readline.setCompletionEntryFunction(Just (return . expandTabs))
                  ; s <- Readline.readline prompt
                  ; let addHist Nothing = return ""
@@ -4082,6 +4158,7 @@ lineEditReadln prompt expandTabs = fio body
                        addHist (Just s) = (Readline.addHistory s)>>(return s)
                  ; addHist s
                  }
+-}
 
 setCommand "" value tenv =
     do { ms <- readRef modes
@@ -4206,10 +4283,10 @@ checkReadEvalPrint (hint,env) =
           (ExecCom exp) ->
              do { ((t,e2),oblig) <- collectPred (inferExp exp)
                 ; t2 <- zonk t
-                -- ; showKinds varsOfRho t2
                 ; obs <- zonk oblig
                 ; updateDisp
                 ; warnM [Ds(show exp ++ " :: "),Dd t2]
+                ; showKinds varsOfRho t2
                 ; whenM (not (null oblig)) [Ds "Only when we can solve\n   ",Dd obs]
                 ; return (True)
                 }
@@ -4618,7 +4695,7 @@ partByFree oblig = do { ps <- mapM free oblig; return(foldr acc ([],[],[]) ps)}
         acc ([],p) (free,hasVars,ground) = (free,hasVars,p:ground)
         acc (vs,p) (free,hasVars,ground) = (vs++free,p:hasVars,ground)
 
-wellTyped :: TcEnv -> Exp -> FIO (String,Exp)
+wellTyped :: TcEnv -> Exp -> FIO (String,Exp,[String])
 wellTyped env e = tcInFIO env
   (do { ((t::Rho,term),oblig) <- collectPred(inferExp e)
       ; truths <- getAssume
@@ -4633,9 +4710,23 @@ wellTyped env e = tcInFIO env
              (failD 0 [Ds "Unresolved obligations:\n  ",Dl oblig3 "\n  "
                       , Ds " => ", Dd typ])
       -- ; warnM [Ds "\nt = ",Dd t2, Ds "\ntyp = ",Dd typ]
-      ; (levels,polyk) <- generalize(passOn++oblig3,typ)
-      ; (_,typeString) <- showThruDisplay [Dd polyk]
-      ; return(typeString,term)})
+      ; (levels,polyk@(K _ sig)) <- generalize(passOn++oblig3,typ)
+      ; let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
+      ; pairs <- mapM kind (subtermsSigma sig [])
+      ; (_,typeString) <- showThruDisplay [Dd polyk,Ds "\n"]
+      ; return(typeString,term,pairs)})
+
+
+varTyped nm env = tcInFIO env
+  (case getVar nm env of
+    Nothing -> return Nothing
+    Just(poly@(K _ sig),mod,cdlev,exp) ->
+      do { let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
+         ; pairs <- mapM kind (subtermsSigma sig [])
+         ; return(Just(poly,mod,cdlev,exp,pairs)) }
+  )
+    
+    
 
 arrowP (Rarrow _ _) = True
 arrowP (Rtau (TyApp (TyApp (TyCon sx l "(->)" k) x) y)) = True
@@ -4715,13 +4806,15 @@ trim free xs = filter p xs
 -------------------------------------------------------------
 -- used for the   :t type-exp     command
 
-parseAndKind :: TcEnv -> [Char] -> FIO (Kind,Tau)
+parseAndKind :: TcEnv -> [Char] -> FIO (Kind,Tau,[String])
 parseAndKind env s = tcInFIO env
     (
     do { map1 <- getTypeEnv
        ; s <- toTau (map1,location env,syntaxExt env,[]) (parsePT s)
        ; (tau::Tau,s2) <- infer s
-       ; return(MK tau,s2)
+       ; let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
+       ; pairs <- mapM kind (subtermsTau tau [])
+       ; return(MK tau,s2,pairs)
        -- ; return(MK (kindOf s2),s2)
        })
 

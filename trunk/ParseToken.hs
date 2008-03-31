@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Nov  8 15:51:28 Pacific Standard Time 2007
+-- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.2
 
 -----------------------------------------------------------
@@ -354,7 +354,7 @@ align p stop =
      ; (do { try layoutSep; xs <- align p stop; return (x:xs)}) <|>
        (do { try layoutEnd; stop; return[x]}) <|>
            -- removing indentation happens automatically
-           -- in function "update", if we see layoutEnd
+           -- in function "update" (in Parser.hs), if we see layoutEnd
        (do { stop; undent; return [x]})
      }
 
