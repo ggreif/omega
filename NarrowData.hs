@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Nov  8 15:51:28 Pacific Standard Time 2007
+-- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.2
 
 module NarrowData where
@@ -108,36 +108,31 @@ inject (RelN (EqR(x,y))) = teq x y
 ---------------------------------------------------------------------
 -- relations (Rel) and Problems (Prob) are type-like
 
+instance Zonk m a => Zonk m (Prob a) where
+  zonkG (TermP x) = do { a <- zonkG x; return (TermP a) }
+  zonkG (EqP(x,y)) = do { a <- zonkG x; b <- zonkG y; return (EqP(a,b)) }
+  zonkG (AndP xs) = do { as <- mapM (zonkG) xs; return (AndP as) }
+
+  tvs (TermP x) = tvs x
+  tvs (EqP(x,y)) = binaryLift unionP (tvs x) (tvs y)
+  tvs (AndP xs) = tvs xs
+
+
 instance TypeLike m a => TypeLike m (Prob a) where
   sub env (TermP x) = do { a <- sub env x; return (TermP a) }
   sub env (EqP(x,y)) = do { a <- sub env x; b <- sub env y; return (EqP(a,b)) }
   sub env (AndP xs) = do { as <- mapM (sub env) xs; return (AndP as) }
+  
+instance Zonk m a => Zonk m (Rel a) where
+  zonkG (EqR(x,y)) = do { a <- zonkG x; b <- zonkG y; return (EqR(a,b)) }
+  zonkG (AndR xs) = do { as <- mapM (zonkG) xs; return (AndR as) }
 
-  zonk (TermP x) = do { a <- zonk x; return (TermP a) }
-  zonk (EqP(x,y)) = do { a <- zonk x; b <- zonk y; return (EqP(a,b)) }
-  zonk (AndP xs) = do { as <- mapM (zonk) xs; return (AndP as) }
-
-  get_tvs (TermP x) = get_tvs x
-  get_tvs (EqP(x,y)) = binaryLift unionP (get_tvs x) (get_tvs y)
-  get_tvs (AndP xs) = get_tvs xs
-
-  --nf (TermP x) = do { a <- nf x; return (TermP a) }
-  --nf (EqP(x,y)) = do { a <- nf x; b <- nf y; return (EqP(a,b)) }
-  --nf (AndP xs) = do { as <- mapM (nf) xs; return (AndP as) }
-
-
+  tvs (EqR(x,y)) = binaryLift unionP (tvs x) (tvs y)
+  tvs (AndR xs) = tvs xs
+  
 instance TypeLike m a => TypeLike m (Rel a) where
   sub env (EqR(x,y)) = do { a <- sub env x; b <- sub env y; return (EqR(a,b)) }
   sub env (AndR xs) = do { as <- mapM (sub env) xs; return (AndR as) }
-
-  zonk (EqR(x,y)) = do { a <- zonk x; b <- zonk y; return (EqR(a,b)) }
-  zonk (AndR xs) = do { as <- mapM (zonk) xs; return (AndR as) }
-
-  get_tvs (EqR(x,y)) = binaryLift unionP (get_tvs x) (get_tvs y)
-  get_tvs (AndR xs) = get_tvs xs
-
-  --nf (EqR(x,y)) = do { a <- nf x; b <- nf y; return (EqR(a,b)) }
-  --nf (AndR xs) = do { as <- mapM (nf) xs; return (AndR as) }
 
 instance Eq NName where
  (NTyCon a sx l1 b) == (NTyCon c tx l2 d) = a==c

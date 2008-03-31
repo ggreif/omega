@@ -2,15 +2,15 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Nov  8 15:51:28 Pacific Standard Time 2007
+-- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.2
 
 module Commands (commands,dispatchColon,execExp,drawPatExp
                 ,letDec,commandF,notDup,foldF) where
 
-import Infer2(TcEnv(sourceFiles),getVar,initTcEnv,getkind,parseAndKind,setCommand
+import Infer2(TcEnv(sourceFiles),varTyped,getVar,initTcEnv,getkind,parseAndKind,setCommand
              ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
-             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC)
+             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC,getM)
 import RankN(pprint,warnM,showKinds)
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
@@ -20,8 +20,9 @@ import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
 import ParserDef(getInt,getBounds,expr,parseString)
-import Auxillary(plist,plistf,DispElem(..),prefix)
+import Auxillary(plist,plistf,DispElem(..),prefix,maybeM)
 import Monads(report,readRef,tryAndReport)
+import Monad(when)
 
 -- tryAndReport :: FIO a -> (Loc -> String -> FIO a) -> FIO a
 --------------------------------------------------------
@@ -32,16 +33,19 @@ qCom tenv _ = error "quitting"
 
 -- :t (4 + 2)
 tCom tenv x =
-   case getVar (Global x) tenv of
-     Just(sigma,mod,lev,exp) ->
-       do { writeln (x++" :: "++(pprint sigma)) -- ++"\n"++sht t)
-          ; return (tenv)
-          }
-     Nothing -> tryAndReport (do { Right(e,more) <- parseString expr x
-                                 ; (typ,_) <- wellTyped tenv e
-                                 ; writeln (x++" :: "++(pprint typ))
-                                 ; return tenv})
-                 (\ loc message -> do { writeln message; return(tenv)})
+  maybeM (varTyped (Global x) tenv)
+         (\(sigma,mod,lev,exp,subpairs) -> 
+                        do { writeln (x++" :: "++(pprint sigma)++"\n")
+                           ; verbose <- getM "kind" False
+                           ; when verbose (mapM_ writeln subpairs)
+                           ; return (tenv)})
+         (tryAndReport (do { Right(e,more) <- parseString expr x
+                           ; (typ,_,subpairs) <- wellTyped tenv e
+                           ; writeln (x++" :: "++(pprint typ)++"\n")
+                           ; verbose <- getM "kind" False
+                           ; when verbose (mapM_ writeln subpairs)
+                           ; return tenv})
+                       (\ loc message -> do { writeln message; return(tenv)}))
 
 -- :env map
 envCom tenv s = envArg tenv s
@@ -62,8 +66,10 @@ vCom tenv s =
 kCom tenv x =
  case (getkind x tenv) of
    Nothing ->
-     do { (rho,t) <- parseAndKind tenv x
+     do { (rho,t,subpairs) <- parseAndKind tenv x
         ; writeln (x++" :: "++(pprint rho)++"  = " ++ pprint t)
+        ; verbose <- getM "kind" False
+        ; when verbose (mapM_ writeln subpairs)
         ; return (tenv)}
    Just(k,t,tree) ->
      do { writeln (x++" :: "++(pprint k)++"\n" ++ tree)
@@ -176,10 +182,12 @@ commands = concat ([
 -- (ExecCom e)
 -- 5 + 2
 execExp tenv e =
-   do { (t,e') <- wellTyped tenv e
+   do { (t,e',subpairs) <- wellTyped tenv e
       ; v <- (eval (runtime_env tenv) e')
       ; u <- runAction v
       ; writeln ((show u)++ " : "++(pprint t))
+      ; verbose <- getM "kind" False
+      ; when verbose (mapM_ writeln subpairs)
       ; return (tenv) }
 
 -- (DrawCom p e)

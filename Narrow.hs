@@ -2,7 +2,7 @@
 -- OGI School of Science & Engineering, Oregon Health & Science University
 -- Maseeh College of Engineering, Portland State University
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Nov  8 15:51:28 Pacific Standard Time 2007
+-- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.2
 
 module Narrow(narr,defTree,Check(..),matches) where
@@ -24,6 +24,7 @@ class (TyCh m) => Check m where
   getDefTree :: NName -> m(DefTree TcTv Tau)
   tryRewriting :: Tau -> m(Maybe (Tau,Unifier))
   normalizeTau :: Tau -> m (Tau,Unifier)
+
 
 --------------------------------------------------
 -- Unifiers and substitutions
@@ -398,13 +399,14 @@ mguV s0 truths pairs =
      ; case maybe of
         Left u2 -> return(u2,s0)
         Right ("Rigid",v,t) ->
-            (let (name,loc) = locInfo v
-             in failM 3 [Ds "The supposedly polymorphic type variable: ",Dd v
-                        ,Ds "\narising from the pattern: "
+            (do { (name,loc) <- locInfo v
+               
+                ; failM 3 [Ds "The supposedly polymorphic type variable: ",Dd v
+                        ,Ds "\narising from "
                         ,Ds name
-                        ,Ds ", from "
+                        ,Ds "\nnear "
                         ,Ds loc
-                        ,Ds ",\nis forced by context to be\n  ", Dd t])
+                        ,Ds ",\nis forced by context to be\n  ", Dd t]})
         Right (s,t1,t2) ->
           -- showKinds varsOf pairs >>
           -- showKinds (varsOfRel varsOfTau) truths >>
@@ -414,8 +416,9 @@ mguV s0 truths pairs =
      }
 
 
-locInfo (TcTv (Tv un (Rigid q loc nm) k)) = (nm,show loc)
-locInfo _ = ("?","unknown")
+locInfo (TcTv (Tv un (Rigid q loc (nm,ref)) k)) = 
+  do { t <- readRef ref; x <- fromIO t; return(x,show loc)} 
+locInfo _ = return ("?","unknown")
 
 -- True means put the problem on left, False means on right
 buildQ True  y (TermP x,ts,u) = (EqP(x,subTau u y),ts,u)
