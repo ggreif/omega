@@ -26,10 +26,10 @@ clean:
 	rm -f *.hi *.o *.prof
 
 manual: all
-	$(MAKE) -C ../doc -f ../src/Makefile OmegaManual.ps
+	./$(EXEC) -manual ../doc
+	$(MAKE) -C ../doc -f `pwd`/Makefile OmegaManual.ps
 
-OmegaManual.ps:
-	../src/$(EXEC) -manual `pwd`
+OmegaManual.ps: version.tex OmegaManual.tex
 	latex OmegaManual.tex
 	bibtex.exe OmegaManual
 	latex OmegaManual.tex && latex OmegaManual.tex
