@@ -4095,8 +4095,6 @@ predefined =
  "data Equal:: a ~> a ~> *0 where\n"++
  "  Eq:: Equal x x\n"++
 
- "data EqTag :: Tag ~> Tag ~> *0 where\n"++
- "  EqTag:: EqTag x x\n"++
  "data HiddenLabel :: *0 where\n"++
  "  Hidden:: Label t -> HiddenLabel\n"++
  "data Row :: a ~> b ~> *1 where\n"++
