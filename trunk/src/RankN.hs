@@ -142,6 +142,15 @@ unifyLevel s x y = do { a <- pruneLv x; b <- pruneLv y; walk (a,b)}
                              ,Ds ("\n  internal info "++show x++" =/= "++show y)
                              ,Ds ("\n                "++s)]
 
+unifyLev :: String -> Level -> Level -> Maybe[(TcLv,Level)]
+unifyLev s x y = walk (x,y)
+  where walk (LvZero,LvZero) = Just []
+        walk (LvSucc x,LvSucc y) = unifyLev s x y
+        walk (TcLv v,TcLv u) | u==v = Just []
+        walk (TcLv(v@(LvMut u r)),y) = Just[(v,y)]
+        walk (y,TcLv(v@(LvMut u r))) = Just[(v,y)]
+        walk (x,y) = Nothing
+
 levelVars x = do { a <- pruneLv x; walk a }
   where walk (TcLv v) = return [v]
         walk (LvSucc x) = levelVars x
@@ -342,6 +351,7 @@ class TyCh m => Quantify m t where
   for_all :: [Name] -> ForAllArgs -> t -> m PolyKind
 
 subst env t = sub (env,[],[],[]) t
+
 
 substPred :: TyCh m => [(Name,Tau)] -> [Pred] -> m[Pred]
 substPred [] xs = return xs
@@ -2897,7 +2907,7 @@ c = TcTv(Tv 7 (Skol "c") star)
 
 ps = [ Equality b a, Equality c a]
 
-Left qas = mgu [(b,a),(c,a)]
+Left(_,qas) = mgu [(b,a),(c,a)]
 wsd = subTau qas (tpair a (tpair b c))
 
 mostGenUnify xs =
@@ -2906,8 +2916,8 @@ mostGenUnify xs =
     Right (s,x,y) -> fail s
 
 
-mgu :: [(Tau,Tau)] -> Either [(TcTv,Tau)] (String,Tau,Tau)
-mgu [] = Left []
+mgu :: [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) (String,Tau,Tau)
+mgu [] = Left ([],[])
 mgu ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mgu xs
 
 mgu ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = mguVar x tau xs
@@ -2915,7 +2925,7 @@ mgu ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguVar x tau xs
 
 mgu ((TyApp x y,TyApp a b):xs) = mgu ((x,a):(y,b):xs)
 mgu ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mgu xs -- TODO LEVEL
-mgu ((Star n,Star m):xs) | n==m = mgu xs
+mgu ((Star n,Star m):xs) = mguLevel n m xs
 mgu ((Karr x y,Karr a b):xs) = mgu ((x,a):(y,b):xs)
 mgu ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
   if f==g then mgu (zip ys zs ++ xs) else Right("TyFun doesn't match",x,y)
@@ -2940,10 +2950,10 @@ failIfInConsistent pat current extension xs =
 
 
 
-mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either [(TcTv,Tau)] ([Char],Tau,Tau)
+mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) ([Char],Tau,Tau)
 mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
                      then Right("occurs check", TcTv x, tau)
-                     else compose new2 (Left new1)
+                     else compose2 new2 (Left ([],new1))
   where vs = tvsTau tau
         new1 = [(x,tau)]
         k2 = kindOf tau
@@ -2951,9 +2961,30 @@ mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
                  Just k3 -> mgu (subPairs new1 ((k,k3):xs))
                  Nothing -> mgu (subPairs new1 xs)
 
-compose (Left s1) (Left s2) = Left ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
+
+mguLevel LvZero LvZero xs = mgu xs
+mguLevel (LvSucc x) (LvSucc y) xs = mguLevel x y xs
+mguLevel (TcLv v) x xs = compose2 (Left([(v,x)],[])) (mgu xs)
+mguLevel x (TcLv v) xs = compose2 (Left([(v,x)],[])) (mgu xs)
+mguLevel a b xs = Right("levels don't match",Star a, Star b)
+
+
+subLev env (t@(TcLv v)) = 
+  case lookup v env of
+         Nothing  -> t
+         Just l -> l
+subLev env (LvSucc x) = LvSucc(subLev env x)
+subLev env x = x
+ 
+compose2 (Left (l1,s1)) (Left (l2,s2)) = 
+    Left ([(l,subLev l1 t) | (l,t) <- l2] ++ l1,[(u,subTau s1 t) | (u,t) <- s2] ++ s1)
+compose2 _ (Right x) = Right x
+compose2 (Right y) _ = Right y
+
+compose (Left (s1)) (Left (s2)) = Left ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 compose _ (Right x) = Right x
 compose (Right y) _ = Right y
+
 
 o s1 s2 = [(u,subTau s1 t) | (u,t) <- s2] ++ s1
 
@@ -3701,7 +3732,7 @@ sumM ((n,xs):zs) = (n+m,xs) where (m,_) = sumM zs
 
 matchRel (Rel p) (Rel q) =
   case mgu [(p,q)] of
-    Left u -> (1,u)
+    Left (_,u) -> (1,u)
     Right (a,b,c) -> (0,[])
 matchRel p q = (0,[])
 
