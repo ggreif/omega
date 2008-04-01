@@ -193,7 +193,10 @@ tcEnv = (Tc (\ env -> return(env,[])))
 getBs = do { env <- tcEnv; zonk(bindings env) }
 getAssume = do { env <- tcEnv; zonk(assumptions env) }
 collectPred :: TC a -> TC (a,[Pred])
-collectPred x = do { (ans,ps) <- extractAccum x; ps2 <- zonk ps; return(ans,ps2) }
+collectPred x = 
+  do { (ans,ps) <- extractAccum x
+     ; ps2 <- zonk ps
+     ; return(ans,ps2) }
 
 getMatchingRules p s = do { env <- tcEnv; return(filter p (getRules s env))}
 
@@ -610,7 +613,7 @@ typeExp mod (Var v) expectRho =
         ; (polyk,mod,n,exp) <- lookupVar v
         ; when (n > m) (failD 2 [Ds (show v++" used at level "++show m++" but defined at level "++show n)])
 
-        ; when False -- (show v=="Eq")
+        ; when False -- (show v=="Eq") 
             (do { truths <- getTruths
                 ; showKinds (varsOfPair varsOfPoly varsOfExpectRho) (polyk,expectRho)
 
@@ -999,8 +1002,8 @@ checkUnreachable computation good = handleK (=="bad refinement") 3
       ; preds <- underRules (fragRules frag) comp
       ; let problem = predsToProb preds []
       ; (mapping,prob2) <- freshenVs problem
-      ; dispFrag "Frag in unreachable = " frag
-      ; warnM [Ds "preds = ", Dd preds]
+      -- ; dispFrag "Frag in unreachable = " frag
+      -- ; warnM [Ds "preds = ", Dd preds]
       ; let bad = doNotGuardUnreachable (getTheta frag `o` mapping) preds (zip ps ts)
       ; whenM False [Ds "\nChecking unreachable\n   ",Dl preds "\n   "]
       ; existsNonSat preds prob2 good bad}) good
@@ -1504,7 +1507,7 @@ constrRange c (p:ps) t pairs =
 okRange c (Rtau t) = help t
   where help (TySyn _ _ _ _ x) = help x
         help (TyCon synext level nm polykind) =
-           do { unifyLevel level (LvSucc LvZero)
+           do { unifyLevel "okRange" level (LvSucc LvZero)
               ; return t }
         help (TyApp f x) = help f
         help (tf@(TyFun nm k args)) =
@@ -1959,15 +1962,16 @@ genConstrFunFrag tyConInfo (d2,tag,strata,isProp,conFunInfo) = mapM f conFunInfo
   where f (nm,(sig,mod,lev,exp)) =
           do { -- Replace TyCon's which have stale PolyKind fields
                -- (i.e. they are monomorphic and non-level polymorphic)
-             ; sig1 <- sub ([],[],tyConSub,[]) sig
+             ; sig1 <- sub ([],[],tyConSub,levelsub) sig
              ; (_,w) <- generalize sig1  -- Now generalize
              ; return(strata,isProp,tag,(nm,(w,mod,lev,exp)))}
         tyConSub = map (\ (nm,tau,polykind,levs) -> (nm,tau)) tyConInfo
+        levelsub = concat(map (\ (nm,tau,polykind,levs) -> levs) tyConInfo)
 
 
-genTyCon :: (Bool,String,Tau,PolyKind) -> TC (String,Tau,PolyKind,[(TcLv,Level)])
+-- genTyCon :: (Bool,String,Tau,PolyKind) -> TC (String,Tau,PolyKind,[(TcLv,Level)])
 genTyCon (isprop,nm,TyCon sx level _ _ ,K lvs k) =  -- Ignore the current lvs,
-  do { (levs,K names k2) <- generalize k            -- we'll compute a more accurate one
+  do { (levs,K names k2) <- generalize k     -- we'll compute a more accurate one
      ; return(nm,TyCon sx level nm (K names k2),K names k2,levs) }
 
 
@@ -4709,10 +4713,14 @@ wellTyped env e = tcInFIO env
       ; when (not(null oblig3) && not(arrowP typ))
              (failD 0 [Ds "Unresolved obligations:\n  ",Dl oblig3 "\n  "
                       , Ds " => ", Dd typ])
-      -- ; warnM [Ds "\nt = ",Dd t2, Ds "\ntyp = ",Dd typ]
-      ; (levels,polyk@(K _ sig)) <- generalize(passOn++oblig3,typ)
-      ; let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
+      -- ; warnM [Ds "\nAfter normRho t = ",Dd t, Ds "\ntyp = ",Dd typ]
+      ; (levels,polyk@(K level sig)) <- generalize(passOn++oblig3,typ)
+      ; let kind x = do { k <- kindOfM x
+                        ; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]
+                        ; return s}
       ; pairs <- mapM kind (subtermsSigma sig [])
+     
+      
       ; (_,typeString) <- showThruDisplay [Dd polyk,Ds "\n"]
       ; return(typeString,term,pairs)})
 

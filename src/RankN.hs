@@ -131,15 +131,16 @@ pruneLv (t@(TcLv(LvMut uniq ref))) =
           Just y -> do {a <- pruneLv y; writeRef ref (Just a); return a}}
 pruneLv x = return x
 
-unifyLevel :: TyCh m => Level -> Level -> m ()
-unifyLevel x y = do { a <- pruneLv x; b <- pruneLv y; walk (a,b)}
+unifyLevel :: TyCh m => String -> Level -> Level -> m ()
+unifyLevel s x y = do { a <- pruneLv x; b <- pruneLv y; walk (a,b)}
   where walk (LvZero,LvZero) = return()
-        walk (LvSucc x,LvSucc y) = unifyLevel x y
+        walk (LvSucc x,LvSucc y) = unifyLevel s x y
         walk (TcLv v,TcLv u) | u==v = return()
         walk (TcLv(v@(LvMut u r)),y) = writeRef r (Just y) -- unifyLvVar v y
         walk (y,TcLv(v@(LvMut u r))) = writeRef r (Just y) -- unifyLvVar v y
-        walk (x,y) = failD 1 [Ds "Levels don't match ",Dd x,Ds " =/= ",Dd y
-                             ,Ds ("\n  internal info "++show x++" =/= "++show y)]
+        walk (x,y) = failD 1 [Ds "\nLevels don't match ",Dd x,Ds " =/= ",Dd y
+                             ,Ds ("\n  internal info "++show x++" =/= "++show y)
+                             ,Ds ("\n                "++s)]
 
 levelVars x = do { a <- pruneLv x; walk a }
   where walk (TcLv v) = return [v]
@@ -1086,9 +1087,9 @@ unify x y =
         f (t1@(TyVar n k)) (t2@(TyVar n1 k1)) | n==n1 = return ()
         f (TyApp x y) (TyApp a b) = do { unify x a; unify y b }
         f (x@(TyCon sx l s _)) (y@(TyCon tx k t _)) =
-           do { unifyLevel l k
+           do { unifyLevel "unify TyCon case" l k
               ; if s==t then return () else matchErr "different constants" x y }
-        f (x@(Star n)) (y@(Star m)) = unifyLevel n m
+        f (x@(Star n)) (y@(Star m)) = unifyLevel "unify Star case" n m
         f (Karr x y) (Karr a b) = do { unify x a; unify y b }
         f (TySyn nm1 n1 f1 a1 t1) t2 = unify t1 t2
         f t1 (TySyn nm2 n2 f2 a2 t2) = unify t1 t2
@@ -1511,7 +1512,7 @@ predLev x = do { y <- pruneLv x; help y }
   where help (LvSucc x) = return x
         help LvZero = failM 1 [Ds "Cannot take the predecessor of level 0"]
         help (n@(TcLv(LvMut u r))) =
-          do { m <- newLevel; unifyLevel n (LvSucc m); pruneLv m }
+          do { m <- newLevel; unifyLevel "predLev" n (LvSucc m); pruneLv m }
         help (TcLv (LvVar nm)) =
           failM 1 [Ds "\nLevel '",dName nm,Ds "' is not polymorphic as declared (case 0)."
                   ,Ds "\nWe are trying to force it to be the successor of something."]
@@ -3908,7 +3909,7 @@ mguStar beta ((TcTv a,tau):xs) = mguStarVar beta a tau xs
 mguStar beta ((tau,TcTv a):xs) = mguStarVar beta a tau xs
 mguStar beta ((TyApp x y,TyApp a b):xs) = mguStar beta ((x,a):(y,b):xs)
 mguStar beta ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mguStar beta xs -- TODO LEVEL
-mguStar beta ((Star n,Star m):xs) = unifyLevel n m >> mguStar beta xs
+mguStar beta ((Star n,Star m):xs) = unifyLevel "mguStar" n m >> mguStar beta xs
 mguStar beta ((Karr x y,Karr a b):xs) = mguStar beta ((x,a):(y,b):xs)
 mguStar beta ((TySyn nm n fs as x,y):xs) = mguStar beta ((x,y):xs)
 mguStar beta ((y,TySyn nm n fs as x):xs) = mguStar beta ((y,x):xs)
