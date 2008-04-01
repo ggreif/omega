@@ -220,16 +220,29 @@ prop = MK propT
 andKind = poly (karr prop (karr prop prop))
 success = TyCon Ox (lv 1) "Success" (poly(MK propT))
 andName = NTyCon "and" Ox (lv 1) andKind
-varWild (Tv _ _ k) = TcTv(wild k)
-termWild t = case kindOf t of
-               Just k -> TcTv (wild (MK k))
-               Nothing -> TcTv (wild star)
+
+varWildM (Tv _ _ k) =
+  do { n <- nextInteger
+     ; r <- newRef Nothing
+     ; return(Tv n (Flexi r) k)}
+     
+termWildM t = 
+  do { k <- kindOfM t 
+     ; n <- nextInteger
+     ; r <- newRef Nothing
+     ; return(TcTv(Tv n (Flexi r) (MK k)))}
+     
 
 equalP (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = True
 equalP _ = False
 
 equalParts (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = (x,y)
 
+
+varWild (Tv _ _ k) = TcTv(wild k)
+termWild t = case kindOf t of
+               Just k -> TcTv (wild (MK k))
+              --  Nothing -> TcTv (wild star)
 wild = unsafePerformIO (do { n <- nextInteger; r <- newRef Nothing; return(Tv n (Flexi r))})
 
 ---------------------------------------------------

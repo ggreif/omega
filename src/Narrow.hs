@@ -78,6 +78,12 @@ traceSteps (steps,count,d,exceeded) truths ys =
      }
 -}
 
+
+fxx d (prob,truth,unifier) =
+              displays d [dProb prob,if null unifier
+                                then Ds "\n"
+                                else Dr[Ds " where ",dUn (take 3 unifier)]]
+
 traceSteps2 (steps,count,d,exceeded) (problems@((ps,truths,us):_)) found =
   do { verbose <- getMode "narrowing"
      ; let f d (prob,truth,unifier) =
@@ -198,8 +204,8 @@ stepEq s0 (a,b) truths =
                then failM 3 [Ds s]
                else case mgu (zip args args2) of
                       Right _ -> failM 3 [Ds s]
-                      Left u -> do { ts <- subRels u truths
-                                   ; return([(TermP success,ts,u)],s0)})
+                      Left(_,u) -> do { ts <- subRels u truths
+                                      ; return([(TermP success,ts,u)],s0)})
   (FunN nm args, rhs) ->
     handleM 4 (do { (ans,s1) <- stepTerm s0 a truths
                   ; return(map (buildQ True b) ans,s1)})
@@ -305,11 +311,12 @@ applyLfRule s0 term truths rule uselessUnifier =
            return ([(TermP(subTau unifier rhs2),truths,[])],s0)
          Nothing ->
            case mostGenUnify [(lhs2,term)] of
-             Just u2 -> let important = freeTerm term
-                            u3 = orientBindings important u2
-                            good (var,term) = elem var important
-                        in do { truths2 <- subRels u3 truths
-                              ; return ([(TermP(subTau u3 rhs2),truths2,filter good u3)],s0)}
+             Just(_,u2) -> 
+                  let important = freeTerm term
+                      u3 = orientBindings important u2
+                      good (var,term) = elem var important
+                  in do { truths2 <- subRels u3 truths
+                        ; return ([(TermP(subTau u3 rhs2),truths2,filter good u3)],s0)}
              Nothing -> (return ([],s0)) }
 
 ----------------------------------------------------------------
@@ -334,8 +341,10 @@ push u (prob,truths,u2) = (prob,truths,u2 `o` u)
 implies :: Rel Tau -> (Tau,Tau) -> Maybe [(TcTv,Tau)]
 implies (EqR(a,b)) (x,y) =
    case mostGenUnify [(x,a),(y,b)] of
-     Nothing -> mostGenUnify [(x,b),(y,a)]
-     Just u -> Just u
+     Nothing -> case mostGenUnify [(x,b),(y,a)] of
+                  Just (_,u) -> Just u
+                  Nothing -> Nothing
+     Just(_,u) -> Just u
 implies (AndR []) (x,y) = Nothing
 implies (AndR (r:rs)) (x,y) =
   case implies r (x,y) of
@@ -424,9 +433,9 @@ buildQ _ _ prob = error ("Non term problem returned from stepProb  in equality")
 matches :: Check m => Tau -> Tau -> m (Maybe (Tau,Unifier))
 matches term pat =
   do { p <- freshen pat;
-     ; case mostGenUnify [(p,term)] of
-         Nothing -> return Nothing
-         Just u -> return(Just(subTau u term,u))}
+     ; case mgu [(p,term)] of -- mostGenUnify [(p,term)] of
+         Right(s,x,y) -> (warnM [Ds s,Dd x, Dd y] >> return Nothing)
+         Left(_,u) -> return(Just(subTau u term,u))}
 
 orientBindings free [] = []
 orientBindings free ((p@(var,term)):more) =
@@ -528,6 +537,41 @@ matchLx name args (h:t, newArgs) =
 -- If we're computing a DefTree for {f a0 a1 a2 a3} then we call
 -- generalizeL 0 [a0,a1,a2,a3]
 
+
+matchLxM ::   Check m => NName -> [Tau] -> (Path,[Tau]) -> m [Chain TcTv Tau]
+matchLxM name args ([], newArgs) = return [(Root (fun name newArgs))]
+matchLxM name args (h:t, newArgs) =
+  do { tails <- makeChainLM (fun name newArgs)
+     ; return(map (Next (fun name args) (h:t)) tails)}
+
+
+makeChainLM ::  Check m => Tau -> m[Chain TcTv Tau]
+makeChainLM x = liftN h x
+  where h (FunN name args) =
+          do { pairs <- generalizeLM 0 args
+             ; ans <- mapM (matchLxM name args) pairs
+             ; return(concat ans)}
+            
+
+generalizeLM ::  Check m => Int -> [Tau] -> m[(Path,[Tau])]
+generalizeLM _ [] = return [([],[])]
+generalizeLM n (arg_n : args) = liftN h arg_n
+  where h (VarN vv) =
+          do { newTerm <- varWildM vv
+             ; pairs <- generalizeLM (n+1) args
+             ; return(do { (newPos, newRest) <- pairs
+                         ; return (newPos, TcTv newTerm : newRest)})}
+        h (ConN name ts) = 
+          do { pairs <- (generalizeLM 0 ts)
+             ; pairs2 <- (generalizeLM (n+1) args)
+             ; pairs3 <- mapM matchM pairs
+             ; return(pairs3 ++ foldr add [] pairs2)}
+          where matchM ([], _) = do { ans <- termWildM arg_n; return([n], ans : args)}
+                matchM (a:b, newArgs) = return(n:a:b, con name newArgs : args)
+                add (a:b, newRest) ans = (a:b, con name ts : newRest):ans
+                add ([], newRest) ans = ans
+
+
 generalizeL :: Int -> [Tau] -> [(Path,[Tau])]
 generalizeL _ [] = return ([],[])
 generalizeL n (arg_n : args) = liftN h arg_n
@@ -597,8 +641,18 @@ mainY name patternList = do { zs <- mapM (f12 name) patternList
                                        (makeChainL (renameVarN lhs2))
                 where lhs2 = (fun name lhs)
 
-defTree :: Rule NName TcTv Tau -> [DefTree TcTv Tau]
-defTree (NarR(name,zs)) = mainY name zs
+
+
+mainYM ::   Check m => NName -> [([TcTv],[Tau],Tau)] -> m[DefTree TcTv Tau]
+mainYM name patternList = do { pairs <- mapM (f13 name) patternList
+                             ; return(do { zs <- pairs; makeTreeL zs})}
+  where f13 name (free2,lhs,rhs) = do { pairs <- makeChainLM (renameVarN lhs2); 
+                                      ; return(map (makeTreePath free2 lhs2 rhs) pairs)}
+                where lhs2 = (fun name lhs)
+
+
+defTree ::  Check m => Rule NName TcTv Tau -> m[DefTree TcTv Tau]
+defTree (NarR(name,zs)) = mainYM name zs
 
 
 --------------------------------------------------------------

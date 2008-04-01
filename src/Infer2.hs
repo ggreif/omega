@@ -2721,7 +2721,8 @@ hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) =
      ; let f d (ts,ps,t) = displays d [Dl ts ",",Ds " ----> ",Dd t]
      ; morepairs <- hasMonoTypeFun env1 more
      ; rule <- makeRule nm polyt clauses
-     ; tree <- case defTree rule of
+     ; trees <- defTree rule 
+     ; tree <- case trees of
                  (t:ts) -> return t
                  [] -> failD 0 [Ds ("\nThe type function "++nm++" is not inductively sequential.\n")
                                ,Ds (show dd)]
@@ -2782,7 +2783,7 @@ checkPTBndr :: ToEnv -> (Tpat,Tau) ->  TC ToEnv
 checkPTBndr current (Tvar s nm,k) =
   return[(s,TyVar nm (MK k),poly (MK k))]
 checkPTBndr current (Tfun c xs,k) = checkPTBndr current (Tcon c xs,k)
-checkPTBndr current (y@(Tcon (tag@('`':cs)) xs),TyCon sx _ "Tag" _) = return[]
+checkPTBndr current (y@(Tcon (tag@('`':cs)) xs),_) = return [] --TyCon sx _ "Tag" _) = return[]
 checkPTBndr current (y@(Tcon c xs),k) =
   do {(tau,kind@(K lvs sigma)) <- getInfo y current c
      ; let check1 [] rng = return(rng,[])
@@ -3124,7 +3125,7 @@ matchPred truth question =
   case work of
     Nothing -> Right []
     Just pairs -> case mostGenUnify pairs of
-                    Just u -> Left u
+                    Just(_,u) -> Left u
                     Nothing -> Right pairs
  where work = case (truth,question) of
                 (Rel x,Rel y) -> Just [(x,y)]
@@ -3699,7 +3700,7 @@ truthStep (truths,questions,open,u0) =
         ,open,composeU u u0,n)
       | t <- truths
       ,(q,n) <- zip questions [0..]
-      , u <- mostGenUnify [(t,q)] ]
+      , (_,u) <- mostGenUnify [(t,q)] ]
 
 ---------------------------------------------------------------
 
@@ -3755,8 +3756,8 @@ matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
   do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newflexi r
      ; ys <- matchR truths open rs term
      ; case mostGenUnify [(lhs,term)] of
-        Just sub -> do { let pre2 = subPred sub precond
-                             rhs2 = subPred sub rhs
+        Just(_,sub) -> do { let pre2 = subPred sub precond
+                                rhs2 = subPred sub rhs
                        ; verbose <- getMode "solving"
                        ; whenM verbose
                            [Ds "\nRule : ",Ds nm
@@ -3908,7 +3909,7 @@ checkTau ((r@(RW nm key Axiom _ _ _ _)):rs) truth =
 mguWithFail:: Monad m => [(Tau,Tau)] -> m [(TcTv,Tau)]
 mguWithFail xs =
   case mgu xs of
-        Left sub -> return sub
+        Left(_,sub) -> return sub
         Right (mess,t1,t2) -> fail mess
 
 
@@ -3932,9 +3933,9 @@ mergeMgu sub1 sub2 =
           project2 sub (v,t1,t2) = (v,subTau sub t2)
       in case mgu (map project1 triples) of
            Right x -> Right x
-           Left sub3 -> case mergeMgu sub3 (composeU sub1' sub2') of
-                          Left us -> Left(us ++ map (project2 sub3) triples)
-                          Right x -> Right x
+           Left(_,sub3) -> case mergeMgu sub3 (composeU sub1' sub2') of
+                            Left us -> Left(us ++ map (project2 sub3) triples)
+                            Right x -> Right x
 
 a1 = [("a",12),("b",34),("c",23)]
 a2 = [("z",1),("a",22),("c",11),("e",99)]
