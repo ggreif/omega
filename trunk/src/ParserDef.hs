@@ -159,8 +159,11 @@ expvariable = terminal identifier (Var . Global)
 expconstructor = terminal conName (\ s -> Var (Global s))
 
 patvariable :: Parser Pat
-patvariable = terminal identifier (Pvar . Global)
-
+patvariable = do { (result@(Pvar x)) <- terminal identifier (Pvar . Global)
+                 ; let (Global (patname@(init:_))) = x
+                 ; if isUpper init
+                   then fail ("pattern bindings must be lowercase, but this is not: " ++ patname)
+                   else return result}
 name,constructor :: Parser Var
 constructor = terminal conName Global
 name = terminal identifier Global
@@ -210,10 +213,7 @@ asPattern =
   do { Pvar x <- patvariable
      ; symbol "@"
      ; p <- pattern
-     ; let (Global (patname@(init:_))) = x
-     ; if isUpper init
-       then fail ("@-style pattern bindings must be lowercase, but this is not: " ++ patname)
-       else return (Paspat x p)
+     ; return (Paspat x p)
      }
 
 infixPattern =
