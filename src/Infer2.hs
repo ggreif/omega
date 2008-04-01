@@ -1,4 +1,3 @@
-
 module Infer2 where
 
 -- import qualified System.Console.Readline as Readline
@@ -48,7 +47,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2
-            ,subtermsTau,subtermsSigma,kindOfM)
+            ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 --hiding (Level)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
@@ -771,10 +770,10 @@ typeExp mod (Reify s v) expect = error ("Unexpected reified value: "++s)
 typeExp mod (ExtE x) expect =
   do { exts <- getSyntax
      ; loc <- getLoc
-     ; let lift0 (nm) = Var (Global nm)
-           lift1 (nm) x = App (Var (Global nm)) x
-           lift2 (nm) x y = App (App (Var (Global nm)) x) y
-           lift3 (nm) x y z = App (App (App (Var (Global nm)) x) y) z
+     ; let lift0 nm = Var (Global nm)
+           lift1 nm x = App (lift0 nm) x
+           lift2 nm x y = App (lift1 nm x) y
+           lift3 nm x y z = App (lift2 nm x y) z
      ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
      ; typeExp mod new expect
      }
@@ -1448,10 +1447,10 @@ checkPat rename mod k t pat =
     (ExtP x,_) ->
        do { exts <- getSyntax
           ; loc <- getLoc
-          ; let lift0 (nm) = Pcon (Global nm) []
-                lift1 (nm) x = Pcon (Global nm) [x]
-                lift2 (nm) x y = Pcon (Global nm) [x,y]
-                lift3 (nm) x y z = Pcon (Global nm) [x,y,z]
+          ; let lift0 nm = Pcon (Global nm) []
+                lift1 nm x = Pcon (Global nm) [x]
+                lift2 nm x y = Pcon (Global nm) [x,y]
+                lift3 nm x y z = Pcon (Global nm) [x,y,z]
           ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
           ; checkPat rename mod k t new
           }
@@ -3408,6 +3407,12 @@ pTtoTpat (Star' k (Just s)) env =
 pTtoTpat (TyFun' (TyVar' s : xs)) e1 =
   do { (e2,ys) <- thrd e1 pTtoTpat xs
      ; return(e2,Tfun s ys) }
+pTtoTpat (Ext ext) e1 =
+  do { exts <- syntaxInfo
+     ; loc <- currentLoc
+     ; new <- buildExt (show loc) extToTpatLift ext exts
+     ; pTtoTpat new e1
+     }
 pTtoTpat x e1 = fail ("The type: "++show x++" is not appropriate for the LHS of a type fun.")
 
 thrd e1 f [] = return(e1,[])
