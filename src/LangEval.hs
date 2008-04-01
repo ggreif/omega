@@ -1,5 +1,5 @@
-
-module LangEval where
+module LangEval(env0,vals,elaborate,Prefix(..),
+                Env,eval,mPatStrict,extendV) where
 
 import Auxillary
 import Syntax
