@@ -52,8 +52,10 @@ itemize f h items =
 -------------------------------------------------------------------
 -- Printing out tables for the manual
 
+vals' = map (\(name,maker) -> (name,maker name)) vals
+
 infixOperators = (concat (map f metaHaskellOps))
-  where f x = case lookup x vals of
+  where f x = case lookup x vals' of
                  Nothing -> []
                  Just (_,y) -> [(x,showSigma y)]
 
@@ -135,7 +137,7 @@ predefinedTypes h =
        "types"
     ; figure2 h
        (verbatim h
-          ("\nValue :: Type \n\n"++(concat (map f vals))))
+          ("\nValue :: Type \n\n"++(concat (map f vals'))))
               "Predefined functions and values."
           "values"
     }
