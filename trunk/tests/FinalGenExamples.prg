@@ -279,7 +279,7 @@ count List = \ c -> sumList . mapList c
 count Tree = \ c -> sumTree . mapTree c 
 count Pair = \ c1 c2 (x,y) -> c1 x + c2 y 
 
-size:: Type (*0 ~> *0) f -> f a -> Int
+size:: forall (f:: *0 ~> *0) (a:: *0) . Type (*0 ~> *0) f -> f a -> Int
 size f = count f (const 1)
 
 sum:: Type (*0 ~> *0) f -> f Int -> Int
