@@ -13,27 +13,27 @@ import NarrowData
 class (TyCh m) => Check m where
   getMode :: String -> m Bool
   wait :: String -> m ()
-  rewEq :: (Tau,Tau) -> m(Maybe Unifier)
-  rewNestedEqual :: (Tau,Tau) -> m (Maybe (Tau,Unifier))
+  rewEq :: (Tau,Tau) -> m(Maybe Unifier2)
+  rewNestedEqual :: (Tau,Tau) -> m (Maybe (Tau,Unifier2))
   getDefTree :: NName -> m(DefTree TcTv Tau)
-  tryRewriting :: Tau -> m(Maybe (Tau,Unifier))
-  normalizeTau :: Tau -> m (Tau,Unifier)
+  tryRewriting :: Tau -> m(Maybe (Tau,Unifier2))
+  normalizeTau :: Tau -> m (Tau,Unifier2)
 
 
 --------------------------------------------------
 -- Unifiers and substitutions
 
-subProb u (EqP(x,y)) = EqP(subTau u x,subTau u y)
+subProb u (EqP(x,y)) = EqP(sub2Tau u x,sub2Tau u y)
 subProb u (AndP rs) = AndP (map (subProb u) rs)
-subProb u (TermP x) = TermP(subTau u x)
+subProb u (TermP x) = TermP(sub2Tau u x)
 
 --composeUn :: Unifier -> Unifier -> Unifier
---composeUn s1 s2 = ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
+--composeUn s1 s2 = ([(u,sub2Tau s1 t) | (u,t) <- s2] ++ s1)
 
 --o new old = composeUn new old
 
 pushUnifier u1 [] = []
-pushUnifier u1 ((exp,u2):xs) = (exp,u2 `o` u1):pushUnifier u1 xs
+pushUnifier u1 ((exp,u2):xs) = (exp,composeTwo u2 u1):pushUnifier u1 xs
 
 --------------------------------------------------
 -- Values, variables or a constructor applied to all values
@@ -79,17 +79,17 @@ traceSteps (steps,count,d,exceeded) truths ys =
 -}
 
 
-fxx d (prob,truth,unifier) =
-              displays d [dProb prob,if null unifier
+fxx d (prob,truth,unifier@(ls,vs)) =
+              displays d [dProb prob,if null vs
                                 then Ds "\n"
-                                else Dr[Ds " where ",dUn (take 3 unifier)]]
+                                else Dr[Ds " where ",dUn (ls,take 3 vs)]]
 
 traceSteps2 (steps,count,d,exceeded) (problems@((ps,truths,us):_)) found =
   do { verbose <- getMode "narrowing"
-     ; let f d (prob,truth,unifier) =
-              displays d [dProb prob,if null unifier
+     ; let f d (prob,truth,unifier@(ls,vs)) =
+              displays d [dProb prob,if null vs
                                 then Ds "\n"
-                                else Dr[Ds " where ",dUn (take 3 unifier)]]
+                                else Dr[Ds " where ",dUn (ls,take 3 vs)]]
      ; d1 <- whenP verbose d
          [Ds "\n-------------------------------------\n"
          ,Ds (show steps), Ds " Narrowing the list (looking for "
@@ -145,12 +145,12 @@ stepProb s (prob@(EqP(x,y))) truths =
             Nothing -> stepEq s (x,y) truths)
 
 stepProb s (TermP t) truths = stepTerm s t truths
-stepProb s (AndP []) truths = return([(TermP success,truths,[])],s)
+stepProb s (AndP []) truths = return([(TermP success,truths,([],[]))],s)
 stepProb s (AndP [p]) truths = stepProb s p truths
 stepProb (s@(nstep,nsol,d0,ex)) (AndP (p:ps)) truths =
   do { let (d1,cntxt) = displays d0 [dProb p]
            newS = (20,2,d1,False)
-     ; (ans,s1@(_,_,d2,exceed)) <- narr ("And sub-problem\n  "++cntxt) newS [(p,truths,[])] []
+     ; (ans,s1@(_,_,d2,exceed)) <- narr ("And sub-problem\n  "++cntxt) newS [(p,truths,([],[]))] []
      ; if exceed
           then return ([],s1)
           else do { let nextS = (nstep -1,nsol,d2,ex)
@@ -164,7 +164,7 @@ stepProb (s@(nstep,nsol,d0,ex)) (AndP (p:ps)) truths =
 stepEq:: Check m => ST Z -> (Tau,Tau) -> Rel Tau -> m(Sol,ST Z)
 stepEq s0 (a,b) truths =
  case (project a,project b) of
-  (VarN x,VarN y) | x==y -> return([(TermP success,truths,[])],s0)
+  (VarN x,VarN y) | x==y -> return([(TermP success,truths,([],[]))],s0)
   (VarN x,VarN y) ->
     do { (u,s1) <- mguV s0 truths [(TcTv x,TcTv y)]
        ; truths2 <- subRels u truths
@@ -175,12 +175,12 @@ stepEq s0 (a,b) truths =
     do { vs <- mapM termFresh ts
        ; (u,s1) <- mguV s0 truths [(a,con nm vs)]
        ; truths2 <- subRels u truths
-       ; return([(EqP (subTau u a,subTau u b),truths2,u)],s1)}
+       ; return([(EqP (sub2Tau u a,sub2Tau u b),truths2,u)],s1)}
   (ConN nm ts,VarN s) ->
     do { vs <- mapM termFresh ts
        ; (u,s1) <- mguV s0 truths [(b,con nm vs)]
        ; truths2 <- subRels u truths
-       ; return([(EqP (subTau u a,subTau u b),truths2,u)],s1)}
+       ; return([(EqP (sub2Tau u a,sub2Tau u b),truths2,u)],s1)}
   (VarN s,FunN _ _) | False ->  -- not (occursN s b) ->
     do { (t1,_) <- normalizeTau b
        ; (u,s1) <- mguV s0 truths [(TcTv s,t1)]
@@ -191,7 +191,7 @@ stepEq s0 (a,b) truths =
        ; (u,s1) <- mguV s0 truths [(TcTv s,t1)]
        ; truths2 <- subRels u truths
        ; return([(TermP success,truths2,u)],s1)}
-  (FunN _ _,FunN _ _) | a==b -> return([(TermP success,truths,[])],s0)
+  (FunN _ _,FunN _ _) | a==b -> return([(TermP success,truths,([],[]))],s0)
 
   (FunN nm args,FunN nm2 args2) ->
     handleM 4
@@ -204,8 +204,8 @@ stepEq s0 (a,b) truths =
                then failM 3 [Ds s]
                else case mgu (zip args args2) of
                       Right _ -> failM 3 [Ds s]
-                      Left(_,u) -> do { ts <- subRels u truths
-                                      ; return([(TermP success,ts,u)],s0)})
+                      Left u -> do { ts <- subRels u truths
+                                   ; return([(TermP success,ts,u)],s0)})
   (FunN nm args, rhs) ->
     handleM 4 (do { (ans,s1) <- stepTerm s0 a truths
                   ; return(map (buildQ True b) ans,s1)})
@@ -217,9 +217,9 @@ stepEq s0 (a,b) truths =
   (ConN n xs,ConN m ys) | n /= m -> return([],s0)
   (t1@(ConN n xs),t2@(ConN m ys)) | n==m ->
     case (xs,ys) of
-     ([],[]) -> return([(TermP success,truths,[])],s0)
-     ([x],[y]) -> return([(EqP(x,y),truths,[])],s0)
-     (_,_) -> return([(andP(zipWith (curry EqP) xs ys),truths,[])],s0)
+     ([],[]) -> return([(TermP success,truths,([],[]))],s0)
+     ([x],[y]) -> return([(EqP(x,y),truths,([],[]))],s0)
+     (_,_) -> return([(andP(zipWith (curry EqP) xs ys),truths,([],[]))],s0)
 
 
 
@@ -234,7 +234,7 @@ failEq s0 truths fun other mess =
 stepTerm:: Check m => ST Z -> Tau -> Rel Tau -> m(Sol,ST Z)
 stepTerm s0 term truths =
   case project term of
-   (VarN _) -> return([(TermP term,truths,[])],s0)
+   (VarN _) -> return([(TermP term,truths,([],[]))],s0)
                -- VarN case Should be unreachable, if the valueP test works.
    (FunN nm _) -> maybeM
                    (tryRewriting term)
@@ -247,12 +247,12 @@ stepTerm s0 term truths =
                     do { let exp = getTermAtPath path term
                        ; (ans,s1) <- stepTerm s0 exp truths
                        ; return(map (reBuild term path) ans,s1)}
-                  Nothing -> return([(TermP term,truths,[])],s0)
+                  Nothing -> return([(TermP term,truths,([],[]))],s0)
    (RelN (EqR(x,y))) -> do { ans <- stepProb s0 (EqP(x,y)) truths
                            ; return ans}
 
 reBuild term path (TermP x,ts,u) = (problem,ts,u)
-    where problem = TermP(subTau u (insertNewTermAtPath term path x))
+    where problem = TermP(sub2Tau u (insertNewTermAtPath term path x))
 
 
 stepTree:: Check m => NName ->  Tau -> Rel Tau -> DefTree TcTv Tau -> ST Z -> m(Sol,ST Z)
@@ -284,7 +284,7 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                  other -> let newest = insertNewTermAtPath matched path new
                           in if newest==term
                                  then maybeM (tryRewriting term)
-                                             (\(t2,u2) -> return([(TermP t2,truths,u2 `o` mU)],s1))
+                                             (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
                                              (noProgress name term)
                                  else do { truths2 <- subRels mU truths
                                          ; return ([(TermP newest,truths2,mU)],s1)}}
@@ -306,17 +306,17 @@ noProgress name term =
 
 applyLfRule s0 term truths rule uselessUnifier =
   do { (lhs2,rhs2) <- freshX rule
-     ; case match [] [(lhs2,term)] of
+     ; case match2 ([],[]) [(lhs2,term)] of
          Just unifier ->
-           return ([(TermP(subTau unifier rhs2),truths,[])],s0)
+           return ([(TermP(sub2Tau unifier rhs2),truths,([],[]))],s0)
          Nothing ->
            case mostGenUnify [(lhs2,term)] of
-             Just(_,u2) -> 
+             Just(ls,u2) -> 
                   let important = freeTerm term
                       u3 = orientBindings important u2
                       good (var,term) = elem var important
-                  in do { truths2 <- subRels u3 truths
-                        ; return ([(TermP(subTau u3 rhs2),truths2,filter good u3)],s0)}
+                  in do { truths2 <- subRels (ls,u3) truths
+                        ; return ([(TermP(sub2Tau (ls,u3) rhs2),truths2,(ls,filter good u3))],s0)}
              Nothing -> (return ([],s0)) }
 
 ----------------------------------------------------------------
@@ -331,20 +331,20 @@ moreGen [] u2 = True
 moreGen (p:ps) u2 = elem p u2 && moreGen ps u2
 
 -- Add a solution, only every previous solution is not more general
-addSol n@(t,ts,new) us =
-   if (all (\ (t,ts,old) -> not(moreGen old new)) us)
-      then n:(filter (\ (t,ts,old) -> not(moreGen new old)) us)
+addSol n@(t,ts,(new1,new2)) us =
+   if (all (\ (t,ts,(old1,old2)) -> not(moreGen old2 new2) && not(moreGen old1 new1)) us)
+      then n:(filter (\ (t,ts,(old1,old2)) -> not(moreGen new2 old2) && not(moreGen new1 old1)) us)
       else us
 
-push u (prob,truths,u2) = (prob,truths,u2 `o` u)
+push u (prob,truths,u2) = (prob,truths,composeTwo u2 u)
 
-implies :: Rel Tau -> (Tau,Tau) -> Maybe [(TcTv,Tau)]
+implies :: Rel Tau -> (Tau,Tau) -> Maybe Unifier2
 implies (EqR(a,b)) (x,y) =
    case mostGenUnify [(x,a),(y,b)] of
      Nothing -> case mostGenUnify [(x,b),(y,a)] of
-                  Just (_,u) -> Just u
+                  Just u -> Just u
                   Nothing -> Nothing
-     Just(_,u) -> Just u
+     Just u -> Just u
 implies (AndR []) (x,y) = Nothing
 implies (AndR (r:rs)) (x,y) =
   case implies r (x,y) of
@@ -353,8 +353,8 @@ implies (AndR (r:rs)) (x,y) =
 
 
 subRels u (EqR(x,y)) =
-  do { (a,u1) <- normalizeTau(subTau u x)
-     ; (b,u2) <- normalizeTau(subTau u1 y)
+  do { (a,u1) <- normalizeTau(sub2Tau u x)
+     ; (b,u2) <- normalizeTau(sub2Tau u1 y)
      ; ans <- simpRel(EqR(a,b))
      ; return ans}
 subRels u (AndR rs) = do { ans <- mapM (subRels u) rs; return(AndR ans)}
@@ -364,7 +364,7 @@ simpRel (EqR(x,y)) =
                         (\ s -> return([],(0,0,undefined,True)))
                         -- Return an 'other' case if a failure occurs
      ; case ans of
-        ([(EqP(a,b),_,[])],(_,_,_,False)) -> simpRel (EqR(a,b))
+        ([(EqP(a,b),_,([],[]))],(_,_,_,False)) -> simpRel (EqR(a,b))
         other -> return(EqR(x,y))
      }
 
@@ -382,7 +382,7 @@ properSubTerm v x = liftN free x
 
 fewestVar xAns xterm yAns yterm =
      if xn <= yn then (True,xAns,yterm) else (False,yAns,xterm)
-  where count (term,truths,unifier) = length unifier
+  where count (term,truths,(ls,unifier)) = length unifier
         xn = sum(map count xAns)
         yn = sum(map count yAns)
 
@@ -396,7 +396,7 @@ varsOfRel f (EqR (x,y)) = union3 (f x) (f y)
 varsOfRel f (AndR []) = ([],[],[])
 varsOfRef f (AndR (r:rs)) = union3 (varsOfRel f r) (varsOfRel f (AndR rs))
 
-mguV :: Check m => ST Z -> Rel Tau -> [(Tau,Tau)] -> m(Unifier,ST Z)
+mguV :: Check m => ST Z -> Rel Tau -> [(Tau,Tau)] -> m(Unifier2,ST Z)
 mguV s0 truths pairs =
   do { maybe <- mguB pairs
      ; case maybe of
@@ -424,18 +424,18 @@ locInfo (TcTv (Tv un (Rigid q loc (nm,ref)) k)) =
 locInfo _ = return ("?","unknown")
 
 -- True means put the problem on left, False means on right
-buildQ True  y (TermP x,ts,u) = (EqP(x,subTau u y),ts,u)
-buildQ False y (TermP x,ts,u) = (EqP(subTau u y,x),ts,u)
+buildQ True  y (TermP x,ts,u) = (EqP(x,sub2Tau u y),ts,u)
+buildQ False y (TermP x,ts,u) = (EqP(sub2Tau u y,x),ts,u)
 buildQ _ _ prob = error ("Non term problem returned from stepProb  in equality")
 
 
 
-matches :: Check m => Tau -> Tau -> m (Maybe (Tau,Unifier))
+matches :: Check m => Tau -> Tau -> m (Maybe (Tau,Unifier2))
 matches term pat =
   do { p <- freshen pat;
      ; case mgu [(p,term)] of -- mostGenUnify [(p,term)] of
          Right(s,x,y) -> (warnM [Ds s,Dd x, Dd y] >> return Nothing)
-         Left(_,u) -> return(Just(subTau u term,u))}
+         Left u -> return(Just(sub2Tau u term,u))}
 
 orientBindings free [] = []
 orientBindings free ((p@(var,term)):more) =
@@ -498,7 +498,7 @@ firstPathInList n (Nothing : ys) = firstPathInList (n+1) ys
 insertAt 0 x (t:ts) = x:ts
 insertAt n x (t:ts) = t : insertAt (n-1) x ts
 
-subInPlace :: ((Tau,Unifier) -> c) -> Path -> Tau -> [(Tau,Unifier)] -> [c]
+subInPlace :: ((Tau,Unifier2) -> c) -> Path -> Tau -> [(Tau,Unifier2)] -> [c]
 subInPlace k [] term subterms = map k subterms
 subInPlace k (n:ns) x subterms = liftN h x
   where h (FunN name ts) = subInPlace k2 ns (ts !! n) subterms
@@ -508,9 +508,9 @@ subInPlace k (n:ns) x subterms = liftN h x
         h (RelN (EqR(term1,term2))) = subInPlace k2 ns ([term1,term2] !! n) subterms
             where k2 (x,u) = k((eq (insertAt n x [term1,term2])),u)
 
-duplicateTerm :: Unifier -> Path -> Tau -> [(Tau,Unifier)] -> [(Tau,Unifier)]
+duplicateTerm :: Unifier2 -> Path -> Tau -> [(Tau,Unifier2)] -> [(Tau,Unifier2)]
 duplicateTerm u path term subTs = pushUnifier u (subInPlace app path term subTs)
-  where app (x,u) = (subTau u x,u)
+  where app (x,u) = (sub2Tau u x,u)
 
 
 ----------------------------------------------------------------
@@ -661,8 +661,8 @@ defTree (NarR(name,zs)) = mainYM name zs
 ----------------------------------------------
 -- Helper function for making Display elements
 
-dUn :: Unifier -> DispElem Z
-dUn xs = Dlf (\ d (v,t) -> displays d [Dd v, Ds "=", Dd t]) xs ", "
+dUn :: Unifier2 -> DispElem Z
+dUn (_,xs) = Dlf (\ d (v,t) -> displays d [Dd v, Ds "=", Dd t]) xs ", "
 
 
 instance Show (Rule NName TcTv Tau) where

@@ -41,7 +41,7 @@ data Prob t
   | EqP (t,t)
   | AndP [Prob t]
 
-type Sol = [(Prob Tau,Rel Tau,Unifier)]
+type Sol = [(Prob Tau,Rel Tau,Unifier2)]
 type ST z = (Int,Int,DispInfo z,Bool)
 type Un var term = [(var,term)]
 
@@ -167,7 +167,7 @@ dRel (AndR xs) = Dr [Ds "and(",sepBy dRel xs ",",Ds ")"]
 
 dSol :: Sol -> String -> DispElem Z
 dSol = Dlf f
-  where f d (prob,rel,un) = displays d [Ds "\nProblem = ",dProb prob
+  where f d (prob,rel,(ls,un)) = displays d [Ds "\nProblem = ",dProb prob
                                ,Ds "\nTruths = ",dRel rel
                                ,Ds "\nUnifier = ",Dlf exhibitVT un ", "]
 
