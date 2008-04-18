@@ -165,12 +165,22 @@ instance TyCh m => TypeLike m Level where
         ; return([],zs)}
   --nf x = zonkLv x
 
+subLevel :: HasIORef a => [(TcLv,Level)] -> Level -> a Level
 subLevel env x = do { a <- pruneLv x; walk a }  where
    walk (t@(TcLv v)) = case lookup v env of
                          Nothing  -> return t
                          Just l -> return l
    walk (LvSucc x) = do { a <- subLevel env x; return(LvSucc a) }
    walk x = return x
+   
+-- Non computational substitution of levels
+substLevel :: [(TcLv,Level)] -> Level -> Level   
+substLevel env (t@(TcLv v)) = 
+   case lookup v env of
+     Nothing  -> t
+     Just l -> l
+substLevel env (LvSucc x) = LvSucc(substLevel env x) 
+substLevel env LvZero = LvZero
 
 varsOfLevel (TcLv v) = ([],[],[v])
 varsOfLevel (LvSucc x) = varsOfLevel x
@@ -329,7 +339,7 @@ class (HasIORef m,Fresh m,HasNext m,Accumulates m Pred
   assume :: [Pred] -> MGU -> m a -> m a
   getBindings :: m MGU
   getDisplay :: m (DispInfo Z)
-  solveSomeEqs :: TyCh m => (String,Rho) -> [Pred] -> m ([Pred],[(TcTv,Tau)])
+  solveSomeEqs :: TyCh m => (String,Rho) -> [Pred] -> m ([Pred],Unifier2)
   show_emit :: m Bool
   getTruths :: m[Pred]
   setTruths:: [Pred] -> m a -> m a
@@ -1434,8 +1444,8 @@ instance (Show term, Exhibit (DispInfo Z) term,Typable m term Rho
     = do { (skol_tvs, assump, rho) <- skolTy exp_ty
          ; let (preds,bindings) = splitSkol skol_tvs assump
          ; rho1 <- subT bindings rho
-         ; (preds2,unifier) <- solveSomeEqs ("9."++show expr,rho1) preds
-         ; rho2 <-  subT unifier rho
+         ; (preds2,(ls,unifier)) <- solveSomeEqs ("9."++show expr,rho1) preds
+         ; rho2 <-  sub ([],unifier,[],ls) rho
          ; let verbose = False
          ; whenM verbose
                   [Ds ("\n(Check term Sigma) The term is: "++ show expr)
@@ -1444,7 +1454,7 @@ instance (Show term, Exhibit (DispInfo Z) term,Typable m term Rho
                   ,Ds "\nassump: = ",Dd assump,Ds (show assump)
                   ,Ds "\nSkolem vars are: ",Dl skol_tvs ","
                   ,dv "rho2" rho2]
-         ; rho3 <- sub ([],unifier,[],[]) rho2
+         ; rho3 <- sub ([],unifier,[],ls) rho2
          ; (s,need::[Pred]) <-  extractAccum (assume preds2 unifier (check expr rho2))
          ; whenM verbose
                 [Ds ("\n(check term Sigma) ("++show expr++"), need = "),Dl need ", "
@@ -1869,7 +1879,7 @@ instance TyCh m => Subsumption m PolyKind PolyKind where
 instance TyCh m => Subsumption m Sigma Sigma where
   morepoly s sigma1 sigma2 =
      do { (skol_tvs,assump,rho) <- skolTy sigma2
-        ; (preds,unifier) <- solveSomeEqs ("morepoly Sigma Sigma",starR) assump
+        ; (preds,(levelvars,unifier)) <- solveSomeEqs ("morepoly Sigma Sigma",starR) assump
         ; (_,residual::[Pred]) <-
              extractAccum (handleM 1 (assume preds unifier (morepoly s sigma1 rho))
                                      (captured sigma1 sigma2 rho))
@@ -1915,9 +1925,9 @@ morepolySigmaRho s (sigma1@(Forall sig)) rho2 =
         ; ((),oblig2) <- extract(morepoly s rho1 rho2)
         ; (local,general) <- localPreds vs oblig2
         -- ; warn [Ds "\nlocal = ",Dd local,Ds ", general = ", Dd general]
-        ; (preds2,unifier) <- handleM 1 (solveSomeEqs ("morepoly Sigma Rho",rho2) local)
+        ; (preds2,(ls,unifier)) <- handleM 1 (solveSomeEqs ("morepoly Sigma Rho",rho2) local)
                                         (no_solution sigma1 rho2 rho1)
-        ; gen2 <- sub ([],unifier,[],[]) general
+        ; gen2 <- sub ([],unifier,[],ls) general
         ; injectA " morepoly Sigma Rho 2 " (gen2++preds2)
         }
 
@@ -2763,68 +2773,77 @@ instance Eq Pred where
 ---------------------------------------------------------------
 -----------------------------------------------------------
 -- Side-effect Free subsitution. Usually you must zonk
--- before calling this function.
+-- before calling these functions.
 
-subKind :: [(TcTv,Tau)] -> Kind -> Kind
-subKind [] x = x
-subKind env (MK x) = MK(subTau env x)
+type Unifier2 = ([(TcLv,Level)],[(TcTv,Tau)])
 
-subPoly :: [(TcTv,Tau)] -> PolyKind -> PolyKind
-subPoly [] x = x
-subPoly env (K lvs s) = K lvs(subSigma env s)
+sub2Kind :: Unifier2 -> Kind -> Kind
+sub2Kind ([],[]) x = x
+sub2Kind env (MK x) = MK(sub2Tau env x)
 
-subSigma :: [(TcTv,Tau)] -> Sigma -> Sigma
-subSigma [] x = x
-subSigma env (Forall xs) = Forall(subL env xs)
+sub2Poly :: Unifier2 -> PolyKind -> PolyKind
+sub2Poly ([],[]) x = x
+sub2Poly env (K lvs s) = K lvs(sub2Sigma env s)
 
-subL :: [(TcTv,Tau)] -> L ([Pred],Rho) -> L ([Pred],Rho)
-subL [] xs = xs
-subL env (Nil(eqn,rho)) = Nil(subPred env eqn,subRho env rho)
-subL env (Cons (k,q) x) = Cons (subKind env k,q) (bind nm xs)
+sub2Sigma :: Unifier2 -> Sigma -> Sigma
+sub2Sigma ([],[]) x = x
+sub2Sigma env (Forall xs) = Forall(sub2L env xs)
+
+sub2L :: Unifier2 -> L ([Pred],Rho) -> L ([Pred],Rho)
+sub2L ([],[]) xs = xs
+sub2L env (Nil(eqn,rho)) = Nil(sub2Pred env eqn,sub2Rho env rho)
+sub2L env (Cons (k,q) x) = Cons (sub2Kind env k,q) (bind nm xs)
   where (nm,more) = unsafeUnBind x
-        xs = subL env more
+        xs = sub2L env more
 
-subLTau :: [(TcTv,Tau)] -> L ([Pred],Tau) -> L ([Pred],Tau)
-subLTau [] xs = xs
-subLTau env (Nil(eqn,rho)) = Nil(subPred env eqn,subTau env rho)
-subLTau env (Cons (k,q) x) = Cons (subKind env k,q) (bind nm xs)
+sub2LTau :: Unifier2 -> L ([Pred],Tau) -> L ([Pred],Tau)
+sub2LTau ([],[]) xs = xs
+sub2LTau env (Nil(eqn,rho)) = Nil(sub2Pred env eqn,sub2Tau env rho)
+sub2LTau env (Cons (k,q) x) = Cons (sub2Kind env k,q) (bind nm xs)
   where (nm,more) = unsafeUnBind x
-        xs = subLTau env more
+        xs = sub2LTau env more
 
-subPred :: [(TcTv,Tau)] -> [Pred] -> [Pred]
-subPred [] xs = xs
-subPred env xs = map f xs
-   where f (Equality x y) = Equality (subTau env x) (subTau env y)
-         f (Rel ts) = makeRel (subTau env ts)
-
-subPairs :: [(TcTv,Tau)] -> [(Tau,Tau)] -> [(Tau,Tau)]
-subPairs [] xs = xs
-subPairs env xs = map f xs where f (x,y) = (subTau env x,subTau env y)
+sub2Pred :: Unifier2 -> [Pred] -> [Pred]
+sub2Pred ([],[]) xs = xs
+sub2Pred env xs = map f xs
+   where f (Equality x y) = Equality (sub2Tau env x) (sub2Tau env y)
+         f (Rel ts) = makeRel (sub2Tau env ts)
 
 
-subRho :: [(TcTv,Tau)] -> Rho -> Rho
-subRho [] x = x
-subRho env (Rarrow s r) = Rarrow (subSigma env s) (subRho env r)
-subRho env (Rpair s r) = Rpair (subSigma env s) (subSigma env r)
-subRho env (Rsum s r) = Rsum(subSigma env s) (subSigma env r)
-subRho env (Rtau t) = Rtau(subTau env t)
+sub2Pairs :: Unifier2 -> [(Tau,Tau)] -> [(Tau,Tau)]
+sub2Pairs ([],[]) xs = xs
+sub2Pairs env xs = map f xs where f (x,y) = (sub2Tau env x,sub2Tau env y)
 
-subTau :: [(TcTv,Tau)] -> Tau -> Tau
-subTau [] x = x
-subTau env (TcTv (x@(Tv unq flav k))) =
-   case lookup x env of
-      Nothing -> TcTv (Tv unq flav (subKind env k))
+
+sub2Rho :: Unifier2 -> Rho -> Rho
+sub2Rho ([],[]) x = x
+sub2Rho env (Rarrow s r) = Rarrow (sub2Sigma env s) (sub2Rho env r)
+sub2Rho env (Rpair s r) = Rpair (sub2Sigma env s) (sub2Sigma env r)
+sub2Rho env (Rsum s r) = Rsum(sub2Sigma env s) (sub2Sigma env r)
+sub2Rho env (Rtau t) = Rtau(sub2Tau env t)
+
+sub2Tau :: Unifier2 -> Tau -> Tau
+sub2Tau ([],[]) x = x
+sub2Tau (env@(lvs,vs)) (TcTv (x@(Tv unq flav k))) =
+   case lookup x vs of
+      Nothing -> TcTv (Tv unq flav (sub2Kind env k))
       Just z -> z
-subTau env (TyApp x y) =  TyApp (subTau env x) (subTau env y)
-subTau env (TyCon sx l s k) = TyCon sx l s k2
-  where k2 = subPoly env k
-subTau env (Star n) = Star n
-subTau env (Karr x y) =  Karr (subTau env x) (subTau env y)
-subTau env (TyFun f k x) = TyFun f (subPoly env k) (map (subTau env) x)
-subTau env (TyVar s k) = TyVar s (subKind env k)
-subTau env (TySyn nm n fs as x) = TySyn nm n (map f fs) (map (subTau env) as) (subTau env x)
-  where f (nm,k) = (nm,subKind env k)
-subTau env (TyEx e) = TyEx(subLTau env e)
+sub2Tau env (TyApp x y) =  TyApp (sub2Tau env x) (sub2Tau env y)
+sub2Tau (env@(ls,_)) (TyCon sx l s k) = TyCon sx (substLevel ls l) s k2
+  where k2 = sub2Poly env k
+sub2Tau (ls,vs) (Star n) = Star (substLevel ls n)
+sub2Tau env (Karr x y) =  Karr (sub2Tau env x) (sub2Tau env y)
+sub2Tau env (TyFun f k x) = TyFun f (sub2Poly env k) (map (sub2Tau env) x)
+sub2Tau env (TyVar s k) = TyVar s (sub2Kind env k)
+sub2Tau env (TySyn nm n fs as x) = TySyn nm n (map f fs) (map (sub2Tau env) as) (sub2Tau env x)
+  where f (nm,k) = (nm,sub2Kind env k)
+sub2Tau env (TyEx e) = TyEx(sub2LTau env e)
+
+subRho env x = sub2Rho ([],env) x
+subTau env x = sub2Tau ([],env) x
+subSigma env x = sub2Sigma ([],env) x
+subPairs env x = sub2Pairs ([],env) x
+subPred env x = sub2Pred ([],env) x
 
 ---------------------------------------------------
 -- Get type variables from a term, should be zonked first
@@ -2953,13 +2972,13 @@ failIfInConsistent pat current extension xs =
 mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) ([Char],Tau,Tau)
 mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
                      then Right("occurs check", TcTv x, tau)
-                     else compose2 new2 (Left ([],new1))
+                     else compose2 new2 (Left new1)
   where vs = tvsTau tau
-        new1 = [(x,tau)]
+        new1 = ([],[(x,tau)])
         k2 = kindOf tau
         new2 = case k2 of
-                 Just k3 -> mgu (subPairs new1 ((k,k3):xs))
-                 Nothing -> mgu (subPairs new1 xs)
+                 Just k3 -> mgu (sub2Pairs new1 ((k,k3):xs))
+                 Nothing -> mgu (sub2Pairs new1 xs)
 
 
 mguLevel LvZero LvZero xs = mgu xs
@@ -2976,10 +2995,12 @@ subLev env (t@(TcLv v)) =
 subLev env (LvSucc x) = LvSucc(subLev env x)
 subLev env x = x
  
-compose2 (Left (l1,s1)) (Left (l2,s2)) = 
-    Left ([(l,subLev l1 t) | (l,t) <- l2] ++ l1,[(u,subTau s1 t) | (u,t) <- s2] ++ s1)
+compose2 (Left xs) (Left ys) = Left(composeTwo xs ys)
 compose2 _ (Right x) = Right x
 compose2 (Right y) _ = Right y
+
+composeTwo (l1,s1) (l2,s2) = 
+    ([(l,subLev l1 t) | (l,t) <- l2] ++ l1,[(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 
 compose (Left (s1)) (Left (s2)) = Left ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 compose _ (Right x) = Right x
@@ -3008,16 +3029,22 @@ extendref new old = ([(u,subTau fresh t) | (u,t) <- old] ++ fresh,existing)
 -- it may generate fresh variables but only to get the kind
 -- of a term.
 
-mguB :: TyCh m => [(Tau,Tau)] -> m(Either [(TcTv,Tau)] (String,Tau,Tau))
-mguB [] = return(Left [])
+mguB :: TyCh m => [(Tau,Tau)] -> m(Either Unifier2 (String,Tau,Tau))
+mguB [] = return(Left([],[]))
 mguB ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mguB xs
 
 mguB ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = mguBVar x tau xs
 mguB ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguBVar x tau xs
 
 mguB ((TyApp x y,TyApp a b):xs) = mguB ((x,a):(y,b):xs)
-mguB ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mguB xs -- TODO LEVEL
-mguB ((Star n,Star m):xs) | n==m = mguB xs
+mguB ((TyCon sx level1 s1 _,TyCon tx level2 s2 _):xs) | s1==s2 = 
+  case mguLevel level1 level2 [] of
+    Left u1 -> do { u2 <- mguB (sub2Pairs u1 xs) ; return(compose2 u2 (Left u1))}
+    Right x -> return(Right x)
+mguB ((Star n,Star m):xs) = 
+  case mguLevel n m [] of
+    Left u1 -> do { u2 <- mguB (sub2Pairs u1 xs) ; return(compose2 u2 (Left u1))}
+    Right x -> return(Right x)
 mguB ((Karr x y,Karr a b):xs) = mguB ((x,a):(y,b):xs)
 mguB ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
   if f==g then mguB (zip ys zs ++ xs) else return(Right("TyFun doesn't match",x,y))
@@ -3031,13 +3058,13 @@ mguB ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = return(Right("Rigid",TcTv x,ta
 
 mguB ((x,y):xs) = return(Right("No Match", x, y))
 
-mguBVar :: TyCh m => TcTv -> Tau -> [(Tau,Tau)] -> m(Either [(TcTv,Tau)] ([Char],Tau,Tau))
+mguBVar :: TyCh m => TcTv -> Tau -> [(Tau,Tau)] -> m(Either Unifier2 ([Char],Tau,Tau))
 mguBVar (x@(Tv _ _ (MK k))) tau xs | elem x (tvsTau tau) = return(Right("occurs check", TcTv x, tau))
 mguBVar (x@(Tv _ _ (MK k))) tau xs =
-  do { let new1 = [(x,tau)]
+  do { let new1 = ([],[(x,tau)])
      ; k2 <- kindOfM tau
-     ; new2 <- mguB (subPairs new1 ((k,k2):xs))
-     ; return(compose new2 (Left new1))
+     ; new2 <- mguB (sub2Pairs new1 ((k,k2):xs))
+     ; return(compose2 new2 (Left new1))
      }
 
 
@@ -3046,6 +3073,7 @@ mguBVar (x@(Tv _ _ (MK k))) tau xs =
 -- While Matching, One assumes only variables on the left can match
 -- And, that such variables never appear on the right.
 
+{-
 match :: Monad m => [(TcTv,Tau)] -> [(Tau,Tau)] -> m [(TcTv,Tau)]
 match env [] = return env
 match env ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = match env xs
@@ -3066,8 +3094,40 @@ matchVar env x tau xs =
     case find (\ (v,t) -> v==x) env of
       Just (v,t) -> if t==tau then match env xs else fail "Duplicate"
       Nothing -> match ((x,tau):env) xs
+-}
 
 
+match2 :: Monad m => Unifier2 -> [(Tau,Tau)] -> m Unifier2
+match2 env [] = return env
+match2 env ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = match2 env xs
+match2 env ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = match2Var env x tau xs
+match2 env ((TyApp x y,TyApp a b):xs) = match2 env ((x,a):(y,b):xs)
+match2 env ((TyCon sx level1 s1 _,TyCon tx level2 s2 _):xs) | s1==s2 = 
+  matchLevel env level1 level2 xs 
+match2 env ((Star n,Star m):xs) = matchLevel env n m xs
+match2 env ((Karr x y,Karr a b):xs) = match2 env ((x,a):(y,b):xs)
+match2 env ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
+  if f==g then match2 env (zip ys zs ++ xs) else fail "TyFun doesn't match"
+match2 env ((x@(TyVar s k),y):xs) = fail "No TyVar in match"
+match2 env ((y,x@(TyVar s k)):xs) = fail "No TyVar in match"
+match2 env ((TySyn nm n fs as x,y):xs) = match2 env ((x,y):xs)
+match2 env ((y,TySyn nm n fs as x):xs) = match2 env ((y,x):xs)
+match2 env ((x,y):xs) = fail "No Match"
+
+match2Var (env@(ls,vs)) x tau xs =
+    case find (\ (v,t) -> v==x) vs of
+      Just (v,t) -> if t==tau then match2 env xs else fail "Duplicate"
+      Nothing -> match2 (ls,(x,tau):vs) xs
+
+matchLevel env LvZero LvZero xs = match2 env xs
+matchLevel env (LvSucc x) (LvSucc y) xs = matchLevel env x y xs
+matchLevel (env@(ls,vs)) (TcLv x) l xs = 
+   case find (\ (v,t) -> v==x) ls of
+     Just (v,t) -> if t==l then match2 env xs else fail "Duplicate"
+     Nothing -> match2 ((x,l):ls,vs) xs
+matchLevel env _ _ _ = fail "No Match"
+
+      
 --------------------------------------------------------------------
 
 x2 = [(v 843,Star LvZero)
@@ -3703,7 +3763,7 @@ instance Show TcTv where
 
 -----------------------------------------------------
 
-solveHP ::  TyCh m => (String,Rho) -> [Pred] -> [Pred] -> m ([Pred],[(TcTv,Tau)])
+solveHP ::  TyCh m => (String,Rho) -> [Pred] -> [Pred] -> m ([Pred],Unifier2)
 solveHP context@(s,r) truths oblig =
   do { truths2 <- zonk truths
      ; oblig2 <- zonk oblig

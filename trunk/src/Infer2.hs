@@ -19,21 +19,21 @@ import Bind
 import Syntax
 import RankN(Sht(..),sht,univLevelFromPTkind
             ,Quant(..),TcTv(..),Tau(..),Rho(..),Sigma(..),Kind(..),PolyKind(..)
-            ,ForAllArgs,ToEnv,PPred,PT(..),MGU,Unifier,Z(..),Expected(..),L(..)
+            ,ForAllArgs,ToEnv,PPred,PT(..),MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
-            ,newLevel,unifyLevel,pruneLv,freshLevels,incLev
+            ,newLevel,unifyLevel,pruneLv,freshLevels,incLev,zonkLv
             ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..),Zonk(..)
             , zonkRho, zonkSigma, zonkTau
             ,NameStore(..),useStoreName, showMdisp
             , makeRel , equalPartsM
             ,failD,failK,failM,warnM,handleM,whenM
-            ,dispRef,subTau,subRho,subSigma
+            ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred
             ,extendref, failIfInConsistent
             ,mguStar,star1,star,star_star,starR,shtt,shtP  -- splitU,split3,
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newflexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
             ,instanTy,instanPatConstr,checkArgs
-            ,mgu,mostGenUnify,unify,morepolySS,morepolyRR,match,alpha,morepolySigmaRho
+            ,mgu,mostGenUnify,unify,morepolySS,morepolyRR,match2,alpha,morepolySigmaRho
             ,sigmaPair,sigmaSum,unifyCode,unifyFun
             ,poly,simpleSigma,toSigma,toTau,toEqs,toRho,toPT,rho2PT,toL
             ,windup,unsafeUnwind,unBindWith,unwind
@@ -45,7 +45,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,kind4Hidden,hiddenT,stringT,equalKind,infixEqName,tvsTau,subPairs,teq,equalityP,pred2Tau
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
-            ,parsePT,mutVarSolve,compose,o,equalRel,parseIntThenType,parseType,showPred
+            ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
@@ -93,7 +93,7 @@ instance Check (Mtc TcEnv Pred) where
            Nothing -> failM 0 [Ds "1) Unknown type function: ",Ds s] }
   getDefTree other = failM 0 [Ds "Bad type function: ",Ds (show other)]
   tryRewriting t =
-    do { (t2,u, newtruths) <- liftNf normTau t
+    do { (t2,u, newtruths) <- liftNf norm2Tau t
        ; if t==t2 then return Nothing else return (Just (t2,u))};
   rewEq (t1 @(TyFun nm k xs),t2) =
             do {rs <- getLemmaRules nm; try True (t1,t2) rs}
@@ -101,14 +101,14 @@ instance Check (Mtc TcEnv Pred) where
             do { rs <- getLemmaRules nm; try False (t2,t1) rs }
           try other (t1,t2) [] = return Nothing
           try other (t1,t2) ((lemma,(commutes,vs,[],lhs,rhs)):more) =
-            case match [] [(lhs,t1),(rhs,t2)] of
+            case match2 ([],[]) [(lhs,t1),(rhs,t2)] of
               Just u -> do { warnM [Ds ("\n*** Trying equality lemma '"++rname lemma)
                                   ,Ds "' on term:\n   ",Dd (teq t1 t2)]
-                           ; return (Just [])} -- matching means no variables escape
+                           ; return (Just ([],[]))} -- matching means no variables escape
               Nothing -> try other (t1,t2) more
           try other (t1,t2) (m:more) = try other (t1,t2) more
   rewEq (_,_) = return Nothing
-  normalizeTau t = do { (ans,u,_) <- liftNf normTau t; return (ans,u)}
+  normalizeTau t = do { (ans,u,_) <- liftNf norm2Tau t; return (ans,u)}
 
 
 
@@ -1011,12 +1011,12 @@ checkUnreachable computation good = handleK (=="bad refinement") 3
 existsNonSat [] prob2 good bad = bad 0 []
 existsNonSat (p:ps) prob2 good bad =
   do { d2 <- getDisplay
-     ; ans <- narr "unreachable" (25,1,d2,False) [(prob2,andR[],[])] []
+     ; ans <- narr "unreachable" (25,1,d2,False) [(prob2,andR[],([],[]))] []
      ; case ans of
          ([]    ,(_,_,_,False)) -> good "Narrowing finds non-satisfiable problem"
          ([]    ,(_,_,_,True))          -> bad 1 []
-         (((_,_,sub):xs),(_,_,_,True))  -> bad 2 sub
-         (((_,_,sub):xs),(_,_,_,False)) -> bad 2 sub}
+         (((_,_,(_,sub)):xs),(_,_,_,True))  -> bad 2 sub
+         (((_,_,(_,sub)):xs),(_,_,_,False)) -> bad 2 sub}
 
 doNotGuardUnreachable map prob2 pairs 0 _ =
   failM 2 [Ds "\nThe patterns:\n  ",Dlf f34 pairs " ",Ds "\ndo not guard unreachable code. "
@@ -1511,7 +1511,7 @@ okRange c (Rtau t) = help t
               ; return t }
         help (TyApp f x) = help f
         help (tf@(TyFun nm k args)) =
-          do { (new,un,ps) <- nfTau tf
+          do { (new,(levelvars,un),ps) <- nfTau tf
              ; case (un,ps) of
                 ([],[]) -> do { warnM [Ds "\nTYFUN\n ",Dd new ]; help new}
                 _ -> fail "TyFun in okRange" }
@@ -2501,7 +2501,7 @@ under frag (p@(nm,rho)) comp =
      ; let u0 = bindings env
      ;  (answer,collected) <- handleM 3 (collectPred (inEnv env (comp u0)))
                                         (underErr1 patVars)
-     ; (u5,unsolved,truths,need) <- solveConstraints p env (subPred u0 collected)
+     ; ((levelvars,u5),unsolved,truths,need) <- solveConstraints p env (subPred u0 collected)
      ; equalityVarsGetBound u5 eqs
      ; rigidVarsEscape u5 eqs
      ; (bad,passOn) <- splitObligations unsolved patVars
@@ -2828,37 +2828,45 @@ comp new old =
 
 type Info = (FiniteMap String [RWrule],[(String,DefTree TcTv Tau)],[Pred])
 
-push :: Unifier -> Info -> Info
-push [] info = info
-push u (rules,defs,truths) = (rules,defs,subPred u truths)
+push2 :: Unifier2 -> Info -> Info
+push2 ([],[]) info = info
+push2 u (rules,defs,truths) = (rules,defs,sub2Pred u truths)
 
 infoRules :: Info -> FiniteMap String [RWrule]
 infoRules (rules,defs,truths) = rules
 infoTruths:: Info -> [Pred]
 infoTruths (rules,defs,truths) = truths
 
-normSimplyTrue info (Rel (TyApp (TyCon sx _ "Nat'" k) x)) = return(Just [])
+normSimplyTrue :: Info -> Pred -> TC(Maybe(Unifier2))
+normSimplyTrue info (Rel (TyApp (TyCon sx _ "Nat'" k) x)) = return(Just([],[]))
 normSimplyTrue info (p@(Equality x y)) =
-  do { ((x2,y2),s3) <- normPair normTau subTau info (x,y)
+  do { ((x2,y2),s3) <- norm2Pair norm2Tau sub2Tau info (x,y)
      ; if x2 == y2
           then return (Just s3)
           else return Nothing
      }
 normSimplyTrue info _ = return Nothing
 
+
+normPreConds :: Info -> Bool -> [Pred] -> TC (Maybe Unifier2)
 normPreConds info False _ = return Nothing
-normPreConds info True [] = return(Just [])
+normPreConds info True [] = return(Just ([],[]))
+
+
 normPreConds info True (p:ps) =
   maybeM (normSimplyTrue info p)
-         (\ u1 -> maybeM (normPreConds (push u1 info) True ps)
-                         (\ u2 -> do { u3 <- comp u2 u1; return (Just u3)})
+         (\ u1 -> maybeM (normPreConds (push2 u1 info) True ps)
+                         (\ u2 -> return (Just (composeTwo u2 u1)))
                          (return Nothing))
          (maybeM (normIsAssumed (infoTruths info) p)
-                 (\ u1 -> maybeM (normPreConds (push u1 info) True ps)
-                                 (\ u2 -> do { u3 <- comp u2 u1; return (Just u3)})
+                 (\ u1 -> maybeM (normPreConds (push2 u1 info) True ps)
+                                 (\ u2 -> return (Just (composeTwo u2 u1)))
                                  (return Nothing))
                  (return Nothing))
 
+
+
+normIsAssumed:: [Pred] -> Pred -> TC(Maybe Unifier2)
 normIsAssumed truths q =
   do { let matchFirst [] = return Nothing
            matchFirst (p:ps) =
@@ -2868,30 +2876,36 @@ normIsAssumed truths q =
      ; matchFirst truths }
 
 
+
+normWithLemmas:: Info -> [(RWrule,(Bool,a,[Pred],Tau,Tau))] -> Tau -> TC(Maybe(Tau,Unifier2))
 normWithLemmas info [] term = return Nothing
 normWithLemmas info ((lemma,(commutes,vs,preds,lhs,rhs)):more) term =
-  case match [] [(lhs,term)] of
-    Just u1 -> do { let rhs' = subTau u1 rhs
-                        preconds = (subPred u1 preds)
-                  ; verbose <- getMode "theorem"
+  case match2 ([],[]) [(lhs,term)] of
+    Just u1 -> 
+               do { let rhs' = sub2Tau u1 rhs
+                        preconds = (sub2Pred u1 preds)
+                  ; verbose <- getMode "theorem" 
                   ; proceed <-
                        case commutes of
                          False -> return True
-                         True -> let lhs' = subTau u1 lhs
+                         True -> let lhs' = sub2Tau u1 lhs
                                  in return(rhs' < lhs')
-                  ; whenM (verbose && proceed)
+                  ; RankN.whenM (verbose && proceed)
                       [Ds ("\n*** Trying lemma '"++rname lemma++"' on term:\n   ")
                       ,Ds "[" ,Dl preconds ",",Ds "] => "
                       ,Dd term,Ds "  --->  ",Dd rhs']
                   ; maybeM (normPreConds info proceed preconds)
-                           (\ u2 -> do { u3 <- comp u2 u1
-                                       ; new2 <- subT u3 rhs'
-                                       ; (new3,u4) <- normTau (push u3 info) new2 -- rew result for additional changes
-                                       ; u5 <- comp u4 u3
+                           (\ u2 -> do { let u3 = composeTwo u2 u1
+                                             new2 = sub2Tau u3 rhs'
+                                       ; (new3,u4) <- norm2Tau (push2 u3 info) new2 -- rew result for additional changes
+                                       ; let u5 = composeTwo u4 u3
                                        ; return (Just (new3,u5))})
                            (normWithLemmas info more term)}
     Nothing -> normWithLemmas info more term
 
+
+normWithRules4Name:: Info -> Unifier2 -> String -> Tau ->
+                    ((Tau,Unifier2) -> TC(Tau,Unifier2)) -> TC(Tau,Unifier2)
 normWithRules4Name info u1 nm term noneApplyContinuation =
  do { let goodRules =
             case Map.lookup nm (infoRules info) of
@@ -2900,117 +2914,127 @@ normWithRules4Name info u1 nm term noneApplyContinuation =
           fresh x = do { info <- freshLemma x; return(x,info)}
     ; rs <- mapM fresh goodRules
     ; maybeM (normWithLemmas info rs term)
-             ( \ (newer,u2) -> do { u3 <- comp u2 u1
-                                  ; normTau (push u3 info) newer})
+             ( \ (newer,u2) -> do { let u3 = composeTwo u2 u1
+                                  ; norm2Tau (push2 u3 info) newer})
              (noneApplyContinuation(term,u1))
     }
 
-normTau:: Info -> Tau -> TC(Tau,Unifier)
-normTau (i@(rules,defs,truths)) t =
+
+norm2Tau:: Info -> Tau -> TC(Tau,Unifier2)
+norm2Tau (i@(rules,defs,truths)) t =
   do { --verbose <- getMode "narrowing"
      -- ; whenM verbose [Ds "\nNormTau ",Dd t,Ds "\n  ",Dl truths "\n  "];
-      normT i t }
+      norm2T i t }
 
-normT info (y@(TyVar nm k)) = return(y,[])
-normT info (app@(TyApp x y)) =
+norm2T:: Info -> Tau -> TC(Tau,Unifier2)
+norm2T info (y@(TyVar nm k)) = return(y,([],[]))
+norm2T info (app@(TyApp x y)) =
    case rootTau app [] of
      (c@(TyCon sx level_ nm k),args) ->
-       do { (args2,unifier) <- normTauL info args
+       do { (args2,unifier) <- norm2TauL info args
           ; let new = applyT (c:args2)
-          ; normWithRules4Name (push unifier info) unifier nm new return}
-     (f,args) -> do { (ts,u) <- normTauL info (f:args); return(applyT ts,u)}
-normT info (TyCon sx l nm k) = return(TyCon sx l nm k,[])
-normT info (Star n) = return(Star n,[])
-normT info (Karr x y) =
-   do { ((a,b),u) <- normPair normTau subTau info (x,y); return(Karr a b,u)}
-normT info (TyFun nm k xs) =
-   do { (ys,unifier) <- normTauL info xs
+          ; normWithRules4Name (push2 unifier info) unifier nm new return}
+     (f,args) -> do { (ts,u) <- norm2TauL info (f:args); return(applyT ts,u)}
+
+norm2T info (TyCon sx l nm k) = return(TyCon sx l nm k,([],[]))
+norm2T info (Star n) = return(Star n,([],[]))
+norm2T info (Karr x y) =
+   do { ((a,b),u) <- norm2Pair norm2Tau sub2Tau info (x,y); return(Karr a b,u)}
+norm2T info (TyFun nm k xs) =
+   do { (ys,unifier) <- norm2TauL info xs
       ; let new = (TyFun nm k ys)
             found (nm,tr) = return tr
             notFound = (failM 0 [Ds "2) Unknown type function: ",Ds nm])
       ; tree <- maybeM (defTreeInfo nm) found notFound
-      ; normWithDefs (push unifier info) tree new
-          (normWithRules4Name (push unifier info) unifier nm new return)
+      ; normWithDefs (push2 unifier info) tree new
+          (normWithRules4Name (push2 unifier info) unifier nm new return)
                -- (crossFertilize (push unifier info)))
       }
-normT info (TcTv v) = return(TcTv v,[])
-normT info (TySyn nm n vs xs t) =
-   do { (t':xs',u) <- normTauL info (t:xs); return(TySyn nm n vs xs' t',u)}
-normT info (TyEx l) =
+norm2T info (TcTv v) = return(TcTv v,([],[]))
+norm2T info (TySyn nm n vs xs t) =
+   do { (t':xs',u) <- norm2TauL info (t:xs); return(TySyn nm n vs xs' t',u)}
+norm2T info (TyEx l) =
    do { (vs,(ps,body)) <- unwind l
-      ; (body',u) <- normTau info body
+      ; (body',u) <- norm2Tau info body
       ; return(TyEx(windup vs (ps,body')),u)}
 
 
-normWithDefs:: Info -> (DefTree TcTv Tau) -> Tau -> TC(Tau,Unifier) -> TC(Tau,Unifier)
+normWithDefs:: Info -> (DefTree TcTv Tau) -> Tau -> TC(Tau,Unifier2) -> TC(Tau,Unifier2)
 normWithDefs info (Leaf pat free lhs rhs) term next =
  do { (lhs2,rhs2) <- freshX (free,lhs,rhs)
-    ; case match [] [(lhs2,term)] of
+    ; case match2 ([],[]) [(lhs2,term)] of
         Just unifier ->
-           do { let rewritten = subTau unifier rhs2
-              ; verbose <- getMode "narrowing"
-              ; whenM verbose [Ds "\n2Norm ",Dd term, Ds " ---> ", Dd rewritten,Ds "; "]
-              ; normTau (push unifier info) rewritten }
-        Nothing -> next }
+           do { let rewritten = sub2Tau unifier rhs2
+              ; verbose <- getMode "narrowing"  
+              ; RankN.whenM verbose [Ds "\n2Norm ",Dd term, Ds " ---> ", Dd rewritten,Ds "; "]
+              ; norm2Tau (push2 unifier info) rewritten }
+        Nothing -> next }       
 normWithDefs info (Branchx pattern path trees) term next = first trees term
   where first [] term = next
         first (t:ts) term = normWithDefs info t term (first ts term)
 
-normRho info (Rtau x) = do { (a,u) <- normTau info x; return(Rtau a,u) }
-normRho info (Rarrow s r) =
-  do { (a,u1) <- normSigma info s
-     ; (b,u2) <- normRho (push u1 info) (subRho u1 r)
-     ; u3 <- comp u2 u1
+
+
+
+norm2Rho :: Info -> Rho -> TC(Rho,Unifier2)
+norm2Rho info (Rtau x) = do { (a,u) <- norm2Tau info x; return(Rtau a,u) }
+norm2Rho info (Rarrow s r) =
+  do { (a,u1) <- norm2Sigma info s
+     ; (b,u2) <- norm2Rho (push2 u1 info) (sub2Rho u1 r)
+     ; let u3 = composeTwo u2 u1
      ; return(Rarrow a b,u3)}
-normRho info (Rpair s r) =
-  do { (a,u1) <- normSigma info s
-     ; (b,u2) <- normSigma (push u1 info) (subSigma u1 r)
-     ; u3 <- comp u2 u1
+norm2Rho info (Rpair s r) =
+  do { (a,u1) <- norm2Sigma info s
+     ; (b,u2) <- norm2Sigma (push2 u1 info) (sub2Sigma u1 r)
+     ; let u3 = composeTwo u2 u1
      ; return(Rpair a b,u3)}
-normRho info (Rsum s r) =
-  do { (a,u1) <- normSigma info s
-     ; (b,u2) <- normSigma (push u1 info) (subSigma u1 r)
-     ; u3 <- comp u2 u1
+norm2Rho info (Rsum s r) =
+  do { (a,u1) <- norm2Sigma info s
+     ; (b,u2) <- norm2Sigma (push2 u1 info) (sub2Sigma u1 r)
+     ; let u3 = composeTwo u2 u1
      ; return(Rsum a b,u3)}
 
-normPred :: Info -> Pred -> TC(Pred,Unifier)
-normPred info (Equality x y) =
-  do { ([a,b],u) <- normTauL info [x,y]; return(Equality a b,u)}
-normPred info (Rel t) =
-  do { (a,u) <- normTau info t; return(Rel a,u) }
+
+norm2Pred :: Info -> Pred -> TC(Pred,Unifier2)
+norm2Pred info (Equality x y) =
+  do { ([a,b],u) <- norm2TauL info [x,y]; return(Equality a b,u)}
+norm2Pred info (Rel t) =
+  do { (a,u) <- norm2Tau info t; return(Rel a,u) }
+
 
 
 ---------------------------
-normForAllArgs info [] = return([],[])
-normForAllArgs info ((nm,MK k,q):ts) =
-  do { (k',u2) <- normTau info k
-     ; let f (nm,MK tau,q) = (nm,MK(subTau u2 tau),q)
-     ; (ts',u3) <- normForAllArgs (push u2 info) (map f ts)
-     ; u4 <- comp u3 u2
+norm2ForAllArgs info [] = return([],([],[]))
+norm2ForAllArgs info ((nm,MK k,q):ts) =
+  do { (k',u2) <- norm2Tau info k
+     ; let f (nm,MK tau,q) = (nm,MK(sub2Tau u2 tau),q)
+     ; (ts',u3) <- norm2ForAllArgs (push2 u2 info) (map f ts)
+     ; let u4 = composeTwo u3 u2
      ; return((nm,MK k',q):ts',u4)}
 
-normSigma:: Info -> Sigma -> TC(Sigma,Unifier)
-normSigma info (Forall xs) =
+norm2Sigma:: Info -> Sigma -> TC(Sigma,Unifier2)
+norm2Sigma info (Forall xs) =
   do { (ys,(eqn,rho)) <- unwind xs
-     ; (ys',u0) <- normForAllArgs info ys
-     ; (eqn',u1) <- normPredL (push u0 info) (subPred u0 eqn)
-     ; u2 <- comp u1 u0
-     ; (rho',u3) <- normRho (push u2 info) (subRho u2 rho)
-     ; u4 <- comp u3 u2
+     ; (ys',u0) <- norm2ForAllArgs info ys
+     ; (eqn',u1) <- norm2PredL (push2 u0 info) (sub2Pred u0 eqn)
+     ; let u2 = composeTwo u1 u0
+     ; (rho',u3) <- norm2Rho (push2 u2 info) (sub2Rho u2 rho)
+     ; let u4 = composeTwo u3 u2
      ; return(Forall(windup ys' (eqn',rho')),u4)}
+
 
 -- Lifting normalizing functions
 
-liftNf:: (Info -> t -> TC(s,Unifier)) -> t -> TC(s,Unifier,[Pred])
+liftNf:: (Info -> t -> TC(s,Unifier2)) -> t -> TC(s,Unifier2,[Pred])
 liftNf f tau =
   do { env <- tcEnv
      ; truths <- getTruths
      -- ; warnM [Ds "The rules =\n  ",Dl (concat(map snd(Map.toList(rules env)))) "\n  "]
      ; (tau',unifier) <- f (rules env,tyfuns env,truths) tau
-     ; return(tau',unifier,subPred unifier truths)}
+     ; return(tau',unifier,sub2Pred unifier truths)}
 
-nfTau = liftNf normTau
-nfPredL = liftNf normPredL
+nfTau = liftNf norm2Tau
+nfPredL = liftNf norm2PredL
 
 
 -- Does a term normalize to a non-TyFun term, and not extend the refinement?
@@ -3020,52 +3044,52 @@ normTyFunTau (x@(TyFun _ _ _)) =
   do { ans <- nfTau x
      ; case ans of
         (TyFun nm k args,_,_) -> return Nothing
-        (result,[],_) -> return(Just result)
+        (result,([],[]),_) -> return(Just result)
         _ -> return Nothing }
 normTyFunTau _ = return Nothing
 
 ----------------------------------------------------------------
 -- Normalizing structured objects like lists and pairs
 
-normPair:: (Info -> t -> TC(t,Unifier)) -> (Unifier -> t -> t) -> Info -> (t,t)-> TC ((t,t),Unifier)
-normPair f sub info (x,y) =
+norm2Pair:: (Info -> t -> TC(t,Unifier2)) -> (Unifier2 -> t -> t) -> Info -> (t,t)-> TC ((t,t),Unifier2)
+norm2Pair f sub info (x,y) =
   do { (x',u2) <- f info x
-     ; (y',u3) <- f (push u2 info) (sub u2 y)
-     ; ; u4 <- comp u3 u2
+     ; (y',u3) <- f (push2 u2 info) (sub u2 y)
+     ; let u4 = composeTwo u3 u2
      ; return((x',y'),u4)}
 
-normL:: (Info -> t -> TC(t,Unifier)) -> (Unifier -> t -> t) -> Info -> [t] -> TC ([t],Unifier)
-normL f sub info [] = return([],[])
-normL f sub info (t:ts) =
+norm2L:: (Info -> t -> TC(t,Unifier2)) -> (Unifier2 -> t -> t) -> Info -> [t] -> TC ([t],Unifier2)
+norm2L f sub info [] = return([],([],[]))
+norm2L f sub info (t:ts) =
   do { (t',u2) <- f info t
-     ; (ts',u3) <- normL f sub (push u2 info) (map (sub u2) ts)
-     ; u4 <- comp u3 u2
+     ; (ts',u3) <- norm2L f sub (push2 u2 info) (map (sub u2) ts)
+     ; let u4 = composeTwo u3 u2
      ; return(t':ts',u4)}
 
-normPairL:: Info -> [(Tau,Tau)] -> TC ([(Tau,Tau)],Unifier)
-normPairL i ps = normL (normPair normTau subTau) subPair i ps
-  where  subPair u (x,y) = (subTau u x,subTau u y)
+norm2PairL:: Info -> [(Tau,Tau)] -> TC ([(Tau,Tau)],Unifier2)
+norm2PairL i ps = norm2L (norm2Pair norm2Tau sub2Tau) subPair i ps
+  where  subPair u (x,y) = (sub2Tau u x,sub2Tau u y)
 
-crossPairL:: Info -> [(Tau,Tau)] -> TC ([(Tau,Tau)],Unifier)
-crossPairL i ps = normL (normPair crossThenNorm subTau) subPair i ps
-  where  subPair u (x,y) = (subTau u x,subTau u y)
+cross2PairL:: Info -> [(Tau,Tau)] -> TC ([(Tau,Tau)],Unifier2)
+cross2PairL i ps = norm2L (norm2Pair crossThenNorm sub2Tau) subPair i ps
+  where  subPair u (x,y) = (sub2Tau u x,sub2Tau u y)
          crossThenNorm i tau =
             do { (tau1,u1) <- crossF i tau
                ; if not(tau==tau1)
-                     then do { (tau2,u2) <- normTau i tau1
-                             ; return(tau2,composeMGU u2 u1)}
+                     then do { (tau2,u2) <- norm2Tau i tau1
+                             ; return(tau2,composeTwo u2 u1)}
                      else return (tau1,u1)
                }
 
-normTauL:: Info -> [Tau] -> TC ([Tau],Unifier)
-normTauL info ts = normL normTau subTau info ts
+norm2TauL:: Info -> [Tau] -> TC ([Tau],Unifier2)
+norm2TauL info ts = norm2L norm2Tau sub2Tau info ts
 
 -- not quite a list since normPred:: Pred ->[Pred]
-normPredL info [] = return([],[])
-normPredL info (t:ts) =
-  do { (t',u2) <- normPred info t
-     ; (ts',u3) <- normPredL (push u2 info) (subPred u2 ts)
-     ; u4 <- comp u3 u2
+norm2PredL info [] = return([],([],[]))
+norm2PredL info (t:ts) =
+  do { (t',u2) <- norm2Pred info t
+     ; (ts',u3) <- norm2PredL (push2 u2 info) (sub2Pred u2 ts)
+     ; let u4 = composeTwo u3 u2
      ; return(removeCommonTyCon t' ++ ts',u4)}
 
 --------------------------------------------------------------
@@ -3073,29 +3097,29 @@ normPredL info (t:ts) =
 -- If we know (Equal z {f x y}) and we have term with with subterms {f x y}
 -- denoted: Term[{f x y}], then rebuild it as  Term[z]
 
-crossFertilize:: Info ->  (Tau,Unifier) -> TC(Tau,Unifier)
+crossFertilize:: Info ->  (Tau,Unifier2) -> TC(Tau,Unifier2)
 crossFertilize (info@(rules,defs,truths)) (term,u) = find truths
   where find [] = return (term,u)
         find ((t@(Equality x y)):ts) | (term==y) && (not(x == y)) =
               warnM [Ds "\nCross fertilizing with:\n  ",Dd t] >>
-              normTau (push u info) x
+              norm2Tau (push2 u info) x
         find (t:ts) = find ts
 
-crossF info (y@(TyVar nm k)) = return(y,[])
+crossF info (y@(TyVar nm k)) = return(y,([],[]))
 crossF info (app@(TyApp x y)) =
-   do { ((a,b),u) <- normPair crossF subTau info (x,y)
+   do { ((a,b),u) <- norm2Pair crossF sub2Tau info (x,y)
       ; return(TyApp a b,u)}
-crossF info (TyCon sx l nm k) = return(TyCon sx l nm k,[])
-crossF info (Star n) = return(Star n,[])
+crossF info (TyCon sx l nm k) = return(TyCon sx l nm k,([],[]))
+crossF info (Star n) = return(Star n,([],[]))
 crossF info (Karr x y) =
-   do {((a,b),u) <- normPair crossF subTau info (x,y); return(Karr a b,u)}
+   do {((a,b),u) <- norm2Pair crossF sub2Tau info (x,y); return(Karr a b,u)}
 crossF info (TyFun nm k xs) =
-   do { (ys,unifier) <- normL crossF subTau info xs
+   do { (ys,unifier) <- norm2L crossF sub2Tau info xs
       ; let new = (TyFun nm k ys)
-      ; crossFertilize (push unifier info) (new,unifier)}
-crossF info (TcTv v) = return(TcTv v,[])
+      ; crossFertilize (push2 unifier info) (new,unifier)}
+crossF info (TcTv v) = return(TcTv v,([],[]))
 crossF info (TySyn nm n vs xs t) =
-   do { (t':xs',u) <- normL crossF subTau info (t:xs)
+   do { (t':xs',u) <- norm2L crossF sub2Tau info (t:xs)
       ; return(TySyn nm n vs xs' t',u)}
 crossF info (TyEx l) =
    do { (vs,(ps,body)) <- unwind l
@@ -3110,7 +3134,7 @@ getLemmaRules nm =
      ; rs <- mapM fresh rules
      ; return rs}
 
-isAssumed:: Pred -> TC (Maybe [(TcTv,Tau)])
+isAssumed:: Pred -> TC (Maybe Unifier2)
 isAssumed q =
   do { truths <- getTruths
      ; let matchFirst [] = return Nothing
@@ -3120,13 +3144,13 @@ isAssumed q =
                 Right pairs -> (matchFirst ps)
      ; matchFirst truths }
 
--- matchPred :: Pred -> Pred -> Either Unifier
+matchPred :: Pred -> Pred -> Either Unifier2 [(Tau,Tau)]
 matchPred truth question =
   case work of
     Nothing -> Right []
-    Just pairs -> case mostGenUnify pairs of
-                    Just(_,u) -> Left u
-                    Nothing -> Right pairs
+    Just pairs -> case mgu pairs of
+                    Left u -> Left u
+                    Right _  -> Right pairs
  where work = case (truth,question) of
                 (Rel x,Rel y) -> Just [(x,y)]
                 (Equality x y,Equality a b) -> Just[(x,a),(y,b)]
@@ -3173,17 +3197,17 @@ normUnder truths terms =
      ; whenM False -- (not (null terms))
              [Ds "\nNormalizing\n  ", Dl terms "\n  "]
 
-     ; (ans,unifier,ts) <- inEnv env2 (liftNf normPairL terms')
+     ; (ans,unifier,ts) <- inEnv env2 (liftNf norm2PairL terms')
      ; whenM False -- (not (null terms))
              [Ds "\nNormalized = \n  ",Dl ans "\n  "]
-     ; inEnv (env2{assumptions = ts}) (liftNf crossPairL ans)
+     ; inEnv (env2{assumptions = ts}) (liftNf cross2PairL ans)
      }
 
 
 -- Here we assume the truths and the questions have already been normalized
 
-solveByNarrowing :: (Int,Int) ->(String,Rho) -> [Pred] -> [(Tau,Tau)] -> TC [(TcTv,Tau)]
-solveByNarrowing (nsol,nsteps) context truths [] = return []
+solveByNarrowing :: (Int,Int) ->(String,Rho) -> [Pred] -> [(Tau,Tau)] -> TC Unifier2
+solveByNarrowing (nsol,nsteps) context truths [] = return ([],[])
 solveByNarrowing (nsol,nsteps) context@(s,_) normTruths tests =
     do { verbose <- getMode "narrowing"
        ; (free,levs) <- zonk (map (uncurry TyApp) tests) >>= get_tvs
@@ -3196,37 +3220,37 @@ solveByNarrowing (nsol,nsteps) context@(s,_) normTruths tests =
              hyp = andR(map EqR (foldr pred2Pair [] normTruths))
              originalVar (v,term) = elem v free
 
-
-
-
-
        ; reportEnter context tests conj normTruths
        ; (d2,cntxt) <- showThruDisplay [dProb conj]
-       ; (ans2,(_,_,d3,exceed)) <- narr cntxt (nsteps,nsol,d2,False) [(conj,hyp,[])] []
-       ; let termOf (TermP x,ts,un) = (x,un)
-             termOf (EqP(x,y),ts,un) = (teq x y,un)
+       ; (ans2,(_,_,d3,exceed)) <- narr cntxt (nsteps,nsol,d2,False) [(conj,hyp,([],[]))] []
+       ; let termOf (TermP x,ts,(ls,un)) = (x,(ls,un))
+             termOf (EqP(x,y),ts,(ls,un)) = (teq x y,(ls,un))
        ; result <- if exceed
             then do {(solvedByDecProc) <- tryCooper (foldr pred2Pair [] normTruths) conj
                     ; if solvedByDecProc
-                         then return[]
+                         then return([],[])
                          else failM 0 [Ds "Solving the equations: ",Dd tests
                                       ,Ds " exceeded narrowing resources."]}
             else case map termOf ans2 of
-                  [(xinstan,unifier)] -> checkKind (filter originalVar unifier)
-
+                  [(xinstan,(levelvars,unifier))] -> 
+                     do { vs <- checkKind (filter originalVar unifier); return(levelvars,vs)}
                   [] -> failM 0 [Ds "The equations: ",Dd tests,Ds " have no solution"]
                   others -> moreThanOne context normTruths originalVar conj others
        ; reportExit result
-       ; zonk result}
+       ; zonk2 result}
+
+zonk2 (ls,vs) = do { ls' <- mapM f ls; vs' <- mapM g vs; return(ls',vs')}
+  where f (x,y) = do { z <- zonkLv y; return(x,z)}
+        g (x,y) = do { z <- zonk y; return(x,z)}
 
 newToOld ex ans = (if ex then Exceeded else Answers)(map g ans)
-  where g (TermP x,ts,un) = (x,un)
-        g (EqP(x,y),ts,un) = (teq x y,un)
+  where g (TermP x,ts,(ls,un)) = (x,un)
+        g (EqP(x,y),ts,(ls,un)) = (teq x y,un)
 
-simplyTrue :: Pred -> TC (Maybe [(TcTv,Tau)])
-simplyTrue (Rel (TyApp (TyCon sx _ "Nat'" k) x)) = return(Just [])
+simplyTrue :: Pred -> TC (Maybe Unifier2)
+simplyTrue (Rel (TyApp (TyCon sx _ "Nat'" k) x)) = return(Just ([],[]))
 simplyTrue (p@(Equality x y)) =
-  do { ((x2,y2),unifier,newTruths) <- liftNf (normPair normTau subTau) (x,y)
+  do { ((x2,y2),unifier,newTruths) <- liftNf (norm2Pair norm2Tau sub2Tau) (x,y)
      ; if x2 == y2
           then return (Just unifier)
           else return Nothing
@@ -3236,13 +3260,13 @@ simplyTrue _ = return Nothing
 moreThanOne context truths originalVar x others =
  do { solvedByDecisionProc <- tryCooper (foldr pred2Pair [] truths) x
     ; case (x,solvedByDecisionProc) of
-        (_,True) -> return []
+        (_,True) -> return ([],[])
         (EqP(x,y),_) ->
             (maybeM (simplyTrue (Equality x y))
                     (\ u -> exit x (Just u))
                     (exit x Nothing))
         (other,_) -> exit x Nothing}
- where proj (t,u) = filter originalVar u
+ where proj (t,(ls,u)) = (ls,filter originalVar u)
        short = map proj others
        contextElem (name,Rtau(Star LvZero)) =
            Ds ("While infering the type for: "++name)
@@ -3255,7 +3279,7 @@ moreThanOne context truths originalVar x others =
           ,Dd origterm
           ,Ds "\nUnder the truths\n ",Dl truths "\n "
           ,Ds "\nBut, it has ambiguous solutions:\n  "
-          ,Dl short "\n  "]
+          ,Dl (map snd short) "\n  "]
 
 -----------------------------------------------------------------
 -- To solve by narrowing we need some helper functions
@@ -3280,7 +3304,7 @@ reportEnter p conj normf truths =
          ,Dwrap 80 "Assumptions: " truths ", "
          ,Dwrap 80 "   Theorems: " rs ", "]}
 
-reportExit ans =
+reportExit (levelvars,ans) =
  do { truths <- getAssume
     ; verbose <- getMode "narrowing"
     ; whenM verbose [Ds "\nAnswers = ", Dd ans,Ds "\nTruths = ",Dd truths]
@@ -3305,7 +3329,7 @@ checkKind ((v@(Tv n f (MK k)), term):more) =
 tryCooper :: [(Tau,Tau)] -> Prob Tau -> TC Bool
 tryCooper truths x =
   do { let xnorm = prob2Tau x
-     ; (truthsnorm,_,_) <- liftNf normPairL truths
+     ; (truthsnorm,_,_) <- liftNf norm2PairL truths
      ; xZonk <- zonk xnorm
      ; truthsZonk <- zonk truthsnorm
      ; (d3,_) <- showThruDisplay [Dd truthsZonk,Dd xZonk]
@@ -3539,21 +3563,23 @@ getRefinementRules newrules =
 subT env t = sub ([],env,[],[]) t
 
 commutingMatch (a,b) (x,y) =
-  case match [] [(a,x),(b,y)] of
+  case match2 ([],[]) [(a,x),(b,y)] of
     Just u -> Just u
-    Nothing -> match [] [(b,x),(a,y)]
+    Nothing -> match2 ([],[]) [(b,x),(a,y)]
 
-establish :: Bool -> [Pred] -> TC(Maybe [(TcTv,Tau)])
+establish :: Bool -> [Pred] -> TC(Maybe Unifier2)
 establish False _ = return Nothing
-establish True [] = return(Just [])
+establish True [] = return(Just ([],[]))
 establish True (p:ps) =
   maybeM (simplyTrue p)
          (\ u1 -> maybeM (establish True ps)
-                         (\ u2 -> do { u3 <- comp u2 u1; return (Just u3)})
+                         (\ u2 -> do { let u3 = composeTwo u2 u1
+                                     ; return (Just u3)})
                          (return Nothing))
          (maybeM (isAssumed p)
                  (\ u1 -> maybeM (establish True ps)
-                                 (\ u2 -> do { u3 <- comp u2 u1; return (Just u3)})
+                                 (\ u2 -> do { let u3 = composeTwo u2 u1
+                                             ; return (Just u3)})
                                  (return Nothing))
                  (return Nothing))
 
@@ -3567,7 +3593,8 @@ applyRefinements (lemma:more) (x,y) =
   -- warnM [Ds "\n",Dd lemma,Ds "\n(a,b) = ",Dd (a,b), Ds "\n(x,y) = ",Dd (x,y)] >>
   do { (vs,preds,(a,b),refinement) <- freshRefinement lemma
      ; case commutingMatch (a,b) (x,y) of
-         Just u1 -> do { new <- subT u1 refinement
+         Just (_,u1) -> 
+                    do { new <- subT u1 refinement
                        ; let preconds = (subPred u1 preds)
                        ; verbose <- getMode "theorem"
                        ; whenM verbose
@@ -3576,20 +3603,21 @@ applyRefinements (lemma:more) (x,y) =
                            ,Dd (Equality x y),Ds "  --->  ",Dd new
                            ]
                        ; maybeM (establish True preconds)
-                          (\ u2 -> do { u3 <- comp u2 u1
-                                      ; ans <- subT u3 refinement
+                          (\ u2 -> do { let u3 = composeTwo u2 ([],u1)
+                                            ans = sub2Pred u3 refinement
                                       ; return(Just(u3,ans))})
                           (applyRefinements more (x,y))}
          Nothing -> applyRefinements more (x,y)}
 
+extendEqsWithRules :: [RWrule] -> [Pred] -> [Pred] -> TC[Pred]
 extendEqsWithRules rules [] new = return new
 extendEqsWithRules rules (p:ps) new =
    case p of
     (Equality x y) -> maybeM (applyRefinements rules (x,y)) next1 next2
     (Rel t) -> next2
   where next1 (u,ok) =
-          do { new2 <- subT u new
-             ; p2 <- subT u p
+          do { let new2 = sub2Pred u new
+                   [p2] = sub2Pred u [p]
              ; extendEqsWithRules rules (nub(ps ++ok)) (p2 : new2)}
         next2 = extendEqsWithRules rules ps (p : new)
 
@@ -3605,7 +3633,7 @@ extendEqsWithRules rules (p:ps) new =
 refine refinement eqs newRules =
   do { rules <- getRefinementRules newRules
      ; outerTruths <- getTruths
-     ; (normTruths,_,_) <- underRules newRules (liftNf normPredL eqs)
+     ; (normTruths,_,_) <- underRules newRules (liftNf norm2PredL eqs)
      ; newEqs <- extendEqsWithRules rules normTruths []
      ; let (pairs,truths) = split newEqs [] []
      ; newRefine <- comp pairs refinement
@@ -3774,27 +3802,27 @@ matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
 -- simpler predicates. If the returned list is empty, then the input
 -- is solved.
 
-solveConstraints :: ([Char],Rho) -> TcEnv -> [Pred] -> Mtc TcEnv Pred ([(TcTv,Tau)],[Pred],[Tau],[Tau])
+solveConstraints :: ([Char],Rho) -> TcEnv -> [Pred] -> Mtc TcEnv Pred (Unifier2,[Pred],[Tau],[Tau])
 solveConstraints (nm,rho) env collected =
   do { -- Split into Equalities and Relations, and normalize everything.
      ; let (oblig,residual) = splitR collected ([],[])
            assump = assumptions env -- Truths stored in the extended environment
            rules = getRules "" env
-     ; (truths1,u0,_) <- inEnv env (liftNf normPredL assump)
-     ; let oblig2 = foldr pred2Pair [] (subPred u0 oblig)
+     ; (truths1,u0,_) <- inEnv env (liftNf norm2PredL assump)
+     ; let oblig2 = foldr pred2Pair [] (sub2Pred u0 oblig)
      ; (normOblig,u1,normTruths) <- inEnv env (normUnder truths1 oblig2)
      ; steps <- getBound "narrow" 25
      ; u2 <- handleM 2
                   (inEnv env (solveByNarrowing (3,steps) ("9."++nm,rho) normTruths normOblig))
                   (underErr nm rules assump oblig)
-     ; let u3 = u2 `o` (u1 `o` u0)
-     ; expandTruths <- inEnv env (expandTruths2 (subPred u3 normTruths))
-     ; (residual',u3b,_) <- liftNf normTauL residual -- Normalize residual constraints
-     ; let u3c = u3 `o` u3b
-     ; (unsolved,un4) <- inEnv env (solvP expandTruths (map (subTau u3c) residual'))
-     ; let u5 = un4 `o` u3c
-     ; let truths = (map (subTau u5) expandTruths)
-           need = (map (subTau u5) residual)
+     ; let u3 = composeTwo u2 (composeTwo u1 u0)
+     ; expandTruths <- inEnv env (expandTruths2 (sub2Pred u3 normTruths))
+     ; (residual',u3b,_) <- liftNf norm2TauL residual -- Normalize residual constraints
+     ; let u3c = composeTwo u3 u3b
+     ; (unsolved,un4) <- inEnv env (solvP expandTruths (map (sub2Tau u3c) residual'))
+     ; let u5 = composeTwo ([],un4) u3c
+     ; let truths = (map (sub2Tau u5) expandTruths)
+           need = (map (sub2Tau u5) residual)
      ; return(u5,unsolved,truths,need)}
 
 splitR [] (eqs,rels) = (eqs,rels)
@@ -3894,9 +3922,9 @@ checkTau ((r@(RW nm key Refinement _ _ _ _)):rs) truth = checkTau rs truth
 checkTau ((r@(RW nm key Axiom _ _ _ _)):rs) truth =
   do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newflexi r
      ; ys <- checkTau rs truth
-     ; case match [] [(lhs,truth)] of
+     ; case match2 ([],[]) [(lhs,truth)] of
         Just unifier -> do { let rhsts = map (unRel 33) rhs
-                                 new = map (subTau unifier) rhsts
+                                 new = map (sub2Tau unifier) rhsts
                            ; verbose <- getMode "solving"
                            ; whenM verbose [Ds ("Axiom "++nm++" expands truths by:\n  "),Dl new "\n  "]
                            ; return(new ++ ys)}
@@ -4705,10 +4733,10 @@ wellTyped env e = tcInFIO env
       ; (vs,passOn,solvePs) <- partByFree oblig
       -- ; warnM [Ds "Vars in Toplevel term: ",Dl vs ", " ]
       -- ; warnM [Ds "Obligations at top level are: ",Dd oblig]
-      ; (oblig2,_,_) <- liftNf normPredL solvePs
+      ; (oblig2,_,_) <- liftNf norm2PredL solvePs
       ; env <- tcEnv
       ; (u,oblig3,_,_) <- solveConstraints (show e,t) env oblig2
-      ; (typ,_,_) <- liftNf normRho t
+      ; (typ,_,_) <- liftNf norm2Rho t
       ; when (not(null oblig3) && not(arrowP typ))
              (failD 0 [Ds "Unresolved obligations:\n  ",Dl oblig3 "\n  "
                       , Ds " => ", Dd typ])
@@ -4784,7 +4812,7 @@ narrowString env count s =
      ; d0 <- readRef dispRef
      ; let (d1,cntxt) = displays d0 [Dd newTau]
      ; writeRef dispRef d1
-     ; (sols,(_,_,d1,ex)) <- narr cntxt (20,n,d1,False) [(TermP newTau,andR[],[])] []
+     ; (sols,(_,_,d1,ex)) <- narr cntxt (20,n,d1,False) [(TermP newTau,andR[],([],[]))] []
      ; if null sols && not ex
           then warnM [Ds "\nNo possible solutions\n"]
           else showSols us (newToOld ex sols)
