@@ -168,6 +168,8 @@ name,constructor :: Parser Var
 constructor = terminal conName Global
 name = terminal identifier Global
 
+
+
 -----------------------------------------------------------
 -- Syntactic Extensions
 -- They come with or without suffixes. Without suffixes they are
@@ -552,7 +554,8 @@ pCommand :: Parser Command    -- Parse a command
 pCommand =
   (try (eof >> return EmptyCom))
   <|>
-  (try (do { symbol ":"; Global x <- name
+  (try (do { symbol ":"
+           ; x <- lexeme(identifier <|> string "kind" <|> string "type")
            ; rest <- many (satisfy (\ x-> True))
            ; return (ColonCom x rest)}))
   <|>
