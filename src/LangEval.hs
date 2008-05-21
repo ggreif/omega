@@ -688,13 +688,13 @@ run = lift1 "run" g where
 
 
 reifyV = lift1 "lift" f where
-  f x = do { v <- (reify x); return(Vcode v empty)}
+  f x = do { v <- reify x; return(Vcode v empty)}
 
 reify :: Monad m => V -> m Exp
 reify (Vlit x) = return(Lit x)
-reify (Vsum j v) = do { x <- (reify v); return(Sum j x)}
+reify (Vsum j v) = do { x <- reify v; return(Sum j x)}
 reify (Vprod x y) = do { a <- reify x; b <- reify y; return(Prod a b)}
-reify (Vcon (c,_) vs) = do { us <- (mapM reify vs); return(f (Var c) us)}
+reify (Vcon (c,_) vs) = do { us <- mapM reify vs; return(f (Var c) us)}
   where f g [] = g
         f g (x:xs) = f (App g x) xs
 reify v = return(Lit(CrossStage v))
