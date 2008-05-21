@@ -130,8 +130,7 @@ consDownf f (Vcon (Global "[]",Lx("","[]",":")) []) = []
 consDownf f (Vcon (Global ":",Lx("","[]",":")) [x,xs]) = (f x) : (consDown xs)
 consDownf f v = error ("Value not a list in from List: "++(show v))
 
-lift1 name f = Vprimfun name (analyzeWith g)
-  where g v = f v
+lift1 name f = Vprimfun name (analyzeWith f)
 
 lift2 name f = Vprimfun name (analyzeWith g)
   where g v = return(lift1 (name++" "++show v) (f v))
@@ -175,7 +174,7 @@ instance (Encoding a,Encoding b) => Encoding (a -> FIO b) where
 -}
 
 -- for functions without monadic ranges (FIO a) we can always turn them into V
--- but its impossible to pull functions back from V with those types. Here
+-- but it's impossible to pull functions back from V with those types. Here
 -- are three functions for the forward path
 
 to1 :: (Encoding a, Encoding b) => String -> (a -> b) -> V
@@ -221,7 +220,7 @@ instance Encoding Float where
 instance Encoding Char where
     to n = Vlit(Char n)
     from (Vlit(Char n)) = n
-    from v = error ("Value not an Char: "++(show v))
+    from v = error ("Value not a Char: "++(show v))
 
 instance Encoding Bool where
     to True = (Vcon (Global "True",Ox) [])
@@ -240,12 +239,12 @@ instance Encoding a => Encoding (Maybe a) where
 instance (Encoding a,Encoding b) => Encoding (a,b) where
     to (a,b) = Vprod (to a) (to b)
     from (Vprod x y) = (from x,from y)
-    from v = error ("Value not an pair: "++(show v))
+    from v = error ("Value not a pair: "++(show v))
 
 instance (Encoding a,Encoding b,Encoding c) => Encoding (a,b,c) where
     to (a,b,c) = Vprod (to a) (Vprod (to b) (to c))
     from (Vprod x (Vprod y z)) = (from x,from y,from z)
-    from v = error ("Value not an triple: "++(show v))
+    from v = error ("Value not a triple: "++(show v))
 
 instance (Encoding a,Encoding b,Encoding c,Encoding d) => Encoding (a,b,c,d) where
     to (a,b,c,d) = Vprod (to a) (Vprod (to b) (Vprod (to c) (to d)))

@@ -180,7 +180,7 @@ name = terminal identifier Global
 -- Tuples   (2,True)    (2,True,"x")i
 -- Records              {a=4, b=True}i  {a=4, b=True; r}i
 
--- If a syntacitc extension has the empty string as a suffix
+-- If a syntactic extension has the empty string as a suffix
 -- turn it into the normal kind of syntactic sugar
 
 extToExp (Pairx xs "") = expTuple xs
@@ -220,7 +220,7 @@ asPattern =
 
 infixPattern =
   do { p1 <- try conApp <|> simplePattern
-                    --  E.g. "(L x : xs)" should parses as ((L x) : xs) rather than (L(x:xs))
+                    --  E.g. "(L x : xs)" should parse as ((L x) : xs) rather than (L(x:xs))
      ; x <- constrOper
      ; p2 <- pattern
      ; return (Pcon (Global x) [p1,p2])
@@ -533,7 +533,7 @@ code =
      ; return(Bracket e)}
 
 -------------------------------------------------------------------------
------------------ Read eval printloop commands ------------
+----------------- Read-eval-print loop commands ------------
 
 data Command =
     ColonCom String String   -- :t x

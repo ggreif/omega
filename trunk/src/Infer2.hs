@@ -705,7 +705,7 @@ typeExp mod (Case exp ms) (Infer ref) =
         ; ((domain,e2),oblig) <- peek (infer exp)
         ; dom <- case domain of
                   Rtau d -> return d
-                  x -> failM 3 [Ds "Infering the type of ",Dd (Case exp ms)
+                  x -> failM 3 [Ds "Inferring the type of ",Dd (Case exp ms)
                                ,Ds " returns Rho type: ",Dd x]
         ; ms2 <- checkL oblig mod ms dom rng
         ; writeRef ref rng
@@ -951,7 +951,7 @@ peek :: TC a -> TC (a,[Pred])
 peek x = do { (a,eqs) <- collectPred x; injectA " peek " eqs; return(a,eqs) }
 
 --------------------------------------------------------------------------
--- Bodys are Typable
+-- Bodies are Typable
 
 instance Typable (Mtc TcEnv Pred) (Body Exp) Rho where
   tc = typeBody Wob
@@ -964,7 +964,7 @@ typeBody mod (Guarded xs) expect = do { xs' <- mapM f xs; return(Guarded xs')}
      where f (test,body) =
              binaryLift(,)(typeExp Rig test (Check(Rtau boolT)))
                           (typeExp mod body expect)
-typeBody mod Unreachable expect = failD 3 [Ds "No Unreaachable Yet 1"]
+typeBody mod Unreachable expect = failD 3 [Ds "No Unreachable Yet 1"]
 
 -----------------------------------------------------------
 -- (Case matches) are Typeable
@@ -1476,7 +1476,7 @@ tauToPred tau = Rel tau
 badRefine pat expect computed s x y =
   do { kindelems <- showKinds2 (expect,computed)
      ; failK "bad refinement" 2
-          [Ds "\nWhile infering the type of the pattern: ",Dd pat
+          [Ds "\nWhile inferring the type of the pattern: ",Dd pat
           ,Ds "\nwe expected it to have type: ",Dd expect
           ,Ds "\nbut we computed type: ",Dd computed
           ,Dr kindelems
@@ -1715,7 +1715,7 @@ buildEnv newf ((nm,k,q):xs) env pairs =
 
 -- ====================================================================
 -- Types in syntax are stored as PT, we need to translate them
--- into Sigma types, and check that their well formed with Kind *
+-- into Sigma types, and check that they are well formed with Kind *
 -- PT types stored in Data Decs are handled differently because they
 -- may have kinds other than *, and they are not always generalized.
 -- We return a Sigma type, and a Fresh Rho type, and update the Display so it maps
@@ -1754,7 +1754,7 @@ checkPT name loc pt =
                ; subst2 <- compX [(nm2,TcTv v)] subst
                  -- the infered names (ys) my include types not in the explicit (xs) , skip over such
                ; (subst3,skols) <- rigid (if nm==nm2 then xs else (s,nm):xs) ys subst2
-               ; newname <- registerDisp syn v    -- Update the Display to map the ridgid to the PT name
+               ; newname <- registerDisp syn v    -- Update the Display to map the rigid to the PT name
                ; return(subst3,v:skols)}
         rigid _ _ subst = return(subst,[])
         err s = failD 2 [Ds "The prototype:  ",Dd pt,Ds "\ndoes not have kind *0, because ",Ds s]
@@ -1836,13 +1836,13 @@ introLorR (loc,var,args,preds,typ) = False
 
 
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) | any introLorR cs =
-  failM 1 [Ds "\nThe data decl: ",Ds name,Ds " has a contructor named 'L' or 'R'."
+  failM 1 [Ds "\nThe data decl: ",Ds name,Ds " has a constructor named 'L' or 'R'."
           ,Ds "\nThese names are reserved for the sum type. L:: a -> (a+b), R:: b -> (a+b)"]
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) =
   do { (vs,level,sigma) <- univLevelFromPTkind k
      ; return(decl,(isP,name,sigma,level,loc,vs))}
 kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs _)) =
-  failM 1 [Ds "\nData decs should have been translated way.\n",Ds (show decl)]
+  failM 1 [Ds "\nData decs should have been translated away.\n",Ds (show decl)]
 
 -- Given T :: a ~> b ~> * ; data T x y = ... OR data T (x:a) (y:b) = ...
 -- Bind the args to their kinds [(x,a),(y,b)]. If there is No kind
@@ -1926,7 +1926,7 @@ checkDataDecs decls =
      ; css <- mapM (constrType env2) ds2                       -- Step 2
      -- After checking ConFuns, zonk and generalize Type Constructors
      ; tyConMap2 <- mapM genTyCon tyConMap
-     -- Then generalize the Construtor functions as well
+     -- Then generalize the Constructor functions as well
      ; conFunMap2 <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
      ; let ds2 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
            exts = filter (/= Ox) (map (\ (newd,synext,strata,isprop,zs) -> synext) css)
@@ -3095,7 +3095,7 @@ norm2PredL info (t:ts) =
 --------------------------------------------------------------
 -- Cross fertilization
 -- If we know (Equal z {f x y}) and we have term with with subterms {f x y}
--- denoted: Term[{f x y}], then rebuild it as  Term[z]
+-- denoted: Term[{f x y}], then rebuild it as Term[z]
 
 crossFertilize:: Info ->  (Tau,Unifier2) -> TC(Tau,Unifier2)
 crossFertilize (info@(rules,defs,truths)) (term,u) = find truths
@@ -3269,7 +3269,7 @@ moreThanOne context truths originalVar x others =
  where proj (t,(ls,u)) = (ls,filter originalVar u)
        short = map proj others
        contextElem (name,Rtau(Star LvZero)) =
-           Ds ("While infering the type for: "++name)
+           Ds ("While inferring the type for: "++name)
        contextElem (name,rho) =
            Dr [Ds ("\nWhile checking: "++name++":: "),Dd rho]
        exit origterm (Just u) = return u
@@ -3394,7 +3394,7 @@ instance NameStore d => Exhibit d Tpat where
 
 instance (NameStore d,Exhibit d x) => Exhibit d (Body x) where
   exhibit d (Normal e) = exhibit d e
-  exhibit d (Guarded xs) = (d,"NoGuards yet")
+  exhibit d (Guarded xs) = (d,"No Guardeds yet")
 
 instance  (NameStore a) => Exhibit a RuleClass where
   exhibit d x =(d,show x)
@@ -3552,7 +3552,7 @@ freshRefinement r =
  do { info <- freshRule newflexi r
     ; case info of
        (commutes,vars,precond,Equality a b,rhs) -> return(vars,precond,(a,b),rhs)
-       _ -> failD 2 [Ds "In freshRefinement ",Dd r,Ds " is not a refinememnt lemma."]
+       _ -> failD 2 [Ds "In freshRefinement ",Dd r,Ds " is not a refinement lemma."]
     }
 
 getRefinementRules newrules =
@@ -3649,8 +3649,8 @@ refine refinement eqs newRules =
 
 
 -- preds and qs start out identical, as we accumulate the refinement
--- we apply the refinement to preds, so it propogates, but we don't want it to
--- accumulate in truths, so when its not an refinement we put q on truths
+-- we apply the refinement to preds, so it propagates, but we don't want it to
+-- accumulate in truths, so when it's not a refinement we put q on truths
 
 split ((Equality (TcTv v@(Tv un (Rigid _ _ _) k)) y):preds) refine truths =
     split (subPred [(v,y)] preds) ((v,y):refine) truths
@@ -3688,7 +3688,7 @@ rootConst _ _ = fail "Not an application of a TyCon"
 -- Given a set of truths and a set of predicates that ALL need to be
 -- solved, If we can unify any of the predicates with a truth we can
 -- remove it from the predicates needing solution. This makes the set
--- of things that must ALL be true smaller, But for each unifcation
+-- of things that must ALL be true smaller, But for each unification
 -- we must duplicate the whole smaller problem. That is why we get a
 -- list of smaller problems to solve. Solving any one of these will
 -- solve the original problem. We should prefer solutions with the
@@ -4098,7 +4098,6 @@ predefined =
  "data Parser (x::*0) = primitive\n"++
  "kind Tag = primitive\n"++
  "data Label (t :: Tag) = primitive\n"++
- "data Bind (x::*0) (y::*0) = primitive\n"++
  "data Bool:: *0 where\n"++
  "  True:: Bool\n"++
  "  False:: Bool\n"++
@@ -4117,7 +4116,6 @@ predefined =
  "  Z:: Nat' Z\n"++
  "  S:: forall (a:: Nat) . Nat' a -> Nat' (S a)\n"++
  " deriving Nat(v)\n"++
- --"data Equal a b = Eq where a=b\n"++
 -- "data Equal :: forall (a:: *1) . a ~> a ~> *0 where\n"++
 -- "  Eq:: forall (b:: *1) (x:: b) . Equal x x\n"++
 
@@ -4360,7 +4358,7 @@ tcCircuit vs e ds expect =
 --    out1 = Delay Low out2
 --    out2 = Xor change out1
 --
--- which has the intermnediate form:
+-- which has the intermediate form:
 -- InterF 2 [change] out2 [(1,out1,Bit,Delay Low out2),(0,out2,Bit,Xor change out1)]
 -- ==========================================
 
@@ -4646,7 +4644,7 @@ checkDecs env ds =
 
 -- when we check a declaration constraints that don't mention
 -- any of the variables in the decl are passed upwards to be solved
--- by enclosing decls. At top level, their are no enclosing decls
+-- by enclosing decls. At top level, there are no enclosing decls
 -- and the only constraints that get passed upwards are ones with
 -- no variables (we hope). Here is where we try and solve them.
 
@@ -4716,7 +4714,7 @@ ioTyped env p e =
 -- Used for the evaluating command
 
 -- free variables in predicates at top level probably cannot
--- be solved. At Toplevel we expect predcates that are ground
+-- be solved. At Toplevel we expect predicates that are ground
 -- terms, so if we get any with free vars, we just abstract over them.
 -- So we need to split a [Pred] into ([Pred],[Pred]), those with
 -- free (to be abstracted over) and those that are ground (to solve).
