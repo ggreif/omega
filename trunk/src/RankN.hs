@@ -2766,7 +2766,7 @@ instance Eq Pred where
 
 ---------------------------------------------------------------
 -----------------------------------------------------------
--- Side-effect free subsitution. Usually you must zonk
+-- Side-effect free substitution. Usually you must zonk
 -- before calling these functions.
 
 type Unifier2 = ([(TcLv,Level)],[(TcTv,Tau)])
