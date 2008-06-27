@@ -33,12 +33,15 @@ tCom tenv x =
                            ; verbose <- getM "kind" False
                            ; when verbose (mapM_ writeln subpairs)
                            ; return (tenv)})
-         (tryAndReport (do { Right(e,more) <- parseString expr x
-                           ; (typ,_,subpairs) <- wellTyped tenv e
-                           ; writeln (x++" :: "++(pprint typ)++"\n")
-                           ; verbose <- getM "kind" False
-                           ; when verbose (mapM_ writeln subpairs)
-                           ; return tenv})
+         (tryAndReport (do { ans <- parseString expr x
+                           ; case ans of
+                               Left message -> fail message
+                               Right(e,more) ->
+                                 do { (typ,_,subpairs) <- wellTyped tenv e
+                                    ; writeln (x++" :: "++(pprint typ)++"\n")
+                                    ; verbose <- getM "kind" False
+                                    ; when verbose (mapM_ writeln subpairs)
+                                    ; return tenv}})
                        (\ loc message -> do { writeln message; return(tenv)}))
 
 -- :env map
