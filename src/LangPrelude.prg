@@ -44,8 +44,6 @@ const x _ = x
 primitive freshAtom  :: forall (k :: *1) (a::k) . IO(Atom a) 
 primitive same  :: forall (k :: *1) (a::k) (b::k).Atom a -> Atom b -> Maybe(Equal a b) 
 primitive swapAtom :: forall (k :: *1) (a::k) (b::k) c . Atom a -> Atom b -> c -> c
-primitive fuse :: a -> b -> Bind a b
-primitive melt :: Bind a b -> IO(a,b)
 
 
 xyzzy = 5
