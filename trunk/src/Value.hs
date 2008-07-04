@@ -338,7 +338,7 @@ down ref =
      }
 
 -----------------------------------------------------------------
--- Primitive operations on Ptr's
+-- Primitive operations on Ptrs
 
 newPtr :: V
 newPtr = Vfio [] action
