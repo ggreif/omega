@@ -1569,7 +1569,7 @@ getDecTyp rename (d:ds) =
 checkDec :: Frag -> (Mod,Rho,Dec,[TcTv]) -> TC Dec
 checkDec frag (mod,_,Prim loc nm t,skols) = newLoc loc $ return(Prim loc nm t)
 checkDec frag (mod,rho,Fun loc nm hint ms,skols) | unequalArities ms =
-  failD 3 [Ds ("\n\nThe equations for function: "++show nm++", give different aritites.")]
+  failD 3 [Ds ("\n\nThe equations for function: "++show nm++", give different arities.")]
 checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
   do { let frag = (markLambda (addSkol skols mutRecFrag))
      ; let hasRho (loc,ps,bod,ds) =
