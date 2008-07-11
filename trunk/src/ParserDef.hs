@@ -882,3 +882,7 @@ Right(Program xxx) = unsafePerformIO(parseFile program "D:/work/sheard/research/
 
 --(TypeSig lc v t) = xxx !! 0
 --(FX _ _ ff tbs tfs) = vars [] t emptyF
+
+ty2 = "app:: Seq a ~> Seq a ~> Seq a\n"++
+      "{app Snil ys} = ys\n"++
+      "{app (Scons x xs) ys} = Scons x {app xs ys}"

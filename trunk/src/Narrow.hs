@@ -9,6 +9,7 @@ import Monads
 import Bind(Name)
 import RankN
 import NarrowData
+import Debug.Trace(trace)
 
 class (TyCh m) => Check m where
   getMode :: String -> m Bool
@@ -557,10 +558,10 @@ generalizeLM ::  Check m => Int -> [Tau] -> m[(Path,[Tau])]
 generalizeLM _ [] = return [([],[])]
 generalizeLM n (arg_n : args) = liftN h arg_n
   where h (VarN vv) =
-          do { newTerm <- varWildM vv
+          do { newTerm <- return(varWild vv) -- varWildM vv  
              ; pairs <- generalizeLM (n+1) args
              ; return(do { (newPos, newRest) <- pairs
-                         ; return (newPos, TcTv newTerm : newRest)})}
+                         ; return (newPos, newTerm {- TcTv newTerm -} : newRest)})}
         h (ConN name ts) = 
           do { pairs <- (generalizeLM 0 ts)
              ; pairs2 <- (generalizeLM (n+1) args)
@@ -604,7 +605,7 @@ makeTreeL [Leaf x free lhs rhs ] = [Leaf x free lhs rhs]
 makeTreeL (Branchx term pos tree : rest)
   | all branchP rest &&
     all (== pos) (map (\(Branchx _ p _) -> p) rest)
-  = do { zs <- mapM makeTreeL (partition children)
+  = do { zs <- mapM (makeTreeL)(partition children)
        ; return( Branchx term pos zs)}
   where children = concat (map (\(Branchx _ _ t) -> t)
                                (Branchx term pos tree : rest))
@@ -637,16 +638,21 @@ renameVarN x = liftN h x
 mainY ::  NName -> [([TcTv],[Tau],Tau)] -> [DefTree TcTv Tau]
 mainY name patternList = do { zs <- mapM (f12 name) patternList
                             ; makeTreeL zs}
-  where f12 name (free2,lhs,rhs) = map (makeTreePath free2 lhs2 rhs)
+  where f12:: NName -> ([TcTv],[Tau],Tau) -> [DefTree TcTv Tau]
+        f12 name (free2,lhs,rhs) = map (makeTreePath free2 lhs2 rhs)
                                        (makeChainL (renameVarN lhs2))
                 where lhs2 = (fun name lhs)
 
 
-
+fff xs = plistf ff "[1" xs "\n" "1]"
+  where ff y = plistf tree2string "[2" y "\n" "2]"
+  
 mainYM ::   Check m => NName -> [([TcTv],[Tau],Tau)] -> m[DefTree TcTv Tau]
 mainYM name patternList = do { pairs <- mapM (f13 name) patternList
-                             ; return(do { zs <- pairs; makeTreeL zs})}
-  where f13 name (free2,lhs,rhs) = do { pairs <- makeChainLM (renameVarN lhs2); 
+                             ; return(makeTreeL (concat pairs))}
+                            
+  where f13:: Check m => NName -> ([TcTv],[Tau],Tau) -> m [DefTree TcTv Tau]   
+        f13 name (free2,lhs,rhs) = do { pairs <- makeChainLM (renameVarN lhs2); 
                                       ; return(map (makeTreePath free2 lhs2 rhs) pairs)}
                 where lhs2 = (fun name lhs)
 
@@ -681,5 +687,4 @@ tree2string tree = indent 0 tree
           concat (map (\x -> indent (n+1) x) tree)
         blanks n = "\n" ++ (take n (repeat ' '))
 
-
-
+ 

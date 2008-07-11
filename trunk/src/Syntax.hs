@@ -1230,14 +1230,14 @@ ppDec dec =
     Import s Nothing -> text "import" <+> PP.doubleQuotes (text s)
     Import s (Just vs) -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back (text ",") (map ppImport vs))
     TypeSyn _ s args pt -> PP.sep [text ("type "++s) <+> PP.hsep (map ppArg args) <+> text "=",ppPT pt]
-    TypeFun _ s Nothing ms -> PP.vcat [text s <> text "::Nothing",f1 ms]
-    TypeFun _ s (Just pt) ms -> text (s++" :: ") <> ppPT pt <+> f1 ms
+    TypeFun _ s Nothing ms -> PP.vcat ((text s <> text "::<no prototype>\n"):f1 ms)
+    TypeFun _ s (Just pt) ms -> PP.vcat ((text (s++" :: ") <> ppPT pt):(f1 ms))
     AddTheorem loc xs -> text "theorem " <> (PP.vcat (map f xs))
      where f (x,Nothing) = ppVar x
            f (x,Just e) = ppVar x <+> text "=" <+> ppExp e
    where
       f (v,pts) = ppVar v <+> PP.hsep (map ppPT pts)
-      f1 ms = PP.vcat (map f2 ms)
+      f1 ms = (map f2 ms)
       f2 (pts,pt) = PP.braces (PP.hsep (map ppPT pts)) <+> text "=" <+> ppPT pt
 ppCs (loc,name,vars,preds,typ) =
    PP.sep [ ((ppVar name) <> text "::"),PP.nest 3 (PP.sep [(all vars),quals preds,ppPT typ]) ]

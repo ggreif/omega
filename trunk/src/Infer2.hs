@@ -652,7 +652,7 @@ typeExp mod (Prod x y) expect =
 typeExp mod (e@(App fun arg)) expect =
      do { (fun_ty,f) <- infer fun
         ; (arg_ty, res_ty) <- handleM 2 (unifyFun fun_ty) (notfun e fun_ty)
-        ; x <- handleM 2 (check arg arg_ty) (badarg e arg_ty)
+        ; x <- handleM 2 (check arg arg_ty) (badarg e arg arg_ty)
         ; zz <- zonk arg_ty
         ; fz <- zonk fun_ty
         ; ww <- zonk res_ty
@@ -793,13 +793,19 @@ notfun e fun_ty s =
                 ,Ds "\nthe function has a non-functional type: "
                 ,Dd fun_ty]
 
-badarg e arg_ty s =
+badarg :: Exp -> Exp -> Sigma -> String -> TC Exp
+badarg all arg arg_ty s =
  do { z <- zonk arg_ty
+    --; (computed::Rho,_) <- infer arg
     ; failK "badarg" 2
-       [Ds "\nIn the expression: "
-       ,Dd e
-       ,Ds "\nthe argument did not have type: "
+       [Ds "\nIn the expression\n"
+       ,Dd all
+       ,Ds "\nthe argument:\n"
+       ,Dd arg
+       ,Ds "\ndid not have type: "
        ,Dn arg_ty
+      -- ,Ds "\nInstead, it had type:\n"
+      -- ,Dd computed
        ,Ds s]}
 
 resulterr e res_ty expect s =
@@ -2705,7 +2711,7 @@ computeTypeFunEnv env xs =
      ; return (env{ type_env = triples ++ type_env env })}
  where doOneTypeFun (t@(TypeFun loc nm Nothing ms)) =
          fail ("\nType functions must be explicitly kinded with kind signature\n"++show t)
-       doOneTypeFun (TypeFun loc nm (Just pt) ms) =
+       doOneTypeFun (t@(TypeFun loc nm (Just pt) ms)) =
           do { (nmSigmaType,monoKindAsTau,nmTypeKind,names) <- inferPolyPT [] pt
              ; let poly = K names (nmSigmaType)
                    getLevel (Star n) = n
@@ -2720,7 +2726,7 @@ hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) =
      ; clauses <- mapM (checkLhsMatch (type_env env1) sigma) ms
      ; let f d (ts,ps,t) = displays d [Dl ts ",",Ds " ----> ",Dd t]
      ; morepairs <- hasMonoTypeFun env1 more
-     ; rule <- makeRule nm polyt clauses
+     ; rule@(NarR(a,xs))  <- makeRule nm polyt clauses
      ; trees <- defTree rule 
      ; tree <- case trees of
                  (t:ts) -> return t
