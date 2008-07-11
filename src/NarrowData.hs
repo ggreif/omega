@@ -57,6 +57,8 @@ data DefTree var term
 data Chain var term
   = Root term
   | Next term Path (Chain var term)
+  deriving Show
+  
 
 
 -- For encoding Rules and solutions to narrowing problems
@@ -228,9 +230,7 @@ varWildM (Tv _ _ k) =
      
 termWildM t = 
   do { k <- kindOfM t 
-     ; n <- nextInteger
-     ; r <- newRef Nothing
-     ; return(TcTv(Tv n (Flexi r) (MK k)))}
+     ; return(TcTv (wild (MK k))) }
      
 
 equalP (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = True
@@ -243,6 +243,13 @@ varWild (Tv _ _ k) = TcTv(wild k)
 termWild t = case kindOf t of
                Just k -> TcTv (wild (MK k))
               --  Nothing -> TcTv (wild star)
+
+-- There is unique variable "WildCard" that is different from all
+-- other type variables. It is unique, but different. Its actual
+-- value doesn't matter, since it is never looked at, only its identity.
+-- Sometimes we need versions with the same identity, but different
+-- kinds. varWild, termWild, and termWildM compute one of these.
+
 wild = unsafePerformIO (do { n <- nextInteger; r <- newRef Nothing; return(Tv n (Flexi r))})
 
 ---------------------------------------------------

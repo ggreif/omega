@@ -1850,7 +1850,8 @@ escapes2 bad = failM 0 [Dlf f bad "\n"]
 
 captured sig1 sig2 rho mess =
   failM 0
-    [Dd sig1,Ds " is not more polymorphic than\n"
+    [Ds "\nThe type:\n"
+    ,Dd sig1,Ds "\nis not more polymorphic than\n"
     ,Dd sig2,Ds ("\n"++"Because the skolemized version of the second type: ")
     ,Dd rho,Ds ("\nhas the following problem: "++mess)]
 

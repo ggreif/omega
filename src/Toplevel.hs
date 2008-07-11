@@ -170,6 +170,7 @@ elabFile file (tenv) =
    do { all <- parseDecs file
       ; let (imports,ds) = partition importP all
             (dss,pairs) = topSortR freeOfDec ds
+      --; mapM (writeln . (++"\n"). show) ds
       --; writeln (show(map freeOfDec ds))
       ; tenv2 <- importManyFiles imports tenv
       -- Check for multiple definitions in the file
@@ -309,3 +310,4 @@ tests = go "tests.prg"
 tm = go "toMetaMl.prg"
 
 q s = go ("C:/tmp/OmegaExamples/"++s++".prg")
+
