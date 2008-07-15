@@ -2013,20 +2013,20 @@ data PT
 
 -------------------------------------------
 
-getLevel (Star' n Nothing) vs = return (lv n)
-getLevel (Star' k (Just s)) vs =
+getLevel name (Star' n Nothing) vs = return (lv n)
+getLevel name (Star' k (Just s)) vs =
   case lookup s vs of
     Just n -> return(incLev k (TcLv (LvVar n)))
     Nothing -> failM 1 [Ds "\nUnknown level ",Dd s]
-getLevel (Karrow' dom rng) vs = getLevel rng vs
-getLevel pt vs = failM 1 [Ds "\nRange:", Dd pt,Ds " in kind of data decl is not a *n"]
+getLevel name (Karrow' dom rng) vs = getLevel name rng vs
+getLevel name pt vs = failM 1 [Ds ("\nIn the data declartion for '"++name++"' the range:\n   "), Dd pt,Ds "\nis not of the form *n, for some Level n."]
 
-univLevelFromPTkind (pt@(Forallx q vs preds t)) =
-  do { n <- getLevel t []; return([],n,pt)}
-univLevelFromPTkind (PolyLevel ls (pt@(Forallx q vs preds t))) =
-  do { us <- freshLevels ls; n <- getLevel t us; return(us,n,pt)}
-univLevelFromPTkind pt =
-  do { n <- getLevel pt []; return([],n,pt)}
+univLevelFromPTkind name (pt@(Forallx q vs preds t)) =
+  do { n <- getLevel name t []; return([],n,pt)}
+univLevelFromPTkind name (PolyLevel ls (pt@(Forallx q vs preds t))) =
+  do { us <- freshLevels ls; n <- getLevel name t us; return(us,n,pt)}
+univLevelFromPTkind name pt =
+  do { n <- getLevel name pt []; return([],n,pt)}
 
 
 definesValueConstr (Star' n Nothing) = n==0
