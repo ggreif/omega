@@ -23,7 +23,7 @@ import ParserAll(Parser)
 -- By rights these should be defined in Value.hs But then
 -- we'd have recursive import lists
 
-data Ev = Ev [(Var,V)] (V,V,V)
+data Ev = Ev [(Var,V)] (V,V,V)  -- Runtime environment mapping Vars to Values
 
 showenv (Ev xs m) =
   "Ev with \n   "++show (map fst xs)

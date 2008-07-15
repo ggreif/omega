@@ -16,7 +16,7 @@ import List(partition,(\\),nub,find)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
 import Monad(when)
-import Infer2(TcEnv(sourceFiles),completionEntry,lineEditReadln,initTcEnv
+import Infer2(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
              ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
              ,var_env,type_env,rules,runtime_env,syntaxExt)
 import RankN(pprint,Z,failD,disp0,dispRef)
@@ -231,21 +231,24 @@ importFile (Import name vs) tenv =
 importNames :: String -> Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
 importNames name items new old =
   old { imports = (name,new):(imports old)
-      , var_env = addListToFM (var_env old) (filter p (toList (var_env new)))
+      , var_env = addListToFM (var_env old) (filter okToAddVar (toList (var_env new)))
       , type_env = (filter q (type_env new)) ++ (type_env old)
       , runtime_env = add (runtime_env new) (runtime_env old)
       , rules = appendFM2 (rules old) (filter p2 (toList (rules new)))
       , syntaxExt = addSyntax syntax (syntaxExt new) (syntaxExt old)
+      , tyfuns = (filter okToAddTyFun (tyfuns new)) ++ (tyfuns old)
       }
- where elemOf x Nothing = True
-       elemOf x (Just vs) = elem x vs
-       p (x,y) = elemOf x vs
+      
+ where elemOf x Nothing = True          -- No import list, so everything is imported
+       elemOf x (Just vs) = elem x vs   -- is it in the import list?
+       okToAddVar (x,y) = elemOf x vs
+       okToAddTyFun (x,y) = elemOf (Global x) vs
        p2 (s,y) = elemOf (Global s) vs
        q (str,tau,polyk) = elemOf (Global str) vs
-       add (Ev xs _) (Ev ys t) = Ev (filter p xs ++ ys) t
-       accV (VarImport v) vs = v:vs
+       add (Ev xs _) (Ev ys t) = Ev (filter okToAddVar xs ++ ys) t
+       accV (VarImport v) vs = v:vs  -- used to fold over the runtime environment
        accV _ vs = vs
-       accSyn (SyntaxImport nm tag) vs = (nm,tag):vs
+       accSyn (SyntaxImport nm tag) vs = (nm,tag):vs -- fold over syntax imports
        accSyn _ vs = vs
        (vs,syntax) = case items of
              Just zs -> (Just(foldr accV [] zs),foldr accSyn [] zs)
