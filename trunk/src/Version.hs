@@ -1,3 +1,3 @@
 module Version where
 version = "Omega Interpreter: version 1.4.3"
-buildtime = "Thu Jul 10 13:25:27 Pacific Daylight Time 2008"
+buildtime = "Tue Jul 15 12:43:03 Pacific Daylight Time 2008"

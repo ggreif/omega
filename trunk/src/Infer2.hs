@@ -1844,8 +1844,8 @@ introLorR (loc,var,args,preds,typ) = False
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) | any introLorR cs =
   failM 1 [Ds "\nThe data decl: ",Ds name,Ds " has a constructor named 'L' or 'R'."
           ,Ds "\nThese names are reserved for the sum type. L:: a -> (a+b), R:: b -> (a+b)"]
-kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) =
-  do { (vs,level,sigma) <- univLevelFromPTkind k
+kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) = newLoc loc $
+  do { (vs,level,sigma) <- univLevelFromPTkind name k
      ; return(decl,(isP,name,sigma,level,loc,vs))}
 kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs _)) =
   failM 1 [Ds "\nData decs should have been translated away.\n",Ds (show decl)]
