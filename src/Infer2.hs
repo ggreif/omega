@@ -43,7 +43,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,pairT,arrowT,kind4Atom,atomT,sumT,notEqKind,notEqT,propT,intT,charT
             ,ptsub,karr,chrSeqT,symbolT,floatT,ttag,tlabel,tarr
             ,kind4Hidden,hiddenT,stringT,equalKind,infixEqName,tvsTau,subPairs,teq,equalityP,pred2Tau
-            ,argsToEnv,binaryLift,expecting,bindtype,failtype,zap,rootT,rootTau
+            ,argsToEnv,binaryLift,expecting,bindtype,failtype,returntype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2
@@ -740,7 +740,8 @@ typeExp mod (CheckT e) expect =
 typeExp mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
 typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
      do { (vs,preds,tau) <- instanL [] xs  -- ## WHAT DO WE DO WITH THE PREDS?
-        ; typeExp mod e (Check (Rtau tau))}
+        ; x <- typeExp mod e (Check (Rtau tau))
+        ; return(Exists x)}
 typeExp mod (p@(Exists e)) expect =
     failD 2 [Ds "Existential expressions cannot have their type inferred:\n   ", Dd p
             ,Ds "\n   The type expected is:\n   ", Dd expect
@@ -1201,8 +1202,19 @@ checkL caseOblig mod ((m@(loc,pat,body,ds)):ms) dom rng =
 
 tcStmts mod m b [] = failD 2 [Ds "Do should have at least one statement"]
 tcStmts mod m b [NoBindSt loc e] =
-   do { e2 <- newLoc loc (typeExp mod e (Check (Rtau (TyApp m b))))
-      ; return([NoBindSt loc e2])}
+   case e of  -- (do { a; return b}::M z) is very common, but propogating the
+              -- expected type ((return b)::M z) is hard, because (return b)
+              -- is a function application. If the function is "return", there
+              -- is a very simple and efficient rule. check (b::z)
+     App (rexp@(Var (Global "return"))) x -> 
+      do {(K _ retSig,rmod,rn,rexp) <- lookupVar (Global "return")
+         ; retT <- returntype m
+         ; morepoly "return" retSig retT
+         ; e2 <- newLoc loc (typeExp mod x (Check (Rtau b)))
+         ; return([NoBindSt loc (App rexp e2)])}
+     other -> 
+      do { e2 <- newLoc loc (typeExp mod e (Check (Rtau (TyApp m b))))
+         ; return([NoBindSt loc e2])}
 tcStmts mod m b [st@(BindSt loc pat e)] =
    failD 2 [Ds ("Last stmt in Do must not be a bind: "++show st)]
 tcStmts mod m b [st@(LetSt loc ds)] =

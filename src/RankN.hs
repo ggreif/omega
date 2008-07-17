@@ -596,6 +596,7 @@ bindtype m =
 -- bindtype m = toSigma env (pt "forall a b . m a -> (a -> m b) -> m b")
 --   where env = [("m",m,poly star_star)]
 
+-- given m, produce : (String -> m a)
 failtype :: TyCh m => Tau -> m Sigma
 failtype m =
     do { av <- fresh;
@@ -604,6 +605,17 @@ failtype m =
         (Cons (star,All)
               (bind av (Nil ([],Rtau (tstring `tarr` (TyApp m a)))))))
       }
+      
+-- given m, produce : (a -> m a)
+returntype :: TyCh m => Tau -> m Sigma
+returntype m =
+    do { av <- fresh;
+      ; let a = TyVar av star
+      ; return(Forall
+        (Cons (star,All)
+              (bind av (Nil ([],Rtau (a `tarr` (TyApp m a)))))))
+      }
+      
 
 -- Eq :: (forall (k:*1) (u:k) (v:k) . (u = v) => Eq u v)
 sigma4Eq = Forall (Cons (star1,All) (bind kname
