@@ -150,17 +150,17 @@ stepProb s (AndP []) truths = return([(TermP success,truths,([],[]))],s)
 stepProb s (AndP [p]) truths = stepProb s p truths
 stepProb (s@(nstep,nsol,d0,ex)) (AndP (p:ps)) truths =
   do { let (d1,cntxt) = displays d0 [dProb p]
-           newS = (20,2,d1,False)
-     ; (ans,s1@(_,_,d2,exceed)) <- narr ("And sub-problem\n  "++cntxt) newS [(p,truths,([],[]))] []
+           newS = (nstep,2,d1,False)
+     ; (ans,s1@(nstep',_,d2,exceed)) <- narr ("And sub-problem\n  "++cntxt) newS [(p,truths,([],[]))] []
      ; if exceed
           then return ([],s1)
-          else do { let nextS = (nstep -1,nsol,d2,ex)
-     ; case ans of
-         [] -> return([],nextS)
-         [(TermP x,ts1,u1)] | x==success ->
-            return([(andP(map (subProb u1) ps),ts1,u1)],nextS)
-         new -> let add (p,ts,u1) = (andP(map (subProb u1) ps++[p]),ts,u1)
-                in return(map add new,nextS)}}
+          else do { let nextS = (nstep'-1,nsol,d2,ex)
+                  ; case ans of
+                    [] -> return([],nextS)
+                    [(TermP x,ts1,u1)] | x==success ->
+                            return([(andP(map (subProb u1) ps),ts1,u1)],nextS)
+                    new -> let add (p,ts,u1) = (andP(map (subProb u1) ps++[p]),ts,u1)
+                           in return(map add new,nextS)}}
 
 stepEq:: Check m => ST Z -> (Tau,Tau) -> Rel Tau -> m(Sol,ST Z)
 stepEq s0 (a,b) truths =
