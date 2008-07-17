@@ -1640,9 +1640,8 @@ mustBe (term,qual) t comput expect =
                [Ds ("\nWe computed the "++term++" ")
                ,Dd tz,Ds (" to have "++qual++" ")
                ,Dd computz,Ds "\nWe expected it to be "
-               ,Dd rz,Ds ("\n"++message),
-               if qual=="kind"
-                  then Ds warning0 else Ds ""]
+               ,Dd rz,Ds ("\n"++message)
+               ]
             }
 
 
@@ -3210,7 +3209,7 @@ sht (TcTv (Tv n (Rigid _ _ _) k))  =
     "(Rigid " ++ show n ++":"++shtt k++")"
 sht (TyFun nm k xs) = "{TyFun ("++nm ++ "::"++shtt k++")"++plistf sht " " xs " " "}"
 sht (TySyn nm n fs as t) = "{Syn "++nm++(plistf sht " " as " " " = ")++sht t++"}"
--- sht x = show x
+sht (TyEx l)= shtL l
 
 shtR (Rarrow x y) = "("++shtS x++" r-> "++shtR y++")"
 shtR (Rpair x y) = "R("++shtS x++","++shtS y++")"
@@ -3227,7 +3226,12 @@ shtS (Forall xs) =
 shtEq (Equality x y) = "Equality("++sht x++","++sht y++")"
 shtEq (Rel ts) = "Rel("++sht ts++")"
 
-
+shtL xs = let (ys,(eqs,a)) = unsafeUnwind xs
+              f [] = ""
+              f [(nm,MK k,_)] = show nm
+              f ((nm,MK k,_):xs) = show nm++f xs
+          in "(exists "++(f ys)++"."++shtt a++")"
+ 
 -- =============================================================
 -- New style Display
 -- =============================================================
