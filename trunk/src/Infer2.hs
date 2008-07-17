@@ -1076,12 +1076,12 @@ typeMatch caseOblig mod (x@(loc,p,Unreachable,ds)) (Check t) =
 
 typeMatch caseOblig mod (loc,p,body,ds) (Check t) = newLoc loc $
   do { (bodyFrag,[p1],_,(argFrag,rng,ds2)) <- fragForMatch caseOblig mod t p ds
-     ; let err s  =
+     ; let err s  = 
                (do { let (Frag zs _ _ truths theta rs exts) = bodyFrag
                    ; binds <- getBindings
                    ; typeString <- renderRho t
                    ; failK "tcMatchPat" 2
-                      [Ds "\n*** Error type checking match ***\n"
+                      [Ds ("\n*** Error type checking match at "++show loc++" ***\n")
                       ,Ds ("\n"++render((ppPat p)<+>(text "->")$$ PP.nest 3 (ppBody body)))
                       ,Ds  "\n\n***   type:\n",Ds typeString
                       ,Ds  "\n\n***   vars:\n   ",Dlf dispBind zs "\n   "
@@ -1207,13 +1207,13 @@ tcStmts mod m b [NoBindSt loc e] =
               -- is a function application. If the function is "return", there
               -- is a very simple and efficient rule. check (b::z)
      App (rexp@(Var (Global "return"))) x -> 
-      do {(K _ retSig,rmod,rn,rexp) <- lookupVar (Global "return")
+      do { (K _ retSig,rmod,rn,rexp) <- lookupVar (Global "return")
          ; retT <- returntype m
          ; morepoly "return" retSig retT
          ; e2 <- newLoc loc (typeExp mod x (Check (Rtau b)))
          ; return([NoBindSt loc (App rexp e2)])}
      other -> 
-      do { e2 <- newLoc loc (typeExp mod e (Check (Rtau (TyApp m b))))
+      do {e2 <- newLoc loc (typeExp mod e (Check (Rtau (TyApp m b))))
          ; return([NoBindSt loc e2])}
 tcStmts mod m b [st@(BindSt loc pat e)] =
    failD 2 [Ds ("Last stmt in Do must not be a bind: "++show st)]
@@ -1268,6 +1268,7 @@ isRigid (TyFun f k xs) = if (all rigid (map isRigid xs)) then Rig else Wob
 
 
 unifyMonad :: TyCh a => Expected Rho -> a (Tau,Tau)
+unifyMonad (Check (Rtau (TySyn nm n fs as t))) = unifyMonad (Check (Rtau t))
 unifyMonad (Check (Rtau (TyApp m a))) = return (m,a)
 unifyMonad expected =
   do { a <- newTau star
