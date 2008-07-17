@@ -251,10 +251,11 @@ importNames name items new old =
        accSyn (SyntaxImport nm tag) vs = (nm,tag):vs -- fold over syntax imports
        accSyn _ vs = vs
        (vs,syntax) = case items of
-             Just zs -> (Just(foldr accV [] zs),foldr accSyn [] zs)
-             Nothing -> (Nothing,[])
+             Just zs -> (Just(foldr accV [] zs),Just(foldr accSyn [] zs))
+             Nothing -> (Nothing,Nothing)
 
-addSyntax imports new old = foldr acc old new
+addSyntax Nothing new old = new ++ old
+addSyntax (Just imports) new old = foldr acc old new
   where acc ext old = if (synName ext,synKey ext) `elem` imports
                          then ext:old else old
 
