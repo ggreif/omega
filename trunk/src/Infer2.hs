@@ -91,7 +91,7 @@ instance Check (Mtc TcEnv Pred) where
        ; case info of
            Just(nm,tree) -> return tree
            Nothing -> failM 0 [Ds "1) Unknown type function: ",Ds s] }
-  getDefTree other = failM 0 [Ds "Bad type function: ",Ds (show other)]
+  getDefTree other = failM 1 [Ds "Bad type function: ",Dd ( other)]
   tryRewriting t =
     do { (t2,u, newtruths) <- liftNf norm2Tau t
        ; if t==t2 then return Nothing else return (Just (t2,u))};
@@ -1090,7 +1090,8 @@ typeMatch caseOblig mod (loc,p,body,ds) (Check t) = newLoc loc $
      -- check the clause
      ; let comp theta = do { range <- appTheta mod theta rng
                            ; typeBody mod body (Check range) }
-     ; body3 <- handleM 4 (underFragUsingTheta (bodyName p body,rng) bodyFrag comp) err
+     ; body3 <- handleK (\ x -> (prefix "Not in scope" x)) 4 
+                (underFragUsingTheta (bodyName p body,rng) bodyFrag comp) err
      ; escapeCheck body t argFrag
      ; return(loc,p1,body3,ds2) }
 typeMatch caseOblig mod (loc,p,body,ds) (Infer ref) = newLoc loc $
@@ -2079,7 +2080,7 @@ range f b x = failM 1 [Ds "\nThe type: ",Dd b,Ds "\nis not a good type for a con
 constrType :: [(String,Tau,PolyKind)] -> (Dec,[(String,Name)],Level) ->
               TC (Dec,SynExt String,Level,Bool,[(Var,(Sigma,Mod,CodeLevel,Exp))])
 
-constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strata) =
+constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strata) = newLoc loc $
     do { synTag <- checkDerivs constrs derivs
        ; let newd = (GADT loc isProp tname tkind constrs derivs synTag)
        ; zs <- mapM (processOneCon levels strata) constrs
@@ -2094,7 +2095,8 @@ constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strat
  parseSigma levels cname strata vars preds typ  =
     case vars of
      -- The constr leaves the kinding of vars implicit.  C:: T a -> T a
-     [] -> do { (nmMap,vars,ps,rho2) <- inferConSigma levels currentMap loc (preds,typ)
+     [] -> do { checkRng cname tname strata typ
+              ; (nmMap,vars,ps,rho2) <- inferConSigma levels currentMap loc (preds,typ)
               ; checkValuesDontUseKarr cname rho2 strata
               ; return(Forall(windup vars (ps,rho2)))}
      _  -> do { (_,rng) <- checkRng cname tname strata typ
@@ -2218,7 +2220,7 @@ checkRng c (Global tname) _ (t@(TyApp' _ _)) = down t
         down (TyApp' x y) = down x
         down t = failD 2 [Ds "\nThe range of the constructor: ",Dd c
                          ,Ds " is not an application of: "
-                         ,Dd tname,Ds ".\nInstead it is: ",Dd t,Ds(shtt t)]
+                         ,Dd tname,Ds ".\nInstead it is: ",Dd t,Ds("\ninternal representation: "++shtt t)]
 checkRng c tname _ typ =
   failD 2 [Ds "\nThe range of the constructor: ",Dd c,Ds " is not "
           ,Dd tname,Ds ".\nInstead it is: ",Dd typ]

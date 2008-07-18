@@ -435,7 +435,7 @@ matches :: Check m => Tau -> Tau -> m (Maybe (Tau,Unifier2))
 matches term pat =
   do { p <- freshen pat;
      ; case mgu [(p,term)] of -- mostGenUnify [(p,term)] of
-         Right(s,x,y) -> (warnM [Ds s,Dd x, Dd y] >> return Nothing)
+         Right(s,x,y) ->  return Nothing
          Left u -> return(Just(sub2Tau u term,u))}
 
 orientBindings free [] = []
