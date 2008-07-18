@@ -3339,7 +3339,7 @@ exhibitpar xs x@(Karr _ _) = (ys,"("++ ans ++ ")")
   where (ys,ans) = exhibit xs x
 exhibitpar xs x@(TyApp _ _) = (ys,"("++ans++ ")")
   where (ys,ans) = exhibit xs x
-exhibitpar xs x@(TySyn nm n fs as t) | n>1 =  (ys,"("++ans++ ")")
+exhibitpar xs x@(TySyn nm n fs as t) | n>=1 =  (ys,"("++ans++ ")")
   where (ys,ans) = exhibit xs x
 exhibitpar xs x@(TyEx _) = (ys,"("++ ans ++ ")")
   where (ys,ans) = exhibit xs x
@@ -3550,7 +3550,7 @@ instance NameStore d => Exhibit d Tau where
   exhibit info (TyFun f k xs) = (d2,"{"++f++" "++body++"}")
     where (d2,body) = exhibitL exhibitpar info xs " "
   exhibit info (TySyn nm n fs as t) = (d2,nm++" "++xs)
-    where (d2,xs) = exhibitL exhibit info as " "
+    where (d2,xs) = exhibitL exhibitpar info as " "
   exhibit xs (TyEx x) = exhibitLdata Ex xs x
 
 -- Rho
