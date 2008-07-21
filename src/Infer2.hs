@@ -315,7 +315,8 @@ modes_and_doc =
   ,("predicate_emission",False,"Reports the fact that a prediciate has been emitted. Predicates are collected at generalization sites, and are either solved, or abstracted into constrained types.")
   ,("narrowing",False,"Shows the steps taken when narrowing. Useful for debugging when narrowing does not return the result desired.")
   ,("theorem",False,"Reports when a lemma is added by a 'theorem' declaration, and when such a lemma is applicable.")
-  ,("kind",False,"Displays kinds of subterms when using the :k or :t commands")
+  ,("kind",False,"Displays kinds of subterms when using the :k or :t commands.")
+  ,("unreachable",False,"Displays information when checking for unreachable clauses.")
   ]
 
 mode0 = map (\ (name,value,doc) -> (name,value)) modes_and_doc
@@ -885,7 +886,10 @@ typeMatchPs:: Mod -> (String,Loc,[Pat],Body Exp,[Dec]) -> Expected Rho -> TC(Str
 typeMatchPs mod (x@(nm,loc,ps,Unreachable,ds)) (Check t) = newLoc loc $
     (do -- ts <- getTruths
         -- bs <- getBindings
-        checkUnreachable (fragForPs mod nm loc t ps ds) (\ message -> return x))
+        verbose <- getMode "unreachable"
+        whenM verbose [Ds "\n\nChecking the unreachability of the clause:\n",Ds (nm++" "),Dl ps " ",Ds " = unreachable\n"]
+        checkUnreachable (fragForPs mod nm loc t ps ds) 
+                         (\ message -> whenM verbose [Ds message,Ds "\nUnreachability confirmed."] >> return x))
 typeMatchPs mod (nm,loc,ps,body,ds) (Check t) = newLoc loc $
      do { (bodyFrag,ps1,ts,(patFrag,rng,ds2)) <- fragForPs mod nm loc t ps ds
         ; let err s  =
@@ -1012,7 +1016,8 @@ checkUnreachable computation good = handleK (=="bad refinement") 3
       -- ; dispFrag "Frag in unreachable = " frag
       -- ; warnM [Ds "preds = ", Dd preds]
       ; let bad = doNotGuardUnreachable (getTheta frag `o` mapping) preds (zip ps ts)
-      ; whenM False [Ds "\nChecking unreachable\n   ",Dl preds "\n   "]
+      ; verbose <- getMode "unreachable"
+      ; whenM verbose [Ds "Checking satisfiabilty of the predicates:\n   ",Dl preds "\n   "]
       ; existsNonSat preds prob2 good bad}) good
 
 existsNonSat [] prob2 good bad = bad 0 []
@@ -1020,7 +1025,7 @@ existsNonSat (p:ps) prob2 good bad =
   do { d2 <- getDisplay
      ; ans <- narr "unreachable" (25,1,d2,False) [(prob2,andR[],([],[]))] []
      ; case ans of
-         ([]    ,(_,_,_,False)) -> good "Narrowing finds non-satisfiable problem"
+         ([]    ,(_,_,_,False)) -> good "Narrowing finds non-satisfiable problem."
          ([]    ,(_,_,_,True))          -> bad 1 []
          (((_,_,(_,sub)):xs),(_,_,_,True))  -> bad 2 sub
          (((_,_,(_,sub)):xs),(_,_,_,False)) -> bad 2 sub}
@@ -1071,8 +1076,11 @@ fragForMatch caseOblig mod expectedTy pat whereDs =
 
 typeMatch:: [Pred] -> Mod -> Match Pat Exp Dec -> Expected Rho -> TC (Match Pat Exp Dec)
 typeMatch caseOblig mod (x@(loc,p,Unreachable,ds)) (Check t) =
-  checkUnreachable (fragForMatch caseOblig mod t p ds)
-                   (\ message -> return x)
+  do { verbose <- getMode "unreachable"
+     ; whenM verbose [Ds "\n\nChecking unreachability of the case clause:\n",Dd p, Ds " -> unreachable\n"]
+     ; checkUnreachable (fragForMatch caseOblig mod t p ds)
+                        (\ message -> whenM verbose [Ds message,Ds "\nUnreachability confirmed."] >>return x)
+     }
 
 typeMatch caseOblig mod (loc,p,body,ds) (Check t) = newLoc loc $
   do { (bodyFrag,[p1],_,(argFrag,rng,ds2)) <- fragForMatch caseOblig mod t p ds
