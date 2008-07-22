@@ -33,7 +33,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newflexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
             ,instanTy,instanPatConstr,checkArgs
-            ,mgu,mostGenUnify,unify,morepolySS,morepolyRR,match2,alpha,morepolySigmaRho
+            ,mguB,mostGenUnify,unify,morepolySS,morepolyRR,match2,alpha,morepolySigmaRho
             ,sigmaPair,sigmaSum,unifyCode,unifyFun
             ,poly,simpleSigma,toSigma,toTau,toEqs,toRho,toPT,rho2PT,toL
             ,windup,unsafeUnwind,unBindWith,unwind
@@ -395,10 +395,10 @@ composeM (env@(_,s1,_,_)) s2 =
 
 infixr +++    --- NOTE (+++) is NOT COMMUTATIVE, see composeU
 (Frag xs ys zs eqs u1 rs1 exts1) +++ (Frag as bs cs eqs2 u2 rs2 exts2) =
-  case (mergeMgu u1 u2) of
-    Left u3 -> return (Frag (xs++as) (ys++bs) (zs++cs) (union eqs eqs2) u3 (rs1++rs2) (exts1++exts2))
-    Right (mess,t1,t2) -> failD 2 [Ds "Inconsistent types checking patterns: "
-                               ,Dd t1,Ds " != ", Dd t2]
+  eitherM (mergeMgu u1 u2)
+    (\ u3 -> return (Frag (xs++as) (ys++bs) (zs++cs) (union eqs eqs2) u3 (rs1++rs2) (exts1++exts2)))
+    (\ (mess,t1,t2) -> failD 2 [Ds "Inconsistent types checking patterns: "
+                               ,Dd t1,Ds " != ", Dd t2])
 
 composeU s1 s2 = ([(u,subTau s1 t) | (u,t) <- s2] ++ s1)
 
@@ -423,10 +423,10 @@ addTermVar p (Frag terms pvs types eqs theta rules exts) =
        (return (Frag (p:terms) pvs types eqs theta rules exts))
 
 addUnifier u (Frag terms pvs types eqs theta rules exts) =
-   case (mergeMgu u theta) of
-     Left u2 -> return(Frag terms pvs types eqs u2 rules exts)
-     Right(s,t1,t2) -> failD 2 [Ds "Inconsistent types checking patterns: "
-                               ,Dd t1,Ds " != ", Dd t2]
+   eitherM (mergeMgu u theta)
+      (\ u2 -> return(Frag terms pvs types eqs u2 rules exts))
+      ( \ (s,t1,t2) -> failD 2 [Ds "Inconsistent types checking patterns: "
+                               ,Dd t1,Ds " != ", Dd t2])
 
 addPVS vs (Frag terms pvs types eqs theta rules exts) =
           (Frag terms (vs++pvs) types eqs theta rules exts)
@@ -1423,11 +1423,13 @@ checkPat rename mod k t pat =
                                    ,Ds "\n ",Dd x,Ds " =/= ",Dd y]
                 addRigid (pat,sigma) = (pat,sigma,Rig)
           ; thingsToUnify <- down tauExpect tauC
+          -- ; warnM [Ds "\nThings to unify = ",Dd thingsToUnify]
           ; eitherInfo <- mguStar vsC thingsToUnify
           ; case eitherInfo of
              Right(s,x,y) -> badRefine pat tauExpect tauC s x y
              Left(psi,truths) ->
-               do { k2 <- addUnifier psi (addPVS vsC k)
+               do { -- warnM [Ds "\n unifier = ",Dd psi,Ds " truths  = ",Dd truths];
+                    k2 <- addUnifier psi (addPVS vsC k)
                   ; let k3 = addEqs (truths ++ subPred psi assump) k2
                   ; (k4,ps2) <- checkPats rename k3 (map addRigid pairs)
                   ; return(k4,Pcon c ps2)}
@@ -1731,9 +1733,9 @@ instanceOf args lhs rhs =
  do { (env,pairs) <- buildEnv newflexi args [] []
     ; lhs' <- subst env lhs
     ; rhs' <- subst env rhs
-    ; case mgu [(lhs',rhs')] of
-       Left unifier -> return True
-       Right failure -> return False }
+    ; eitherM (mguB [(lhs',rhs')])
+        (\ unifier -> return True)
+        (\ _ -> return False) }
 
 buildEnv newf [] env pairs = return (env,pairs)
 buildEnv newf ((nm,k,q):xs) env pairs =
@@ -2899,9 +2901,9 @@ normIsAssumed:: [Pred] -> Pred -> TC(Maybe Unifier2)
 normIsAssumed truths q =
   do { let matchFirst [] = return Nothing
            matchFirst (p:ps) =
-              case (matchPred p q) of
-                Left unifier -> return(Just unifier)
-                Right pairs -> (matchFirst ps)
+              eitherM (matchPred p q) 
+                      (\ unifier -> return(Just unifier))
+                      (\ pairs -> (matchFirst ps))
      ; matchFirst truths }
 
 
@@ -3168,18 +3170,18 @@ isAssumed q =
   do { truths <- getTruths
      ; let matchFirst [] = return Nothing
            matchFirst (p:ps) =
-              case (matchPred p q) of
-                Left unifier -> return(Just unifier)
-                Right pairs -> (matchFirst ps)
+              eitherM (matchPred p q)
+                      (\ unifier -> return(Just unifier))
+                      (\ pairs -> (matchFirst ps))
      ; matchFirst truths }
 
-matchPred :: Pred -> Pred -> Either Unifier2 [(Tau,Tau)]
+matchPred :: Pred -> Pred -> TC (Either Unifier2 [(Tau,Tau)])
 matchPred truth question =
   case work of
-    Nothing -> Right []
-    Just pairs -> case mgu pairs of
-                    Left u -> Left u
-                    Right _  -> Right pairs
+    Nothing -> return (Right [])
+    Just pairs -> eitherM (mguB pairs)
+                          (\ u -> return(Left u))
+                          (\ _ -> return (Right pairs))
  where work = case (truth,question) of
                 (Rel x,Rel y) -> Just [(x,y)]
                 (Equality x y,Equality a b) -> Just[(x,a),(y,b)]
@@ -3735,33 +3737,44 @@ rootConst _ _ = fail "Not an application of a TyCon"
 --   [LE _c _c,LE _c _c] => [LE _c _c] where {_a=_c, _b=_c}
 -- The second two are irrelevant since they are subsumed by the first two.
 
-samePred (ts1,ps1,_,u1,i) (ts2,ps2,_,u2,j) = compare (i,length u1)(j,length u2)
-moreGeneral (ts1,ps1,_,u1) (ts2,ps2,_,u2) = compare (length u1)(length u2)
-
-relevant [] = []
-relevant [(t,p,s,u,i)] = [(t,p,s,u)]
-relevant (x@(_,_,_,[],i):y@(_,_,_,_,j):zs) | i==j = relevant (x:zs)
-relevant ((t,p,s,u,i):zs) = (t,p,s,u):relevant zs
 
 elim n [] = []
 elim 0 (x:xs) = xs
 elim n (x:xs) = x : (elim (n-1) xs)
 
-truthStep :: ([Tau],[Tau],[String],Unifier) -> [([Tau],[Tau],[String],Unifier)]
-truthStep (truths,questions,open,u0) =
-      sortBy moreGeneral $
-      relevant $
-      sortBy samePred
-      [ (map (subTau u) truths
-        ,map (subTau u) (elim n questions)
-        ,open,composeU u u0,n)
-      | t <- truths
-      ,(q,n) <- zip questions [0..]
-      , (_,u) <- mostGenUnify [(t,q)] ]
+
+truthStep2 :: TyCh m => ([Tau],[Tau],[String],Unifier2) -> m[([Tau],[Tau],[String],Unifier2)]
+truthStep2 (truths,questions,open,u0) = 
+     do { pairs <- mapM run pairsM
+        ; return $ sortBy moreGeneral 
+                 $ relevant 
+                 $ sortBy samePred
+                 [ (map (sub2Tau u) truths
+                   , map (sub2Tau u) (elim n questions)
+                   , open,composeTwo u u0
+                   ,n)
+                 | (n,[u]) <- pairs ]
+       }
+  where unifyM :: TyCh m => [(Tau,Tau)] -> m[Unifier2]
+        unifyM xs = eitherM (mguB xs) (\ ans -> return[ans]) (\ _ -> return[])
+        run (n,x) = do { a <- x; return(n,a)}
+        pairsM = [ (n,unifyM [(t,q)])
+                 | t <- truths
+                 , (q,n) <- zip questions [(0::Int)..]
+                 ]
+        samePred (ts1,ps1,_,(_,u1),i) (ts2,ps2,_,(_,u2),j) = compare (i,length u1)(j,length u2) 
+        relevant [] = []
+        relevant [(t,p,s,u,i)] = [(t,p,s,u)]
+        relevant (x@(_,_,_,(_,[]),i):y@(_,_,_,_,j):zs) | i==j = relevant (x:zs)
+        relevant ((t,p,s,u,i):zs) = (t,p,s,u):relevant zs
+        moreGeneral (ts1,ps1,_,(_,u1)) (ts2,ps2,_,(_,u2)) = compare (length u1)(length u2)
+
+
+      
 
 ---------------------------------------------------------------
 
-ruleStep :: ([Tau],[Tau],[String],Unifier) -> TC(Maybe[([Tau],[Tau],[String],Unifier)])
+ruleStep :: ([Tau],[Tau],[String],Unifier2) -> TC(Maybe[([Tau],[Tau],[String],Unifier2)])
 ruleStep (truths,[],open,u0) = return (Nothing)
 ruleStep (truths,q:questions,open,u0) =
    do { s <- predNameFromTau q q
@@ -3780,12 +3793,12 @@ ruleStep (truths,q:questions,open,u0) =
            ,Ds " rules match:\n  ",Ds "\n"]
       ; case infoList of
          [] -> do { zs <- ruleStep (truths,questions,open,u0)
-                  ; let f13 q (ts,qs,nms,u) = (ts,(subTau u q):qs,nms,u)
+                  ; let f13 q (ts,qs,nms,u) = (ts,(sub2Tau u q):qs,nms,u)
                   ; return(fmap (map (f13 q)) zs)}
          ws -> do { good <- foldM goodMatch [] ws
                   ; let fixform (newtruths,rhs,nms,u) =
-                          (newtruths,rhs ++ fix questions,nms,composeU u u0)
-                           where fix x = map (subTau u) x
+                          (newtruths,rhs ++ fix questions,nms,composeTwo u u0)
+                           where fix x = map (sub2Tau u) x
                   ; return(Just(map fixform good))}}
 
 
@@ -3793,7 +3806,7 @@ ruleStep (truths,q:questions,open,u0) =
 goodMatch good (truths,precond,result,open,unifier) =
   do { ans <- solv 4 [(truths,map (unRel 5) precond,open,unifier)]
      ; case ans of
-         [(truths2,[],nms,u)] -> return((truths2,map (subTau u) (map (unRel 6) result),open,u):good)
+         [(truths2,[],nms,u)] -> return((truths2,map (sub2Tau u) (map (unRel 6) result),open,u):good)
          _ -> return good}
 
 unRel n (Rel x) = x
@@ -3803,7 +3816,7 @@ exploreD n = length n > 3
 
 
 -- Does any rule match term?
-matchR ::[Tau] -> [String] -> [RWrule] -> Tau -> TC[([Tau],[Pred],[Pred],[String],Unifier)]
+matchR ::[Tau] -> [String] -> [RWrule] -> Tau -> TC[([Tau],[Pred],[Pred],[String],Unifier2)]
 matchR truths openRules [] term = return []
 matchR truths open ((r@(RW nm key BackChain _ _ _ _)):rs) term
   | elem nm open = matchR truths open rs term
@@ -3812,18 +3825,18 @@ matchR truths open ((r@(RW nm key _ _ _ _ _)):rs) term
 matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
   do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newflexi r
      ; ys <- matchR truths open rs term
-     ; case mostGenUnify [(lhs,term)] of
-        Just(_,sub) -> do { let pre2 = subPred sub precond
-                                rhs2 = subPred sub rhs
-                       ; verbose <- getMode "solving"
-                       ; whenM verbose
-                           [Ds "\nRule : ",Ds nm
-                           ,Ds "\nMatched term: ",Dd term
-                           ,Ds "\n Rewrites to: ",Dd rhs2
-                           ,Ds "\n Under subst: ",Dd sub
-                           ,Ds "\nPrerequisite: ",Dd pre2]
-                       ; return((map (subTau sub) truths,pre2,rhs2,nm:open,sub):ys) }
-        Nothing -> return ys
+     ; maybeM (mostGenUnify [(lhs,term)])
+        (\ sub ->    do { let pre2 = sub2Pred sub precond
+                              rhs2 = sub2Pred sub rhs
+                        ; verbose <- getMode "solving"
+                        ; whenM verbose
+                            [Ds "\nRule : ",Ds nm
+                            ,Ds "\nMatched term: ",Dd term
+                            ,Ds "\n Rewrites to: ",Dd rhs2
+                            ,Ds "\n Under subst: ",Dd sub
+                            ,Ds "\nPrerequisite: ",Dd pre2]
+                        ; return((map (sub2Tau sub) truths,pre2,rhs2,nm:open,sub):ys) })
+        (return ys)
      }
 
 ----------------------------------------------------------------------------
@@ -3849,7 +3862,7 @@ solveConstraints (nm,rho) env collected =
      ; (residual',u3b,_) <- liftNf norm2TauL residual -- Normalize residual constraints
      ; let u3c = composeTwo u3 u3b
      ; (unsolved,un4) <- inEnv env (solvP expandTruths (map (sub2Tau u3c) residual'))
-     ; let u5 = composeTwo ([],un4) u3c
+     ; let u5 = composeTwo un4 u3c
      ; let truths = (map (sub2Tau u5) expandTruths)
            need = (map (sub2Tau u5) residual)
      ; return(u5,unsolved,truths,need)}
@@ -3859,30 +3872,31 @@ splitR ((p@(Equality _ _)):ps) (eqs,rels) = splitR ps (p:eqs,rels)
 splitR ((Rel t):ps) (eqs,rels) = splitR ps (eqs,t:rels)
 
 --               Truths Quest Rules
-solv :: Int -> [([Tau],[Tau],[String],Unifier)] -> TC ([([Tau],[Tau],[String],Unifier)])
+solv :: Int -> [([Tau],[Tau],[String],Unifier2)] -> TC ([([Tau],[Tau],[String],Unifier2)])
 solv n [] = return ([])
 solv 0 xs = warnM [Ds "\nThe 'backchain' bounds have been exceeded."] >> return ([])
 solv n ((ts,[],nms,u):xs) =
   do { (ys) <- solv (n-1) xs
      ; return ((ts,[],nms,u):ys) }
 solv n ((x@(ts,qs,nms,u)):xs) =
-  case truthStep x of
-   [] -> do { m <- ruleStep x
-            ; case m of
-                Nothing -> do { (ys) <- solv (n-1) xs; return(x:ys)}
-                Just ws ->  solv n (xs++ws) }
-   zs -> do { whenM False [Ds "Truth Steps\n  ",Dlf f15 zs "\n  "
-                         ,Ds "\n questions = ",Dl qs "; "
-                         ,Ds "\ntruths = ",Dl ts "; "]
-            ; solv n (zs++xs)}
+  do { ans <- truthStep2 x
+     ; case ans of
+        [] -> do { m <- ruleStep x
+                 ; case m of
+                     Nothing -> do { (ys) <- solv (n-1) xs; return(x:ys)}
+                     Just ws ->  solv n (xs++ws) }
+        zs -> do { whenM False [Ds "Truth Steps\n  ",Dlf f15 zs "\n  "
+                               ,Ds "\n questions = ",Dl qs "; "
+                               ,Ds "\ntruths = ",Dl ts "; "]
+                 ; solv n (zs++xs)}}
 
 f15 d (ts,qs,_,u) = displays d [Ds "[",Dl ts ",",Ds "] => [",Dl qs ",",Ds"]", Ds " where ",Dd u]
 
-solvP :: [Tau] -> [Tau] -> TC([Pred],Unifier)
+solvP :: [Tau] -> [Tau] -> TC([Pred],Unifier2)
 solvP truths questions =
   do { steps <- getBound "backchain" 4
-     ; ans <- solv steps [(truths,questions,[],[])]
-     ; let aMostGeneral (ts,qs,nms,u) = null u
+     ; ans <- solv steps [(truths,questions,[],([],[]))]
+     ; let aMostGeneral (ts,qs,nms,(levelu,u)) = null u
            axiom [] = False
            axiom (c:cs) = isUpper c
            axiomOnlySolution (ts,qs,nms,u) = all axiom nms
@@ -3918,7 +3932,7 @@ unique x none onef many =
 -- refutable, so we should filter them out. If all are refutable, then
 -- the questions themselves are refutable.
 
-allRefutable :: [([Tau],[Tau],[String],Unifier)] -> TC(Either [([Tau],[Tau],[String],Unifier)] (DispElem Z))
+allRefutable :: [([Tau],[Tau],[String],Unifier2)] -> TC(Either [([Tau],[Tau],[String],Unifier2)] (DispElem Z))
 allRefutable sols = do { xs <- mapM test1 sols; check xs sols []}
  where test1 (truths,quests,names,unifier) = refutable (map Rel quests)
        check [] sols good = return(Left good)
@@ -3926,7 +3940,7 @@ allRefutable sols = do { xs <- mapM test1 sols; check xs sols []}
        check (Just dispElem : xs) sols good = return(Right dispElem)
 
 
-showOneAmbig term d (ts,ps,nms,u) = displays d [Ds "\n   ",Dd (subPred u (map Rel term))]
+showOneAmbig term d (ts,ps,nms,(levelu,u)) = displays d [Ds "\n   ",Dd (subPred u (map Rel term))]
 g45 d (ts,ps,nms,u) = displays d [Ds "questions [",Dl ps ",",Ds "] unifier ",Dd u,Ds " rules used ",Dl nms ","]
 
 
@@ -3963,11 +3977,11 @@ checkTau ((r@(RW nm key Axiom _ _ _ _)):rs) truth =
 -- =================================================================
 -- effect free unifiers and their operations
 
-mguWithFail:: Monad m => [(Tau,Tau)] -> m [(TcTv,Tau)]
+mguWithFail:: TyCh m => [(Tau,Tau)] -> m [(TcTv,Tau)]
 mguWithFail xs =
-  case mgu xs of
-        Left(_,sub) -> return sub
-        Right (mess,t1,t2) -> fail mess
+  eitherM (mguB xs)
+          (\ (_,sub) -> return sub)
+          (\(mess,t1,t2) -> fail mess)
 
 
 findCommon xs [] = (xs,[],[])
@@ -3981,18 +3995,26 @@ findCommon xs (y:ys) = if null ps then (xs2,y:ys2,ps2) else (xs2,ys2,ps++ps2)
                else let (ws,pairs) = g xs (a,b)
                     in ((c,d):ws,pairs)
 
-mergeMgu :: [(TcTv,Tau)] -> [(TcTv,Tau)] -> Either [(TcTv,Tau)] (String,Tau,Tau)
+mergeMgu :: TyCh m => [(TcTv,Tau)] -> [(TcTv,Tau)] -> m(Either [(TcTv,Tau)] (String,Tau,Tau))
 mergeMgu sub1 sub2 =
   case findCommon sub1 sub2 of
-   (_,_,[]) -> Left(composeU sub1 sub2)
+   (_,_,[]) -> return(Left(composeU sub1 sub2))
    (sub1',sub2',triples) ->
       let project1(v,t1,t2) = (t1,t2)
           project2 sub (v,t1,t2) = (v,subTau sub t2)
-      in case mgu (map project1 triples) of
+      in eitherM (mguB (map project1 triples)) 
+           (\ (_,sub3) -> eitherM (mergeMgu sub3 (composeU sub1' sub2'))
+                             (\ us -> return(Left(us ++ map (project2 sub3) triples)))
+                             (\ x -> return(Right x)))
+           (\ x -> return(Right x))                            
+
+{-      
+      case mgu (map project1 triples) of
            Right x -> Right x
            Left(_,sub3) -> case mergeMgu sub3 (composeU sub1' sub2') of
                             Left us -> Left(us ++ map (project2 sub3) triples)
                             Right x -> Right x
+-}
 
 a1 = [("a",12),("b",34),("c",23)]
 a2 = [("z",1),("a",22),("c",11),("e",99)]
@@ -4303,7 +4325,8 @@ checkReadEvalPrint (hint,env) =
                    do { s1 <- zonk sigma
                       ; updateDisp
                       ; warnM [Ds (x ++ " :: "),Dd s1]
-                      -- ; showKinds s1
+                      ; verbose <- getMode "kind"
+                      ; when verbose (showKinds varsOfPoly s1)
                       ; return (True)}
                 Nothing -> do { putS ("Unknown name: "++x); return (True)}
           (ColonCom "o" e) ->
@@ -4344,10 +4367,12 @@ checkReadEvalPrint (hint,env) =
                 ; obs <- zonk oblig
                 ; updateDisp
                 ; warnM [Ds(show exp ++ " :: "),Dd t2]
-                ; showKinds varsOfRho t2
+                ; verbose <- getMode "kind"
+                ; when verbose (showKinds varsOfRho t2)
                 ; whenM (not (null oblig)) [Ds "Only when we can solve\n   ",Dd obs]
                 ; return (True)
                 }
+          EmptyCom -> return True
           other -> putS "unknown command" >> return (True)
      }
 
@@ -4917,3 +4942,33 @@ renderProb f t =
            string = render(f doc)
      ; writeRef dispRef d2
      ; return string }
+
+
+-------------------------------------------------------------------
+{-
+truthStep :: ([Tau],[Tau],[String],Unifier) -> [([Tau],[Tau],[String],Unifier)]
+truthStep (truths,questions,open,u0) =
+      sortBy moreGeneral $
+      relevant $
+      sortBy samePred
+      [ (map (subTau u) truths
+        ,map (subTau u) (elim n questions)
+        ,open,composeU u u0,n)
+      | t <- truths
+      ,(q,n) <- zip questions [0..]
+      , (_,u) <- unifyToList [(t,q)] ]
+
+unifyToList xs =
+      case mgu xs of 
+        Left ans -> [ans]
+        Right (s,x,y) -> [] 
+
+samePred (ts1,ps1,_,u1,i) (ts2,ps2,_,u2,j) = compare (i,length u1)(j,length u2)
+moreGeneral (ts1,ps1,_,u1) (ts2,ps2,_,u2) = compare (length u1)(length u2)
+
+
+relevant [] = []
+relevant [(t,p,s,u,i)] = [(t,p,s,u)]
+relevant (x@(_,_,_,[],i):y@(_,_,_,_,j):zs) | i==j = relevant (x:zs)
+relevant ((t,p,s,u,i):zs) = (t,p,s,u):relevant zs
+-}

@@ -255,6 +255,11 @@ instance NameStore d => Exhibit d TcLv where
   exhibit env v = (env2,s) -- (env2,s++"("++show v++")")
     where (env2,s) = useStoreLevel v id env
 
+instance NameStore d => Exhibit d [(TcLv,Level)] where
+  exhibit xs [] = (xs,"[]")
+  exhibit xs ys = (zs,"["++ans++"]")
+    where (zs,ans) = exhibitL exhibit xs ys ", "
+
 instance NameStore d => Exhibit d Level where
   exhibit env (TcLv v) = (env2,str) -- ++"("++show v++")")
     where (env2,str) = exhibit env v
@@ -1176,6 +1181,8 @@ unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (TcTv v@(Tv _ (Flexi _) _)) = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 (Flexi _) k2))      = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) = emit (TcTv x) y
+unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TyCon tx k t _)) = emit (TcTv x) y
+
 unifyVar v (x@(TyFun nm k _)) = emit (TcTv v) x
 unifyVar v t = matchErr "(V) different types" (TcTv v) t
 
@@ -1601,9 +1608,8 @@ instance TyCh m => Typable m  Tau Tau where
         --          ; showKinds varsOfTau (TyApp fk2 (TyApp ff x))
          ; let err mess =
                  do { (inferred::Tau,_) <- infer x
-                    ; let but = case kindOf arg_ty of
-                                  Nothing -> Ds ") but"
-                                  Just k -> Dr [ Ds ":: ",Dd k,Ds ") but"]
+                     ; k <- kindOfM arg_ty
+                     ; let but = Dr [ Ds ":: ",Dd k,Ds ") but"]
                     ; failM 2
                        [Ds "\nwhile checking the kind of ("
                        ,Dd t, Ds ")" {- , Ds (shtt t) -}
@@ -1655,31 +1661,6 @@ mustBe (term,qual) t comput expect =
 -- possibility of polymorphic TyCon's. Then we need to
 -- generate new 'kind variables', so it must be monadic.
 -- We supply a pure function "kindOf" but it is inexact.
-
-kindOf :: Tau -> Maybe Tau
-kindOf (TcTv (Tv u r (MK k))) = Just k
-kindOf (TyCon sx level_ s (K lvs (Forall xs))) =
-   case (lvs,unsafeUnwind xs) of
-    ([],(vs,(_,Rtau k))) -> Just k
-    (lvs,(vs,(_,rho))) -> Nothing -- error ("Non Tau in kind of Type constructor: "++show rho)
-kindOf (Star n) = Just (Star (LvSucc n))
-kindOf (Karr x y) = kindOf y
-kindOf (TyVar n (MK k)) = Just k
-kindOf (TyFun s (K lvs (Forall xs)) ts) =
-   case (lvs,unsafeUnwind xs) of
-     ([],(vs,(_,Rtau k))) ->  unwind ts k
-     (lvs,(vs,(_,rho))) -> Nothing  -- error ("Non Tau in Type function kind: "++show rho)
- where unwind [] k = Just k
-       unwind (x:xs) (Karr a b) = unwind xs b
-       unwind _ k = Nothing  -- error ("Non (~>) in Type function kind: "++show k)
-kindOf (TyApp ff x) =
-  case kindOf ff of
-    (Just (Karr a b)) -> Just b
-    k -> Nothing -- error ("\nIn KindOf, Non (~>) in Type application: "++show (TyApp ff x)++"\nwhere the function, "++show ff++", has kind: "++show k)
-kindOf (TySyn nm n fs as b) = kindOf b
-kindOf (TyEx xs) =
-    case unsafeUnwind xs of
-     (vs,(_,k)) -> Just k
 
 kindOfM :: TyCh m => Tau -> m Tau
 kindOfM (TcTv (Tv u r (MK k))) = return k
@@ -1805,35 +1786,6 @@ instance TyCh m => Typable m (L([Pred],Tau)) Tau where
 
 typkind (t@(Tv un f k)) = (t,k)
 
-hasKind :: TyCh m => String -> Sigma -> Kind -> m ()
-hasKind name sigma (MK kind) =
-  do { let new nam quant k =
-              do { v <- newFlexiTyVar k; return(TcTv v)}
-     ; (env,eqs,rho) <- unBindWith (\ x -> return "FlexVarsShouldNeverBackPatch4") new sigma
-     ; let err message = failM 3
-               [Ds ("\nWhile checking the kind of constructor\n   "++name++" :: ")
-               ,Dl eqs ", ",Ds " =>\n      ",Dd rho, Dlf ff (map typkind env) "\n", Ds message]
-           ff d (typ,MK kind) = displays d2 [Dd typ, Ds ks]
-             where (d2,ks) = exhibitKinding d kind
-
-           err2 mess = err ("\nWe checked the well formedness of constraints, and found: "++mess)
-           ok (Tv unq (Flexi ref) k) =
-               do { maybet <- readRef ref
-                  ; case maybet of
-                      Nothing -> return True
-                      Just t -> return False}
-     ; good <- mapM ok env
-     ; evars <- envTvs
-     ; if (all id good)
-          then if any (`elem` evars) env
-                  then failM 2 [Ds "A universal variable escapes"]
-                  else return ()
-          else failM 2 [Ds "A universal variable got bound"]
-     ; handleM 3 (check rho kind) err
-     ; handleM 3 (mapM kindPred eqs) err2
-     ; return ()
-     }
-
 
 --kindPred :: TyCh m => Pred -> m Pred
 kindPred(Equality a b) =
@@ -1871,7 +1823,8 @@ captured sig1 sig2 rho mess =
 -- Subsumption instances
 
 instance TyCh m => Subsumption m Tau Tau where
-   morepoly s x y = unify x y
+   morepoly s x y = -- warnM [Ds "Insubsumption Tau Tau ",Dd x,Ds "=?=" ,Dd y] >> 
+                    unify x y
 
 instance (TypeLike m b,Subsumption m b b) => Subsumption m b (Expected b) where
    morepoly s t1 (Check t2) = morepoly s t1 t2
@@ -1900,9 +1853,11 @@ instance TyCh m => Subsumption m Sigma Sigma where
         }
 
 instance TyCh m => Subsumption m Sigma (Expected Rho) where
-   morepoly s s1 (Check e2) = morepoly s s1 e2
+   morepoly s s1 (Check e2) = -- warnM [Ds "Insubsumption Sigma ExpectedRho ",Dd s1,Ds "=?=" ,Dd e2] >> 
+                              morepoly s s1 e2
    morepoly s s1 (Infer ref) =
-      do { (preds,rho1) <- instanTy [] s1;
+      do { -- warnM [Ds "Insubsumption Sigma ExpectedRho ",Dd s1,Ds "=?= Infer"];
+           (preds,rho1) <- instanTy [] s1;
          ; injectA " morepoly Sigma (Expected Rho) " preds -- ## DO THIS WITH THE PREDS?
          ; writeRef ref rho1
          }
@@ -1923,14 +1878,14 @@ instance (TyCh m) => Subsumption m Sigma Rho where
 morepolySigmaRho s (Forall(Nil([],rho1))) rho2 = morepoly s rho1 rho2
 morepolySigmaRho s (sigma1@(Forall sig)) rho2 =
      do { ts <- getTruths
-        ; whenM False [Ds "Entering morepoly\n Sigma = "
+        ; whenM False [Ds "Entering morepoly Sigma Rho \n Sigma = "
                ,Dd sigma1,Ds "\n Rho = ",Dd rho2
                ,Ds "\n truths = ",Dl ts ", "]
         ; (vs,preds,rho1) <- instanL [] sig
         ; injectA " morepoly Sigma Rho 1 " preds -- ## DO THIS WITH THE PREDS?
         ; ((),oblig2) <- extract(morepoly s rho1 rho2)
         ; (local,general) <- localPreds vs oblig2
-        -- ; warn [Ds "\nlocal = ",Dd local,Ds ", general = ", Dd general]
+        -- ; warnM [Ds "\nlocal = ",Dd local,Ds ", general = ", Dd general]
         ; (preds2,(ls,unifier)) <- handleM 1 (solveSomeEqs ("morepoly Sigma Rho",rho2) local)
                                         (no_solution sigma1 rho2 rho1)
         ; gen2 <- sub ([],unifier,[],ls) general
@@ -1957,7 +1912,7 @@ no_solution sigma rho skoRho s = failM 1
 ----------------------------------------------------------------
 
 instance TyCh m => Subsumption m Rho Rho where
- morepoly s x y = -- warnM [Ds "\n Rho1 = ",Dd x,Ds " Rho2 = ",Dd y] >>
+ morepoly s x y = -- warnM [Ds "\n Subsumption Rho Rho: ",Dd x,Ds " =?= ",Dd y] >>
                   f x y where
   f (Rarrow a b) x = do{(m,n) <- unifyFun x; morepoly s b n; morepoly s m a }
   f x (Rarrow m n) = do{(a,b) <- unifyFun x; morepoly s b n; morepoly s m a }
@@ -2860,9 +2815,10 @@ union2 (x,y) (a,b) = (union x a,unionBy f y b)
 union3 (x,y,z) (a,b,c) = (union x a,unionBy f y b,union z c)
   where f (n1,k1) (n2,k2) = n1==n2
 
+varsOfTcTv (x@(Tv unq flav (MK k))) = union3 (varsOfTau k) ([x],[],[])
 
 varsOfTau :: Tau -> ([TcTv],[(Name,Kind)],[TcLv])
-varsOfTau (TcTv (x@(Tv unq flav (MK k)))) = union3 (varsOfTau k) ([x],[],[])
+varsOfTau (TcTv x) = varsOfTcTv x
 varsOfTau (TyApp x y) = union3 (varsOfTau x) (varsOfTau y)
 varsOfTau (Karr x y) = union3 (varsOfTau x) (varsOfTau y)
 varsOfTau (TyFun f k xs) = union3 (varsOfPoly k) (foldr g ([],[],[]) xs)  where g t vs = union3 (varsOfTau t) vs
@@ -2876,6 +2832,11 @@ varsOfTau (TySyn nm n fs xs x) =
          h (nm,k) vs = union3 (varsOfKind k) vs
 varsOfTau (TyEx x) = (varsOfLTau x)
 
+varsOfList :: (a -> ([TcTv],[(Name,Kind)],[TcLv])) -> [a] -> ([TcTv],[(Name,Kind)],[TcLv])
+varsOfList f [] = ([],[],[])
+varsOfList f (x:xs) = union3 (f x) (varsOfList f xs)
+
+varsOfTauTauL = varsOfList (varsOfPair varsOfTau varsOfTau)
 
 varsOfPoly(K lvs x) = case varsOfSigma x of
                        (vs,nms,ls) -> (vs,nms,ls \\ map LvVar lvs)
@@ -2932,67 +2893,15 @@ c = TcTv(Tv 7 (Skol "c") star)
 
 ps = [ Equality b a, Equality c a]
 
-Left(_,qas) = mgu [(b,a),(c,a)]
-wsd = subTau qas (tpair a (tpair b c))
-
-mostGenUnify xs =
-  case mgu xs of
-    Left ans -> return ans
-    Right (s,x,y) -> fail s
-
-
-mgu :: [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) (String,Tau,Tau)
-mgu [] = Left ([],[])
-mgu ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mgu xs
-
-mgu ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = mguVar x tau xs
-mgu ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguVar x tau xs
-
-mgu ((TyApp x y,TyApp a b):xs) = mgu ((x,a):(y,b):xs)
-mgu ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mgu xs -- TODO LEVEL
-mgu ((Star n,Star m):xs) = mguLevel n m xs
-mgu ((Karr x y,Karr a b):xs) = mgu ((x,a):(y,b):xs)
-mgu ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
-  if f==g then mgu (zip ys zs ++ xs) else Right("TyFun doesn't match",x,y)
-mgu ((x@(TyVar s k),y):xs) = Right("No TyVar in MGU", x, y)
-mgu ((y,x@(TyVar s k)):xs) = Right("No TyVar in MGU", x, y)
-mgu ((TySyn nm n fs as x,y):xs) = mgu ((x,y):xs)
-mgu ((y,TySyn nm n fs as x):xs) = mgu ((y,x):xs)
-
-mgu ((TcTv (x@(Tv n (Rigid _ _ _) _)),tau):xs) = Right("Rigid",TcTv x,tau)
-mgu ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = Right("Rigid",TcTv x,tau)
-
-mgu ((x,y):xs) = Right("No Match", x, y)
-
 failIfInConsistent pat current extension xs =
-  case mgu xs of
-    Right ("No Match",x,y) ->
-        failK "bad refinement" 2
-           [Ds "in the scope of ",Ds pat,Ds "\nThe current refinement\n   "
-           ,Dl current ",",Ds "\nis inconsistent with the refinement extension\n   "
-           ,Dl extension "," ,Ds "\nbecause ",Dd x, Ds " =/= ",Dd y]
-    _ -> return (map (uncurry Equality) xs)
-
-
-
-mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) ([Char],Tau,Tau)
-mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
-                     then Right("occurs check", TcTv x, tau)
-                     else compose2 new2 (Left new1)
-  where vs = tvsTau tau
-        new1 = ([],[(x,tau)])
-        k2 = kindOf tau
-        new2 = case k2 of
-                 Just k3 -> mgu (sub2Pairs new1 ((k,k3):xs))
-                 Nothing -> mgu (sub2Pairs new1 xs)
-
-
-mguLevel LvZero LvZero xs = mgu xs
-mguLevel (LvSucc x) (LvSucc y) xs = mguLevel x y xs
-mguLevel (TcLv v) x xs = compose2 (Left([(v,x)],[])) (mgu xs)
-mguLevel x (TcLv v) xs = compose2 (Left([(v,x)],[])) (mgu xs)
-mguLevel a b xs = Right("levels don't match",Star a, Star b)
-
+  do { ans <- mguB xs
+     ; case ans of
+        Right ("No Match",x,y) ->
+          failK "bad refinement" 2
+            [Ds "in the scope of ",Ds pat,Ds "\nThe current refinement\n   "
+            ,Dl current ",",Ds "\nis inconsistent with the refinement extension\n   "
+            ,Dl extension "," ,Ds "\nbecause ",Dd x, Ds " =/= ",Dd y]
+        _ -> return (map (uncurry Equality) xs) }
 
 subLev env (t@(TcLv v)) = 
   case lookup v env of
@@ -3035,6 +2944,30 @@ extendref new old = ([(u,subTau fresh t) | (u,t) <- old] ++ fresh,existing)
 -- it may generate fresh variables but only to get the kind
 -- of a term.
 
+mostGenUnify :: TyCh m => [(Tau,Tau)] -> m (Maybe ([(TcLv,Level)],[(TcTv,Tau)]))
+mostGenUnify xs =
+  do { ans <- mguB xs 
+     ; case ans of 
+        Left ans -> return (return ans)
+        Right (s,x,y) -> return(fail s) }
+
+eitherM :: Monad m => m (Either a b) -> (a -> m c) -> (b -> m c) -> m c
+eitherM comp leftf rightf =
+  do { x <- comp
+     ; case x of
+         Left y -> leftf y
+         Right y -> rightf y}
+
+
+mguLevelB::  TyCh m => Level -> Level -> [(Tau,Tau)] -> m(Either Unifier2 (String,Tau,Tau))
+mguLevelB LvZero LvZero xs = mguB xs
+mguLevelB (LvSucc x) (LvSucc y) xs = mguLevelB x y xs
+mguLevelB (TcLv v) x xs = 
+   do { zs <- mguB xs; return(compose2 (Left([(v,x)],[])) zs)}
+mguLevelB x (TcLv v) xs = 
+   do { zs <- mguB xs; return(compose2 (Left([(v,x)],[])) zs)}
+mguLevelB a b xs = return(Right("levels don't match",Star a, Star b))
+
 mguB :: TyCh m => [(Tau,Tau)] -> m(Either Unifier2 (String,Tau,Tau))
 mguB [] = return(Left([],[]))
 mguB ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mguB xs
@@ -3044,13 +2977,13 @@ mguB ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguBVar x tau xs
 
 mguB ((TyApp x y,TyApp a b):xs) = mguB ((x,a):(y,b):xs)
 mguB ((TyCon sx level1 s1 _,TyCon tx level2 s2 _):xs) | s1==s2 = 
-  case mguLevel level1 level2 [] of
-    Left u1 -> do { u2 <- mguB (sub2Pairs u1 xs) ; return(compose2 u2 (Left u1))}
-    Right x -> return(Right x)
+  eitherM (mguLevelB level1 level2 [])
+    (\u1 -> do { u2 <- mguB (sub2Pairs u1 xs) ; return(compose2 u2 (Left u1))})
+    (\x -> return(Right x))
 mguB ((Star n,Star m):xs) = 
-  case mguLevel n m [] of
-    Left u1 -> do { u2 <- mguB (sub2Pairs u1 xs) ; return(compose2 u2 (Left u1))}
-    Right x -> return(Right x)
+  eitherM (mguLevelB n m [])
+    (\ u1 -> do { u2 <- mguB (sub2Pairs u1 xs) ; return(compose2 u2 (Left u1))})
+    (\ x -> return(Right x))
 mguB ((Karr x y,Karr a b):xs) = mguB ((x,a):(y,b):xs)
 mguB ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
   if f==g then mguB (zip ys zs ++ xs) else return(Right("TyFun doesn't match",x,y))
@@ -3162,7 +3095,7 @@ test2 =
  where v n = TcTv(Tv n (Rigid All Z (show n,undefined)) star)
        u n = v n
 
-go = mgu test2
+-- go = mguB test2
 
 -------------------------------------------------------------
 -- sometimes when debugging, you need to see
@@ -3186,13 +3119,26 @@ instance Sht Sigma where
 instance Sht Pred where
   shtt = shtEq
 instance (Sht p,Sht s) => Sht ([p],s) where
-  shtt (ps,s) = shtt ps ++ " => "++shtt s
+  shtt (ps,s) = shttL shtt ps ++ " => "++shtt s
+
+instance Sht [(Tau,Tau)] where
+  shtt xs = plistf f "\n[   " xs ",\n   " "]"
+    where f (x,y) = "("++sht x++","++sht y++")"
+    
+instance Sht [Pred] where
+  shtt xs = plistf shtt "[" xs "," "]"
+      
+{-
 instance Sht x => Sht [x] where
   shtt xs = plistf shtt "[" xs "," "]"
+-}
+
+shttL f xs = plistf f "[" xs "," "]"
+
 instance Sht Kind where
   shtt (MK s) = shtt s
 instance Sht Name => Sht PolyKind where
-  shtt (K lvs z) = "(level "++shtt lvs ++"."++shtt z++")"
+  shtt (K lvs z) = "(level "++shttL shtt lvs ++"."++shtt z++")"
 instance Sht Name where
   shtt x = show x
 
@@ -3491,10 +3437,9 @@ exSynPair d (t@(TyApp (TyApp (TyCon (Px(key,pair)) _ c1 _) x) y))
   where (d1,x') = exhibit d x
         (d2,y') = exhibit d1 y
 
-exhibitNmK xs (nm,k) = useStoreName nm k f xs          -- One or the other
+exhibitNmK xs (nm,k) = useStoreName nm k ("'"++) xs          -- One or the other
                      -- (zs,"("++ans++":: "++k2++")")
-    where f s = "'"++s
-          (ys,ans) = useStoreName nm k f xs
+    where (ys,ans) = useStoreName nm k ("'"++) xs
           (zs,k2) = exhibit ys k
 
 polyLevel LvZero = False
@@ -3642,9 +3587,9 @@ instance (NameStore d,Exhibit d a) => Exhibit d ([Pred], a) where
 
 instance NameStore d => Exhibit d (Name,Kind,Quant) where
   exhibit xs (nm,k,q) = (d2,"("++nmS++","++kS++","++show q++")")
-    where (d1,nmS) = useStoreName nm k f xs
+    where (d1,nmS) = useStoreName nm k ("'"++) xs
           (d2,kS) = exhibit d1 k
-          f s = "'"++s
+
 
 instance (NameStore d,Exhibit d Name)=> Exhibit d (String,Tau,PolyKind) where
   exhibit xs (str,tau,pkind)= (d2,"("++str++","++tauS++","++pkindS++")")
@@ -3776,9 +3721,9 @@ solveHP context@(s,r) truths oblig =
   do { truths2 <- zonk truths
      ; oblig2 <- zonk oblig
      ; let (hotruths,fots) = span higherOrder truths2
-           counts = map (countM oblig2) hotruths
            force (1,u) = mutVarSolve u
            force (n,u) = return []
+     ; counts <- mapM (countM oblig2) hotruths      
      ; mapM force counts
      ; truths3 <- zonk truths2
      ; oblig3 <- zonk oblig2
@@ -3799,12 +3744,14 @@ sumM [] = (0,[])
 sumM ((n,xs):zs) = (n+m,xs) where (m,_) = sumM zs
 
 matchRel (Rel p) (Rel q) =
-  case mgu [(p,q)] of
-    Left (_,u) -> (1,u)
-    Right (a,b,c) -> (0,[])
-matchRel p q = (0,[])
+  do {ans <- mguB [(p,q)]
+     ; case ans of
+         Left (_,u) -> return (1,u)
+         Right (a,b,c) -> return (0,[])}
+matchRel p q = return(0,[])
 
-countM ps p = sumM(map (matchRel p) ps)
+countM ps p = do { ans <- mapM (matchRel p) ps
+                 ; return(sumM ans)}
 
 higherOrder (Rel t) = ho t
   where ho (TyApp f y) = ho f
@@ -4012,6 +3959,14 @@ mguStar beta ((Star n,Star m):xs) = unifyLevel "mguStar" n m >> mguStar beta xs
 mguStar beta ((Karr x y,Karr a b):xs) = mguStar beta ((x,a):(y,b):xs)
 mguStar beta ((TySyn nm n fs as x,y):xs) = mguStar beta ((x,y):xs)
 mguStar beta ((y,TySyn nm n fs as x):xs) = mguStar beta ((y,x):xs)
+
+mguStar beta ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) | f==g =
+  eitherM (mguStar beta (zip ys zs))
+     (\ (old,ps) -> eitherM (mguStar beta (subPairs old xs))
+                      (\ (new,qs) -> return(composeStar  (Left(new,ps++qs)) old))
+                      (\ err -> return(Right err)) )
+     (\ _ -> do { ans <- (mguStar beta xs); return (emitStar (x,y) ans)} )
+  
 mguStar beta ((x@(TyFun f _ ys),y):xs) =
    do { ans <-  (mguStar beta xs); return (emitStar (x,y) ans) }
 mguStar beta ((y,x@(TyFun f _ ys)):xs) =
@@ -4103,3 +4058,113 @@ subtermsRho (Rtau x) ans = subtermsTau x ans
 subtermsSigma:: Sigma -> [Tau] -> [Tau]
 subtermsSigma (Forall l) ans = subtermsRho rho ans
   where (args,(preds,rho)) = unsafeUnwind l
+
+{-
+------------------------------------------------------------------------------------------------------------------------------------------------------
+-- I have gotten rid of all occurences of "mgu" and replaced them with "mguB"
+-- except one in "truthStep" in Infer.hs I don't know how to get rid of it.
+------------------------------------------------------------------------------
+
+
+mgu :: [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) (String,Tau,Tau)
+mgu [] = Left ([],[])
+mgu ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mgu xs
+
+mgu ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = mguVar x tau xs
+mgu ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguVar x tau xs
+
+mgu ((TyApp x y,TyApp a b):xs) = mgu ((x,a):(y,b):xs)
+mgu ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mgu xs -- TODO LEVEL
+mgu ((Star n,Star m):xs) = mguLevel n m xs
+mgu ((Karr x y,Karr a b):xs) = mgu ((x,a):(y,b):xs)
+mgu ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
+  if f==g then mgu (zip ys zs ++ xs) else Right("TyFun doesn't match",x,y)
+mgu ((x@(TyVar s k),y):xs) = Right("No TyVar in MGU", x, y)
+mgu ((y,x@(TyVar s k)):xs) = Right("No TyVar in MGU", x, y)
+mgu ((TySyn nm n fs as x,y):xs) = mgu ((x,y):xs)
+mgu ((y,TySyn nm n fs as x):xs) = mgu ((y,x):xs)
+
+mgu ((TcTv (x@(Tv n (Rigid _ _ _) _)),tau):xs) = Right("Rigid",TcTv x,tau)
+mgu ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = Right("Rigid",TcTv x,tau)
+
+mgu ((x,y):xs) = Right("No Match", x, y)
+
+
+mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) ([Char],Tau,Tau)
+mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
+                     then Right("occurs check", TcTv x, tau)
+                     else compose2 new2 (Left new1)
+  where vs = tvsTau tau
+        new1 = ([],[(x,tau)])
+        k2 = kindOf tau
+        new2 = case k2 of
+                 Just k3 -> mgu (sub2Pairs new1 ((k,k3):xs))
+                 Nothing -> mgu (sub2Pairs new1 xs)
+
+
+mguLevel LvZero LvZero xs = mgu xs
+mguLevel (LvSucc x) (LvSucc y) xs = mguLevel x y xs
+mguLevel (TcLv v) x xs = compose2 (Left([(v,x)],[])) (mgu xs)
+mguLevel x (TcLv v) xs = compose2 (Left([(v,x)],[])) (mgu xs)
+mguLevel a b xs = Right("levels don't match",Star a, Star b)
+
+hasKind :: TyCh m => String -> Sigma -> Kind -> m ()
+hasKind name sigma (MK kind) =
+  do { let new nam quant k =
+              do { v <- newFlexiTyVar k; return(TcTv v)}
+     ; (env,eqs,rho) <- unBindWith (\ x -> return "FlexVarsShouldNeverBackPatch4") new sigma
+     ; let err message = failM 3
+               [Ds ("\nWhile checking the kind of constructor\n   "++name++" :: ")
+               ,Dl eqs ", ",Ds " =>\n      ",Dd rho, Dlf ff (map typkind env) "\n", Ds message]
+           ff d (typ,MK kind) = displays d2 [Dd typ, Ds ks]
+             where (d2,ks) = exhibitKinding d kind
+
+           err2 mess = err ("\nWe checked the well formedness of constraints, and found: "++mess)
+           ok (Tv unq (Flexi ref) k) =
+               do { maybet <- readRef ref
+                  ; case maybet of
+                      Nothing -> return True
+                      Just t -> return False}
+     ; good <- mapM ok env
+     ; evars <- envTvs
+     ; if (all id good)
+          then if any (`elem` evars) env
+                  then failM 2 [Ds "A universal variable escapes"]
+                  else return ()
+          else failM 2 [Ds "A universal variable got bound"]
+     ; handleM 3 (check rho kind) err
+     ; handleM 3 (mapM kindPred eqs) err2
+     ; return ()
+     }
+
+
+
+kindOf :: Tau -> Maybe Tau
+kindOf (TcTv (Tv u r (MK k))) = Just k
+kindOf (TyCon sx level_ s (K lvs (Forall xs))) =
+   case (lvs,unsafeUnwind xs) of
+    ([],(vs,(_,Rtau k))) -> Just k
+    (lvs,(vs,(_,rho))) -> Nothing -- error ("Non Tau in kind of Type constructor: "++show rho)
+kindOf (Star n) = Just (Star (LvSucc n))
+kindOf (Karr x y) = kindOf y
+kindOf (TyVar n (MK k)) = Just k
+kindOf (TyFun s (K lvs (Forall xs)) ts) =
+   case (lvs,unsafeUnwind xs) of
+     ([],(vs,(_,Rtau k))) ->  unwind ts k
+     (lvs,(vs,(_,rho))) -> Nothing  -- error ("Non Tau in Type function kind: "++show rho)
+ where unwind [] k = Just k
+       unwind (x:xs) (Karr a b) = unwind xs b
+       unwind _ k = Nothing  -- error ("Non (~>) in Type function kind: "++show k)
+kindOf (TyApp ff x) =
+  case kindOf ff of
+    (Just (Karr a b)) -> Just b
+    k -> Nothing -- error ("\nIn KindOf, Non (~>) in Type application: "++show (TyApp ff x)++"\nwhere the function, "++show ff++", has kind: "++show k)
+kindOf (TySyn nm n fs as b) = kindOf b
+kindOf (TyEx xs) =
+    case unsafeUnwind xs of
+     (vs,(_,k)) -> Just k
+     
+-} 
+   
+------------------------------------------------------------------
+------------------------------------------------------------------
