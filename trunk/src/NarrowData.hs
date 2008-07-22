@@ -240,9 +240,11 @@ equalParts (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = (x,y)
 
 
 varWild (Tv _ _ k) = TcTv(wild k)
+{-
 termWild t = case kindOf t of
                Just k -> TcTv (wild (MK k))
               --  Nothing -> TcTv (wild star)
+              -}
 
 -- There is unique variable "WildCard" that is different from all
 -- other type variables. It is unique, but different. Its actual
@@ -266,9 +268,10 @@ nAppend xs (Exceeded ys) = Exceeded(xs++ys)
 -- Making fresh copies of terms. I.e. replacing every
 -- var with a fresh var.
 
-termFresh t = case kindOf t of
-                Just k -> newTau (MK k)
-                Nothing -> newTau star
+termFresh t = 
+  do { k <- kindOfM t 
+     ; newTau (MK k)
+     }
 
 
 varFresh (Tv u f (MK k)) = do {k1 <- freshN k; newTau (MK k1)}
