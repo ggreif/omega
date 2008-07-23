@@ -1506,7 +1506,7 @@ showKinds:: (TyCh m,TypeLike m a) => (a -> ([TcTv],[(Name,Kind)],[TcLv])) -> a -
 showKinds varsOf t =
  do { t1 <- zonk t
     ; let (free,names,zs) = varsOf t1
-    ; whenM (not(null free)) [Ds "\nwhere ",Dlf f free ", "]
+    ; whenM (not(null free)) [Ds "\nkinds ",Dlf f free ", "]
     ; whenM (not(null zs)) [Dlf g zs ", "]
     ; whenM (not(null names)) [Dlf h names "\n"]}
  where f disp (v@(Tv un fl k)) = displays disp [Dd v, Ds ":",Dd k]
@@ -4059,112 +4059,6 @@ subtermsSigma:: Sigma -> [Tau] -> [Tau]
 subtermsSigma (Forall l) ans = subtermsRho rho ans
   where (args,(preds,rho)) = unsafeUnwind l
 
-{-
-------------------------------------------------------------------------------------------------------------------------------------------------------
--- I have gotten rid of all occurences of "mgu" and replaced them with "mguB"
--- except one in "truthStep" in Infer.hs I don't know how to get rid of it.
-------------------------------------------------------------------------------
 
-
-mgu :: [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) (String,Tau,Tau)
-mgu [] = Left ([],[])
-mgu ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m = mgu xs
-
-mgu ((TcTv (x@(Tv n (Flexi _) _)),tau):xs) = mguVar x tau xs
-mgu ((tau,TcTv (x@(Tv n (Flexi _) _))):xs) = mguVar x tau xs
-
-mgu ((TyApp x y,TyApp a b):xs) = mgu ((x,a):(y,b):xs)
-mgu ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mgu xs -- TODO LEVEL
-mgu ((Star n,Star m):xs) = mguLevel n m xs
-mgu ((Karr x y,Karr a b):xs) = mgu ((x,a):(y,b):xs)
-mgu ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) =
-  if f==g then mgu (zip ys zs ++ xs) else Right("TyFun doesn't match",x,y)
-mgu ((x@(TyVar s k),y):xs) = Right("No TyVar in MGU", x, y)
-mgu ((y,x@(TyVar s k)):xs) = Right("No TyVar in MGU", x, y)
-mgu ((TySyn nm n fs as x,y):xs) = mgu ((x,y):xs)
-mgu ((y,TySyn nm n fs as x):xs) = mgu ((y,x):xs)
-
-mgu ((TcTv (x@(Tv n (Rigid _ _ _) _)),tau):xs) = Right("Rigid",TcTv x,tau)
-mgu ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = Right("Rigid",TcTv x,tau)
-
-mgu ((x,y):xs) = Right("No Match", x, y)
-
-
-mguVar :: TcTv -> Tau -> [(Tau,Tau)] -> Either ([(TcLv,Level)],[(TcTv,Tau)]) ([Char],Tau,Tau)
-mguVar (x@(Tv _ _ (MK k))) tau xs = if (elem x vs)
-                     then Right("occurs check", TcTv x, tau)
-                     else compose2 new2 (Left new1)
-  where vs = tvsTau tau
-        new1 = ([],[(x,tau)])
-        k2 = kindOf tau
-        new2 = case k2 of
-                 Just k3 -> mgu (sub2Pairs new1 ((k,k3):xs))
-                 Nothing -> mgu (sub2Pairs new1 xs)
-
-
-mguLevel LvZero LvZero xs = mgu xs
-mguLevel (LvSucc x) (LvSucc y) xs = mguLevel x y xs
-mguLevel (TcLv v) x xs = compose2 (Left([(v,x)],[])) (mgu xs)
-mguLevel x (TcLv v) xs = compose2 (Left([(v,x)],[])) (mgu xs)
-mguLevel a b xs = Right("levels don't match",Star a, Star b)
-
-hasKind :: TyCh m => String -> Sigma -> Kind -> m ()
-hasKind name sigma (MK kind) =
-  do { let new nam quant k =
-              do { v <- newFlexiTyVar k; return(TcTv v)}
-     ; (env,eqs,rho) <- unBindWith (\ x -> return "FlexVarsShouldNeverBackPatch4") new sigma
-     ; let err message = failM 3
-               [Ds ("\nWhile checking the kind of constructor\n   "++name++" :: ")
-               ,Dl eqs ", ",Ds " =>\n      ",Dd rho, Dlf ff (map typkind env) "\n", Ds message]
-           ff d (typ,MK kind) = displays d2 [Dd typ, Ds ks]
-             where (d2,ks) = exhibitKinding d kind
-
-           err2 mess = err ("\nWe checked the well formedness of constraints, and found: "++mess)
-           ok (Tv unq (Flexi ref) k) =
-               do { maybet <- readRef ref
-                  ; case maybet of
-                      Nothing -> return True
-                      Just t -> return False}
-     ; good <- mapM ok env
-     ; evars <- envTvs
-     ; if (all id good)
-          then if any (`elem` evars) env
-                  then failM 2 [Ds "A universal variable escapes"]
-                  else return ()
-          else failM 2 [Ds "A universal variable got bound"]
-     ; handleM 3 (check rho kind) err
-     ; handleM 3 (mapM kindPred eqs) err2
-     ; return ()
-     }
-
-
-
-kindOf :: Tau -> Maybe Tau
-kindOf (TcTv (Tv u r (MK k))) = Just k
-kindOf (TyCon sx level_ s (K lvs (Forall xs))) =
-   case (lvs,unsafeUnwind xs) of
-    ([],(vs,(_,Rtau k))) -> Just k
-    (lvs,(vs,(_,rho))) -> Nothing -- error ("Non Tau in kind of Type constructor: "++show rho)
-kindOf (Star n) = Just (Star (LvSucc n))
-kindOf (Karr x y) = kindOf y
-kindOf (TyVar n (MK k)) = Just k
-kindOf (TyFun s (K lvs (Forall xs)) ts) =
-   case (lvs,unsafeUnwind xs) of
-     ([],(vs,(_,Rtau k))) ->  unwind ts k
-     (lvs,(vs,(_,rho))) -> Nothing  -- error ("Non Tau in Type function kind: "++show rho)
- where unwind [] k = Just k
-       unwind (x:xs) (Karr a b) = unwind xs b
-       unwind _ k = Nothing  -- error ("Non (~>) in Type function kind: "++show k)
-kindOf (TyApp ff x) =
-  case kindOf ff of
-    (Just (Karr a b)) -> Just b
-    k -> Nothing -- error ("\nIn KindOf, Non (~>) in Type application: "++show (TyApp ff x)++"\nwhere the function, "++show ff++", has kind: "++show k)
-kindOf (TySyn nm n fs as b) = kindOf b
-kindOf (TyEx xs) =
-    case unsafeUnwind xs of
-     (vs,(_,k)) -> Just k
-     
--} 
-   
 ------------------------------------------------------------------
 ------------------------------------------------------------------

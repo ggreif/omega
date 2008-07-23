@@ -3108,6 +3108,7 @@ cross2PairL i ps = norm2L (norm2Pair crossThenNorm sub2Tau) subPair i ps
             do { (tau1,u1) <- crossF i tau
                ; if not(tau==tau1)
                      then do { (tau2,u2) <- norm2Tau i tau1
+                             ; warnM [Ds "Cross Result\n  ",Dd tau,Ds " ===> ",Dd tau2]
                              ; return(tau2,composeTwo u2 u1)}
                      else return (tau1,u1)
                }
@@ -3136,6 +3137,8 @@ crossFertilize (info@(rules,defs,truths)) (term,u) = find truths
               norm2Tau (push2 u info) x
         find (t:ts) = find ts
 
+
+-- Pushes "crossFertilize" into every subterm.
 crossF info (y@(TyVar nm k)) = return(y,([],[]))
 crossF info (app@(TyApp x y)) =
    do { ((a,b),u) <- norm2Pair crossF sub2Tau info (x,y)
@@ -3847,7 +3850,7 @@ matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
 solveConstraints :: ([Char],Rho) -> TcEnv -> [Pred] -> Mtc TcEnv Pred (Unifier2,[Pred],[Tau],[Tau])
 solveConstraints (nm,rho) env collected =
   do { -- Split into Equalities and Relations, and normalize everything.
-     ; let (oblig,residual) = splitR collected ([],[])
+     ; let (oblig,residualNonEqRels) = splitR collected ([],[])
            assump = assumptions env -- Truths stored in the extended environment
            rules = getRules "" env
      ; (truths1,u0,_) <- inEnv env (liftNf norm2PredL assump)
@@ -3856,20 +3859,31 @@ solveConstraints (nm,rho) env collected =
      ; steps <- getBound "narrow" 25
      ; u2 <- handleM 2
                   (inEnv env (solveByNarrowing (3,steps) ("9."++nm,rho) normTruths normOblig))
-                  (underErr nm rules assump oblig)
+                  (\ message -> 
+                      do { ans <- mguB oblig2
+                         ; warnM [Ds "Trying simple unification, "]
+                         ; case ans of
+                             Left unifier2 -> warnM [Ds "which succeeds: ",Dd unifier2] >>
+                                              return unifier2
+                             Right(m,_,_) -> warnM [Ds "which fails: ",Ds m] >>
+                                             underErr nm rules assump oblig message})
      ; let u3 = composeTwo u2 (composeTwo u1 u0)
      ; expandTruths <- inEnv env (expandTruths2 (sub2Pred u3 normTruths))
-     ; (residual',u3b,_) <- liftNf norm2TauL residual -- Normalize residual constraints
+     ; (residual',u3b,_) <- liftNf norm2TauL residualNonEqRels -- Normalize residual constraints
      ; let u3c = composeTwo u3 u3b
      ; (unsolved,un4) <- inEnv env (solvP expandTruths (map (sub2Tau u3c) residual'))
      ; let u5 = composeTwo un4 u3c
      ; let truths = (map (sub2Tau u5) expandTruths)
-           need = (map (sub2Tau u5) residual)
+           need = (map (sub2Tau u5) residualNonEqRels)
      ; return(u5,unsolved,truths,need)}
 
 splitR [] (eqs,rels) = (eqs,rels)
 splitR ((p@(Equality _ _)):ps) (eqs,rels) = splitR ps (p:eqs,rels)
 splitR ((Rel t):ps) (eqs,rels) = splitR ps (eqs,t:rels)
+
+splitR' [] (eqs,rels) = (eqs,rels)
+splitR' ((p@(Equality x y)):ps) (eqs,rels) = splitR' ps ((x,y):eqs,rels)
+splitR' ((Rel t):ps) (eqs,rels) = splitR' ps (eqs,Rel t:rels)
 
 --               Truths Quest Rules
 solv :: Int -> [([Tau],[Tau],[String],Unifier2)] -> TC ([([Tau],[Tau],[String],Unifier2)])
@@ -4281,7 +4295,7 @@ waitN mode =
 
 
 commandString =
- ":set p     set 'p' (e.g. :set solve, :set pred, :set narrow, or :set theorem)\n"++
+ ":set p     set 'p' (e.g. :set solve, :set pred, :set narrow, :set kind, or :set theorem)\n"++
  ":q         quit\n"++
  ":rules     list rules in scope\n"++
  ":h         hint. What is the current expected type\n"++
@@ -4349,10 +4363,11 @@ checkReadEvalPrint (hint,env) =
                 ; (vs,_) <- get_tvs expect
                 ; eitherX <- morepolyRR vs typ expect
                 ; case eitherX of
-                   Left(unifier,preds) ->
-                      do { warnM [Ds(show exp ++ " :: "),Dd (subRho unifier typ)]
-                         ; warnM [Ds "\nUnder the refinement:\n  ",Dl unifier "\n  "]
-                         ; warnM [Ds "\nOnly when we can solve\n  ",Dl (subPred unifier (obs++preds)) "\n  "]
+                   Left(unifier,preds) ->  
+                      do { (u2@(_,unifier2),preds2) <- solveByUnify unifier preds
+                         ; warnM [Ds(show exp ++ " :: "),Dd (sub2Rho u2 typ)]
+                         ; warnM [Ds "\nUnder the refinement:\n  ",Dl unifier2 "\n  "]
+                         ; warnM [Ds "\nOnly when we can solve\n  ",Dl (subPred unifier (obs++preds2)) "\n  "]
                          }
                    Right(message,t1,t2) ->
                       warnM [Ds "\nThe typing ",Dd exp, Ds " :: ",Dd ty
@@ -4365,11 +4380,13 @@ checkReadEvalPrint (hint,env) =
              do { ((t,e2),oblig) <- collectPred (inferExp exp)
                 ; t2 <- zonk t
                 ; obs <- zonk oblig
+                ; (u2@(_,unifier2),preds2) <- solveByUnify [] oblig
+                ; let t3 = sub2Rho u2 t2
                 ; updateDisp
-                ; warnM [Ds(show exp ++ " :: "),Dd t2]
+                ; warnM [Ds(show exp ++ " :: "),Dd t3]
                 ; verbose <- getMode "kind"
-                ; when verbose (showKinds varsOfRho t2)
-                ; whenM (not (null oblig)) [Ds "Only when we can solve\n   ",Dd obs]
+                ; when verbose (showKinds varsOfRho t3)
+                ; whenM (not (null preds2)) [Ds "Only when we can solve\n   ",Dd preds2]
                 ; return (True)
                 }
           EmptyCom -> return True
@@ -4379,6 +4396,16 @@ checkReadEvalPrint (hint,env) =
 checkLoop :: Expected Rho -> TcEnv -> TC ()
 checkLoop typ env = interactiveLoop checkReadEvalPrint (typ,env)
 
+
+solveByUnify :: TyCh m => Unifier -> [Pred] -> m (Unifier2,[Pred])
+solveByUnify unifier preds = do { ans <- mguB eqs; return(combine ans)}
+  where (eqs,rels) = splitR' preds ([],[])
+        combine (Left u2) = let u3 = composeTwo u2 ([],unifier)
+                            in (u3,sub2Pred u3 rels)
+        combine (Right _) = (([],unifier),preds)
+                         
+                                                     
+                                                     
 -- ==================================================================
 -- The Circuit extension
 
@@ -4944,31 +4971,3 @@ renderProb f t =
      ; return string }
 
 
--------------------------------------------------------------------
-{-
-truthStep :: ([Tau],[Tau],[String],Unifier) -> [([Tau],[Tau],[String],Unifier)]
-truthStep (truths,questions,open,u0) =
-      sortBy moreGeneral $
-      relevant $
-      sortBy samePred
-      [ (map (subTau u) truths
-        ,map (subTau u) (elim n questions)
-        ,open,composeU u u0,n)
-      | t <- truths
-      ,(q,n) <- zip questions [0..]
-      , (_,u) <- unifyToList [(t,q)] ]
-
-unifyToList xs =
-      case mgu xs of 
-        Left ans -> [ans]
-        Right (s,x,y) -> [] 
-
-samePred (ts1,ps1,_,u1,i) (ts2,ps2,_,u2,j) = compare (i,length u1)(j,length u2)
-moreGeneral (ts1,ps1,_,u1) (ts2,ps2,_,u2) = compare (length u1)(length u2)
-
-
-relevant [] = []
-relevant [(t,p,s,u,i)] = [(t,p,s,u)]
-relevant (x@(_,_,_,[],i):y@(_,_,_,_,j):zs) | i==j = relevant (x:zs)
-relevant ((t,p,s,u,i):zs) = (t,p,s,u):relevant zs
--}

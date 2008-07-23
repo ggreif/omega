@@ -202,9 +202,7 @@ stepEq s0 (a,b) truths =
        -- we are only going to pursue one path, so choose one
        ; case fewestVar ansA a ansB b of
            (bool,ans,term) -> return(map (buildQ bool term) ans,s2)})
-    (\ s -> warnM [Ds "\nIn default case of stepEQ ",Dd a,Ds "=?=",Dd b] >>
-    
-            if nm /= nm2
+    (\ s -> if nm /= nm2
                then failM 3 [Ds s]
                else 
                  do { ans <- mguB (zip args args2)
@@ -295,8 +293,7 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                           in if newest==term
                                  then maybeM (tryRewriting term)
                                              (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
-                                             (warnM [Ds "NOPROGRESS ",Dd name,Dl path "," ,Dd term] >>
-                                              noProgress name term)
+                                             (noProgress name term)
                                  else do { truths2 <- subRels mU truths
                                          ; return ([(TermP newest,truths2,mU)],s1)}}
 
@@ -673,37 +670,3 @@ tree2string tree = indent 0 tree
 
  
 ----------------------------------------------------------------
-{-
-mainY ::  NName -> [([TcTv],[Tau],Tau)] -> [DefTree TcTv Tau]
-mainY name patternList = do { zs <- mapM (f12 name) patternList
-                            ; makeTreeL zs}
-  where f12:: NName -> ([TcTv],[Tau],Tau) -> [DefTree TcTv Tau]
-        f12 name (free2,lhs,rhs) = map (makeTreePath free2 lhs2 rhs)
-                                       (makeChainL (renameVarN lhs2))
-                where lhs2 = (fun name lhs)
-makeChainL :: Tau -> [Chain TcTv Tau]
-makeChainL x = liftN h x
-  where h (FunN name args) =
-          do { zs <- generalizeL 0 args
-             ; matchLx name args zs}
-             
-matchLx ::  NName -> [Tau] -> (Path,[Tau]) -> [Chain TcTv Tau]
-matchLx name args ([], newArgs) = return (Root (fun name newArgs))
-matchLx name args (h:t, newArgs) =
-  do { tail <- makeChainL (fun name newArgs)
-     ; return (Next (fun name args) (h:t) tail)}
-     
-generalizeL :: Int -> [Tau] -> [(Path,[Tau])]
-generalizeL _ [] = return ([],[])
-generalizeL n (arg_n : args) = liftN h arg_n
-  where h (VarN vv) =
-          do { (newPos, newRest) <- generalizeL (n+1) args
-             ; return (newPos, varWild vv : newRest)}
-        h (ConN name ts) = map match (generalizeL 0 ts) ++
-                           foldr add [] (generalizeL (n+1) args)
-          where match ([], _) = ([n], termWild arg_n : args)
-                match (a:b, newArgs) = (n:a:b, con name newArgs : args)
-                add (a:b, newRest) ans = (a:b, con name ts : newRest):ans
-                add ([], newRest) ans = ans     
-
--}
