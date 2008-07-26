@@ -630,7 +630,9 @@ fff xs = plistf ff "[1" xs "\n" "1]"
   
 mainYM ::   Check m => NName -> [([TcTv],[Tau],Tau)] -> m[DefTree TcTv Tau]
 mainYM name patternList = do { pairs <- mapM (f13 name) patternList
-                             ; return(makeTreeL (concat pairs))}
+                             ; let allPossibleOneFromEach = cross2 pairs
+                             --; return(makeTreeL (concat pairs))}
+                             ; return(concat(map makeTreeL allPossibleOneFromEach))}
                             
   where f13:: Check m => NName -> ([TcTv],[Tau],Tau) -> m [DefTree TcTv Tau]   
         f13 name (free2,lhs,rhs) = do { pairs <- makeChainLM (renameVarN lhs2); 
@@ -640,6 +642,13 @@ mainYM name patternList = do { pairs <- mapM (f13 name) patternList
 
 defTree ::  Check m => Rule NName TcTv Tau -> m[DefTree TcTv Tau]
 defTree (NarR(name,zs)) = mainYM name zs
+
+
+cross2 []  = []
+cross2 [xs] = map (\x->[x]) xs
+cross2 (xs:xss) = [ x:ys   | x <- xs, ys <- cross2 xss ]
+
+
 
 
 --------------------------------------------------------------
