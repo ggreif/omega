@@ -4810,8 +4810,8 @@ wellTyped env e = tcInFIO env
   (do { ((t::Rho,term),oblig) <- collectPred(inferExp e)
       ; truths <- getAssume
       ; (vs,passOn,solvePs) <- partByFree oblig
-      -- ; warnM [Ds "Vars in Toplevel term: ",Dl vs ", " ]
-      -- ; warnM [Ds "Obligations at top level are: ",Dd oblig]
+      --; warnM [Ds "Vars in Toplevel term: ",Dl vs ", " ]
+      --; warnM [Ds "Obligations at top level are: ",Dd oblig]
       ; (oblig2,_,_) <- liftNf norm2PredL solvePs
       ; env <- tcEnv
       ; (u,oblig3,_,_) <- solveConstraints (show e,t) env oblig2
@@ -4819,24 +4819,30 @@ wellTyped env e = tcInFIO env
       ; when (not(null oblig3) && not(arrowP typ))
              (failD 0 [Ds "Unresolved obligations:\n  ",Dl oblig3 "\n  "
                       , Ds " => ", Dd typ])
-      -- ; warnM [Ds "\nAfter normRho t = ",Dd t, Ds "\ntyp = ",Dd typ]
       ; (levels,polyk@(K level sig)) <- generalize(passOn++oblig3,typ)
+      -- instantiate whatever levels are generalized over     
+      ; let mkLevSub (v,TcLv(LvVar nm)) = do { x <- newLevel; return (LvVar nm,x)}
+      ; sub2 <- mapM mkLevSub levels
+      ; let sigma2 = sub2Sigma (sub2,[]) sig
       ; let kind x = do { k <- kindOfM x
                         ; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]
                         ; return s}
-      ; pairs <- mapM kind (subtermsSigma sig [])
-     
-      
+      ; pairs <- mapM kind (subtermsSigma sigma2 [])
       ; (_,typeString) <- showThruDisplay [Dd polyk,Ds "\n"]
       ; return(typeString,term,pairs)})
 
 
+            
 varTyped nm env = tcInFIO env
   (case getVar nm env of
     Nothing -> return Nothing
-    Just(poly@(K _ sig),mod,cdlev,exp) ->
-      do { let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
-         ; pairs <- mapM kind (subtermsSigma sig [])
+    Just(poly@(K levels sig),mod,cdlev,exp) ->
+      do { -- instantiate whatever levels are generalized over     
+           let mkLevSub nm = do { x <- newLevel; return (LvVar nm,x)}
+         ; sub2 <- mapM mkLevSub levels
+         ; let sigma2 = sub2Sigma (sub2,[]) sig
+         ; let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
+         ; pairs <- mapM kind (subtermsSigma sigma2 [])
          ; return(Just(poly,mod,cdlev,exp,pairs)) }
   )
     
