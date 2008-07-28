@@ -135,6 +135,7 @@ instance TyCh (Mtc TcEnv Pred) where
    syntaxInfo = getSyntax
    normTyFun = normTyFunTau
    fromIO = io2Mtc
+   getIoMode = getMode
 
 type TC a = Mtc TcEnv Pred a
 
@@ -317,6 +318,7 @@ modes_and_doc =
   ,("theorem",False,"Reports when a lemma is added by a 'theorem' declaration, and when such a lemma is applicable.")
   ,("kind",False,"Displays kinds of subterms when using the :k or :t commands.")
   ,("unreachable",False,"Displays information when checking for unreachable clauses.")
+  ,("verbose",False,"For Debugging the compiler")
   ]
 
 mode0 = map (\ (name,value,doc) -> (name,value)) modes_and_doc
@@ -613,8 +615,7 @@ typeExp mod (Var v) expectRho =
      do { m <- getLevel
         ; (polyk,mod,n,exp) <- lookupVar v
         ; when (n > m) (failD 2 [Ds (show v++" used at level "++show m++" but defined at level "++show n)])
-
-        ; when False -- (show v=="Eq") 
+        ; when False -- (show v=="f99") -- False
             (do { truths <- getTruths
                 ; showKinds (varsOfPair varsOfPoly varsOfExpectRho) (polyk,expectRho)
 
@@ -658,8 +659,7 @@ typeExp mod (e@(App fun arg)) expect =
         ; fz <- zonk fun_ty
         ; ww <- zonk res_ty
         ; d <- getDisplay
-
-
+        {-
         ; whenM False --(show arg == "ex1")
             [Ds ("\nChecking application: "++show e)
             ,Ds "\nfun type = ",Dd fun_ty
@@ -667,6 +667,7 @@ typeExp mod (e@(App fun arg)) expect =
             ,Ds "\narg type = ",Dd zz
             ,Ds "\nresult type = ",Dd ww
             ,Ds "\n expected type = ",Dd expect]
+        -}
         ; ns4 <- morePoly e res_ty expect
         ; return(App f x) }
 typeExp mod (exp@(Lam ps e _)) (Check t) =
@@ -891,7 +892,9 @@ typeMatchPs mod (x@(nm,loc,ps,Unreachable,ds)) (Check t) = newLoc loc $
         checkUnreachable (fragForPs mod nm loc t ps ds) 
                          (\ message -> whenM verbose [Ds message,Ds "\nUnreachability confirmed."] >> return x))
 typeMatchPs mod (nm,loc,ps,body,ds) (Check t) = newLoc loc $
-     do { (bodyFrag,ps1,ts,(patFrag,rng,ds2)) <- fragForPs mod nm loc t ps ds
+     do { -- warnM [Ds ("\nBEFORE fragForPs "++nm)];
+         (bodyFrag,ps1,ts,(patFrag,rng,ds2)) <- fragForPs mod nm loc t ps ds
+        --;  warnM [Ds ("\nAfter fragForPs "++nm)]
         ; let err s  =
                (do { (Frag zs _ _ ts theta rs exts) <- zonk patFrag
                    ; truths <- getBindings
@@ -903,7 +906,9 @@ typeMatchPs mod (nm,loc,ps,body,ds) (Check t) = newLoc loc $
                        ,Ds s]} )
         ; let context = mContxt loc nm ps body
         ; let comp theta = do { rng2 <- appTheta mod theta rng
-                              ; chBody1 mod patFrag body rng2 }
+                              ; ans <- chBody1 mod patFrag body rng2
+                              ; return ans
+                              }
         ; body3 <- handleM 2 (underFragUsingTheta (context,rng) bodyFrag comp) err
 
         ; escapeCheck body t patFrag
@@ -2530,8 +2535,11 @@ under frag (p@(nm,rho)) comp =
 
      -- Run the computation (in the new env) and collect the predicates
      ; let u0 = bindings env
+     --; warnM [Ds ("\nIn under "++nm),Ds "\nu0 = ", Dl u0 ",  "]                                        
+     
      ;  (answer,collected) <- handleM 3 (collectPred (inEnv env (comp u0)))
                                         (underErr1 patVars)
+     --; warnM [Ds("\nIn "++nm++" We collected "),Dl collected ";"]             
      ; ((levelvars,u5),unsolved,truths,need) <- solveConstraints p env (subPred u0 collected)
      ; equalityVarsGetBound u5 eqs
      ; rigidVarsEscape u5 eqs
@@ -2553,6 +2561,9 @@ under frag (p@(nm,rho)) comp =
      ; when (not (null bad)) (escapes triples bad)
      ; injectA (" under "++nm++" ") passOn
      ; mutVarSolve u5  -- Permanently Bind any Flexi vars in the unifier
+     --; warnM [Ds ("\nOut under "++nm++" pass on = ")
+     --        ,Ds "\ncollected = ",Dd collected
+     --        ,Dl passOn ";"]
      ; return answer
      }
 
@@ -3850,6 +3861,7 @@ matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
 solveConstraints :: ([Char],Rho) -> TcEnv -> [Pred] -> Mtc TcEnv Pred (Unifier2,[Pred],[Tau],[Tau])
 solveConstraints (nm,rho) env collected =
   do { -- Split into Equalities and Relations, and normalize everything.
+     -- ; warnM [Ds "\nsolve Con\n  ",Dl collected "\n  "]
      ; let (oblig,residualNonEqRels) = splitR collected ([],[])
            assump = assumptions env -- Truths stored in the extended environment
            rules = getRules "" env
