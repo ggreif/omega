@@ -352,6 +352,7 @@ class (HasIORef m,Fresh m,HasNext m,Accumulates m Pred
   syntaxInfo:: m [SynExt String]
   normTyFun :: Tau -> m (Maybe Tau)
   fromIO :: IO a -> m a
+  getIoMode:: String -> m Bool
 
 handleM n = handleK (const True) n
 
@@ -1108,7 +1109,8 @@ pruneV typ v =
 unify :: TyCh m => Tau -> Tau -> m ()
 unify x y =
      do { x1 <- prune x; y1 <- prune y
-        -- ; warnM [Ds "\nUnifying ",Dd x1,Ds " =?= ",Dd y1]
+        --; verbose <- getIoMode "verbose"
+        --; when verbose (warnM [Ds "\nUnifying ",Dd x1,Ds " =?= ",Dd y1])
         ; f x1 y1
         }
   where --f (t1@(TyVar n k1)) t2 =
@@ -1173,14 +1175,19 @@ unifyVar (x@(Tv u1 (Flexi _) _)) (TcTv(y@(Tv u2 (Flexi _) _)))
 unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
   do { (vs,level_) <- get_tvs t
      ; t2 <- zonk t
-     ; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
+     --; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
+     --; verbose <- getIoMode "verbose"
+     --; when verbose (warnM[Ds "Checking kinds of ",Dd x,Ds " i.e. ",Dd t,Ds ":: ",Dd k])
      ; (new_t) <- handleM 1 (check t k) (kinderr t k u1)
      ; writeRef r1 (Just t2)
      ; return ()
      }
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (TcTv v@(Tv _ (Flexi _) _)) = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 (Flexi _) k2))      = unifyVar v (TcTv x)
-unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) = emit (TcTv x) y
+unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) = 
+   do { bs <- getBindings
+      ; warnM [Ds "Emitting ",Dd x,Ds " =?= ", Dd y,Ds "\n",Dl bs ", "] 
+      ; emit (TcTv x) y }
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TyCon tx k t _)) = emit (TcTv x) y
 
 unifyVar v (x@(TyFun nm k _)) = emit (TcTv v) x

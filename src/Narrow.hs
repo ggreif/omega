@@ -414,13 +414,17 @@ mguV s0 truths pairs =
         Left u2 -> return(u2,s0)
         Right ("Rigid",v,t) ->
             (do { (name,loc) <- locInfo v
-               
+                ; ms <- case t of
+                         (TcTv(Tv n (Rigid _ _ _) _)) ->
+                            do { (name2,loc2) <- locInfo t
+                               ; return ("\nWhich arose from "++name2++" near "++ show loc2++"\n "++shtt v++ "\n "++shtt t)}
+                         other -> return ""
                 ; failM 3 [Ds "The supposedly polymorphic type variable: ",Dd v
                         ,Ds "\narising from "
                         ,Ds name
                         ,Ds "\nnear "
                         ,Ds loc
-                        ,Ds ",\nis forced by context to be\n  ", Dd t]})
+                        ,Ds ",\nis forced by context to be\n  ", Dd t,Ds ms]})
         Right (s,t1,t2) ->
           -- showKinds varsOf pairs >>
           -- showKinds (varsOfRel varsOfTau) truths >>
