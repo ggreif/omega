@@ -224,7 +224,7 @@ data DispElem a
   | forall x . Dlf (DispInfo a -> x -> (DispInfo a,String)) [x] String
   | forall x . Dlg (DispInfo a -> x -> (DispInfo a,String)) String [x] String String
   | Dr [DispElem a]
-  | forall x . Dle (x -> [DispElem a]) [x] String
+ --  | forall x . Dle (x -> [DispElem a]) [x] String
 
 drI:: DispInfo z -> [DispElem z] -> DispElem z
 drI _ xs = Dr xs
@@ -243,7 +243,7 @@ displays d xs = help d (reverse xs) "" where
              case x of
                Dd y -> disp d y
                Ds s -> (d,s)
-               Dn y -> let (d2,s) = disp d y in (d2,s++"\n")
+               Dn y -> let (d2,s) = disp d y in (d2,s++"\n")               
                Dl ys sep -> dispL disp d ys sep
                Dwrap max prefix xs sep -> wrap 0 n max n xs sep [prefix,"\n"] d
                   where n = length prefix
@@ -253,6 +253,7 @@ displays d xs = help d (reverse xs) "" where
                Dlg f open ys sep close ->
                  let (d2,inner) = dispL f d ys sep
                  in (d2,open++inner++close)
+               Dr xs -> help d (reverse xs) s
 
 dle f xs sep = Dr(intersperse (map f xs))
   where intersperse [] = []

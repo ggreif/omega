@@ -27,7 +27,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,NameStore(..),useStoreName, showMdisp
             , makeRel , equalPartsM
             ,failD,failK,failM,warnM,handleM,whenM
-            ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred
+            ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
             ,extendref, failIfInConsistent
             ,mguStar,star1,star,star_star,starR,shtt,shtP  -- splitU,split3,
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newflexi,newStar
@@ -46,7 +46,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,returntype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
-            ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2
+            ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 --hiding (Level)
@@ -463,11 +463,13 @@ showFrag message frag =
            "\nAssumptions = "++showPred eqs++"\n*********************") }
 
 
+dispTcTv (x@(Tv unq flav k)) = [Dd x,Ds ": ",Dd k]
+
 dispFrag message frag =
    do { (Frag xs rs tenv eqs theta rules exts) <- zonk frag
       ; warnM [Ds ("\n********** Frag ***************" ++ message)
                 ,Ds "\n   Bindings = ",Dlf dispBind (take 5 xs) "\n              "
-                ,Ds "\n     Skolem = ",Dl rs ", "
+                ,Ds "\n     Skolem = ",dle dispTcTv rs ", "
                 ,Ds "\n Refinement = ",Dl theta ", "
                 ,Ds "\nAssumptions = ", Dl eqs "; "
                 ,Ds "\n   Theorems = ",Dl (map snd rules) "; "]}
@@ -873,7 +875,7 @@ test s1 s2 = runTC tcEnv0
 instance Typable (Mtc TcEnv Pred) (String,Loc,[Pat],Body Exp,[Dec]) Rho where
   tc = typeMatchPs Wob
 
-fragForPs mod nm loc expectedTy pats whereDs =
+fragForPs mod nm loc expectedTy pats whereDs = newLoc loc $
   do { (patFrag,ps1,ts,rng) <- checkBndrs localRename mod nullFrag pats expectedTy
      ; let message = bindingGroupNames "a where clause that binds" whereDs
            name [p] = "the pattern "++show p
@@ -1248,7 +1250,7 @@ tcStmts mod m b ((BindSt loc pat e):ss) =
       -- Smart scrutinee from "Simple Unification Based Type Inference for GADTS"
       ; (oblig',refinement) <- fixate (loc,pat) oblig
       ; (a2,mod2) <- rigidity (subTau refinement a)
-      ; (frag,p2) <- checkBndr localRename mod (addPred oblig' nullFrag) (simpleSigma a2) pat
+      ; (frag,p2) <- newLoc loc $ checkBndr localRename mod (addPred oblig' nullFrag) (simpleSigma a2) pat
       ; let frag1 = (markLambda frag)
       ; let comp theta = do { b2 <- appTheta mod theta b
                             ; tcStmts (modAnd mod mod2) m b2 ss }
@@ -1407,7 +1409,7 @@ checkPat rename mod k t pat =
           
           -- rhoC::    t1 -> t2 -> Ts s1 s2
           -- rhoExpect::           Tu u1 u2
-          -- check that Tu==Ts, mguStar[(u1,s1),(u2,s2)]
+          -- check that Tu==Ts, mguStar "(C p1 .. pn)" [(u1,s1),(u2,s2)]
           ; (pairs,tauC) <- constrRange c ps rhoC []
           ; tauExpect <- okRange c rhoExpect
           ; (us,_) <- get_tvs tauExpect
@@ -1429,14 +1431,29 @@ checkPat rename mod k t pat =
                 addRigid (pat,sigma) = (pat,sigma,Rig)
           ; thingsToUnify <- down tauExpect tauC
           -- ; warnM [Ds "\nThings to unify = ",Dd thingsToUnify]
-          ; eitherInfo <- mguStar vsC thingsToUnify
+          ; loc <- getLoc
+          ; rhoCref <- newRef rhoC  -- we need to describe the pat type, but we haven't computed it yet.
+          ; eitherInfo <- mguStar (describePat pat rhoCref,loc) vsC thingsToUnify
+          -- Because of the 'common rule' (see mguStar in RankN.hs) some of the
+          -- Skolem vars may be mapped by the refinement to a Fresh Rigid Var. 
+          -- The refinement should be mapped over "vsC" and "pairs"
           ; case eitherInfo of
              Right(s,x,y) -> badRefine pat tauExpect tauC s x y
              Left(psi,truths) ->
-               do { -- warnM [Ds "\n unifier = ",Dd psi,Ds " truths  = ",Dd truths];
+               do { writeRef rhoCref (subRho psi rhoC)  -- BackPatch Pattern description
+                  ; verb <- getMode "verbose"
+                  ; let verbose = verb && (show pat) == "(Test d)"
+                  ; let triples = (map (addRigid) pairs)
+                  ; whenM verbose [Ds "\n unifier = ",Dd psi
+                                  ,Ds "\npairs ",Dl pairs ","
+                                  ,Ds "\ntrips ",Dl (map (\(p,s,m)->(p,s)) triples) ", "
+                                  ,Ds "\nskolem ",dle  dispTcTv vsC ", "
+                                  ,Ds "\nskolem2" ,dle dispTcTv (map (subTcTv psi) vsC) ", "];
                     k2 <- addUnifier psi (addPVS vsC k)
                   ; let k3 = addEqs (truths ++ subPred psi assump) k2
-                  ; (k4,ps2) <- checkPats rename k3 (map addRigid pairs)
+                  ; (k4,ps2) <- checkPats rename k3 triples
+                  ; whenM verbose [Ds "\nTriples = ",Dl (map (\(p,s,m)->(p,s)) triples) ", "]
+                  ; when verbose (dispFrag (show pat) k4)
                   ; return(k4,Pcon c ps2)}
           }
     (Pprod x y,mod) ->
@@ -1688,7 +1705,7 @@ refute ((r@(RW nm key BackChain _ _ _ _)):rs) term = refute rs term
 refute ((r@(RW nm key Refinement _ _ _ _)):rs) term = refute rs term
 refute ((r@(RW nm key Axiom   _ _ _ _)):rs) term =
   do { (Rel lhs) <- freshLhs r
-     ; test <- mguStar [] [(lhs,term)]
+     ; test <- mguStar (return "from function refute",Z) [] [(lhs,term)]
      ; case  test of
         Left (sub,eqns) -> return False
         Right _ -> refute rs term
@@ -1785,7 +1802,7 @@ checkPT name loc pt =
   where rigid ((s,nm):xs) ((nm2,k,q):ys) subst =
             do { k2 <- sub (subst,[],[],[]) k   -- in explicit foralls, earlier may bind
                ; let syn = if nm==nm2 then s else (show nm2)
-               ; v <- newRigidTyVar q loc syn k2  -- later, so we need to apply subst to k
+               ; v <- newRigidTyVar q loc (return syn) k2  -- later, so we need to apply subst to k
                ; subst2 <- compX [(nm2,TcTv v)] subst
                  -- the infered names (ys) my include types not in the explicit (xs) , skip over such
                ; (subst3,skols) <- rigid (if nm==nm2 then xs else (s,nm):xs) ys subst2
@@ -2571,15 +2588,22 @@ under frag (p@(nm,rho)) comp =
 -----------------------------------------------------------------
 -- helper functions
 
+describePat :: Pat -> IORef Rho -> IO String
+describePat pat ref = do { r <- readIORef ref; arisesPat pat r}
+
+
 -- arisesPat (Cons x xs) (Int -> [Int] -> [Int]) = an IO computation that returns
 -- "(Cons x xs)::[Int] where
 --    x::Int
 --    xs::[Int]"
 
-arisesPat :: Pat -> Rho -> IO String
+arisesPat ::Pat -> Rho -> IO String
 arisesPat pat rho = do { r <- zonkRho rho; d <- readRef dispRef 
-                       ; (c,args,d2) <- f pat r d []; writeRef dispRef d2
-                       ; return("the pattern: "++c++" where"++concat (map h args))}
+                       ; kindelems <- showKinds3 r
+                       ; (c,args,d2) <- f pat r d []
+                       ; let (d3,kindstrs) = displays d2 kindelems
+                       ; writeRef dispRef d3
+                       ; return("the pattern: "++c++"\nwhere pattern vars are typed as:"++concat (map h args)++kindstrs )}
   where h s = "\n   "++s
         f (Pcon v (p:ps)) (Rarrow dom rng) d args = f (Pcon v ps) rng d2 (arg:args)
             where(d2,arg) = displays d [Dd p,Ds "::",Dd dom]
@@ -3256,10 +3280,12 @@ solveByNarrowing (nsol,nsteps) context truths [] = return ([],[])
 solveByNarrowing (nsol,nsteps) context@(s,_) normTruths tests =
     do { verbose <- getMode "narrowing"
        ; (free,levs) <- zonk (map (uncurry TyApp) tests) >>= get_tvs
+       ; refinement <- getBindings
        ; whenM verbose
               [ Ds ("\n***********************\nIn solve: "++s)
-              , Ds "\nEquations = ",Dlf exhibitTT tests "; "
-              ,Ds "\nTruths = ",Dl normTruths "; "];
+              ,Ds "\nObligations = ",Dlf exhibitTT tests "; "
+              ,Ds "\nTruths      = ",Dl normTruths "; "
+              ,Ds "\nRefinement  = ",Dl refinement "; "];
        ; let ordered = sortBy lessTau tests
              conj = andP(map EqP ordered)
              hyp = andR(map EqR (foldr pred2Pair [] normTruths))
@@ -4822,8 +4848,8 @@ wellTyped env e = tcInFIO env
   (do { ((t::Rho,term),oblig) <- collectPred(inferExp e)
       ; truths <- getAssume
       ; (vs,passOn,solvePs) <- partByFree oblig
-      --; warnM [Ds "Vars in Toplevel term: ",Dl vs ", " ]
-      --; warnM [Ds "Obligations at top level are: ",Dd oblig]
+      -- ; warnM [Ds "Vars in Toplevel term: ",Dl vs ", " ]
+      -- ; warnM [Ds "Obligations at top level are: ",Dd oblig]
       ; (oblig2,_,_) <- liftNf norm2PredL solvePs
       ; env <- tcEnv
       ; (u,oblig3,_,_) <- solveConstraints (show e,t) env oblig2
@@ -4839,7 +4865,8 @@ wellTyped env e = tcInFIO env
       ; let kind x = do { k <- kindOfM x
                         ; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]
                         ; return s}
-      ; pairs <- mapM kind (subtermsSigma sigma2 [])
+      ; let subterms = (subtermsSigma sigma2 [])
+      ; pairs <-  handleM 2  (mapM kind subterms) (\ _ -> return[])
       ; (_,typeString) <- showThruDisplay [Dd polyk,Ds "\n"]
       ; return(typeString,term,pairs)})
 
