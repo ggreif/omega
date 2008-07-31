@@ -167,9 +167,9 @@ data Steps:: Exp e t ~> Exp e t ~> *0  where
 
 progress:: forall (env :: Env)
                   (typ :: Typ)
-                  (e  :: Exp env typ) . 
+                  (e  :: Exp Closed typ) . 
            Exp' e Closed typ -> 
-           (Value e + exists (e' :: Exp env typ) .  Steps e e')
+           (Value e + exists (e' :: Exp Closed typ) .  Steps e e')
 progress Z0 = L ValZ
 progress (S0 x) = 
   case progress x of
