@@ -313,7 +313,7 @@ getBound s m =
 modes_and_doc =
   [("solving",False,"Turns on tracing in the predicate solving engine.")
   -- ,("delay_narrowing",True,"When narrowing an equality such as (v = {\\tt \\{plus a b\\}}), binds the variable 'v' to {\\tt \\{plus a b\\}}, rather than narrowing the variable 'a' to constructors. The binding is then emitted as predicate to be solved later. This has the effect of delaying narrowing until more is known about 'v', 'a', or 'b'.")
-  ,("predicate_emission",False,"Reports the fact that a prediciate has been emitted. Predicates are collected at generalization sites, and are either solved, or abstracted into constrained types.")
+  ,("predicate_emission",False,"Reports the fact that a predicate has been emitted. Predicates are collected at generalization sites, and are either solved, or abstracted into constrained types.")
   ,("narrowing",False,"Shows the steps taken when narrowing. Useful for debugging when narrowing does not return the result desired.")
   ,("theorem",False,"Reports when a lemma is added by a 'theorem' declaration, and when such a lemma is applicable.")
   ,("kind",False,"Displays kinds of subterms when using the :k or :t commands.")
