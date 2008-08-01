@@ -1430,30 +1430,17 @@ checkPat rename mod k t pat =
                                    ,Ds "\n ",Dd x,Ds " =/= ",Dd y]
                 addRigid (pat,sigma) = (pat,sigma,Rig)
           ; thingsToUnify <- down tauExpect tauC
-          -- ; warnM [Ds "\nThings to unify = ",Dd thingsToUnify]
           ; loc <- getLoc
           ; rhoCref <- newRef rhoC  -- we need to describe the pat type, but we haven't computed it yet.
           ; eitherInfo <- mguStar (describePat pat rhoCref,loc) vsC thingsToUnify
-          -- Because of the 'common rule' (see mguStar in RankN.hs) some of the
-          -- Skolem vars may be mapped by the refinement to a Fresh Rigid Var. 
-          -- The refinement should be mapped over "vsC" and "pairs"
           ; case eitherInfo of
              Right(s,x,y) -> badRefine pat tauExpect tauC s x y
              Left(psi,truths) ->
                do { writeRef rhoCref (subRho psi rhoC)  -- BackPatch Pattern description
-                  ; verb <- getMode "verbose"
-                  ; let verbose = verb && (show pat) == "(Test d)"
                   ; let triples = (map (addRigid) pairs)
-                  ; whenM verbose [Ds "\n unifier = ",Dd psi
-                                  ,Ds "\npairs ",Dl pairs ","
-                                  ,Ds "\ntrips ",Dl (map (\(p,s,m)->(p,s)) triples) ", "
-                                  ,Ds "\nskolem ",dle  dispTcTv vsC ", "
-                                  ,Ds "\nskolem2" ,dle dispTcTv (map (subTcTv psi) vsC) ", "];
-                    k2 <- addUnifier psi (addPVS vsC k)
+                  ; k2 <- addUnifier psi (addPVS vsC k)
                   ; let k3 = addEqs (truths ++ subPred psi assump) k2
                   ; (k4,ps2) <- checkPats rename k3 triples
-                  ; whenM verbose [Ds "\nTriples = ",Dl (map (\(p,s,m)->(p,s)) triples) ", "]
-                  ; when verbose (dispFrag (show pat) k4)
                   ; return(k4,Pcon c ps2)}
           }
     (Pprod x y,mod) ->

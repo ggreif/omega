@@ -1175,7 +1175,7 @@ unifyVar (x@(Tv u1 (Flexi _) _)) (TcTv(y@(Tv u2 (Flexi _) _)))
 unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
   do { (vs,level_) <- get_tvs t
      ; t2 <- zonk t
-     --; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
+     ; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
      --; verbose <- getIoMode "verbose"
      --; when verbose (warnM[Ds "Checking kinds of ",Dd x,Ds " i.e. ",Dd t,Ds ":: ",Dd k])
      ; (new_t) <- handleM 1 (check t k) (kinderr t k u1)
@@ -3961,7 +3961,7 @@ mguStar str beta ((TcTv a,TcTv b):xs) | elem a beta && not(elem b beta)
 mguStar str beta ((TcTv b,TcTv a):xs) | elem a beta && not(elem b beta)
    = mguStarVar str beta a (TcTv b) xs
 
-{-
+
 mguStar (str,loc) beta ((TcTv (a@(Tv _ _ k)),TcTv b):xs)
    | (elem a beta && elem b beta) || (not(elem a beta) && not(elem b beta))
    = do { info <- showMdisp [Ds "\nvia the 'common rule' from ",Dd a,Ds " and ",Dd b]
@@ -3971,7 +3971,7 @@ mguStar (str,loc) beta ((TcTv (a@(Tv _ _ k)),TcTv b):xs)
         ; let new1 = [(a,c),(b,c)]
         ; new2 <- mguStar (str,loc) beta (subPairs new1 xs)
         ; return(composeStar new2 new1)}
--}
+
 
 mguStar str beta ((TcTv a,tau):xs) = mguStarVar str beta a tau xs
 mguStar str beta ((tau,TcTv a):xs) = mguStarVar str beta a tau xs
