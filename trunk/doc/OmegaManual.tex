@@ -461,13 +461,13 @@ syntactically different (but semantically the same).
 For example \verb+(Equal 2t {plus 1t 1t})+ is a well formed equality type
 since 2 is semantically equal to 1+1.
 The {\tt Equal} type allows the programmer to reify
-the type checkers notion of equality, and to pass this reified evidence
+the type checker's notion of equality, and to pass this reified evidence
 around as a value. The {\tt Equal} type plays a large role
 in the {\tt theorem} declaration (see Section \ref{theorem}).
 
 \section{Polymorphism and Data Declarations}
 
-\om\ supports both existential and universal quantified components in {\tt data}
+\om\ supports both existentially and universally quantified components in {\tt data}
 declarations. An example of existential quantification is:
 \begin{verbatim}
 data Closure:: *0 ~> *0 ~> *0 where
@@ -1130,7 +1130,7 @@ successful path. In the example above we get a list of one
 solution: \verb+[{a -> Z}]+. Some problems have no
 solutions, some have multiple, and some even have infinite
 solutions. Consider  \verb+{plus x 2t}+, we get
-\verb+2t+ when \verb+{x -> #0}+, and 
+\verb+2t+ when \verb+{x -> 0t}+, and 
 \verb+3t+ when \verb+{x -> 1t}+, and
 \verb+4t+ when \verb+{x -> 2t}+ etc.
 
@@ -1138,7 +1138,7 @@ Narrowing works best when we have a problem with many constraints. The
 constraints prune the search path resulting in few solutions.
 If we're type checking with narrowing we hope there is exactly one solution. 
 Consider narrowing \verb+({plus x 3t} == 5t)+,
-Guessing \verb+{x -> 0}+ and \verb+{x -> S z1}+ we get the two
+Guessing \verb+{x -> Z}+ and \verb+{x -> S z1}+ we get the two
 paths:
 { %\small
 \begin{verbatim}
@@ -1339,7 +1339,7 @@ identical in form to a {\tt data} declaration. It introduces
 a new type constructor and it's associated (value) constructor functions.
 But it also informs the compiler that this type can be used as
 a static level proposition which can be used as a constraint.
-For example conside the proposition {\tt Le} (which is a slight
+For example consider the proposition {\tt Le} (which is a slight
 variant of the {\tt LE} witness from section \ref{typechecker}).
 \begin{verbatim}
 prop Le :: Nat ~> Nat ~> *0 where
@@ -1415,7 +1415,7 @@ in the scope of the {\tt where} clause. The rule:
 trans: (exists d) [Le b d, Le d c] => Le b c --> []
 \end{verbatim}   
 says that we can satisfy {\tt (Le b c)} if we can find
-a concrete {\tt d} such that (both) {\tt (Le b d c)} and {\tt (Le d c)}
+a concrete {\tt d} such that (both) {\tt (Le b d)} and {\tt (Le d c)}
 are satisfied.
 
 
@@ -1434,9 +1434,9 @@ trans (Step z) Base = unreachable
 trans Base (Step z) = Base
 trans (Step x) (Step y) = (Step(trans x y))  
 \end{verbatim}
-The pattern \verb+(Step z)+ has type \verb+(LE (S i) (S j))+
+The pattern \verb+(Step z)+ has type \verb+(Le (S i) (S j))+
 when we know \verb+a = (S i)+ and \verb+b = (S j)+. 
-The pattern \verb+Base+ has type \verb+(LE Z k)+ when we
+The pattern \verb+Base+ has type \verb+(Le Z k)+ when we
 know \verb+b = Z+ and \verb+c = k+. These sets of assumptions
 are inconsistent, since \verb+b+ can't simultaneously
 be equal to \verb+Z+ and \verb+(S i)+. So the clause in the
@@ -1450,7 +1450,7 @@ unreachable clause, without the {\tt unreachable} keyword
 also raises an error.
 
 The point of the unreachable clause is to document that the
-author of the code know that this clause is unreachable, and to
+author of the code knows that this clause is unreachable, and to
 help document that the clauses exhaustively cover all
 possible cases.
 
@@ -1565,9 +1565,9 @@ and {\tt S} are propositions. The intended semantics of a back chaining theorem
 is if one is trying to establish \verb+(S x y)+ as a predicate
 one may establish the set of predicates \verb+{ (P x), (Q y) }+ instead.
 
-\item As a refinment lemma:  \verb+cond -> Equal f g -> (Equal x t,Equal y s)+ where
+\item As a refinement lemma:  \verb+cond -> Equal f g -> (Equal x t,Equal y s)+ where
 {\tt f}, {\tt g}, {\tt s}, and {\tt t} are arbitrary terms, but {\tt x} and {\tt y},
-are variables.  The intended semantics of a refinememnt lemma is to add
+are variables.  The intended semantics of a refinement lemma is to add
 additional facts to the set of assumed truths. These new facts are
 simpler in form (they equate variables to terms) than the old fact they are
 derived from.
@@ -1606,7 +1606,7 @@ the functions {\tt (C,N)}, then the expansion is as follows.
 [x,y ; zs]i ---> C x (C y zs)
 \end{verbatim}
 \noindent
-The semi colon may only appear before the last element in the square brackets.
+The semicolon may only appear before the last element in the square brackets.
 In this case, the last element stands for the tail of the resulting list.
 
 The natural-number-like syntax associates two functions with each
@@ -1834,7 +1834,7 @@ Without level polymorphism, the {\tt Equal} type constructor could only
 witness equality between types a single level. I.e. types classified by
 {\tt *0} but not {\tt *1}. So {\tt (Equal Int Bool)} is well formed
 but {\tt (Equal Nat (Prod *0))} would not be, since both {\tt Nat}
-and {\tt (Prod *0)} are classified by {\tt *1}. For a usefull
+and {\tt (Prod *0)} are classified by {\tt *1}. For a useful
 example, the type of {\tt labelEq} could not be expressed
 using a level-monomorphic {\tt Equal} datatype.
 
@@ -2005,7 +2005,7 @@ All these papers are available at \verb+http://web.cecs.pdx.edu/~sheard+
 
 \input{EqualProofsByInduction.prg}
 
-\section{Quiksort Algorithm in \om}\label{quick}
+\section{Quicksort Algorithm in \om}\label{quick}
 
 \input{qsort.prg}
 
