@@ -12,23 +12,11 @@ import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..),HasIORef(..))
 import Bind
 import Control.Monad.Fix
+import Data.Thrist
 
 instance MonadFix FIO where
   mfix = fixFIO
 
-
-data Thrist :: (* -> * -> *)  -> * -> * -> * where
-  Nil :: Thrist k a a
-  Cons :: k c b -> Thrist k b a -> Thrist k c a
-
--- Thrist appending
-
-appendThrist :: Thrist b c d ->
-                Thrist b d e ->
-                Thrist b c e
-
-appendThrist Nil a = a
-appendThrist (Cons b r) a = Cons b (appendThrist r a)
 
 -- Thrist extending
 
@@ -414,10 +402,16 @@ instance Show BasicBlock where
 instance Show (LType a) where
   show (LInt i) = "i" ++ show i
   show (LPtr a) = show a ++ "*"
-  show (LEmpty) = "{}"
+  show LEmpty = "{}"
   show (ext@(LExtend _ _)) = "{" ++ descend ext
       where descend :: LType (LStruct (b, c)) -> String
             descend (LExtend a LEmpty) = show a ++ "}"
             descend (LExtend a more@(LExtend _ _)) = show a ++ ", " ++ descend more
   show (LArray a d) = "[" ++ show a ++ " x " ++ show d ++ "]"
   show (LNamed t n) = "%" ++ show n
+
+
+{- Type inferencer for Exp that determines the right LLVM type -}
+
+infer (Lit (Int i)) = Int
+
