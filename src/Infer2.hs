@@ -49,7 +49,6 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
---hiding (Level)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
 import Encoding2
@@ -60,12 +59,11 @@ import LangEval(vals,env0,Prefix(..),elaborate)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import Char(isAlpha,isUpper)
 import System.IO.Unsafe(unsafePerformIO)
--- import IOExts(unsafePerformIO)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
 
 import qualified Data.Map as Map
-   -- (Map,empty,member,insertWith,union  ,fromList,toList,lookup)
+   -- (Map,empty,member,insertWith,union,fromList,toList,lookup)
 
 import NarrowData(DefTree(..),NName(..),Rule(..),Prob(..),NResult(..),Rel(..)
                  ,andR,andP,andf,freshX,dProb)
@@ -602,7 +600,7 @@ instance Typable (Mtc TcEnv Pred) Lit Rho where
 -- The main workhorse which does Exp. This is modelled after the
 -- function in "Practical type inference for arbitrary-rank types"
 -- by Simon Peyton Jones and Mark Shields, modified to accomodate
--- "Simple Unification-based Type Inference for GADTS" by Simon
+-- "Simple Unification-based Type Inference for GADTs" by Simon
 -- Peyton Jones, Stephanie Weirich, and Dimitrios Vytiniotis
 
 instance Typable (Mtc TcEnv Pred) Exp Rho where

@@ -3,7 +3,6 @@
 module RankN where
 
 import Bind
--- import IOExts
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 import Monads
@@ -3796,7 +3795,7 @@ test12 = (TcTv a1,f)
 --
 -- 1) Mutvar solvable look like (Equal x type),
 -- where on side is a variable, except where x = skol
--- or y={plus y z}, ie. a TyFun where the var (y) occurs
+-- or y={plus y z}, i.e. a TyFun where the var (y) occurs
 -- in the other side, like the y in  {plus y z}.
 --
 -- 2) Easy ones include (Equal Z {plus n n}) where one
