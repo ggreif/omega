@@ -787,7 +787,7 @@ tvsL fk fr (Nil x) = fr x
 tvsL fk fr (Cons (k,q) b) = binaryLift unionP (fk k) (tvsL fk fr rest)
   where (nm,rest) = unsafeUnBind b 
 
-tvs_Rho   :: (HasIORef m,Fresh m) => Rho -> m([TcTv],[TcLv])
+tvs_Rho :: (HasIORef m,Fresh m) => Rho -> m([TcTv],[TcLv])
 tvs_Rho (Rarrow x y) = binaryLift unionP (tvs_Sigma x) (tvs_Rho y)
 tvs_Rho (Rsum x y) = binaryLift unionP (tvs_Sigma x) (tvs_Sigma y)
 tvs_Rho (Rpair x y) = binaryLift unionP (tvs_Sigma x) (tvs_Sigma y)
@@ -847,7 +847,7 @@ instance (HasIORef m,Fresh m) => Zonk m Level where
  zonkG = zonkLv
  tvs = tvs_Level
 
--- Structured objects are Zonakble if the things inside are
+-- Structured objects are zonkable if the things inside are
 
 instance (Swap r,Zonk m r) => Zonk m (L r) where
   zonkG = zonkL zonkKind zonkG
