@@ -29,7 +29,7 @@ module RankN(PT(TyVar',Rarrow',Karrow',TyApp',Kinded,TyFun',TyCon',Star',Forallx
 	    ,pruneLv,freshLevels,incLev,shtP,unBindWith,unwind
 	    ,varsOfRho,varsOfSigma,varsOfPred,varsOfPair,varsOfPoly,varsOfExpectRho
 	    ,unionTwo,subPred,subpairs,disp0,subst,tunit',tsum,tcode,Zonk(..),Unifier2
-	    ,kindOfM,sub2Tau,composeTwo,zonkRho,zonkSigma,zonkTau,zonkLv,showMdisp
+	    ,kindOfM,sub2Tau,composeTwo,zonkRho,zonkSigma,zonkTau,zonkLv,zonkKind,showMdisp
 	    ,sub2Rho,sub2Sigma,sub2Pred,subtermsTau,subtermsSigma,showKinds2,extToTpatLift
 	    ) where
 
