@@ -11,6 +11,7 @@ import Encoding2(to)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..),HasIORef(..))
 import Bind
+import InferLLVM
 import Control.Monad.Fix
 import Data.Thrist
 
