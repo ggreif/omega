@@ -1431,7 +1431,7 @@ generalize rho =
 
 ---------------------------------------------------------------------
 -- If a term is Typable as a Rho,
--- one can derive Typabilty as a Sigma for Free!
+-- one can derive Typability as a Sigma for free!
 -- Typability for Tau and Rho depends on the semantics of Term
 -- so it is usually defined in the file that defines terms.
 
