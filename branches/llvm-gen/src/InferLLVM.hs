@@ -1,4 +1,4 @@
-module InferLLVM where
+module InferLLVM() where
 
 import Bind
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
@@ -7,7 +7,7 @@ import Monads
 import Monad(when,foldM)
 
 import RankN
-import Syntax(Exp(..))
+import Syntax(Exp(..),Lit(..))
 
 
 data LLType where
@@ -43,6 +43,13 @@ instance TyCh m => TypeLike m LLType where
 
 instance (TypeLike m LLType,TyCh m) => Typable m Exp LLType where
   tc = undefined -- :: term -> Expected ty -> m term
-  check = undefined -- :: term -> ty -> m term
+  check = checkLL -- :: term -> ty -> m term
   infer = undefined -- :: term -> m (ty,term)
 
+checkLL :: TyCh m => Exp -> LLType -> m Exp
+checkLL e@(Lit (Int _)) LLInt = return e
+checkLL e@(Lit _) LLPtr = return e -- generic representation
+checkLL e@(Prod e1 e2) (LLPair t1 t2) = do
+                                        c1 <- checkLL e1 t1
+                                        c2 <- checkLL e2 t2
+                                        return (Prod c1 c2)
