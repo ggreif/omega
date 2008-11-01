@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
 module Infer2 where
 
 import qualified System.Console.Readline as Readline
