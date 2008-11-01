@@ -2,7 +2,8 @@
 -- email ggreif gmail com
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
 
-module InferLLVM() where
+{-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
+module InferLLVM where
 
 import Bind
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)

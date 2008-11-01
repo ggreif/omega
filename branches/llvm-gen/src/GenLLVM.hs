@@ -1,10 +1,8 @@
 -- Copyright (c) Gabor Greif
 -- email ggreif gmail com
 -- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Tue Nov 7 15:20:11 Middle European Time 2007
--- Omega Interpreter: version 1.4.2+
 
-
+{-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
 module GenLLVM(genLLVM) where
 import Syntax
 import Encoding2(to)
