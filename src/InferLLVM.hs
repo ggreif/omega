@@ -1,3 +1,7 @@
+-- Copyright (c) Gabor Greif
+-- email ggreif gmail com
+-- Subject to conditions of distribution and use; see LICENSE.txt for details.
+
 module InferLLVM() where
 
 import Bind
@@ -15,6 +19,7 @@ data LLType where
   LLPtr :: LLType
   LLPair :: LLType -> LLType -> LLType
   LLTv :: TcTv -> LLType
+ deriving (Show)
 
 
 instance (HasIORef m,Fresh m) => Zonk m LLType where
@@ -40,15 +45,21 @@ tvs_LL (LLPair x y) = binaryLift unionP (tvs_LL x) (tvs_LL y)
 instance TyCh m => TypeLike m LLType where
   sub = undefined
 
+instance (TypeLike m LLType,TyCh m) => Typable m Lit LLType where
+  check = checkLit
+  infer = undefined -- :: term -> m (ty,term)
+
+checkLit e@(Int _) LLInt = return e
+checkLit e LLPtr = return e -- generic representation
+checkLit e t = fail (show e ++ " does not check as " ++ show t)
 
 instance (TypeLike m LLType,TyCh m) => Typable m Exp LLType where
-  tc = undefined -- :: term -> Expected ty -> m term
+  -- tc = undefined -- :: term -> Expected ty -> m term
   check = checkLL -- :: term -> ty -> m term
   infer = undefined -- :: term -> m (ty,term)
 
 checkLL :: TyCh m => Exp -> LLType -> m Exp
-checkLL e@(Lit (Int _)) LLInt = return e
-checkLL e@(Lit _) LLPtr = return e -- generic representation
+checkLL e@(Lit l) t = do { _ <- check l t; return e }
 checkLL e@(Prod e1 e2) (LLPair t1 t2) = do
                                         c1 <- checkLL e1 t1
                                         c2 <- checkLL e2 t2
