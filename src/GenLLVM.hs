@@ -91,6 +91,9 @@ data LStruct a
 data LArray a
 
 data LType :: * -> * where
+  -- Wildcard
+  LWild :: Name -> LType a
+  -- Concrete
   LInt :: Int -> LType Int
   LPtr :: LType a -> LType [a]
   -- Structs
@@ -98,6 +101,8 @@ data LType :: * -> * where
   LExtend :: LType a -> LType (LStruct b) -> LType (LStruct (a, b))
   LArray :: LType a -> Int -> LType (LArray a)
   LNamed :: LType a -> Name -> LType a
+  -- Funcs
+  LFunc :: LType a -> LType b -> LType (a -> b)
 
 i1 = LInt 1
 i8 = LInt 8
@@ -412,5 +417,12 @@ instance Show (LType a) where
 
 {- Type inferencer for Exp that determines the right LLVM type -}
 
-infer (Lit (Int i)) = Int
+data HiddenLType where
+  HT :: LType a -> HiddenLType
+
+infer :: Exp -> FIO HiddenLType
+infer (Var _) = do { n <- fresh; return (HT $ LWild n) }
+infer (Lit (Int i)) = return (HT i32)
+infer (Case e ((_, Plit _, body, decls):legs)) = return (HT (i32 `LFunc` i32))
+
 
