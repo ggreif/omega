@@ -1,5 +1,3 @@
-
-{-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
 module RankN where
 
 import Bind
