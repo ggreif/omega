@@ -4,7 +4,7 @@ GHC              = ghc
 GHCI             = ghci
 GHC_FLAGS        = -auto-all  $(GHC_FLAGS_COMMON)
 GHCI_FLAGS       = $(GHC_FLAGS_COMMON)
-GHC_FLAGS_COMMON = -fglasgow-exts -XUndecidableInstances
+GHC_FLAGS_COMMON = -fglasgow-exts -fallow-undecidable-instances
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 

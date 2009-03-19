@@ -33,7 +33,6 @@ instance Show a => Show (SynExt a) where
   show (Px(k,a)) = "Px("++k++","++show a++")"
   show (Rx(k,a,b)) = "Rx("++k++","++show a++","++show b++")"
 
-
 instance Show x => Show(Extension x) where
   show (Listx ts Nothing tag) = plist "[" ts "," ("]"++tag)
   show (Listx ts (Just t) tag) = plist "[" ts "," "; " ++ show t ++"]"++tag
@@ -45,8 +44,6 @@ instance Show x => Show(Extension x) where
           help (x:xs) = show x++","++help xs
   show (Recordx ts Nothing tag) = plistf f "{" ts "," ("}"++tag)
     where f (x,y) = show x++"="++show y
-  show (Recordx ts (Just ys) tag) =  plistf f "{" ts "," (";"++show ys++"}"++tag)
-    where f (x,y) = show x++"="++show y   
 
 extKey :: Extension a -> String
 extKey ((Listx xs _ s)) = s

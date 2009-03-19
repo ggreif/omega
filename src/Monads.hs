@@ -1,6 +1,7 @@
 
 module Monads where
 
+-- import IOExts
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)

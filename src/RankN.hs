@@ -1,6 +1,9 @@
+
+{-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
 module RankN where
 
 import Bind
+-- import IOExts
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 import Monads
@@ -349,7 +352,6 @@ class (HasIORef m,Fresh m,HasNext m,Accumulates m Pred
   syntaxInfo:: m [SynExt String]
   normTyFun :: Tau -> m (Maybe Tau)
   fromIO :: IO a -> m a
-  getIoMode:: String -> m Bool
 
 handleM n = handleK (const True) n
 
@@ -785,7 +787,7 @@ tvsL fk fr (Nil x) = fr x
 tvsL fk fr (Cons (k,q) b) = binaryLift unionP (fk k) (tvsL fk fr rest)
   where (nm,rest) = unsafeUnBind b 
 
-tvs_Rho :: (HasIORef m,Fresh m) => Rho -> m([TcTv],[TcLv])
+tvs_Rho   :: (HasIORef m,Fresh m) => Rho -> m([TcTv],[TcLv])
 tvs_Rho (Rarrow x y) = binaryLift unionP (tvs_Sigma x) (tvs_Rho y)
 tvs_Rho (Rsum x y) = binaryLift unionP (tvs_Sigma x) (tvs_Sigma y)
 tvs_Rho (Rpair x y) = binaryLift unionP (tvs_Sigma x) (tvs_Sigma y)
@@ -845,7 +847,7 @@ instance (HasIORef m,Fresh m) => Zonk m Level where
  zonkG = zonkLv
  tvs = tvs_Level
 
--- Structured objects are zonkable if the things inside are
+-- Structured objects are Zonakble if the things inside are
 
 instance (Swap r,Zonk m r) => Zonk m (L r) where
   zonkG = zonkL zonkKind zonkG
@@ -1106,8 +1108,7 @@ pruneV typ v =
 unify :: TyCh m => Tau -> Tau -> m ()
 unify x y =
      do { x1 <- prune x; y1 <- prune y
-        --; verbose <- getIoMode "verbose"
-        --; when verbose (warnM [Ds "\nUnifying ",Dd x1,Ds " =?= ",Dd y1])
+        -- ; warnM [Ds "\nUnifying ",Dd x1,Ds " =?= ",Dd y1]
         ; f x1 y1
         }
   where --f (t1@(TyVar n k1)) t2 =
@@ -1173,19 +1174,13 @@ unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
   do { (vs,level_) <- get_tvs t
      ; t2 <- zonk t
      ; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
-     --; verbose <- getIoMode "verbose"
-     --; when verbose (warnM[Ds "Checking kinds of ",Dd x,Ds " i.e. ",Dd t,Ds ":: ",Dd k])
      ; (new_t) <- handleM 1 (check t k) (kinderr t k u1)
      ; writeRef r1 (Just t2)
      ; return ()
      }
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (TcTv v@(Tv _ (Flexi _) _)) = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 (Flexi _) k2))      = unifyVar v (TcTv x)
-unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) = 
-   do { verbose <- getIoMode "verbose";
-        bs <- getBindings;
-        whenM verbose [Ds "Emitting ",Dd x,Ds " =?= ", Dd y,Ds "\n",Dl bs ", "];
-      ; emit (TcTv x) y }
+unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) = emit (TcTv x) y
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TyCon tx k t _)) = emit (TcTv x) y
 
 unifyVar v (x@(TyFun nm k _)) = emit (TcTv v) x
@@ -1268,10 +1263,10 @@ newFlexiTyVar k =
      ; r <- newRef Nothing ;
      ; return (Tv n (Flexi r) k) }
 
-newRigidTyVar :: TyCh m => Quant -> Loc -> IO String -> Kind -> m TcTv
-newRigidTyVar q loc descripComp k =
-  do { dummy <- newRef descripComp
-     ; n <- nextInteger; return(Tv n (Rigid q loc ("NewRidgidTyVar Call",dummy)) k) }
+newRigidTyVar :: TyCh m => Quant -> Loc -> String -> Kind -> m TcTv
+newRigidTyVar q loc s k =
+  do { dummy <- newRef (return "DummyRigidRef")
+     ; n <- nextInteger; return(Tv n (Rigid q loc (s,dummy)) k) }
 
 newSkolTyVar :: TyCh m => String -> Kind -> m TcTv
 newSkolTyVar s k =
@@ -1284,7 +1279,7 @@ skolTy sigma = unBindWith (\ x -> return "SkolemVarsShouldNeverBackPatch") newSk
 -- "new" from "unBindWithL" will be one of these three functions
 newflexi       nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
 newSkolem      nam quant k = do { v <- newSkolTyVar (show nam) k; return(TcTv v)}
-newRigid loc s nam quant k = do { v <- newRigidTyVar quant loc (return s) k; return(TcTv v) }
+newRigid loc s nam quant k = do { v <- newRigidTyVar quant loc s k; return(TcTv v) }
 
 
 newTau k = do { v <- newFlexiTyVar k; return (TcTv v)}
@@ -1429,7 +1424,7 @@ generalize rho =
 
 ---------------------------------------------------------------------
 -- If a term is Typable as a Rho,
--- one can derive Typability as a Sigma for free!
+-- one can derive Typabilty as a Sigma for Free!
 -- Typability for Tau and Rho depends on the semantics of Term
 -- so it is usually defined in the file that defines terms.
 
@@ -1522,14 +1517,11 @@ showKinds varsOf t =
 showKinds2 t =
  do { t1 <- zonkG t
     ; (free,zs) <- tvs t1
-    ; return( (if (not(null free)) then [Ds "\nwhere types have kinds:\n   ",Dlf f free "\n   "] else [])++
+    ; return( (if (not(null free)) then [Ds "\nwhere ",Dlf f free ", "] else [])++
               (if (not(null zs)) then [Dlf g zs ", "] else []) )
     }
  where f disp (v@(Tv un fl k)) = displays disp [Dd v, Ds ":",Dd k]
        g disp l = displays disp [Ds ("level("++show l++") "),Dd l ]
-       
-showKinds3 :: Rho -> IO [DispElem Z]
-showKinds3 x = showKinds2 x
       
 ----------------------------------------------------
 -- levels in kind arrow should descend or be equal
@@ -1670,31 +1662,27 @@ mustBe (term,qual) t comput expect =
 -- generate new 'kind variables', so it must be monadic.
 -- We supply a pure function "kindOf" but it is inexact.
 
-
 kindOfM :: TyCh m => Tau -> m Tau
-kindOfM x = do { -- verbose <- getIoMode "verbose";
-                 -- when verbose (warnM [Ds "\nKind of  ",Dd x]);
-                 f x } where
-  f (TcTv (Tv u r (MK k))) = return k
-  f (TyCon sx level_ s (K lvs sigma)) =
-   do { info <- instanTy lvs sigma
-      ; case (info) of
-        (([],Rtau k)) -> return k
-        (other) -> failM 0 [Ds "An illegal kind in a TyCon was found while computing the kind of a type: ",Dd sigma] }
-  f (Star n) =  return (Star (LvSucc n))
-  f (Karr x y) = kindOfM y
-  f (TyVar n (MK k)) = return k
-  f (TyFun s (K lvs sigma) ts) =
-   do { info <- instanTy lvs sigma
-      ; case info of
-        ([],Rtau k) -> matchKind k ts
-        other -> failM 0 [Ds "An illegal kind in a Type Funtion was found while computing the kind of a type: ",Dd sigma] }
-  f (ty@(TyApp ff x)) =
-   do { let (f,ts) = rootTau ty []
-      ; k <- kindOfM f
-      ; matchKind k ts }
-  f (TySyn nm n fs as b) = kindOfM b
-  f (TyEx xs) = do { (_,_,t) <- instanL [] xs; kindOfM t}
+kindOfM (TcTv (Tv u r (MK k))) = return k
+kindOfM (TyCon sx level_ s (K lvs sigma)) =
+  do { info <- instanTy lvs sigma
+     ; case (info) of
+       (([],Rtau k)) -> return k
+       (other) -> failM 0 [Ds "An illegal kind in a TyCon was found while computing the kind of a type: ",Dd sigma] }
+kindOfM (Star n) =  return (Star (LvSucc n))
+kindOfM (Karr x y) = kindOfM y
+kindOfM (TyVar n (MK k)) = return k
+kindOfM (TyFun s (K lvs sigma) ts) =
+  do { info <- instanTy lvs sigma
+     ; case info of
+       ([],Rtau k) -> matchKind k ts
+       other -> failM 0 [Ds "An illegal kind in a Type Funtion was found while computing the kind of a type: ",Dd sigma] }
+kindOfM (ty@(TyApp ff x)) =
+  do { let (f,ts) = rootTau ty []
+     ; k <- kindOfM f
+     ; matchKind k ts }
+kindOfM (TySyn nm n fs as b) = kindOfM b
+kindOfM (TyEx xs) = do { (_,_,t) <- instanL [] xs; kindOfM t}
 
 
 
@@ -2787,11 +2775,6 @@ sub2Pairs :: Unifier2 -> [(Tau,Tau)] -> [(Tau,Tau)]
 sub2Pairs ([],[]) xs = xs
 sub2Pairs env xs = map f xs where f (x,y) = (sub2Tau env x,sub2Tau env y)
 
-sub2TcTv:: Unifier2 -> TcTv -> TcTv
-sub2TcTv env (var@(Tv unq flav k)) = 
-   case sub2Tau env (TcTv var) of
-     TcTv u -> u
-     _ -> Tv unq flav (sub2Kind env k)
 
 sub2Rho :: Unifier2 -> Rho -> Rho
 sub2Rho ([],[]) x = x
@@ -2822,7 +2805,7 @@ subTau env x = sub2Tau ([],env) x
 subSigma env x = sub2Sigma ([],env) x
 subPairs env x = sub2Pairs ([],env) x
 subPred env x = sub2Pred ([],env) x
-subTcTv env x = sub2TcTv ([],env) x
+
 ---------------------------------------------------
 -- Get type variables from a term, should be zonked first
 
@@ -3793,7 +3776,7 @@ test12 = (TcTv a1,f)
 --
 -- 1) Mutvar solvable look like (Equal x type),
 -- where on side is a variable, except where x = skol
--- or y={plus y z}, i.e. a TyFun where the var (y) occurs
+-- or y={plus y z}, ie. a TyFun where the var (y) occurs
 -- in the other side, like the y in  {plus y z}.
 --
 -- 2) Easy ones include (Equal Z {plus n n}) where one
@@ -3937,11 +3920,11 @@ compStar (Right y) _ = Right y
 emitStar (x,y) (Left(sub,eqs)) = Left(sub,Equality x y :eqs)
 emitStar pair (Right x) = Right x
 
-mguStarVar str beta (x@(Tv _ _ (MK k))) tau xs =
+mguStarVar beta (x@(Tv _ _ (MK k))) tau xs =
   do { let vs = tvsTau tau
            new1 = [(x,tau)]
      ; k2 <- kindOfM tau
-     ; new2 <- mguStar str beta (subPairs new1 ((k,k2):xs))
+     ; new2 <- mguStar beta (subPairs new1 ((k,k2):xs))
      ; return(if (elem x vs)
                  then Right("occurs check", TcTv x, tau)
                  else composeStar new2 new1)}
@@ -3949,48 +3932,46 @@ mguStarVar str beta (x@(Tv _ _ (MK k))) tau xs =
 whichPat (Tv u (Rigid q loc (str,ref)) k) = str
 whichPat _ = "?"
 
-mguStar:: TyCh m => (IO String,Loc) -> [TcTv] -> [(Tau,Tau)] -> m(Either ([(TcTv,Tau)],[Pred]) (String,Tau,Tau))
-mguStar str beta [] = return(Left ([],[]))
-mguStar str beta ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m
-   = mguStar str beta xs
-mguStar str beta ((TcTv a,TcTv b):xs) | elem a beta && not(elem b beta)
-   = mguStarVar str beta a (TcTv b) xs
-mguStar str beta ((TcTv b,TcTv a):xs) | elem a beta && not(elem b beta)
-   = mguStarVar str beta a (TcTv b) xs
+mguStar:: TyCh m => [TcTv] -> [(Tau,Tau)] -> m(Either ([(TcTv,Tau)],[Pred]) (String,Tau,Tau))
+mguStar beta [] = return(Left ([],[]))
+mguStar beta ((TcTv (Tv n _ _),TcTv (Tv m _ _)):xs) | n==m
+   = mguStar beta xs
+mguStar beta ((TcTv a,TcTv b):xs) | elem a beta && not(elem b beta)
+   = mguStarVar beta a (TcTv b) xs
+mguStar beta ((TcTv b,TcTv a):xs) | elem a beta && not(elem b beta)
+   = mguStarVar beta a (TcTv b) xs
 
-
-mguStar (str,loc) beta ((TcTv (a@(Tv _ _ k)),TcTv b):xs)
+mguStar beta ((TcTv (a@(Tv _ _ k)),TcTv b):xs)
    | (elem a beta && elem b beta) || (not(elem a beta) && not(elem b beta))
-   = do { info <- showMdisp [Ds "\nvia the 'common rule' from ",Dd a,Ds " and ",Dd b]
-        ; let description = do { x <- str; return(x++info)}
-        ; cVar <- newRigidTyVar All loc description k
+   = do { loc <- currentLoc
+        ; name <- showMdisp [Ds "via the 'common rule' from ",Dd a,Ds " and ",Dd b]
+        ; cVar <- newRigidTyVar All loc name k
         ; let c = TcTv cVar
         ; let new1 = [(a,c),(b,c)]
-        ; new2 <- mguStar (str,loc) beta (subPairs new1 xs)
+        ; new2 <- mguStar beta (subPairs new1 xs)
         ; return(composeStar new2 new1)}
+        
+mguStar beta ((TcTv a,tau):xs) = mguStarVar beta a tau xs
+mguStar beta ((tau,TcTv a):xs) = mguStarVar beta a tau xs
+mguStar beta ((TyApp x y,TyApp a b):xs) = mguStar beta ((x,a):(y,b):xs)
+mguStar beta ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mguStar beta xs -- TODO LEVEL
+mguStar beta ((Star n,Star m):xs) = unifyLevel "mguStar" n m >> mguStar beta xs
+mguStar beta ((Karr x y,Karr a b):xs) = mguStar beta ((x,a):(y,b):xs)
+mguStar beta ((TySyn nm n fs as x,y):xs) = mguStar beta ((x,y):xs)
+mguStar beta ((y,TySyn nm n fs as x):xs) = mguStar beta ((y,x):xs)
 
-
-mguStar str beta ((TcTv a,tau):xs) = mguStarVar str beta a tau xs
-mguStar str beta ((tau,TcTv a):xs) = mguStarVar str beta a tau xs
-mguStar str beta ((TyApp x y,TyApp a b):xs) = mguStar str beta ((x,a):(y,b):xs)
-mguStar str beta ((TyCon sx level_ s1 _,TyCon tx level_2 s2 _):xs) | s1==s2 = mguStar str beta xs -- TODO LEVEL
-mguStar str beta ((Star n,Star m):xs) = unifyLevel "mguStar" n m >> mguStar str beta xs
-mguStar str beta ((Karr x y,Karr a b):xs) = mguStar str beta ((x,a):(y,b):xs)
-mguStar str beta ((TySyn nm n fs as x,y):xs) = mguStar str beta ((x,y):xs)
-mguStar str beta ((y,TySyn nm n fs as x):xs) = mguStar str beta ((y,x):xs)
-
-mguStar str beta ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) | f==g =
-  eitherM (mguStar str beta (zip ys zs))
-     (\ (old,ps) -> eitherM (mguStar str beta (subPairs old xs))
+mguStar beta ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) | f==g =
+  eitherM (mguStar beta (zip ys zs))
+     (\ (old,ps) -> eitherM (mguStar beta (subPairs old xs))
                       (\ (new,qs) -> return(composeStar  (Left(new,ps++qs)) old))
                       (\ err -> return(Right err)) )
-     (\ _ -> do { ans <- (mguStar str beta xs); return (emitStar (x,y) ans)} )
+     (\ _ -> do { ans <- (mguStar beta xs); return (emitStar (x,y) ans)} )
   
-mguStar str beta ((x@(TyFun f _ ys),y):xs) =
-   do { ans <-  (mguStar str beta xs); return (emitStar (x,y) ans) }
-mguStar str beta ((y,x@(TyFun f _ ys)):xs) =
-   do { ans <-  (mguStar str beta xs); return (emitStar (y,x) ans) }
-mguStar str beta ((x,y):xs) = return(Right("No Match", x, y))
+mguStar beta ((x@(TyFun f _ ys),y):xs) =
+   do { ans <-  (mguStar beta xs); return (emitStar (x,y) ans) }
+mguStar beta ((y,x@(TyFun f _ ys)):xs) =
+   do { ans <-  (mguStar beta xs); return (emitStar (y,x) ans) }
+mguStar beta ((x,y):xs) = return(Right("No Match", x, y))
 
 
 
@@ -4042,7 +4023,7 @@ morepolyRR s x y = f x y where
   f (Rsum m n) (Rsum a b) = morepolySS s m a `thenStar`  morepolySS s n b
   f (Rsum m n) x = do{(a,b) <- checkSum x; morepolySS s m a `thenStar` morepolySS s n b}
   f x (Rsum a b) = do{(m,n) <- checkSum x; morepolySS s m a `thenStar` morepolySS s n b}
-  f (Rtau x) (Rtau y) = mguStar (return "morepolyRR",Z) s [(x,y)]
+  f (Rtau x) (Rtau y) = mguStar s [(x,y)]
 
 
 -- showKinds

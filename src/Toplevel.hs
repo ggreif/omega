@@ -31,6 +31,9 @@ import Manual(makeManual)
 import Commands
 import SyntaxExt(synName,synKey)
 
+-- import System.Console.Readline(setCompletionEntryFunction)
+-- setCompletionEntryFunction :: Maybe (String -> IO [String]) -> IO ()
+
 -------------------------------------------------------------
 -- The programmer interface: the top level loop.
 -- it performs the read-eval-typecheck-print loop.
