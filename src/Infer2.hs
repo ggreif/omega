@@ -1,6 +1,6 @@
 module Infer2 where
 
-import qualified System.Console.Editline.Readline as Readline
+import PureReadline
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 
@@ -4265,11 +4265,11 @@ interactiveLoop f env = handleM 3
 
 lineEditReadln :: String -> (String -> [String]) -> FIO String
 lineEditReadln prompt expandTabs = fio body
- where body = do { Readline.setCompletionEntryFunction(Just (return . expandTabs))
-                 ; s <- Readline.readline prompt
+ where body = do { PureReadline.setCompletionEntryFunction(return . expandTabs)
+                 ; s <- PureReadline.readline prompt
                  ; let addHist Nothing = return ""
                        addHist (Just "") = return ""
-                       addHist (Just s) = (Readline.addHistory s)>>(return s)
+                       addHist (Just s) = (PureReadline.addHistory s)>>(return s)
                  ; addHist s
                  }
 

@@ -1572,12 +1572,16 @@ levelLTE x y (TcLv(v@(LvMut u r))) m = writeRef r (Just m) >> return ()
 levelLTE x y (m@(TcLv (LvVar nm))) (TcLv(v@(LvMut u r))) =  writeRef r (Just m) >> return ()
 levelLTE x y (TcLv (LvVar nm)) m = failM 1 [Ds "\nLevel '",dName nm,Ds "' is not polymorphic as declared (case 1).",Ds (shtt m)]
 
-notLTE (n:: Int) (y1,yL) (x1,xL) =
-   warnM [Ds "\n\n*** WARNING ***\n",Dd n, Ds " While inferring the kind of: "
-         ,Dd (Karr x1 y1)
-         ,Ds "\nWe find that the level of ",Dd x1,Ds "(", Dd xL,Ds ")"
-         ,Ds " is not >= to the level of ",Dd y1,Ds "(",Dd yL,Dd ")\n"] >> return ()
-
+notLTE (n:: Int) (y1,yL) (x1,xL) 
+   | itsAValue = warnM [Ds "\n\n*** WARNING ***\n",Dd n, Ds " While inferring the kind of: "
+                       ,Dd (Karr x1 y1)
+                       ,Ds "\nWe find that the level of ",Dd x1,Ds "(", Dd xL,Ds ")"
+                       ,Ds " is not >= to the level of ",Dd y1,Ds "(",Dd yL,Dd ")\n"] >> return ()
+   | otherwise = return ()                    
+ where itsAValue = case fromLevel yL of
+                     Nothing -> True
+                     Just m -> m<=1
+ 
 checkLevelsDescend x1 y1 =
  do { xL <- levelOf x1
     ; yL <- levelOf y1
@@ -1611,14 +1615,14 @@ instance TyCh m => Typable m  Tau Tau where
       do { (fk,a) <- infer ff
          ; fk2 <- zonk fk
          ; (arg_ty,res_ty) <- unifyKindFun ff fk2
-        -- ; warnM [Ds"\ncheckAppCase ",Dd ff,Ds ":: ",Dd fk2,Dd "\n  ",Dd x
-        --         ,Ds "\n",Dd arg_ty,Ds " ~> ",Dd res_ty]
-        --          ; showKinds varsOfTau (TyApp fk2 (TyApp ff x))
+         --; warnM [Ds"\ncheckAppCase ",Dd ff,Ds ":: ",Dd fk2,Dd "\n  ",Dd x
+         --        ,Ds "\n",Dd arg_ty,Ds " ~> ",Dd res_ty]
+         --         ; showKinds varsOfTau (TyApp fk2 (TyApp ff x))
          ; let err mess =
                  do { (inferred::Tau,_) <- infer x
                      ; k <- kindOfM arg_ty
                      ; let but = Dr [ Ds ":: ",Dd k,Ds ") but"]
-                    ; failM 2
+                     ; failM 2
                        [Ds "\nwhile checking the kind of ("
                        ,Dd t, Ds ")" {- , Ds (shtt t) -}
                        ,Ds "\nwe expected (", Dd x, Ds "::  ",Dd arg_ty,but
