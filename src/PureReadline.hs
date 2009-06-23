@@ -35,7 +35,6 @@
 -----------------------------------------------------------
 module PureReadline (readline, addHistory,setCompletionEntryFunction) where
 
-import System.FilePath.Posix (pathSeparator)
 import Control.Exception (finally)
 import Control.Monad
 import Data.Char (isSpace)
@@ -44,6 +43,8 @@ import Data.List (isPrefixOf, inits)
 import System.IO
 import System.IO.Unsafe (unsafePerformIO)
 import System.Directory (getDirectoryContents, doesDirectoryExist)
+--import System.FilePath.Posix (pathSeparator)
+pathSeparator = '/'
 
 data Command 
     = Move Cursor

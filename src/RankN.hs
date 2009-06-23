@@ -1534,6 +1534,7 @@ showKinds3 x = showKinds2 x
 ----------------------------------------------------
 -- levels in kind arrow should descend or be equal
 -- (x ~> y)  (levelOf x) >= (levelOf y)
+-- June 22 2009, We are experimenting with relaxing this rule!! 
 
 levelOf x = do { y <- prune x; ans <- get y
                -- ; warnM[Ds "\nLevel of ",Dd y,Ds " = ",Dd ans]
@@ -1565,6 +1566,10 @@ incLev 0 level = level
 incLev n level = incLev (n-1) (LvSucc level)
 
 levelLTE x y LvZero _ = return ()
+-- This is an experiment
+levelLTE x y _ (LvSucc _) = return ()
+-- end experiment
+
 levelLTE x y (LvSucc m) LvZero = notLTE 1 x y
 levelLTE x y (LvSucc m) v = do { u <- predLev v; levelLTE x y m u}
 levelLTE x y (TcLv v) (TcLv u) | u==v = return ()
@@ -2001,7 +2006,9 @@ getLevel name (Star' k (Just s)) vs =
     Just n -> return(incLev k (TcLv (LvVar n)))
     Nothing -> failM 1 [Ds "\nUnknown level ",Dd s]
 getLevel name (Karrow' dom rng) vs = getLevel name rng vs
-getLevel name pt vs = failM 1 [Ds ("\nIn the data declartion for '"++name++"' the range:\n   "), Dd pt,Ds "\nis not of the form *n, for some Level n."]
+getLevel name (Rarrow' x y) vs = 
+  failM 1 [Ds ("\nIn the data declaration for '"++name++"' the range uses a value type arrow (->) use (~>) instead.")]
+getLevel name pt vs = failM 1 [Ds ("\nIn the data declaration for '"++name++"' the range:\n   "), Dd pt,Ds "\nis not of the form *n, for some Level n."]
 
 univLevelFromPTkind name (pt@(Forallx q vs preds t)) =
   do { n <- getLevel name t []; return([],n,pt)}
@@ -2404,7 +2411,7 @@ simpletyp =
 
 parseStar :: Parser PT
 parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
-  where star = (do { s <- ident; return(0,Just s)}) <|> -- This comes first, otherwise wed always get just "*"
+  where star = (do { s <- ident; return(0,Just s)}) <|> -- This comes first, otherwise we'd always get just "*"
                (parens (do { ds <- many digit; symbol "+"; s <- ident; return(val ds,Just s)})) <|>  -- then this
                (do { ds <- many digit; return (val ds,Nothing)})
 
@@ -2505,6 +2512,7 @@ typToRel t _ = fail ("Expecting a relational predicate, found:\n  "++ show t)
 -- f :: (a=b,P a) => a -> b                 multiply qualified
 -- f :: forall a b . (a=b,P a) => a -> b    explicit forall
 -- Nat :: level b . *b                             -- Level polymorphic tycon
+-- T:: level b . x ~> *(b+1)                       -- Level polymorphic
 -- f :: level b . forall (a::*b) . a -> a -> *0    -- Level polymorphic args
 
 typingHelp =
