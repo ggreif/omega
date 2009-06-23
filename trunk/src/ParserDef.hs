@@ -886,3 +886,13 @@ Right(Program xxx) = unsafePerformIO(parseFile program "D:/work/sheard/research/
 ty2 = "app:: Seq a ~> Seq a ~> Seq a\n"++
       "{app Snil ys} = ys\n"++
       "{app (Scons x xs) ys} = Scons x {app xs ys}"
+
+d6 = "data Natural:: level n . *n where\n"++
+     "   Zero :: Natural\n"++
+     "   Succ :: Natural ~> Natural\n" ++
+     " deriving Nat(p)\n"
+     
+d45 = "data Natural':: level n . (Natural::*1) ~> *(n+1) where\n" ++
+     "   Zero' :: Natural' Zero\n" ++
+     "   Succ' :: Natural' n -> Natural' (Succ n)\n" ++
+     " deriving Nat(s)"

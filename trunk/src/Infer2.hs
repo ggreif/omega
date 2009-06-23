@@ -21,7 +21,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,Quant(..),TcTv(..),Tau(..),Rho(..),Sigma(..),Kind(..),PolyKind(..)
             ,ForAllArgs,ToEnv,PPred,PT(..),MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
-            ,newLevel,unifyLevel,pruneLv,freshLevels,incLev,zonkLv
+            ,newLevel,unifyLevel,pruneLv,freshLevels,incLev,zonkLv,unifyLev,substLevel,instanLevel
             ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..),Zonk(..)
             , zonkRho, zonkSigma, zonkTau
             ,NameStore(..),useStoreName, showMdisp
@@ -1948,13 +1948,137 @@ transDataToGadt ds = mapM getGADT ds
 -- schema T::*0 ~> Nat ~> *0  with level *0, then check that (a -> Int -> T a Z) :: *0
 -- Then add theorems and rules, and build a Frag to return.
 
+-- When defining a level polymorphic type, these functions are used 
+-- to specialize the types of constructors to live in the value name space
+-- 1) Turn (x ~> y ~> T_(i)) into (x -> y -> T_(1))
+-- 2) Make sure T has level one in the value name space.
+
+
+rangeNameLevel (TyCon syn level name kind) = (name,level)
+rangeNameLevel (Karr x y) = rangeNameLevel y
+rangeNameLevel (TyApp f x) = rangeNameLevel f
+rangeNameLevel (TySyn _ _ _ _ x) = rangeNameLevel x
+rangeNameLevel x = ("",LvZero)
+
+pairLevels l (TyCon syn level name kind) = [(l,level)]
+pairLevels l (Karr x y) = pairLevels l x ++ pairLevels l y
+pairLevels l (TyApp f x) = pairLevels l f
+pairLevels l (TySyn _ _ _ _ x) = pairLevels l x
+pairLevels l x = []
+
+fixRho (Rtau x) = do { (x',list,name) <- fixTau x; return(Rtau x',list,name)}
+fixRho (Rarrow s t) = do { (t',list,name) <- fixRho t; return(Rarrow s t',list,name)}
+fixRho x = return(x,[],("",LvZero))
+
+fixTau (Karr x y) = do { (y',list,nm) <- fixTau y; return(tarr x y',levelOf x ++ list,nm)}
+fixTau (TyApp f x) = do { (f',list,nm) <- fixTau f; return(TyApp f' x,list,nm) }
+fixTau x = return (x,levelOf x,nameOf x)
+
+nameOf (TyCon syn level name kind) = (name,level)
+nameOf (TyApp f x) = nameOf f
+nameOf x = ("",LvZero)
+
+levelOf (TyCon syn level name kind) = [level]
+levelOf (TyApp f x) = levelOf f
+levelOf x = []
+
+-- instanLevel
+gg cname (K levelnames (Forall z)) = 
+     do { let (polynames,(preds,t)) = unsafeUnwind z
+        ; (rho2,list,(name,levl)) <- fixRho t
+	; let levels2 = map (\ x -> (x,LvSucc LvZero)) list
+              good (TcLv (LvVar x)) name = x /= name
+              good (LvSucc x) name = good x name
+              good other name = True
+        ; pairs <- case unifyLevels levels2 of
+                     Nothing -> failM 1 [Ds "\nValue level of level polymorphic ",Dd name
+                                        ,Ds " fails to be compatible with level 1 type\n"]
+                                        
+                     Just x -> return x
+         ; rho3 <- sub ([],[],[],pairs) rho2
+         ; warnM [Ds "\n in gg levels = ",Dl levels2 ",",Ds " levels2 = ",Dl levels2 ","
+                -- ,Ds "\n          rho = ",Dd rho
+                 ,Ds "\n         rho3 = ",Dd rho3]
+      
+        ; preds' <- sub ([],[],[],pairs) preds
+        ; pnames <- sub ([],[],[],pairs) polynames
+        ; return (K (filter (good levl) levelnames) (Forall (windup pnames (preds',rho3))))
+        }
+        
+hh cname (zz@(K levelnames sigma)) = 
+     do { (sigma2@(Forall z)) <- instanLevel levelnames sigma
+        ; warnM [Ds "\n in gg for ",Dd cname,Ds"\n  sigma = ",Dd sigma,Ds "\n  sigma2 = ",Dd sigma2]
+        
+        ; let (polynames,(preds,t)) = unsafeUnwind z
+              downRho (Rtau x) k = return (x,k . Rtau)
+     	      downRho (Rarrow s r) k = downRho r (k . Rarrow s)
+              downRho x k = failM 1 [Ds ("Range of type "),Dd x, Ds " is ill-formed."]
+              fixArr (Karr x y) = tarr x (fixArr y)
+	      fixArr x = x
+	; (rho2,list,_) <- fixRho t
+	; sigma3 <- zonk (Forall (windup polynames (preds,rho2)))
+	; warnM [Ds "\n in gg for ",Dd cname,Ds "\n  sigma3 = ",Dd sigma3]
+        ; (tau,rhoK) <- downRho t id 
+        ; let levels2 = map (\ x -> (x,LvSucc LvZero)) list
+              levels = pairLevels (LvSucc LvZero) tau
+        ; let (name,levl) = rangeNameLevel tau
+              good (TcLv (LvVar x)) name = x /= name
+              good (LvSucc x) name = good x name
+              good other name = True
+        ; pairs <- case unifyLevels levels of
+                     Nothing -> failM 1 [Ds "\nValue level of level polymorphic ",Dd name
+                                        ,Ds " fails to be compatible with level 1 type\n"
+                                        ,Ds "tau = ",Dd tau,Ds " Level = ",Dd levl,Ds " presumed ",Dd (LvSucc LvZero)]
+                     Just x -> return x
+         ; rho <- sub ([],[],[],pairs) (rhoK (fixArr tau))
+         ; rho3 <- sub ([],[],[],pairs) rho2
+         ; warnM [Ds "\n in gg levels = ",Dl levels ",",Ds " levels2 = ",Dl levels2 ","
+                 ,Ds "\n          rho = ",Dd rho
+                 ,Ds "\n         rho3 = ",Dd rho3]
+      
+        ; preds' <- sub ([],[],[],pairs) preds
+        ; pnames <- sub ([],[],[],pairs) polynames
+        ; return (K (filter (good levl) levelnames) (Forall (windup pnames (preds',rho3))))
+        }        
+    
+unifyLevName :: String -> Level -> Level -> Maybe[(TcLv,Level)]
+unifyLevName s x y = walk (x,y)
+  where walk (LvZero,LvZero) = Just []
+        walk (LvSucc x,LvSucc y) = unifyLevName s x y
+        walk (TcLv v,TcLv u) | u==v = Just []
+        walk (TcLv v,y) = Just[(v,y)]
+        walk (y,TcLv v) = Just[(v,y)]
+        walk (x,y) = Nothing
+        
+unifyLevels :: [(Level,Level)] -> Maybe[(TcLv,Level)]
+unifyLevels xs = walk [] xs
+  where sub1 env (v,l) = (v,substLevel env l)
+        sub2 env (l1,l2) = (substLevel env l1,substLevel env l2)
+        walk env [] = Just env
+        walk env ((LvZero,LvZero):more) = walk env more
+        walk env ((LvSucc x,LvSucc y):more) = walk env ((x,y):more)
+        walk env ((TcLv v,TcLv u):more) | u==v = walk env more
+        walk env ((TcLv v,y):more) = walk env2 (map (sub2 env2) more)
+          where env2 = ((v,y):(map (sub1 env) env))
+        walk env ((y,TcLv v):more) = walk env2 (map (sub2 env2) more)
+          where env2 = ((v,y):(map (sub1 env) env))          
+        walk env ((x,y):more) = Nothing        
+        
 unKindArr (K xs t) = K xs (f t)
   where f (Forall z) = Forall (windup xs (ps,g t))
             where (xs,(ps,t)) = unsafeUnwind z
-        g (Rtau x) = Rtau(h x)
-        g x = x
-        h (Karr x y) = tarr x (h y)
-        h z = z
+        g (Rtau x) = Rtau(h (fst(rangeNameLevel x)) x)
+        g (Rarrow s r) = Rarrow s (g r)
+        g x =  error ("g at bad type "++show x)
+        
+        h nm (Karr x y) = tarr (fixAtOne nm x) (h nm y)
+        h nm (t@(TyCon syn level name kind)) = fixAtOne nm t
+        h nm (TyApp f x) = TyApp (h nm f) x
+        h nm z = error ("h at bad type "++show z)
+        one = LvSucc(LvZero)
+        fixAtOne nm (TyCon syn level name kind) | name==nm = TyCon syn one name kind
+        fixAtOne nm (TyApp f x) = TyApp (fixAtOne nm f) x
+        fixAtOne nm x = x
 
 checkDataDecs :: [Dec] -> TC (Sigma,Frag,[Dec])
 checkDataDecs decls =
@@ -1962,22 +2086,24 @@ checkDataDecs decls =
      ; (ds2,env2,tyConMap) <- kindsEnvForDataBindingGroup ds   -- Step 1
      ; css <- mapM (constrType env2) ds2                       -- Step 2
      -- After checking ConFuns, zonk and generalize Type Constructors
-     ; tyConMap2 <- mapM genTyCon tyConMap
+     ; (tyConMap2) <- mapM genTyCon tyConMap
      -- Then generalize the Constructor functions as well
      ; conFunMap2 <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
      ; let ds2 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
            exts = filter (/= Ox) (map (\ (newd,synext,strata,isprop,zs) -> synext) css)
 
-           lift [] types values = (types,values)
+           lift [] types values = return (types,values)
            lift ((level,isProp,tag,(Global s,(polyk,mod,n,exp))):xs) types values =
              case (definesValues level,definesTypes level) of
                -- I.e. a Kind or above, the ConFuns are types not values!
               (False,True) -> lift xs ((s,TyCon tag level s (polyk),polyk):types) values
-              (True,False) -> lift xs types ((Global s,(polyk,mod,n,exp),LetBnd):values)
-              (True,True) -> lift xs ((s,TyCon tag level s (polyk),polyk):types)
-                                     ((Global s,(unKindArr polyk,mod,n,exp),LetBnd):values)
+              (True,False) -> do { poly2 <- gg s polyk
+                                 ; lift xs types ((Global s,(poly2,mod,n,exp),LetBnd):values)}
+              (True,True) -> do { poly2 <- gg s polyk
+                                ; lift xs ((s,TyCon tag level s (polyk),polyk):types)
+                                          ((Global s,(poly2,mod,n,exp),LetBnd):values)}
      ; let proj (nm,tau,polykind,levs) = (nm,tau,polykind)
-     ; (types,values) <- return(lift conFunMap2 (map proj tyConMap2) [])
+     ; (types,values) <- lift conFunMap2 (map proj tyConMap2) []
      ; let makeRule (level,False,_,(Global c,(polyk,mod,_,_))) = return []
            makeRule (level,True,_,(Global c,(K lvs sigma,mod,_,_))) = sigmaToRule (Just (Axiom)) (c,sigma)
      ; rules <- mapM makeRule conFunMap2
@@ -1996,13 +2122,14 @@ definesTypes (TcLv _) = True
 definesTypes (LvSucc _) = True
 
 genConstrFunFrag tyConInfo (d2,tag,strata,isProp,conFunInfo) = mapM f conFunInfo
-  where f (nm,(sig,mod,lev,exp)) =
+  where f (nm::Var,(sig::Sigma,mod::Mod,lev::CodeLevel,exp::Exp)) =
           do { -- Replace TyCon's which have stale PolyKind fields
                -- (i.e. they are monomorphic and non-level polymorphic)
+             ; let fixKindLevel (nm,tau,polykind,levs) = do { k <- sub ([],[],[],levelsub) tau; return(nm,k)}
+             ; tyConSub <- mapM fixKindLevel tyConInfo
              ; sig1 <- sub ([],[],tyConSub,levelsub) sig
              ; (_,w) <- generalize sig1  -- Now generalize
              ; return(strata,isProp,tag,(nm,(w,mod,lev,exp)))}
-        tyConSub = map (\ (nm,tau,polykind,levs) -> (nm,tau)) tyConInfo
         levelsub = concat(map (\ (nm,tau,polykind,levs) -> levs) tyConInfo)
 
 
@@ -2114,6 +2241,7 @@ constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strat
      -- The constr leaves the kinding of vars implicit.  C:: T a -> T a
      [] -> do { checkRng cname tname strata typ
               ; (nmMap,vars,ps,rho2) <- inferConSigma levels currentMap loc (preds,typ)
+              ; zvars <- zonk vars
               ; checkValuesDontUseKarr cname rho2 strata
               ; return(Forall(windup vars (ps,rho2)))}
      _  -> do { (_,rng) <- checkRng cname tname strata typ
@@ -2229,6 +2357,8 @@ checkRng c tname LvZero (Rarrow' d x) =
   do { (ds,r) <- checkRng c tname LvZero x; return(d:ds,r) }
 checkRng c tname (LvSucc lev) (Karrow' d x) =
   do { (ds,r) <- checkRng c tname (LvSucc lev) x; return (d:ds,r)}
+checkRng c tname (TcLv lev) (Karrow' d x) =
+  do { (ds,r) <- checkRng c tname (TcLv lev) x; return (d:ds,r)}  
 checkRng c (Global tname) _ (t@(TyCon' nm)) | tname == nm = return ([],t)
 checkRng c (Global tname) _ (t@(TyVar' nm)) | tname == nm = return ([],t)
 checkRng c (Global tname) _ (t@(TyApp' _ _)) = down t
@@ -2238,9 +2368,9 @@ checkRng c (Global tname) _ (t@(TyApp' _ _)) = down t
         down t = failD 2 [Ds "\nThe range of the constructor: ",Dd c
                          ,Ds " is not an application of: "
                          ,Dd tname,Ds ".\nInstead it is: ",Dd t,Ds("\ninternal representation: "++shtt t)]
-checkRng c tname _ typ =
+checkRng c tname lev typ =
   failD 2 [Ds "\nThe range of the constructor: ",Dd c,Ds " is not "
-          ,Dd tname,Ds ".\nInstead it is: ",Dd typ]
+          ,Dd tname,Ds ".\nInstead it is: ",Dd typ, Ds " (at level ",Dd lev,Ds ")"]
 
 illFormed name rho kind message =
   failM 3 [Ds "\nWhile checking the type of the constructor: ",Dd name
