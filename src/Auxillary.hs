@@ -229,6 +229,8 @@ data DispElem a
 drI:: DispInfo z -> [DispElem z] -> DispElem z
 drI _ xs = Dr xs
 
+dmany :: (a -> [DispElem b]) -> [a] -> [Char] -> DispElem b
+dmany f list sep = Dlf (\ d x -> displays d (f x)) list sep
 
 dlfI:: (DispInfo z -> x -> DispElem z) -> [x] -> String -> DispElem z
 dlfI f xs sep = Dlf (\ d x -> displays d [f d x]) xs sep

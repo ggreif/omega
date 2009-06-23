@@ -54,7 +54,7 @@ import List((\\),partition,sort,sortBy,nub,union,unionBy
 import Encoding2
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
-                ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,ns)
+                ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
 import LangEval(vals,env0,Prefix(..),elaborate)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import Char(isAlpha,isUpper)
@@ -1951,7 +1951,7 @@ transDataToGadt ds = mapM getGADT ds
 -- When defining a level polymorphic type, these functions are used 
 -- to specialize the types of constructors to live in the value name space
 -- 1) Turn (x ~> y ~> T_(i)) into (x -> y -> T_(1))
--- 2) Make sure T has level one in the value name space.
+-- 2) Make sure T has level one in the value name space, and all args [x,y] have level one as well
 
 
 rangeNameLevel (TyCon syn level name kind) = (name,level)
@@ -1974,19 +1974,56 @@ fixTau (Karr x y) = do { (y',list,nm) <- fixTau y; return(tarr x y',levelOf x ++
 fixTau (TyApp f x) = do { (f',list,nm) <- fixTau f; return(TyApp f' x,list,nm) }
 fixTau x = return (x,levelOf x,nameOf x)
 
-nameOf (TyCon syn level name kind) = (name,level)
-nameOf (TyApp f x) = nameOf f
-nameOf x = ("",LvZero)
-
 levelOf (TyCon syn level name kind) = [level]
 levelOf (TyApp f x) = levelOf f
 levelOf x = []
 
--- instanLevel
+-------------------------------------
+
+-- We've drilled down to the range, return name and level of the TyCon
+nameOf (TyCon syn level name kind) = (name,level)
+nameOf (TyApp f x) = nameOf f
+nameOf x = ("",LvZero)
+
+-- Return a list of all the levels that have to be fixed
+-- basically in (a -> b -> T x) = [level a,level b,level T]
+levelTau (TyCon syn level name kind) = [level]
+levelTau (TyApp f x) = levelOf f
+levelTau (Star n) = [LvSucc n]   -- is this right?
+levelTau (Karr s t) = levelOf t
+levelTau (TySyn _ _ _ _ x) = levelOf x
+levelTau (TyEx x) = levelL levelTau x
+levelTau x = []
+
+levelRho (Rtau t) = levelTau t
+levelRho (Rarrow s t) = levelRho t
+levelRho (Rpair x y) = levelSigma x ++ levelSigma y
+levelRho (Rsum x y) = levelSigma x ++ levelSigma y
+
+levelSigma (Forall z) = levelL levelRho z
+ 
+levelL f l = f r   where (polynames,(preds,r)) = unsafeUnwind l
+
+-- Change all the (a ~> b ~> T) to (a -> b -> T) and also return 
+-- a list levels needing fixing and the name and level of T
+fixTau2 (Karr x y) = (tarr x y',levelOf x ++ list,nm) where (y',list,nm) = fixTau2 y
+fixTau2 (TyApp f x) = (TyApp f' x,list,nm) where (f',list,nm) = fixTau2 f
+fixTau2 x = (x,levelOf x,nameOf x)
+
+fixRho2 (Rtau x) = (Rtau x',list,name) where (x',list,name) = fixTau2 x
+fixRho2 (Rarrow s t) = (Rarrow s t',l2++l1,name) 
+    where (t',l1,name) = fixRho2 t
+          l2 = levelSigma s          
+fixRho2 x = (x,[],("",LvZero))
+       
+fixSigma (Forall z) = (Forall (windup polynames (preds,t')),list,(name,lev))
+  where (polynames,(preds,t)) = unsafeUnwind z
+        (t',list,(name,lev)) = fixRho2 t
+        
+-------
 gg cname (K levelnames (Forall z)) = 
-     do { let (polynames,(preds,t)) = unsafeUnwind z
-        ; (rho2,list,(name,levl)) <- fixRho t
-	; let levels2 = map (\ x -> (x,LvSucc LvZero)) list
+     do { let (sigma2,list2,(name,levl)) = fixSigma (Forall z)
+	      levels2 = map (\ x -> (x,LvSucc LvZero)) list2
               good (TcLv (LvVar x)) name = x /= name
               good (LvSucc x) name = good x name
               good other name = True
@@ -1995,14 +2032,17 @@ gg cname (K levelnames (Forall z)) =
                                         ,Ds " fails to be compatible with level 1 type\n"]
                                         
                      Just x -> return x
-         ; rho3 <- sub ([],[],[],pairs) rho2
-         ; warnM [Ds "\n in gg levels = ",Dl levels2 ",",Ds " levels2 = ",Dl levels2 ","
-                -- ,Ds "\n          rho = ",Dd rho
-                 ,Ds "\n         rho3 = ",Dd rho3]
+         ; sigma3 <- sub ([],[],[],pairs) sigma2
+         ; (_,freelevels) <- get_tvs sigma3
       
-        ; preds' <- sub ([],[],[],pairs) preds
-        ; pnames <- sub ([],[],[],pairs) polynames
-        ; return (K (filter (good levl) levelnames) (Forall (windup pnames (preds',rho3))))
+      ; warnM [Ds "\n in gg  ",Dl levelnames ",",Ds " ",Dd (Forall z)
+                 ,Ds "\n ",dmany (\ x -> [Ds (shtt x)]) levelnames ",", Ds (" . "++shtt (Forall z))
+                 ,Ds "\n level pairs = ",Dl levels2 ","
+                 ,Ds "\n       sigma3 = ",Dd sigma3
+                 ,Ds "\n  free levels = ",Dl freelevels ","
+                 ]
+      
+      ; return (K (filter (good levl) levelnames) sigma3)
         }
         
 hh cname (zz@(K levelnames sigma)) = 
@@ -2125,7 +2165,8 @@ genConstrFunFrag tyConInfo (d2,tag,strata,isProp,conFunInfo) = mapM f conFunInfo
   where f (nm::Var,(sig::Sigma,mod::Mod,lev::CodeLevel,exp::Exp)) =
           do { -- Replace TyCon's which have stale PolyKind fields
                -- (i.e. they are monomorphic and non-level polymorphic)
-             ; let fixKindLevel (nm,tau,polykind,levs) = do { k <- sub ([],[],[],levelsub) tau; return(nm,k)}
+             ; let fixKindLevel (nm,tau,polykind,levs) = 
+                        do { k <- sub ([],[],[],levelsub) tau; return(nm,k)}
              ; tyConSub <- mapM fixKindLevel tyConInfo
              ; sig1 <- sub ([],[],tyConSub,levelsub) sig
              ; (_,w) <- generalize sig1  -- Now generalize
@@ -2370,8 +2411,11 @@ checkRng c (Global tname) _ (t@(TyApp' _ _)) = down t
                          ,Dd tname,Ds ".\nInstead it is: ",Dd t,Ds("\ninternal representation: "++shtt t)]
 checkRng c tname lev typ =
   failD 2 [Ds "\nThe range of the constructor: ",Dd c,Ds " is not "
-          ,Dd tname,Ds ".\nInstead it is: ",Dd typ, Ds " (at level ",Dd lev,Ds ")"]
-
+          ,Dd tname,Ds ".\nInstead it is: ",Dd typ, Ds " (at level ",Dd lev,Ds ")",perhaps]
+     where perhaps = case typ of 
+                      (Rarrow' dom rng) ->  Dr [Ds "\nPerhaps you meant: ",Dd (Karrow' dom rng)]
+                      other -> Ds ""
+                            
 illFormed name rho kind message =
   failM 3 [Ds "\nWhile checking the type of the constructor: ",Dd name
           ,Ds "\nwe checked the well-formedness of:\n  ",Dd rho,Ds " :: ",Dd kind
