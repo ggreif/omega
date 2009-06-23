@@ -799,7 +799,10 @@ tvs_Kind  :: (HasIORef m,Fresh m) => Kind -> m([TcTv],[TcLv])
 tvs_Kind (MK s) = tvs_Tau s
 
 tvs_Poly  :: (HasIORef m,Fresh m) => PolyKind -> m([TcTv],[TcLv])
-tvs_Poly (K nm sig) = tvs_Sigma sig
+tvs_Poly (K names sig) = do { (vs,ls) <- tvs_Sigma sig; return(vs,remove ls) }
+  where remove [] = []
+        remove ((y@(LvVar n)):ys) | n `elem` names = remove ys
+        remove (y:ys) = y : (remove ys)
 
 tvs_Level  :: (HasIORef m,Fresh m) => Level -> m([TcTv],[TcLv])
 tvs_Level (TcLv v) = return([],[v])
@@ -970,7 +973,7 @@ instance  TyCh m => TypeLike m Sigma where
   
 -- TypeLike PolyKind
 instance  TyCh m => TypeLike m PolyKind where
-  sub (env@(ws,xs,ys,zs)) (K lvs r) = do { r' <- sub (ws,xs,ys,zs++map f lvs) r; return(K lvs r')}
+  sub (env@(ws,xs,ys,zs)) (K lvs r) = do { r' <- sub (ws,xs,ys,map f lvs++zs) r; return(K lvs r')}
     where f x = (LvVar x,TcLv(LvVar x))
 
 -- TypeLike Kind
@@ -3175,7 +3178,8 @@ shtP (x,y) = "("++shtt x++"," ++ shtt y++")"
 
 sht (TyVar n k) = "(TyVar "++show n++"::"++shtt k++")"
 sht (TyApp x y) = "(TyApp "++sht x++" "++sht y++")"
-sht (TyCon sx l x k) = "(Con "++x++"@"++show l++" %"++show sx++")"  --  ++"_"++show l++":"++shtt k++")"
+sht (TyCon sx l x k) = "(Con "++x++"@"++show l++" %"++show sx++")"  
+                      ++":"++shtt k++")"
 sht (Star n) = "(Star "++show n++")"
 sht (Karr x y) = "(Karr "++sht x++" "++sht y++")"
 sht (TcTv (Tv n (Flexi _) k))  = "(Flex " ++ show n ++":"++shtt k++")"
@@ -3475,8 +3479,8 @@ polyLevel LvZero = False
 polyLevel (LvSucc x) = polyLevel x
 polyLevel x = True
 
--- Tau
-instance NameStore d => Exhibit d Tau where
+-- Exhibit Tau
+instance (NameStore d) => Exhibit d Tau where
   exhibit xs (t@(TyCon (Nx(k,z,s)) _ c _)) | c==z = (xs,"0" ++ postscript k)
   exhibit xs (t@(TyCon (Lx(k,n,c)) _ s _)) | s==n = (xs,"[]"++postscript k)
   exhibit xs (t@(TyApp (TyApp (TyCon (Lx _) _ _ _) _) _)) = exSynList xs t
@@ -3486,6 +3490,13 @@ instance NameStore d => Exhibit d Tau where
 
   exhibit xs (t@(TyApp (TyApp (TyCon (Px _) _ _ _) _) _)) = exSynPair xs t
   exhibit xs (t@(TyApp (TyCon (Nx _) _ _ _) x)) = exSynNat xs t
+
+  exhibit xs (TyCon _ l nm (K vs k)) |  nm `elem` ["Zero'","Succ'"]  -- to debug use something like: ["L","Bush"] 
+                                     = (ys,nm++"("++l'++","++vs'++"."++k'++")")
+     where (ys,l') = exhibit xs l
+           (ws,vs') = exhibitL exhibit ys (map LvVar vs) ","
+           (zs,k') = exhibit ws k 
+          
   exhibit xs (t@(TyCon sx (LvSucc LvZero) s k)) = (xs,s)
   exhibit xs (t@(TyCon _ l s k))| polyLevel l = (ys,s++"_"++y)
       where (ys,y) = exhibit xs l
