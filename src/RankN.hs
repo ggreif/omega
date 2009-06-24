@@ -503,8 +503,8 @@ hiddenT = TyCon Ox (lv 1) "Hidden" kind4Hidden
 chrSeqT = TyCon Ox (lv 1) "ChrSeq" (poly star)
 floatT =  TyCon Ox (lv 1) "Float" (poly star)
 stringT = TyApp        listT charT
-propT =   TyCon Ox (lv 1) "Prop" (poly star1)
-natT =    TyCon Ox (lv 1) "Nat" (poly star1)
+propT =   TyCon Ox (lv 2) "Prop" (poly star1)
+natT =    TyCon Ox (lv 2) "Nat" (poly star1)
 notEqT =  TyCon Ox (lv 1) "(!=)" notEqKind
 
 declare (x@(TyCon _ _ name poly)) = (name,x,poly)
@@ -520,10 +520,10 @@ tagKind = (K [] (simpleSigma tagT))
 rowT     = TyCon Ox (lv 2) "Row" (poly (karr star1 star1))
 
 -- RCons :: (forall (k:*1) . k ~> (Row k) ~> Row k)  = RCons
-rConsT   = TyCon Ox (lv 1) "RCons" (poly1 star1 f)
+rConsT   = TyCon Ox (lv 2) "RCons" (poly1 star1 f)
            where f k = k `karr` (trow k `karr` trow k)
 -- RNil :: (forall (k:*1) . Row k)
-rNilT    = TyCon Ox (lv 1) "RNil" (poly1 star1 (\ k -> trow k))
+rNilT    = TyCon Ox (lv 2) "RNil" (poly1 star1 (\ k -> trow k))
 
 
 kind4Hidden :: PolyKind -- Hidden :: (forall (k:*1) . (k -> *0) -> *0)
@@ -973,8 +973,11 @@ instance  TyCh m => TypeLike m Sigma where
   
 -- TypeLike PolyKind
 instance  TyCh m => TypeLike m PolyKind where
-  sub (env@(ws,xs,ys,zs)) (K lvs r) = do { r' <- sub (ws,xs,ys,map f lvs++zs) r; return(K lvs r')}
-    where f x = (LvVar x,TcLv(LvVar x))
+  sub (env@(ws,xs,ys,zs)) (K lvs r) = 
+        do { lvs2 <- mapM freshName lvs
+           ; r' <- sub (ws,xs,ys,lvs2++zs) r; return(K (map getV lvs2) r')}
+    where freshName x = do { y <- fresh; return(LvVar x,TcLv(LvVar y))}
+          getV (LvVar x,TcLv(LvVar y)) = y
 
 -- TypeLike Kind
 instance  TyCh m => TypeLike m Kind where
@@ -1323,6 +1326,7 @@ instanL lvs s =
      ; (unifyPred,preds2,r2) <- normalizeEqn eqns r
      ; (u,p,r) <- zonk (unifyPred,preds2,r2)
      ; return(vs,preds2,r2) }
+
 
 
 rigidInstance :: TyCh m => (Rho -> IO String) -> String -> PolyKind -> m([TcTv],[Pred],Rho)
@@ -1757,11 +1761,24 @@ zapPoly :: TyCh m => Tau -> PolyKind -> Expected Tau -> m Tau
 zapPoly (term@(TyCon sx level s k)) (K lvs sig) expect =
     do { (preds2,rho2) <- instanTy lvs sig  -- ## WHAT DO WE DO WITH THE PREDS?
        ; case rho2 of
-            Rtau w -> mustBe ("Constructor","type") term w expect
+            Rtau w -> do { ans <- mustBe ("Constructor","type") term w expect
+                         ; let (cname,lev) = getTyConLevel w
+                         ; unifyLevel ("Checking level of constructor: "++s) (LvSucc level) lev
+                        -- ; warnM [Ds "\nin zapPoly ",Ds (s++"("),Dd level,Ds "):",Ds cname,Ds "(",Dd lev,Ds ")"]
+                         ; zonk ans }
             rho -> failM 0 [Ds "An unexpected Rho appeared while kind checking "
                            ,Dd term,Ds " :: ",Dd rho]
        }
 
+getTyConLevel (TyApp (TyApp (TyCon sx _ "(->)" _) x) y) = getTyConLevel y
+getTyConLevel (Karr x y) = getTyConLevel y
+getTyConLevel x = nameOf x
+
+-- We've drilled down to the range, return name and level of the TyCon
+nameOf (TyCon syn level name kind) = (name,level)
+nameOf (Star n) = (show(Star n),incLev 2 n)
+nameOf (TyApp f x) = nameOf f
+nameOf x = ("",LvZero)
 
 zonkT :: TyCh m => Tau -> m Tau
 zonkT = zonk
@@ -1993,7 +2010,7 @@ data PT
   | TyApp' PT PT
   | Kinded PT PT
   | TyFun' [PT]
-  | TyCon' String
+  | TyCon' String (Maybe(Int,String))
   | Star' Int (Maybe String)
   | Forallx Quant [(String,PT,Quant)] [PPred] PT
   | Tlamx String PT
@@ -2042,7 +2059,7 @@ instance Eq PT where
   (TyApp' pt1 pt2)==(TyApp' pt3 pt4) = pt1==pt3 && pt2==pt4
   (Kinded pt1 pt2)==(Kinded pt3 pt4) = pt1==pt3 && pt2==pt4
   (TyFun' pts1)==(TyFun' pts2) = pts1==pts2
-  (TyCon' s1)==(TyCon' s2) = s1==s2
+  (TyCon' s1 _)==(TyCon' s2 _) = s1==s2
   (Star' i1 x)==(Star' i2 y) = i1==i2 && x==y
   (PolyLevel ss x)==(PolyLevel ts y) = ss==ts && x==y
   (Ext x) == (Ext y) = x==y
@@ -2068,7 +2085,9 @@ getFree bnd (TyFun' (x:xs)) = foldr (getFreeL bnd) ([],[]) xs
     -- Note that the object in function position (x) is like a TyCon
 getFree bnd (TyApp' x y) = (getFree bnd x) `unionTwo` (getFree bnd y)
 getFree bnd (Kinded x y) = (getFree bnd x) `unionTwo` (getFree bnd y)
-getFree bnd (TyCon' s) = ([],[])
+getFree bnd (TyCon' s Nothing) = ([],[])
+getFree bnd (TyCon' c (Just(n,""))) = ([],[])  -- cooresponds to T_(3), so there are no free variables
+getFree bnd (TyCon' c (Just(n,s))) = if elem s bnd then ([],[]) else ([],[s])
 getFree bnd (Star' n Nothing) = ([],[])
 getFree bnd (Star' n (Just s)) = if elem s bnd then ([],[]) else ([],[s])
 getFree bnd (PolyLevel vs t) = getFree (vs++bnd) t
@@ -2106,7 +2125,8 @@ getF union (Karrow' x y) = union (getF union x) (getF union y)
 getF union (TyFun' (x:xs)) = foldr (getFL union) ([],[]) (xs)
 getF union (TyApp' x y) = (getF union x) `union` (getF union y)
 getF union (Kinded x y) = (getF union x) `union` (getF union y)
-getF union (TyCon' s) = ([],[])
+getF union (TyCon' s Nothing) = ([],[])
+getF union (TyCon' s (Just(n,lev))) = ([],[lev])
 getF union (Star' n Nothing) = ([],[])
 getF union (Star' _ (Just n)) = ([],[n])
 getF union (Tlamx n t) = getF union t
@@ -2137,7 +2157,11 @@ subPT sigma fresh x =
   (TyApp' x y)  -> do { a <- rcall x; b <- rcall y; return(TyApp' a b)}
   (Kinded x y)  -> do { a <- rcall x; b <- rcall y; return(Kinded a b)}
   (Ext x) -> do { a <- extM rcall x; return(Ext a)}
-  (TyCon' s) -> return(TyCon' s)
+  (TyCon' s Nothing) -> return(TyCon' s Nothing)
+  (TyCon' c (Just(n,s))) ->
+       case lookup s sigma of
+         Just t -> return(TyCon' c (Just(n,t)))
+         Nothing -> return(TyCon' c (Just(n,s)))
   (Star' n Nothing) -> return(Star' n Nothing)
   (Star' n (Just s)) ->
        case lookup s sigma of
@@ -2178,7 +2202,11 @@ ptsub sigma x =
   (TyApp' x y)  -> TyApp' (rcall x) (rcall y)
   (Kinded x y)  -> Kinded (rcall x) (rcall y)
   (Ext x) -> Ext(fmap rcall x)
-  (TyCon' s) -> (TyCon' s)
+  (TyCon' s Nothing) -> (TyCon' s Nothing)
+  (TyCon' n (Just(i,s))) ->
+      case lookup s sigma of
+       Just(Star' _ (Just t)) -> TyCon' n (Just(i,t))
+       Nothing -> TyCon' n (Just(i,s))
   (Star' n Nothing) -> Star' n Nothing
   (Star' n (Just s)) ->
       case lookup s sigma of
@@ -2227,9 +2255,9 @@ toEqs env ((Rel' nm ts):xs) =
 
 toRho env (Rarrow' x y) =
   do { (s,_) <- toSigma env x; r <- toRho env y; return(arrow s r)}
-toRho env (TyApp' (TyApp' (TyCon' "(,)") x) y) =
+toRho env (TyApp' (TyApp' (TyCon' "(,)" _) x) y) =
   do { (a,_) <- toSigma env x; (b,_) <- toSigma env y; return(pair a b)}
-toRho env (TyApp' (TyApp' (TyCon' "(+)") x) y) =
+toRho env (TyApp' (TyApp' (TyCon' "(+)" _) x) y) =
   do { (a,_) <- toSigma env x; (b,_) <- toSigma env y; return(rsum a b)}
 toRho env t = do { w <- toTau env t; return(Rtau w) }
 
@@ -2241,7 +2269,7 @@ nonCon x = False
 -- of syntactic extensions
 
 extToTpatLift = (lift0,lift1,lift2,lift3)
-    where lift0 t = TyCon' t
+    where lift0 t = TyCon' t Nothing
           lift1 t x = TyApp' (lift0 t) x
           lift2 t x y = TyApp' (lift1 t x) y
           lift3 t x y z = TyApp' (lift2 t x y) z
@@ -2254,7 +2282,13 @@ extToTpatLift = (lift0,lift1,lift2,lift3)
 readName mess ([],loc,exts,levels) s = failM 1 [Ds (mess++" unknown type: "++s++", at "),Ds (show loc)]
 readName mess ((x,tau,k):xs,loc,exts,levels) s =
   if s==x
-     then prune tau else readName mess (xs,loc,exts,levels) s
+     then --   prune tau 
+          do { (_,levelvars) <- get_tvs tau
+             ; let acc (LvVar x) s = x:s
+                   acc _ s = s
+                   free = foldr acc [] levelvars
+             ; instanLevel free tau }
+     else readName mess (xs,loc,exts,levels) s
 
 toTau env x = readTau 0 env x
 
@@ -2264,13 +2298,20 @@ readTau n env (Rarrow' x y) =
   do { s <- readTau 0 env x; r <- readTau 0 env y; return(tarr s r)}
 readTau n env (Karrow' x y) =
   do { s <- readTau 0 env x; r <- readTau 0 env y; return(Karr s r)}
-readTau n env (TyCon' (tag@('`':cs))) = return (ttag tag)
-readTau n env (TyCon' s) =
+readTau n env (TyCon' (tag@('`':cs)) _) = return (ttag tag)
+readTau n (env@(_,loc,_,levels)) (TyCon' s explicit) =
   do { x <- readName "\nWhile parsing a type constructor," env s
      ; case x of
         (TySyn nm m fs as x) | m>n -> failM 0 [Ds ("Type synonym: "++nm++" applied to few args")]
         (TySyn nm m fs as x) | m<n -> failM 0 [Ds ("Type synonym: "++nm++" applied to many args")]
-        x -> return x }
+        x -> case (explicit,x) of
+              (Just(i,""),TyCon ext _ nm k) -> return(TyCon ext (incLev i LvZero) nm k)
+              (Just(i,v),TyCon ext _ nm k) ->
+                 case lookup v levels of
+		    Just lev -> return(TyCon ext (incLev i (TcLv (LvVar lev))) nm k)
+                    Nothing -> failM 1 [Ds ("\n\n"++ show loc),Ds ("\nUnknown level: "++v)]
+              other -> return x
+     }
 readTau n env (Star' m Nothing) = return(Star (lv m))
 readTau n (env@(_,loc,_,levels)) (Star' k (Just m)) =
   case lookup m levels of
@@ -2335,27 +2376,27 @@ argsToEnv ((s,k,quant):xs) (env@(toenv,loc,exts,levels)) =
     }
 
 ------------------------------------------------------
-tunit' = TyCon' "()"
+tunit' = TyCon' "()" Nothing
 
-prodT' = TyCon' "(,)"
+prodT' = TyCon' "(,)" Nothing
 prod' x y = TyApp' (TyApp' prodT' x) y
 
 tprods' [] = tunit'
 tprods' [t] = t
 tprods' (x:xs) = prod' x (tprods' xs)
 
-sumT' = TyCon' "(+)"
+sumT' = TyCon' "(+)" Nothing
 sum' x y = TyApp' (TyApp' sumT' x) y
 tsums' [t] = t
 tsums' (x:xs) = sum' x (tsums' xs)
 
-listT' = TyCon' "[]"
+listT' = TyCon' "[]" Nothing
 list' x = TyApp' listT' x
 
 arr' x y = Rarrow' x y
 
 applyT' [t] = t
-applyT' [TyCon' "(->)",x,y] = Rarrow' x y
+applyT' [TyCon' "(->)" _,x,y] = Rarrow' x y
 applyT' [x,y] = TyApp' x y
 applyT' (x : y : z) = applyT' ((TyApp' x y):z)
 
@@ -2381,24 +2422,50 @@ extToPT x = Ext x
 conName = lexeme (try construct)
   where construct = do{ c <- upper
                       ; cs <- many (identLetter tokenDef)
-                      ; return (c:cs)}
+                      ; return(c:cs)}
                     <?> "Constructor name"
 
+explicitCon = lexeme (try construct)
+  where construct = do{ cs <- conName
+                      ; let (last,name) = trailing cs
+                      ; clevel <- conlevel last 
+                      ; return (TyCon' (fix clevel name cs) clevel) }
+                    <?> "Constructor with explicit level"
+        fix Nothing short long = long
+        fix (Just _) short long = short
+
+trailing x = 
+  case reverse x of
+    ('_' : more) -> ('_',reverse more)
+    other -> ('#',x)
+
+conlevel:: Char -> Parser(Maybe(Int,String))
+conlevel '#' = return Nothing
+conlevel '_' = (underbar <|> (return Nothing)) <?> "Explicit constructor level"
+  where underbar = (parens plusexp) <|> (return Nothing)
+num =  do { ds <- many1 digit; return((read ds)::Int)}
+plusexp = try prefixPlus <|> try postfixPlus <|> try justnum <|> try justvar <|> (return Nothing)
+justnum = do { i <- num; return(Just(i,""))}
+justvar = do { n <- identifier; return(Just(0::Int,n))}
+prefixPlus = do { i <- num; char '+'; n <- identifier; return(Just(i,n)) }
+postfixPlus = do { n <- identifier;  char '+'; i <- num; return(Just(i,n)) }
+
+tyCon0 x = TyCon' x Nothing
 
 simpletyp ::Parser PT
 simpletyp =
        fmap extToPT (extP typN)                        -- #"abc"   #[x,y : zs]i  #(a,b,c)i
-   <|> (fmap TyCon' conName)                           -- T
-   <|> (parse_tag (\ s -> TyCon' ("`"++s)))            -- `abc
+   <|> lexeme explicitCon                              -- T
+   <|> (parse_tag (\ s -> TyCon' ("`"++s) Nothing))    -- `abc
    <|> (fmap TyVar' identifier)                        -- x
    <|> parseStar                                       -- * *1 *2
    <|> fmap extToPT natP                               -- #2  4t (2+x)i
-   <|> try (fmap TyCon'(symbol "()" <|> symbol "[]"))  -- () and []
+   <|> try (fmap tyCon0 (symbol "()" <|> symbol "[]")) -- () and []
    <|> try (do { x <- parens(symbol "->" <|>           -- (->) (+) (,) and (==)
                              symbol "+"  <|>
                              symbol ","  <|>
                              symbol "==")
-               ; return(TyCon' ("("++x++")"))})
+               ; return(TyCon' ("("++x++")") Nothing)})
 
 --   <|> try(do {ts <- parens(sepBy1 typN (symbol ","))  -- (t,t,t)
 --              ; return (tprods' ts)})
@@ -2441,7 +2508,7 @@ arrTyp =
            Nothing -> return d
            Just(Single,r) -> return(Rarrow' d r)
            Just(Wavy,r) -> return(Karrow' d r)
-           Just(InfixEq,r) -> return(TyFun' [TyCon' infixEqName,d,r])
+           Just(InfixEq,r) -> return(TyFun' [TyCon' infixEqName Nothing,d,r])
       }
 
 allPrefix:: Parser (Quant,[(String,PT,Quant)])
@@ -2489,8 +2556,8 @@ proposition =
                      Nothing -> fail "not prop"
     }
 
-isTyConAp (TyApp' (TyApp' (TyCon' "(,)") x) y) = Nothing
-isTyConAp (TyApp' (TyCon' t) x) = Just t
+isTyConAp (TyApp' (TyApp' (TyCon' "(,)" _) x) y) = Nothing
+isTyConAp (TyApp' (TyCon' t _) x) = Just t
 isTyConAp (TyApp' (TyVar' t) x) = Just t
 isTyConAp (TyApp' f x) = isTyConAp f
 isTyConAp x = Nothing
@@ -2502,9 +2569,9 @@ props = (try (do { x <- proposition; symbol "=>"; return[x]})) <|>
           (return [])
 
 
-typToRel t (TyApp' (TyCon' nm) x) = return(Rel' nm t)
+typToRel t (TyApp' (TyCon' nm _) x) = return(Rel' nm t)
 typToRel t (TyApp' f x) = typToRel t f
-typToRel t (TyCon' nm) = return(Rel' nm t)
+typToRel t (TyCon' nm _) = return(Rel' nm t)
 typToRel t _ = fail ("Expecting a relational predicate, found:\n  "++ show t)
 
 
@@ -2615,14 +2682,17 @@ instance Show PT where
   show (TyVar' s) = s
   show (Rarrow' x y) = showp x ++ " -> "++show y
   show (Karrow' x y) = showp x ++ " ~> "++show y
-  show (TyApp' (TyCon' "[]") x) = "[" ++ show x ++ "]"
-  show (TyApp'(TyApp'(TyCon' "(,)") x) y)= "("++show x++","++show y++")"
-  show (TyApp'(TyApp'(TyCon' "(+)") x) y)= "("++show x++"+"++show y++")"
-  show (TyApp'(TyApp'(TyCon' "(!=)") x) y)= show x++" != "++show y
+  show (TyApp' (TyCon' "[]" _) x) = "[" ++ show x ++ "]"
+  show (TyApp'(TyApp'(TyCon' "(,)" _) x) y)= "("++show x++","++show y++")"
+  show (TyApp'(TyApp'(TyCon' "(+)" _) x) y)= "("++show x++"+"++show y++")"
+  show (TyApp'(TyApp'(TyCon' "(!=)" _) x) y)= show x++" != "++show y
   show (TyApp' x (y@(TyApp' _ _))) = show x ++ " " ++ showp y
   show (TyApp' x y) = show x ++ " " ++ showp y
   show (Kinded x y) = "("++show x ++ "::" ++ showp y ++")"
-  show (TyCon' s) = s
+  show (TyCon' s Nothing) = s
+  show (TyCon' s (Just(0,v))) = s++"_"++v
+  show (TyCon' s (Just(i,""))) = s++"_("++show i++")"
+  show (TyCon' s (Just(i,v))) = s++"_("++show i++"+"++v++")"
   show (TyFun' xs) = plistf f "{" xs " " "}"
     where f (x@(TyApp' _ _)) = "("++show x++")"
           f (x@(Rarrow' _ _)) = "("++show x++")"
@@ -2656,7 +2726,11 @@ instance Sht PT where
   shtt (Karrow' x y) = shtt x ++ " ~> "++shtt y
   shtt (TyApp' x y) = "(TyApp' "++shtt x ++ " " ++ shtt y++")"
   shtt (Kinded x y) = "(Kinded "++shtt x ++ " " ++ shtt y++")"
-  shtt (TyCon' s) =  "(TyCon' "++s++ ")"
+  shtt (TyCon' s Nothing) =  "(TyCon' "++s++ ")"
+  shtt (TyCon' s (Just(0,v))) = "(TyCon' "++s++"_"++v++")"
+  shtt (TyCon' s (Just(i,""))) = "(TyCon' "++s++"_("++show i++"))"
+  shtt (TyCon' s (Just(i,v))) = "(TyCon' "++s++"_("++show i++"+"++v++"))"
+  
   shtt (TyFun' xs) = plistf f "{" xs " " "}"
     where f (x@(TyApp' _ _)) = "("++shtt x++")"
           f (x@(Rarrow' _ _)) = "("++shtt x++")"
@@ -2675,9 +2749,9 @@ showquant Ex = "(exists "
 
 showp x@(Rarrow' _ _) = "("++show x ++ ")"
 showp x@(Karrow' _ _) = "("++show x ++ ")"
-showp (t@(TyApp' (TyCon' "[]") x)) = show t
-showp (t@(TyApp'(TyApp'(TyCon' "(,)") x) y)) = show t
-showp (t@(TyApp'(TyApp'(TyCon' "(+)") x) y)) = show t
+showp (t@(TyApp' (TyCon' "[]" _) x)) = show t
+showp (t@(TyApp'(TyApp'(TyCon' "(,)" _) x) y)) = show t
+showp (t@(TyApp'(TyApp'(TyCon' "(+)" _) x) y)) = show t
 showp x@(TyApp' _ _) = "("++show x ++ ")"
 showp x@(Forallx q _ _ _) = "("++show x ++ ")"
 showp x = show x
@@ -3178,8 +3252,8 @@ shtP (x,y) = "("++shtt x++"," ++ shtt y++")"
 
 sht (TyVar n k) = "(TyVar "++show n++"::"++shtt k++")"
 sht (TyApp x y) = "(TyApp "++sht x++" "++sht y++")"
-sht (TyCon sx l x k) = "(Con "++x++"@"++show l++" %"++show sx++")"  
-                      ++":"++shtt k++")"
+sht (TyCon sx l x k) = "(Con "++x++"@"++show l {- ++" %"++show sx -}  ++")"  
+                     --  ++":"++shtt k++")"
 sht (Star n) = "(Star "++show n++")"
 sht (Karr x y) = "(Karr "++sht x++" "++sht y++")"
 sht (TcTv (Tv n (Flexi _) k))  = "(Flex " ++ show n ++":"++shtt k++")"
@@ -3369,7 +3443,9 @@ exhibitKinding d1 (TcTv (v@(Tv _ _ (MK k)))) = (d3,":"++nmStr++kStr)
    where (d2,nmStr) = exhibitTv d1 v
          (d3,kStr) = exhibitKinding d2 k
 exhibitKinding d1 (TyCon sx (LvSucc LvZero) s k) = (d1,":"++s)
-exhibitKinding d1 (TyCon sx l s k) = (d1,{- "_"++show l++ -} ":"++s)
+exhibitKinding d1 (TyCon sx l s k) = --(d1,{- "_"++show l++ -} ":"++s)
+                                     (d2,":"++s++":"++sorting) --  
+  where (d2,sorting) = exhibit d1 k
 exhibitKinding d1 (x@(Karr _ _)) = (d2,":"++s) where (d2,s)= exhibit d1 x
 exhibitKinding d1 (x@(TyApp _ _)) = (d2,":"++s) where (d2,s)= exhibit d1 x
 exhibitKinding d1 x = (d1,":"++show x)
@@ -3409,12 +3485,13 @@ instance NameStore d => Exhibit d Int where
 instance Exhibit (DispInfo Z) Bool where
   exhibit d n = (d,show n)
 
-
 -- Kind
 instance NameStore d => Exhibit d Kind where
   exhibit d1 (MK k) = exhibit d1 k
 
-
+instance NameStore d => Exhibit d Name where
+  exhibit d1 nm = useStoreName nm star id d1
+  
 -----------------------------------------------
 -- Exhibiting Syntactic Extensions in Tau types
 
@@ -3471,13 +3548,17 @@ exSynPair d (t@(TyApp (TyApp (TyCon (Px(key,pair)) _ c1 _) x) y))
         (d2,y') = exhibit d1 y
 
 exhibitNmK xs (nm,k) = useStoreName nm k ("'"++) xs          -- One or the other
-                     -- (zs,"("++ans++":: "++k2++")")
+                      -- (zs,"("++ans++":: "++k2++")")
     where (ys,ans) = useStoreName nm k ("'"++) xs
           (zs,k2) = exhibit ys k
 
 polyLevel LvZero = False
 polyLevel (LvSucc x) = polyLevel x
 polyLevel x = True
+
+
+pp:: Exhibit (DispInfo Z) t => t -> IO ()
+pp x = putStrLn (snd (exhibit disp0 x))
 
 -- Exhibit Tau
 instance (NameStore d) => Exhibit d Tau where
@@ -3491,13 +3572,12 @@ instance (NameStore d) => Exhibit d Tau where
   exhibit xs (t@(TyApp (TyApp (TyCon (Px _) _ _ _) _) _)) = exSynPair xs t
   exhibit xs (t@(TyApp (TyCon (Nx _) _ _ _) x)) = exSynNat xs t
 
-  exhibit xs (TyCon _ l nm (K vs k)) |  nm `elem` ["Zero'","Succ'"]  -- to debug use something like: ["L","Bush"] 
+  exhibit xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug use something like: ["L","Bush"] 
                                      = (ys,nm++"("++l'++","++vs'++"."++k'++")")
      where (ys,l') = exhibit xs l
            (ws,vs') = exhibitL exhibit ys (map LvVar vs) ","
            (zs,k') = exhibit ws k 
           
-  exhibit xs (t@(TyCon sx (LvSucc LvZero) s k)) = (xs,s)
   exhibit xs (t@(TyCon _ l s k))| polyLevel l = (ys,s++"_"++y)
       where (ys,y) = exhibit xs l
   exhibit xs (t@(TyCon _ l s k)) = (xs,s)
@@ -3670,7 +3750,7 @@ toPT d (TyApp (TyApp (TyCon sx n "(->)" k) x) y) = (d2,Rarrow' a b)
 toPT d (TyApp x y) = (d2,TyApp' a b)
   where (d1,a) = toPT d x
         (d2,b) = toPT d1 y
-toPT d (TyCon sx l s k) = (d,TyCon' s)
+toPT d (TyCon sx l s k) = (d,TyCon' s Nothing) -- FIXPT
 toPT d (Star n) =
   case fromLevel n of
     Just m -> (d,Star' m Nothing)
@@ -3706,10 +3786,10 @@ toL f d (x:xs) = (d2,y:ys)
 rho2PT d (Rarrow x y) = (d2,Rarrow' a b)
   where (d1,a) = sigma2PT d x
         (d2,b) = rho2PT d1 y
-rho2PT d (Rsum x y) = (d2,(TyApp' (TyApp' (TyCon' "(,)") a) b))
+rho2PT d (Rsum x y) = (d2,(TyApp' (TyApp' (TyCon' "(,)" Nothing) a) b))
   where (d1,a) = sigma2PT d x
         (d2,b) = sigma2PT d1 y
-rho2PT d (Rpair x y) = (d2,(TyApp' (TyApp' (TyCon' "(+)") a) b))
+rho2PT d (Rpair x y) = (d2,(TyApp' (TyApp' (TyCon' "(+)" Nothing) a) b))
   where (d1,a) = sigma2PT d x
         (d2,b) = sigma2PT d1 y
 rho2PT d (Rtau x) = toPT d x

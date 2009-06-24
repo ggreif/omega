@@ -32,7 +32,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,mguStar,star1,star,star_star,starR,shtt,shtP  -- splitU,split3,
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newflexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
-            ,instanTy,instanPatConstr,checkArgs
+            ,instanTy,instanPatConstr,checkArgs, nameOf
             ,mguB,mostGenUnify,unify,morepolySS,morepolyRR,match2,alpha,morepolySigmaRho
             ,sigmaPair,sigmaSum,unifyCode,unifyFun
             ,poly,simpleSigma,toSigma,toTau,toEqs,toRho,toPT,rho2PT,toL
@@ -1953,37 +1953,9 @@ transDataToGadt ds = mapM getGADT ds
 -- 1) Turn (x ~> y ~> T_(i)) into (x -> y -> T_(1))
 -- 2) Make sure T has level one in the value name space, and all args [x,y] have level one as well
 
-
-rangeNameLevel (TyCon syn level name kind) = (name,level)
-rangeNameLevel (Karr x y) = rangeNameLevel y
-rangeNameLevel (TyApp f x) = rangeNameLevel f
-rangeNameLevel (TySyn _ _ _ _ x) = rangeNameLevel x
-rangeNameLevel x = ("",LvZero)
-
-pairLevels l (TyCon syn level name kind) = [(l,level)]
-pairLevels l (Karr x y) = pairLevels l x ++ pairLevels l y
-pairLevels l (TyApp f x) = pairLevels l f
-pairLevels l (TySyn _ _ _ _ x) = pairLevels l x
-pairLevels l x = []
-
-fixRho (Rtau x) = do { (x',list,name) <- fixTau x; return(Rtau x',list,name)}
-fixRho (Rarrow s t) = do { (t',list,name) <- fixRho t; return(Rarrow s t',list,name)}
-fixRho x = return(x,[],("",LvZero))
-
-fixTau (Karr x y) = do { (y',list,nm) <- fixTau y; return(tarr x y',levelOf x ++ list,nm)}
-fixTau (TyApp f x) = do { (f',list,nm) <- fixTau f; return(TyApp f' x,list,nm) }
-fixTau x = return (x,levelOf x,nameOf x)
-
 levelOf (TyCon syn level name kind) = [level]
 levelOf (TyApp f x) = levelOf f
 levelOf x = []
-
--------------------------------------
-
--- We've drilled down to the range, return name and level of the TyCon
-nameOf (TyCon syn level name kind) = (name,level)
-nameOf (TyApp f x) = nameOf f
-nameOf x = ("",LvZero)
 
 -- Return a list of all the levels that have to be fixed
 -- basically in (a -> b -> T x) = [level a,level b,level T]
@@ -2020,8 +1992,8 @@ fixSigma (Forall z) = (Forall (windup polynames (preds,t')),list,(name,lev))
   where (polynames,(preds,t)) = unsafeUnwind z
         (t',list,(name,lev)) = fixRho2 t
         
--------
-gg cname (K levelnames (Forall z)) = 
+-- Actually specialize a level polymorphic sigma at level 0
+sepecializeAt0 cname (K levelnames (Forall z)) = 
      do { let (sigma2,list2,(name,levl)) = fixSigma (Forall z)
 	      levels2 = map (\ x -> (x,LvSucc LvZero)) list2
               good (TcLv (LvVar x)) name = x /= name
@@ -2029,67 +2001,14 @@ gg cname (K levelnames (Forall z)) =
               good other name = True
         ; pairs <- case unifyLevels levels2 of
                      Nothing -> failM 1 [Ds "\nValue level of level polymorphic ",Dd name
-                                        ,Ds " fails to be compatible with level 1 type\n"]
-                                        
+                                        ,Ds " fails to be compatible with level 1 type\n"]                           
                      Just x -> return x
-         ; sigma3 <- sub ([],[],[],pairs) sigma2
-         ; (_,freelevels) <- get_tvs sigma3
-      
-      ; warnM [Ds "\n in gg  ",Dl levelnames ",",Ds " ",Dd (Forall z)
-                 ,Ds "\n ",dmany (\ x -> [Ds (shtt x)]) levelnames ",", Ds (" . "++shtt (Forall z))
-                 ,Ds "\n level pairs = ",Dl levels2 ","
-                 ,Ds "\n       sigma3 = ",Dd sigma3
-                 ,Ds "\n  free levels = ",Dl freelevels ","
-                 ]
-      
-      ; return (K (filter (good levl) levelnames) sigma3)
+        ; sigma3 <- sub ([],[],[],pairs) sigma2
+        ; (_,freelevels) <- get_tvs sigma3
+        ; return (K (filter (good levl) levelnames) sigma3)
         }
         
-hh cname (zz@(K levelnames sigma)) = 
-     do { (sigma2@(Forall z)) <- instanLevel levelnames sigma
-        ; warnM [Ds "\n in gg for ",Dd cname,Ds"\n  sigma = ",Dd sigma,Ds "\n  sigma2 = ",Dd sigma2]
-        
-        ; let (polynames,(preds,t)) = unsafeUnwind z
-              downRho (Rtau x) k = return (x,k . Rtau)
-     	      downRho (Rarrow s r) k = downRho r (k . Rarrow s)
-              downRho x k = failM 1 [Ds ("Range of type "),Dd x, Ds " is ill-formed."]
-              fixArr (Karr x y) = tarr x (fixArr y)
-	      fixArr x = x
-	; (rho2,list,_) <- fixRho t
-	; sigma3 <- zonk (Forall (windup polynames (preds,rho2)))
-	; warnM [Ds "\n in gg for ",Dd cname,Ds "\n  sigma3 = ",Dd sigma3]
-        ; (tau,rhoK) <- downRho t id 
-        ; let levels2 = map (\ x -> (x,LvSucc LvZero)) list
-              levels = pairLevels (LvSucc LvZero) tau
-        ; let (name,levl) = rangeNameLevel tau
-              good (TcLv (LvVar x)) name = x /= name
-              good (LvSucc x) name = good x name
-              good other name = True
-        ; pairs <- case unifyLevels levels of
-                     Nothing -> failM 1 [Ds "\nValue level of level polymorphic ",Dd name
-                                        ,Ds " fails to be compatible with level 1 type\n"
-                                        ,Ds "tau = ",Dd tau,Ds " Level = ",Dd levl,Ds " presumed ",Dd (LvSucc LvZero)]
-                     Just x -> return x
-         ; rho <- sub ([],[],[],pairs) (rhoK (fixArr tau))
-         ; rho3 <- sub ([],[],[],pairs) rho2
-         ; warnM [Ds "\n in gg levels = ",Dl levels ",",Ds " levels2 = ",Dl levels2 ","
-                 ,Ds "\n          rho = ",Dd rho
-                 ,Ds "\n         rho3 = ",Dd rho3]
-      
-        ; preds' <- sub ([],[],[],pairs) preds
-        ; pnames <- sub ([],[],[],pairs) polynames
-        ; return (K (filter (good levl) levelnames) (Forall (windup pnames (preds',rho3))))
-        }        
-    
-unifyLevName :: String -> Level -> Level -> Maybe[(TcLv,Level)]
-unifyLevName s x y = walk (x,y)
-  where walk (LvZero,LvZero) = Just []
-        walk (LvSucc x,LvSucc y) = unifyLevName s x y
-        walk (TcLv v,TcLv u) | u==v = Just []
-        walk (TcLv v,y) = Just[(v,y)]
-        walk (y,TcLv v) = Just[(v,y)]
-        walk (x,y) = Nothing
-        
+
 unifyLevels :: [(Level,Level)] -> Maybe[(TcLv,Level)]
 unifyLevels xs = walk [] xs
   where sub1 env (v,l) = (v,substLevel env l)
@@ -2104,21 +2023,7 @@ unifyLevels xs = walk [] xs
           where env2 = ((v,y):(map (sub1 env) env))          
         walk env ((x,y):more) = Nothing        
         
-unKindArr (K xs t) = K xs (f t)
-  where f (Forall z) = Forall (windup xs (ps,g t))
-            where (xs,(ps,t)) = unsafeUnwind z
-        g (Rtau x) = Rtau(h (fst(rangeNameLevel x)) x)
-        g (Rarrow s r) = Rarrow s (g r)
-        g x =  error ("g at bad type "++show x)
-        
-        h nm (Karr x y) = tarr (fixAtOne nm x) (h nm y)
-        h nm (t@(TyCon syn level name kind)) = fixAtOne nm t
-        h nm (TyApp f x) = TyApp (h nm f) x
-        h nm z = error ("h at bad type "++show z)
-        one = LvSucc(LvZero)
-        fixAtOne nm (TyCon syn level name kind) | name==nm = TyCon syn one name kind
-        fixAtOne nm (TyApp f x) = TyApp (fixAtOne nm f) x
-        fixAtOne nm x = x
+----------------------------------------------------------
 
 checkDataDecs :: [Dec] -> TC (Sigma,Frag,[Dec])
 checkDataDecs decls =
@@ -2137,9 +2042,9 @@ checkDataDecs decls =
              case (definesValues level,definesTypes level) of
                -- I.e. a Kind or above, the ConFuns are types not values!
               (False,True) -> lift xs ((s,TyCon tag level s (polyk),polyk):types) values
-              (True,False) -> do { poly2 <- gg s polyk
+              (True,False) -> do { poly2 <- sepecializeAt0 s polyk
                                  ; lift xs types ((Global s,(poly2,mod,n,exp),LetBnd):values)}
-              (True,True) -> do { poly2 <- gg s polyk
+              (True,True) -> do { poly2 <- sepecializeAt0 s polyk
                                 ; lift xs ((s,TyCon tag level s (polyk),polyk):types)
                                           ((Global s,(poly2,mod,n,exp),LetBnd):values)}
      ; let proj (nm,tau,polykind,levs) = (nm,tau,polykind)
@@ -2261,6 +2166,7 @@ range f b x = failM 1 [Ds "\nThe type: ",Dd b,Ds "\nis not a good type for a con
 -- in the mutually recursive binding group of GADTS (See kindsEnvForDataBindingGroup).
 -- We are just translating the constructors to Sigma types.
 
+ds xs = Ds (concat xs)
 
 constrType :: [(String,Tau,PolyKind)] -> (Dec,[(String,Name)],Level) ->
               TC (Dec,SynExt String,Level,Bool,[(Var,(Sigma,Mod,CodeLevel,Exp))])
@@ -2400,10 +2306,10 @@ checkRng c tname (LvSucc lev) (Karrow' d x) =
   do { (ds,r) <- checkRng c tname (LvSucc lev) x; return (d:ds,r)}
 checkRng c tname (TcLv lev) (Karrow' d x) =
   do { (ds,r) <- checkRng c tname (TcLv lev) x; return (d:ds,r)}  
-checkRng c (Global tname) _ (t@(TyCon' nm)) | tname == nm = return ([],t)
+checkRng c (Global tname) _ (t@(TyCon' nm _)) | tname == nm = return ([],t)
 checkRng c (Global tname) _ (t@(TyVar' nm)) | tname == nm = return ([],t)
 checkRng c (Global tname) _ (t@(TyApp' _ _)) = down t
-  where down (TyApp' (TyCon' s) x) | s==tname = return ([],t)
+  where down (TyApp' (TyCon' s _ ) x) | s==tname = return ([],t)
         down (TyApp' (TyVar' s) x) | s==tname = return ([],t)
         down (TyApp' x y) = down x
         down t = failD 2 [Ds "\nThe range of the constructor: ",Dd c
@@ -2415,6 +2321,7 @@ checkRng c tname lev typ =
      where perhaps = case typ of 
                       (Rarrow' dom rng) ->  Dr [Ds "\nPerhaps you meant: ",Dd (Karrow' dom rng)]
                       other -> Ds ""
+                            
                             
 illFormed name rho kind message =
   failM 3 [Ds "\nWhile checking the type of the constructor: ",Dd name
@@ -3603,9 +3510,6 @@ instance Show Tpat where
 instance NameStore a => Exhibit a [Derivation] where
   exhibit d x = (d,render(PP.sep (map ppDeriv x)))
 
-instance NameStore d => Exhibit d Name where
-  exhibit d1 nm = useStoreName nm star id d1
-
 instance NameStore d => Exhibit d Tpat where
   exhibit d1 (Tvar s nm) = useStoreName nm star f d1
     where f s = "'"++s
@@ -3642,7 +3546,7 @@ pTtoTpat (TyVar' s) env =
     Nothing -> do { nm <- fresh; let u = Tvar s nm in return((s,u):env,u)}
     Just v -> return(env,v)
 pTtoTpat (x@(TyApp' _ _)) e1 =
-  do { let down (TyApp' (TyCon' s) x) = return(s,[x])
+  do { let down (TyApp' (TyCon' s _) x) = return(s,[x])
            down (TyApp' x y) = do { (c,ys) <- down x; return(c,ys++[y])}
            down y = fail ("Root of ("++show x++") is not a type constructor: "++show y)
      ; (constr,args) <- down x
@@ -3656,7 +3560,7 @@ pTtoTpat (Karrow' x y) e1 =
   do { (e2,dom) <- pTtoTpat x e1
      ; (e3,rng) <- pTtoTpat y e2
      ; return(e3,Tkarr dom rng)}
-pTtoTpat (TyCon' s) e1 = return(e1,Tcon s [])
+pTtoTpat (TyCon' s _) e1 = return(e1,Tcon s [])  
 pTtoTpat (Star' n Nothing) e1 = return(e1,Tstar (lv n))
 pTtoTpat (Star' k (Just s)) env =
   case lookup s env of
