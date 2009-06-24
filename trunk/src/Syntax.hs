@@ -968,7 +968,7 @@ instance Vars PPred where
 
 instance Vars PT where
   vars bnd (TyVar' s) = addFreeT [Global s]
-  vars bnd (TyCon' s) = addFreeT [Global s]
+  vars bnd (TyCon' s _) = addFreeT [Global s]
   vars bnd (TyApp' x y) = vars bnd x . vars bnd y
   vars bnd (Kinded x y) = vars bnd x . vars bnd y
   vars bnd (Rarrow' x y) = vars bnd x . vars bnd y
@@ -1257,9 +1257,9 @@ ppConstr (Constr _ args v pts mpps) =
   where exists [] = PP.empty
         exists ns = text "forall" <+> PP.hsep (map showM ns) <+> text "."
         parenT (x @ (TyApp' y _)) = g (root' y) x
-          where g (TyCon' "(,)") y = ppPT y
-                g (TyCon' "(+)") y = ppPT y
-                g (TyCon' "[]") y = ppPT y
+          where g (TyCon' "(,)" _) y = ppPT y
+                g (TyCon' "(+)" _) y = ppPT y
+                g (TyCon' "[]" _) y = ppPT y
                 g x y = PP.parens $ ppPT y
         parenT (x@(Rarrow' _ _)) = PP.parens $ ppPT x
         parenT (x@(Forallx _ _ _ _)) = PP.parens $ ppPT x
@@ -1393,9 +1393,9 @@ ppStmt s =
 
 -- Print Type
 
-needsParens (TyApp' (TyCon' "[]") x) = False
-needsParens (TyApp' (TyApp' (TyCon' "(,)") _) _) = False
-needsParens (TyApp' (TyApp' (TyCon' "(+)") _) _) = False
+needsParens (TyApp' (TyCon' "[]" _) x) = False
+needsParens (TyApp' (TyApp' (TyCon' "(,)" _) _) _) = False
+needsParens (TyApp' (TyApp' (TyCon' "(+)" _) _) _) = False
 needsParens (TyApp' _ _) = True
 needsParens (Rarrow' _ _) = True
 needsParens (Karrow' _ _) = True
@@ -1411,21 +1411,23 @@ ppPT x =
     TyVar' s -> text s
     Rarrow' x y -> PP.hsep [ ppAll x, text "->", ppAll y]
     Karrow' x y -> PP.parens $ PP.hsep [ ppPT x, text "~>", ppPT y]
-    TyApp' (TyApp' (TyCon' "(,)") x) y ->
+    TyApp' (TyApp' (TyCon' "(,)" _) x) y ->
         PP.sep[PP.lparen <> ppPT x,PP.comma<>ppPT y,PP.rparen]
         --PP.sep[ppPT x <> PP.comma,PP.nest 1 (ppPT y)]
-    TyApp' (TyApp' (TyCon' "(+)") x) y ->
+    TyApp' (TyApp' (TyCon' "(+)" _) x) y ->
         PP.sep[PP.lparen <> ppPT x,text "+"<>ppPT y,PP.rparen]
-    TyApp' (TyApp' (TyCon' "(->)") x) y ->
+    TyApp' (TyApp' (TyCon' "(->)" _) x) y ->
         PP.sep[ppPT x <+> text "->",PP.nest 1 (ppPT y)]
-    TyApp' (TyApp' (TyCon' "Equal") x) y ->
+    TyApp' (TyApp' (TyCon' "Equal" _) x) y ->
         PP.lparen <> text "Equal" <+> PP.sep[ppPT x <+> PP.nest 7 (ppPT y)] <> PP.rparen
-    TyApp' (TyCon' "[]") x -> PP.brackets (ppPT x)
+    TyApp' (TyCon' "[]" _) x -> PP.brackets (ppPT x)
     TyApp' f x | needsParens x -> (ppPT f) <+> (PP.parens (ppPT x))
     TyApp' f x -> (ppPT f) <+> (ppPT x)
     Kinded f x -> text "(" <> (ppPT f) <> text "::" <+> (ppPT x) <> text ")"
     TyFun' xs -> PP.braces(PP.hsep (map ppPT xs))
-    TyCon' s -> text s
+    TyCon' s Nothing -> text s  
+    TyCon' s (Just(0,n)) -> text (s++"_"++n)
+    TyCon' s (Just(i,n)) -> text (concat[s,"_(",show i,"+",n,")"])
     Star' n Nothing -> text "*" <> PP.int n
     Star' 0 (Just n) -> text "*" <> text n
     Star' k (Just n) -> text "*(" <> PP.int k <> text ("+"++n++")")
