@@ -2308,7 +2308,7 @@ readTau n (env@(_,loc,_,levels)) (TyCon' s explicit) =
               (Just(i,""),TyCon ext _ nm k) -> return(TyCon ext (incLev i LvZero) nm k)
               (Just(i,v),TyCon ext _ nm k) ->
                  case lookup v levels of
-		    Just lev -> return(TyCon ext (incLev i (TcLv (LvVar lev))) nm k)
+                    Just lev -> return(TyCon ext (incLev i (TcLv (LvVar lev))) nm k)
                     Nothing -> failM 1 [Ds ("\n\n"++ show loc),Ds ("\nUnknown level: "++v)]
               other -> return x
      }
@@ -2450,6 +2450,22 @@ justvar = do { n <- identifier; return(Just(0::Int,n))}
 prefixPlus = do { i <- num; char '+'; n <- identifier; return(Just(i,n)) }
 postfixPlus = do { n <- identifier;  char '+'; i <- num; return(Just(i,n)) }
 
+
+
+parseStar :: Parser PT
+parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
+  where star = do { info <- (parens plusexp)
+                  ; case info of
+                      Nothing ->
+                      Just(i,"") -> (i,Nothing)
+                      Just(i,s) ->  (i,Just s) }
+{-  
+  (do { s <- ident; return(0,Just s)}) <|> -- This comes first, otherwise we'd always get just "*"
+               (parens (do { ds <- many digit; symbol "+"; s <- ident; return(val ds,Just s)})) <|>  -- then this
+               (do { ds <- many digit; return (val ds,Nothing)})
+
+-}
+
 tyCon0 x = TyCon' x Nothing
 
 simpletyp ::Parser PT
@@ -2476,14 +2492,8 @@ simpletyp =
    <|> do {t <- squares typN; return (list' t)}        -- [t]
    <|> (do { xs <- braces (many1 simpletyp); return(TyFun' xs)}) -- {f x y}
    <|> (do { n <- natural
-           ; fail (show n++" is not a type. Use #"++show n++" for Nat constants")})
+           ; unexpected (show n++" is not a type. Use #"++show n++" for Nat constants")})
 
-
-parseStar :: Parser PT
-parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
-  where star = (do { s <- ident; return(0,Just s)}) <|> -- This comes first, otherwise we'd always get just "*"
-               (parens (do { ds <- many digit; symbol "+"; s <- ident; return(val ds,Just s)})) <|>  -- then this
-               (do { ds <- many digit; return (val ds,Nothing)})
 
 val :: String -> Int
 val [] = 0
@@ -2568,12 +2578,12 @@ props = (try (do { x <- proposition; symbol "=>"; return[x]})) <|>
                    ; symbol "=>"; return xs}))                     <|>
           (return [])
 
-
+{- -- This function is unused
 typToRel t (TyApp' (TyCon' nm _) x) = return(Rel' nm t)
 typToRel t (TyApp' f x) = typToRel t f
 typToRel t (TyCon' nm _) = return(Rel' nm t)
 typToRel t _ = fail ("Expecting a relational predicate, found:\n  "++ show t)
-
+-}
 
 -- A typing has many forms, some are listed below
 -- f :: a -> b                              simple
@@ -2610,12 +2620,17 @@ typing =
         Just(q2,ns) -> return (declaredLevels,Forallx q2 ns preds body)
      }
 
-okLevels declared found | declared /= nub declared = fail "\nDuplicate level in declaration."
+okLevels declared found | declared /= nub declared = 
+  let bad = declared \\ nub declared
+      n = head bad
+  in unexpected ("\nDuplicate level variable: "++n++", in 'level' declaration.")
 okLevels declared found =
   let extra = found \\ declared
   in if null extra
         then return ()
-        else fail ("\nLevels not declared: "++ plist "" extra " " "")
+        else let n = head extra
+             in unexpected ("\nThe level variable: "++n++", is not declared."++
+                            "\nUse 'level "++n++" .  type -> *"++n++"', for example.")
 
 --------------------------------------------------------
 
