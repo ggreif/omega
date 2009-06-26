@@ -42,7 +42,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,boolT,unitT,tlist,tpair,tunit',tsum,tcode,ioT,arrow,applyT,applyT',listT
             ,pairT,arrowT,kind4Atom,atomT,sumT,notEqKind,notEqT,propT,intT,charT
             ,ptsub,karr,chrSeqT,symbolT,floatT,ttag,tlabel,tarr
-            ,kind4Hidden,hiddenT,stringT,equalKind,infixEqName,tvsTau,subPairs,teq,equalityP,pred2Tau
+            ,stringT,equalKind,infixEqName,tvsTau,subPairs,teq,equalityP,pred2Tau
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,returntype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
@@ -4245,9 +4245,9 @@ toEnvX =
   ,( "Atom",      atomT, kind4Atom)
   ,( "(+)",       sumT, poly (karr star (star_star)))
   ,( "(!=)",      notEqT, notEqKind)
-  ,( "Hidden",    hiddenT, kind4Hidden)
   ,( "String",    stringT,poly star)
   ,( infixEqName, TyCon Ox (lv 1) infixEqName equalKind, equalKind)
+  --  ,( "Hidden",    hiddenT, kind4Hidden)
   --, declare tagT   -- ( "Tag"    , tagT, poly star1)
   --, declare labelT -- ( "Label"  , labelT, poly (karr (MK tagT) star))
   ]
@@ -4289,7 +4289,7 @@ predefined =
  "  Eq:: Equal x x\n"++
 
  "data HiddenLabel :: *0 where\n"++
- "  Hidden:: Label t -> HiddenLabel\n"++
+ "  HideLabel:: Label t -> HiddenLabel\n"++
  "data Row :: a ~> b ~> *1 where\n"++
  "  RNil :: Row x y\n"++
  "  RCons :: x ~> y ~> Row x y ~> Row x y\n deriving Record(r)\n"++

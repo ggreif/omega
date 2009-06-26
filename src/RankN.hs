@@ -499,7 +499,7 @@ ioT =     TyCon Ox (lv 1) "IO" (poly star_star)
 ptrT =    TyCon Ox (lv 1) "Ptr" (poly star_star)
 arrowT =  TyCon Ox (lv 1) "(->)" (poly (karr star (star_star)))
 eqT =     TyCon Ox (lv 1) "Equal" kind4Eq
-hiddenT = TyCon Ox (lv 1) "Hidden" kind4Hidden
+-- hiddenT = TyCon Ox (lv 1) "Hidden" kind4Hidden
 chrSeqT = TyCon Ox (lv 1) "ChrSeq" (poly star)
 floatT =  TyCon Ox (lv 1) "Float" (poly star)
 stringT = TyApp        listT charT
@@ -564,9 +564,9 @@ tstring = tlist charT
 tio x = TyApp ioT x
 tptr x = TyApp ptrT x
 teq x y = TyApp (TyApp eqT x) y
-thidden x = TyApp hiddenT x
+-- thidden x = TyApp hiddenT x
 tlabel x = TyApp labelT x
-ttag s = (TyCon Ox (lv 2) (s) tagKind)
+ttag s = (TyCon Ox (lv 1) (s) tagKind)
 trow (MK x) = MK(TyApp rowT x)
 
 
@@ -634,7 +634,7 @@ sigma4Eq = Forall (Cons (star1,All) (bind kname
          eqns = [Equality u v]
          eqty = TyApp (TyApp eqT u) v
 
-
+{-
 -- Hide :: (forall (k:*1) (f:k -> *0) (u':k) . (f u) -> Hidden f)
 sigma4Hide =
     Forall (Cons (star1,All) (bind kname
@@ -647,7 +647,7 @@ sigma4Hide =
        k = TyVar kname star1
        f = TyVar fname (MK k `karr` star)
        u = TyVar uname (MK k)
-
+-}
 
 s1,s2,s3 :: Tau
 s1 = Star (LvSucc LvZero)
@@ -1123,7 +1123,7 @@ unify x y =
         f (t1@(TyVar n k)) (t2@(TyVar n1 k1)) | n==n1 = return ()
         f (TyApp x y) (TyApp a b) = do { unify x a; unify y b }
         f (x@(TyCon sx l s _)) (y@(TyCon tx k t _)) =
-           do { unifyLevel "unify TyCon case" l k
+           do { unifyLevel ("unify TyCon case: "++s++" =?= "++t++show(l,k)) l k
               ; if s==t then return () else matchErr "different constants" x y }
         f (x@(Star n)) (y@(Star m)) = unifyLevel "unify Star case" n m
         f (Karr x y) (Karr a b) = do { unify x a; unify y b }
@@ -1763,8 +1763,8 @@ zapPoly (term@(TyCon sx level s k)) (K lvs sig) expect =
        ; case rho2 of
             Rtau w -> do { ans <- mustBe ("Constructor","type") term w expect
                          ; let (cname,lev) = getTyConLevel w
+                         -- ; warnM [Ds "\nin zapPoly ",Ds (s++"("),Dd level,Ds "):",Ds cname,Ds "(",Dd lev,Ds ")"]
                          ; unifyLevel ("Checking level of constructor: "++s) (LvSucc level) lev
-                        -- ; warnM [Ds "\nin zapPoly ",Ds (s++"("),Dd level,Ds "):",Ds cname,Ds "(",Dd lev,Ds ")"]
                          ; zonk ans }
             rho -> failM 0 [Ds "An unexpected Rho appeared while kind checking "
                            ,Dd term,Ds " :: ",Dd rho]
@@ -2461,28 +2461,18 @@ parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
         fix (Just(i,s)) = (i,Just s)
 
 
-{-
-  where star = do { info <- (parens plusexp)
-                  ; case info of
-                      Nothing -> return(0,Nothing)
-                      Just(i,"") -> return(i,Nothing)
-                      Just(i,s) ->  return(i,Just s) }
--}
-
-
-
 tyCon0 x = TyCon' x Nothing
 
 simpletyp ::Parser PT
 simpletyp =
-       fmap extToPT (extP typN)                        -- #"abc"   #[x,y : zs]i  #(a,b,c)i
-   <|> lexeme explicitCon                              -- T
-   <|> (parse_tag (\ s -> TyCon' ("`"++s) Nothing))    -- `abc
-   <|> (fmap TyVar' identifier)                        -- x
-   <|> parseStar                                       -- * *1 *2
-   <|> fmap extToPT natP                               -- #2  4t (2+x)i
-   <|> try (fmap tyCon0 (symbol "()" <|> symbol "[]")) -- () and []
-   <|> try (do { x <- parens(symbol "->" <|>           -- (->) (+) (,) and (==)
+       fmap extToPT (extP typN)                          -- #"abc"   #[x,y : zs]i  #(a,b,c)i
+   <|> lexeme explicitCon                                -- T
+   <|> (parse_tag (\ s -> TyCon' ("`"++s) (Just(1,"")))) -- `abc
+   <|> (fmap TyVar' identifier)                          -- x
+   <|> parseStar                                         -- * *1 *2
+   <|> fmap extToPT natP                                 -- #2  4t (2+x)i
+   <|> try (fmap tyCon0 (symbol "()" <|> symbol "[]"))   -- () and []
+   <|> try (do { x <- parens(symbol "->" <|>             -- (->) (+) (,) and (==)
                              symbol "+"  <|>
                              symbol ","  <|>
                              symbol "==")
@@ -3572,6 +3562,7 @@ exhibitNmK xs (nm,k) = useStoreName nm k ("'"++) xs          -- One or the other
     where (ys,ans) = useStoreName nm k ("'"++) xs
           (zs,k2) = exhibit ys k
 
+-- polyLevel _ = True -- For debugging purposes to se levels of constrautors
 polyLevel LvZero = False
 polyLevel (LvSucc x) = polyLevel x
 polyLevel x = True

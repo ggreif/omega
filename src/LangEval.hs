@@ -593,10 +593,10 @@ vals =
  ,("fresh",(freshV,gen(typeOf(undefined :: Char -> Symbol))))
  ,("swap",(swapV,gen(typeOf(undefined :: Symbol -> Symbol -> A -> A))))
  ,("symbolEq",(symbolEqV,gen(typeOf(undefined :: Symbol -> Symbol -> Bool))))
- ,("labelEq",(labelEqV,gen(typeOf(undefined :: Label T1 -> Label T2 -> Maybe(Equal T1 T2)))))
+ ,("sameLabel",(sameLabelV,gen(typeOf(undefined :: Label T1 -> Label T2 -> Maybe(Equal T1 T2)))))
  ,("freshLabel",(freshLabelV,gen(typeOf(undefined:: IO HiddenLabel))))
  ,("newLabel",(newLabelV,gen(typeOf(undefined:: String -> HiddenLabel))))
-
+ 
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
  ,("run",(to run,runType))
  ,("lift",(reifyV,liftType))
@@ -847,17 +847,24 @@ symbolEqV = Vprimfun "symbolEq" (analyzeWith f) where
   f (Vlit (Symbol s1)) = return(Vprimfun (nam1 "symbolEq" s1) (analyzeWith (g s1)))
   g s1 (Vlit (Symbol s2)) = return(to (s1 == s2))
 
-labelEqV = Vprimfun "labelEq" (analyzeWith f) where
-  f (Vlit (Tag s1)) = return(Vprimfun (nam1 "labelEq" s1) (analyzeWith (g s1)))
-  g s1 (Vlit (Tag s2)) = if s1==s2
-                            then return(Vcon (Global "Just",Ox) [Vcon (Global "Eq",Ox) []])
-                            else return(Vcon (Global "Nothing",Ox) [])
+
+sameLabelV :: V 
+sameLabelV = Vprimfun "sameLabel" (analyzeWith f) where
+  f ptr1@(Vlit (Tag s)) = return(Vprimfun name (analyzeWith g)) where
+     name = ("sameLabel "++show ptr1)
+     g ptr2@(Vlit (Tag t))  = return comp where
+         comp = if s == t
+                   then (Vcon (Global "Just",Ox) [(Vcon (Global "Eq",Ox) [])])
+                   else (Vcon (Global "Nothing",Ox) [])
+     g v = fail ("Non Tag as 2nd argument to sameLabel: "++show v)
+  f v = fail ("Non Tag as 1st argument to sameLabel: "++show v)
+
 
 freshLabelV = Vfio [] f where
-  f = do { n <- nextInteger ; return(Right(Vcon (Global "Hidden",Ox) [Vlit (Tag ("#"++short n))]))}
+  f = do { n <- nextInteger ; return(Right(Vcon (Global "HideLabel",Ox) [Vlit (Tag ("#"++short n))]))}
 
 newLabelV =  Vprimfun "newLabel" (analyzeWith f) where
-  f str = return(Vcon (Global "Hidden",Ox) [Vlit (Tag (from str))])
+  f str = return(Vcon (Global "HideLabel",Ox) [Vlit (Tag (from str))])
 
 fuse = lift2 "fuse" f where
   f a b = return(Vprod a b)

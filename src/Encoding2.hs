@@ -91,12 +91,14 @@ instance (Generic a,Generic b) => Generic (Eql a b) where
           snd :: (Eql a b) -> b
           snd f = undefined
 
+{-
 data Hidden f = forall a . Hide (f a)
 instance Generic (a Int) => Generic (Hidden a) where
   typeOf x = thidden f
     where deref :: Hidden f -> f Int
           deref = undefined
           TyApp f int = (typeOf (deref x))
+-}
 
 instance Generic a => Generic (Maybe a) where
   typeOf x = tmaybe(typeOf(fromJust x))
@@ -203,8 +205,8 @@ instance Encoding (Label tag) where
     from v = error ("Value not a Label: "++(show v))
 
 instance Encoding HiddenLabel where
-    to (Hidden l) = Vcon (Global "Hidden",Ox) [to l]
-    from (Vcon (Global "Hidden",_) [l]) = Hidden (from l)
+    to (Hidden l) = Vcon (Global "HideLabel",Ox) [to l]
+    from (Vcon (Global "HideLabel",_) [l]) = Hidden (from l)
     from v = error ("Value not a HiddenLabel: "++(show v))
 
 instance Encoding Int where
