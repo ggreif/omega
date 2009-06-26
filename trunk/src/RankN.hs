@@ -2450,21 +2450,26 @@ justvar = do { n <- identifier; return(Just(0::Int,n))}
 prefixPlus = do { i <- num; char '+'; n <- identifier; return(Just(i,n)) }
 postfixPlus = do { n <- identifier;  char '+'; i <- num; return(Just(i,n)) }
 
-
-
 parseStar :: Parser PT
 parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
+  where star = (do { s <- ident; return(0,Just s)}) <|>                -- This comes first, otherwise we'd always get just "*"
+               (parens (fmap fix (prefixPlus <|> postfixPlus))) <|>    -- then this. Order matters
+               (do { ds <- many digit; return (val ds,Nothing)}) 
+        fix:: Maybe(Int,String) -> (Int,Maybe String)
+        fix Nothing = (0,Nothing)
+        fix (Just(i,"")) = (i,Nothing)
+        fix (Just(i,s)) = (i,Just s)
+
+
+{-
   where star = do { info <- (parens plusexp)
                   ; case info of
-                      Nothing ->
-                      Just(i,"") -> (i,Nothing)
-                      Just(i,s) ->  (i,Just s) }
-{-  
-  (do { s <- ident; return(0,Just s)}) <|> -- This comes first, otherwise we'd always get just "*"
-               (parens (do { ds <- many digit; symbol "+"; s <- ident; return(val ds,Just s)})) <|>  -- then this
-               (do { ds <- many digit; return (val ds,Nothing)})
-
+                      Nothing -> return(0,Nothing)
+                      Just(i,"") -> return(i,Nothing)
+                      Just(i,s) ->  return(i,Just s) }
 -}
+
+
 
 tyCon0 x = TyCon' x Nothing
 
