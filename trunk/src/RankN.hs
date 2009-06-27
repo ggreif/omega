@@ -2086,7 +2086,7 @@ getFree bnd (TyFun' (x:xs)) = foldr (getFreeL bnd) ([],[]) xs
 getFree bnd (TyApp' x y) = (getFree bnd x) `unionTwo` (getFree bnd y)
 getFree bnd (Kinded x y) = (getFree bnd x) `unionTwo` (getFree bnd y)
 getFree bnd (TyCon' s Nothing) = ([],[])
-getFree bnd (TyCon' c (Just(n,""))) = ([],[])  -- cooresponds to T_(3), so there are no free variables
+getFree bnd (TyCon' c (Just(n,""))) = ([],[])  -- corresponds to T_(3), so there are no free variables
 getFree bnd (TyCon' c (Just(n,s))) = if elem s bnd then ([],[]) else ([],[s])
 getFree bnd (Star' n Nothing) = ([],[])
 getFree bnd (Star' n (Just s)) = if elem s bnd then ([],[]) else ([],[s])
@@ -3562,7 +3562,7 @@ exhibitNmK xs (nm,k) = useStoreName nm k ("'"++) xs          -- One or the other
     where (ys,ans) = useStoreName nm k ("'"++) xs
           (zs,k2) = exhibit ys k
 
--- polyLevel _ = True -- For debugging purposes to se levels of constrautors
+-- polyLevel _ = True -- For debugging purposes to see levels of constructors
 polyLevel LvZero = False
 polyLevel (LvSucc x) = polyLevel x
 polyLevel x = True
