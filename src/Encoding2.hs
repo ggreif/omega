@@ -329,7 +329,7 @@ instance Encoding HiddenLabel where
 newtype DiffLabel a b = LabelNotEq Int  
 
 instance Encoding (DiffLabel a b) where
-  to (LabelNotEq x) = error "\n(Encoding instance) LabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
+  to (LabelNotEq x) = error "\n*** Error ***\n(Encoding instance) LabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
   from (Vcon (Global "LabelNotEq",_) [l]) = LabelNotEq (from l)
   from v = error ("Value not a DiffLabel: "++(show v))
 
