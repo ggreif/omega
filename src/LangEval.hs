@@ -889,19 +889,19 @@ primitives = map f xs where
 --   HideLabel:: Label t -> HiddenLabel
 -- 
 -- Labels can be compared using the function
--- sameLabel:: Label a -> Label b -> Either (Equal a b) (LabelNotEq a b)
+-- sameLabel:: Label a -> Label b -> Either (Equal a b) (DiffLabel a b)
 --
 -- where
 -- data DiffLabel:: Tag ~> Tag ~> *0 where
 --   LabelNotEq:: Int -> DiffLabel x y
 --
--- But, the type DiffLabel is abstract, and if LabelNotEq is ever 
--- applied  it diverges. Fortunately we can create instances with sameLabel.
+-- But, the type DiffLabel is abstract, and if LabelNotEq is ever
+-- applied, it diverges. Fortunately we can create instances with sameLabel.
 -- It is safe to pattern match against (LabelNotEq n).
 
 -- Values for Labels
 
-sameLabelV :: V 
+sameLabelV :: V
 sameLabelV = Vprimfun "sameLabel" (analyzeWith f) where
   f ptr1@(Vlit (Tag s)) = return(Vprimfun name (analyzeWith g)) where
      name = ("sameLabel "++show ptr1)
@@ -921,12 +921,12 @@ newLabelV =  Vprimfun "newLabel" (analyzeWith f) where
 labelNotEqV = Vprimfun "LabelNotEqV" (analyzeWith f) where
   f str = fail "\nLabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
 
--- Type deescriptions for Labels 
+-- Type descriptions for Labels 
 
 
 sigmaLabelNotEq = sigma
  where tau = typeOf(undefined :: Int -> (DiffLabel T1 T2))
        sigma = gen tau
-       
+
 tyconLabelNotEq = TyCon Ox LvZero "LabelNotEq" (K [] sigmaLabelNotEq)
 
