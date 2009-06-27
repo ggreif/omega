@@ -228,10 +228,12 @@ instance Encoding a => Encoding (Maybe a) where
     from v = error ("Value not a Maybe type: "++show v)
     
 instance (Encoding a,Encoding b) => Encoding (Either a b) where
-    to (Right x) = Vcon (Global "R",Ox) [to x]
-    to (Left x) = Vcon (Global "L",Ox) [to x]
+    to (Right x) =  (Vsum R (to x))
+    to (Left x) = (Vsum L (to x))
     from (Vcon (Global "L",Ox) [x]) = Left(from x)
     from (Vcon (Global "R",Ox) [x]) = Right(from x)
+    from (Vsum R x) = Right(from x)
+    from (Vsum L x) = Left(from x)
     from v = error ("Value not an sum (+) type: "++show v)    
 
 instance (Encoding a,Encoding b) => Encoding (a,b) where
