@@ -17,7 +17,7 @@ import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 import Bind
 import Syntax
-import RankN(Sht(..),sht,univLevelFromPTkind
+import RankN(Sht(..),sht,univLevelFromPTkind, pp
             ,Quant(..),TcTv(..),Tau(..),Rho(..),Sigma(..),Kind(..),PolyKind(..)
             ,ForAllArgs,ToEnv,PPred,PT(..),MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
@@ -41,7 +41,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,getFree,getFreePredL,unionTwo,subPred,subpairs,disp0,lv,subst
             ,boolT,unitT,tlist,tpair,tunit',tsum,tcode,ioT,arrow,applyT,applyT',listT
             ,pairT,arrowT,kind4Atom,atomT,sumT,notEqKind,notEqT,propT,intT,charT
-            ,ptsub,karr,chrSeqT,symbolT,floatT,ttag,tlabel,tarr
+            ,ptsub,karr,chrSeqT,symbolT,floatT,ttag,tlabel,tarr,tagT
             ,stringT,equalKind,infixEqName,tvsTau,subPairs,teq,equalityP,pred2Tau
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,returntype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
@@ -55,7 +55,8 @@ import Encoding2
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
-import LangEval(vals,env0,Prefix(..),elaborate)
+import LangEval(vals,env0,Prefix(..),elaborate
+               ,polyDiffLabel,tyconDiffLabel)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import Char(isAlpha,isUpper)
 import System.IO.Unsafe(unsafePerformIO)
@@ -68,6 +69,7 @@ import qualified Data.Map as Map
 import NarrowData(DefTree(..),NName(..),Rule(..),Prob(..),NResult(..),Rel(..)
                  ,andR,andP,andf,freshX,dProb)
 import Narrow(narr,defTree,Check(..),matches)
+import Value(Label(..),Equal(..))
 
 ------------------------------------------------------------
 -- In order to instantiate the narrowing code we must supply
@@ -4245,6 +4247,7 @@ toEnvX =
   ,( "Atom",      atomT, kind4Atom)
   ,( "(+)",       sumT, poly (karr star (star_star)))
   ,( "(!=)",      notEqT, notEqKind)
+  ,( "DiffLabel", tyconDiffLabel,polyDiffLabel)
   ,( "String",    stringT,poly star)
   ,( infixEqName, TyCon Ox (lv 1) infixEqName equalKind, equalKind)
   --  ,( "Hidden",    hiddenT, kind4Hidden)
@@ -4264,6 +4267,7 @@ predefined =
  "data Parser (x::*0) = primitive\n"++
  "kind Tag = primitive\n"++
  "data Label (t :: Tag) = primitive\n"++
+ "data DiffLabel (t ::Tag) (t :: Tag) = primitive\n"++
  "data Bool:: *0 where\n"++
  "  True:: Bool\n"++
  "  False:: Bool\n"++
