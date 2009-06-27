@@ -133,7 +133,7 @@ evalZ env exp@(App f x) =
 evalZ env (Lam ps body xs) = return(makeLam ps body [] [] env)
 
 evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
-  where caseV ms env v [] = caseErr v (map (\(loc,p,b,ds)->p) ms)
+  where caseV ms env v [] = caseErr env v (map (\(loc,p,b,ds)->p) ms)
         caseV ms env v ((loc,p,body,ds):ps) =
           do { z <- matchStrict Tick p v env
              ; case z of
@@ -142,8 +142,9 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
                   do { let env1 = (extendV es env)
                      ; env2 <- elaborate Tick ds env1
                      ; evalBody env2 body (caseV ms env v ps) } }
-        caseErr v ps = fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
-                        plist "" ps "\n  " "\n"++(pv v))
+        caseErr (env@(Ev xs ys)) v ps = 
+             fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
+                  plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
 evalZ env (Do stmts) =
   do { bind <- evalVar env (Global "bind") -- (monadBind env)
@@ -907,8 +908,8 @@ sameLabelV = Vprimfun "sameLabel" (analyzeWith f) where
      name = ("sameLabel "++show ptr1)
      g ptr2@(Vlit (Tag t))  = return comp where
          comp = if s == t
-                   then (Vcon (Global "L",Ox)  [(Vcon (Global "Eq",Ox) [])])
-                   else (Vcon (Global "R",Ox) [(Vcon (Global "LabelNotEq",Ox) [Vlit (Int 0)])])
+                   then (Vsum L (Vcon (Global "Eq",Ox) []))
+                   else (Vsum R (Vcon (Global "LabelNotEq",Ox) [Vlit (Int 0)]))
      g v = fail ("Non Tag as 2nd argument to sameLabel: "++show v)
   f v = fail ("Non Tag as 1st argument to sameLabel: "++show v)
 
