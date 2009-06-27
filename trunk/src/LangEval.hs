@@ -919,7 +919,7 @@ newLabelV =  Vprimfun "newLabel" (analyzeWith f) where
   f str = return(Vcon (Global "HideLabel",Ox) [Vlit (Tag (from str))])
 
 labelNotEqV = Vprimfun "LabelNotEqV" (analyzeWith f) where
-  f str = fail "\nLabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
+  f str = fail "\n*** Error ***\nLabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
 
 -- Type descriptions for Labels 
 

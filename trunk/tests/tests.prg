@@ -490,6 +490,10 @@ f (Ap a b) = f a + f b
 tim :: Label `tim
 tim = `tim
 
+labelEq x y = case sameLabel x y of
+              L(t @ Eq) -> Just t
+              R _ -> Nothing
+              
 type Env = [exists t .(Label t,Int)]
 
 find:: Label t -> Env -> Maybe(Label t,Int)
@@ -508,6 +512,7 @@ maybeM = (Monad Just bind fail)
 ans = run [| let monad maybeM in do {return 42} |]
 
 (Just (proof @ Eq)) = labelEq `a `a
+
 
 ##test "labels not equal"
   (Just q) = labelEq `a `b
