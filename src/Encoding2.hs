@@ -15,7 +15,7 @@ type Symbol = Name
 
 class Generic t where
    typeOf :: t -> Tau
-
+   
 instance Generic () where
   typeOf x = unitT
 
@@ -33,12 +33,6 @@ instance Generic Bool where
 
 instance Generic Symbol where
   typeOf x = symbolT
-
-instance Generic a => Generic (Label a) where
-  typeOf x = tlabel (typeOf (tagOfLabel x))
-
-instance Generic HiddenLabel where
-  typeOf x = TyCon Ox (LvSucc LvZero) "HiddenLabel" (poly star)
 
 instance (Generic a,Generic b) => Generic (Equal a b) where
   typeOf x = teq (typeOf (leftEqual x)) (typeOf (rightEqual x))
@@ -102,6 +96,11 @@ instance Generic (a Int) => Generic (Hidden a) where
 
 instance Generic a => Generic (Maybe a) where
   typeOf x = tmaybe(typeOf(fromJust x))
+  
+instance (Generic a, Generic b) => Generic(Either a b) where
+  typeOf x = tsum (typeOf(geta x)) (typeOf(getb x))
+    where geta (Left x) = x
+          getb (Right x) = x
 
 
 -------------------------------------------------
@@ -199,16 +198,6 @@ instance Encoding Symbol where
     from (Vlit (Symbol n)) = n
     from v = error ("Value not a Symbol: "++(show v))
 
-instance Encoding (Label tag) where
-    to (Label s) = Vlit (Tag s)
-    from (Vlit (Tag s)) = Label s
-    from v = error ("Value not a Label: "++(show v))
-
-instance Encoding HiddenLabel where
-    to (Hidden l) = Vcon (Global "HideLabel",Ox) [to l]
-    from (Vcon (Global "HideLabel",_) [l]) = Hidden (from l)
-    from v = error ("Value not a HiddenLabel: "++(show v))
-
 instance Encoding Int where
     to n = Vlit(Int n)
     from (Vlit(Int n)) = n
@@ -235,8 +224,15 @@ instance Encoding a => Encoding (Maybe a) where
     to Nothing = Vcon (Global "Nothing",Ox) []
     to (Just x) = Vcon (Global "Just",Ox) [to x]
     from (Vcon (Global "Nothing",Ox) []) = Nothing
-    from (Vcon (Global "Just",Ox) [x]) = from x
+    from (Vcon (Global "Just",Ox) [x]) = (Just (from x))
     from v = error ("Value not a Maybe type: "++show v)
+    
+instance (Encoding a,Encoding b) => Encoding (Either a b) where
+    to (Right x) = Vcon (Global "R",Ox) [to x]
+    to (Left x) = Vcon (Global "L",Ox) [to x]
+    from (Vcon (Global "L",Ox) [x]) = Left(from x)
+    from (Vcon (Global "R",Ox) [x]) = Right(from x)
+    from v = error ("Value not an sum (+) type: "++show v)    
 
 instance (Encoding a,Encoding b) => Encoding (a,b) where
     to (a,b) = Vprod (to a) (to b)
@@ -303,9 +299,7 @@ instance Generic T1 where
    typeOf x = TyVar name4 (MK tagT)
 instance Generic T2 where
    typeOf x = TyVar name5 (MK tagT)
-
-
-
+   
 genOf :: Tau -> [(Name,Kind)]
 genOf (TyVar nm k) = [(nm,k)]
 genOf (TyApp x y) = unionBy f (genOf x) (genOf y) where f (x,_) (y,_) = x==y
@@ -318,4 +312,41 @@ gen t = Forall (mk (genOf t) t)
 
 instance Show A where
   show (A x) = show x
+
+----------------------------------------
+-- Labels and Tag encodings
+
+instance Encoding (Label tag) where
+    to (Label s) = Vlit (Tag s)
+    from (Vlit (Tag s)) = Label s
+    from v = error ("Value not a Label: "++(show v))
+
+instance Encoding HiddenLabel where
+    to (Hidden l) = Vcon (Global "HideLabel",Ox) [to l]
+    from (Vcon (Global "HideLabel",_) [l]) = Hidden (from l)
+    from v = error ("Value not a HiddenLabel: "++(show v))
+
+newtype DiffLabel a b = LabelNotEq Int  
+
+instance Encoding (DiffLabel a b) where
+  to (LabelNotEq x) = error "\n(Encoding instance) LabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
+  from (Vcon (Global "LabelNotEq",_) [l]) = LabelNotEq (from l)
+  from v = error ("Value not a DiffLabel: "++(show v))
+
+instance Generic a => Generic (Label a) where
+  typeOf x = tlabel (typeOf (tagOfLabel x))
+
+instance Generic HiddenLabel where
+  typeOf x = TyCon Ox (LvSucc LvZero) "HiddenLabel" (poly star)
+
+polyDiffLabel = K [] (simpleSigma (Karr tagT (Karr tagT (Star LvZero))))
+tyconDiffLabel = TyCon Ox (LvSucc LvZero) "DiffLabel" polyDiffLabel
+tDiffLabel x y = TyApp (TyApp tyconDiffLabel x) y
+
+instance (Generic a,Generic b) => Generic (DiffLabel a b) where
+  typeOf x = tDiffLabel (typeOf(geta x)) (typeOf(getb x))
+    where geta :: DiffLabel a b -> a
+          geta _ = undefined
+          getb :: DiffLabel a b -> b
+          getb _ = undefined
 
