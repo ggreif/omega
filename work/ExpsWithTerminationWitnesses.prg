@@ -51,8 +51,8 @@ data Stage':: Stage n ~> *0 where
   Inf :: Stage' Inf
 
 ----------------------------------------------------
--- Types and Indexes to types 
--- (Types are singeltons) and Environments
+-- Types and Indexes to Types 
+-- (Types are singletons) and Environments
 
 data TypeIndex:: *1 where
   VarT :: Natural ~> TypeIndex
@@ -91,7 +91,7 @@ data LeqSt:: Stage a ~> Stage b ~> *0 where
   All :: LeqSt x Inf
   Both :: LeqSt x y -> LeqSt (N x) (N y)
 
--- Equal witness for TypeIndex
+-- Equal Witness for TypeIndex
 
 data LeqTy :: TypeIndex ~> TypeIndex ~> *0 where
   EqTy :: LeqTy t t
@@ -101,7 +101,7 @@ data LeqTy :: TypeIndex ~> TypeIndex ~> *0 where
   LeqTyArr :: LeqTy t' t -> LeqTy u u' -> LeqTy (ArrT t u) (ArrT t' u')
   
 ------------------------------------------------
--- Does a Stage Variable Occurr in a TypeIndex?
+-- Does a Stage Variable Occur in a TypeIndex?
 
 data AppearsPos :: Natural ~> TypeIndex ~> *0 where
   SPVar :: AppearsPos i (VarT x)

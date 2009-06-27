@@ -32,7 +32,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind
             ,mguStar,star1,star,star_star,starR,shtt,shtP  -- splitU,split3,
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newflexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
-            ,instanTy,instanPatConstr,checkArgs, nameOf
+            ,instanTy,instanPatConstr,checkArgs,nameOf
             ,mguB,mostGenUnify,unify,morepolySS,morepolyRR,match2,alpha,morepolySigmaRho
             ,sigmaPair,sigmaSum,unifyCode,unifyFun
             ,poly,simpleSigma,toSigma,toTau,toEqs,toRho,toPT,rho2PT,toL
@@ -1993,7 +1993,7 @@ fixSigma (Forall z) = (Forall (windup polynames (preds,t')),list,(name,lev))
         (t',list,(name,lev)) = fixRho2 t
         
 -- Actually specialize a level polymorphic sigma at level 0
-sepecializeAt0 cname (K levelnames (Forall z)) = 
+specializeAt0 cname (K levelnames (Forall z)) = 
      do { let (sigma2,list2,(name,levl)) = fixSigma (Forall z)
 	      levels2 = map (\ x -> (x,LvSucc LvZero)) list2
               good (TcLv (LvVar x)) name = x /= name
@@ -2042,9 +2042,9 @@ checkDataDecs decls =
              case (definesValues level,definesTypes level) of
                -- I.e. a Kind or above, the ConFuns are types not values!
               (False,True) -> lift xs ((s,TyCon tag level s (polyk),polyk):types) values
-              (True,False) -> do { poly2 <- sepecializeAt0 s polyk
+              (True,False) -> do { poly2 <- specializeAt0 s polyk
                                  ; lift xs types ((Global s,(poly2,mod,n,exp),LetBnd):values)}
-              (True,True) -> do { poly2 <- sepecializeAt0 s polyk
+              (True,True) -> do { poly2 <- specializeAt0 s polyk
                                 ; lift xs ((s,TyCon tag level s (polyk),polyk):types)
                                           ((Global s,(poly2,mod,n,exp),LetBnd):values)}
      ; let proj (nm,tau,polykind,levs) = (nm,tau,polykind)
