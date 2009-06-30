@@ -513,9 +513,9 @@ type Env = [exists t .(Label t,Int)]
 find:: Label t -> Env -> Maybe(Label t,Int)
 find t [] = Nothing
 find t ((Ex(s,n)):xs) = 
-  case labelEq t s of
-    Just (p@Eq) -> Just(t,n)
-    Nothing -> find t xs 
+  case sameLabel t s of
+    L(p@Eq) -> Just(t,n)
+    R _ -> find t xs 
 
 testpairs :: Env    
 testpairs = [gg(`a,2),gg(`b,3),gg(`c,99)]  
@@ -545,6 +545,7 @@ maybeM = (Monad Just bind fail)
 
 ans = run [| let monad maybeM in do {return 42} |]
 
+
 testLabels = body
   where monad ioM
         ioM = Monad returnIO bindIO failIO
@@ -554,7 +555,12 @@ testLabels = body
                       Nothing -> return "good news"
                       Just Eq -> return "bad news" }
                       
-         
+
+toLabelA x = case sameLabel y `a of
+        L(t@Eq) -> t
+        R _ -> error "BAD"
+  where (HideLabel y) = newLabel x 
+  
 ------------------------------------------------------------
 -- HasType and Rows are predefined
 
