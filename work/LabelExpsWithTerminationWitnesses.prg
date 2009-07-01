@@ -23,6 +23,8 @@ data TypeIndex:: *1 where
   NatT :: Stage n ~> TypeIndex
   ListT :: Stage n ~> TypeIndex ~> TypeIndex
   ArrT :: TypeIndex ~> TypeIndex ~> TypeIndex
+  
+-- ArrT :: TypeIndex ~> Totality ~> TypeIndex ~> TypeIndex
 
 data Typ :: TypeIndex ~> *0 where
   VarT :: Label n -> Typ (VarT n)
@@ -126,7 +128,15 @@ data Arms:: Env ~> TypeIndex ~> TypeIndex ~> *0  where
   ConsArm:: Pat e1 e2 x -> Exp e2 y -> Arms e1 x y -> Arms e1 x y
  deriving Record(a)
 
-
+-- data Exp:: Env ~> TypeIndex ~> *0 where
+--  Ze :: Exp env (NatT (N s)) 
+--  Se :: Exp env (NatT s) -> Exp env (NatT (N s)) 
+--  Lam :: Exp {f=a;env} b -> Exp env (Arr a 1 b)
+--  App :: Exp env (ArrT s j t) -> Exp env s -> Exp env t 
+--  Fix0 :: Exp {f=ArrT (tc (V i)) w2 a; env}e (ArrT (tc (N (V i))) (N w2) a) ->
+--          Exp env (ArrT (tc s) (N (V i)) a) 
+       
+       
 data Exp:: Env ~> TypeIndex ~> *0 where
   Ze :: Exp env (NatT (N s))
   Se :: Exp env (NatT s) -> Exp env (NatT (N s))
