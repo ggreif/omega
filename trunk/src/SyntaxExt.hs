@@ -229,8 +229,8 @@ flat2 [] = []
 flat2 ((a,b):xs) = a : b : flat2 xs
 
 -----------------------------------------------------------
--- Parsers for syntactic Extensions
---  #"abc"   #[x,y ; zs]i   #4i   #(2+x)i    #(a,b,c)i #{a:Int,b:String; r}i
+-- Parsers for Syntactic Extensions
+--  #"abc"   [x,y; zs]i   #4  4i   (2+x)i    (a,b,c)i  {a=Int,b=String; r}i
 
 semiTailSeq left right elem tail buildf =
   do { lexeme left
