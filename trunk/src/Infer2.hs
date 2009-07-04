@@ -2238,8 +2238,8 @@ checkSyn constrs [ext] =
                 [Ds "\nSyntax name for ",Ds (synName ext),Ds " already in use: ",Ds (show(synKey ext))]
      ; case (constrs,ext) of
         ([nilC,consC],Lx(key,_,_)) -> checkList key nilC consC
-        (_,Nx(('o':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0o123 is reserved for octal integers"]
-        (_,Nx(('x':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0xABC is reserved for hexadecimal integers"]
+        (_,Nx(('o':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0o123 is reserved for octal integers."]
+        (_,Nx(('x':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0xABC is reserved for hexadecimal integers."]
         ([zeroC,succC],Nx(key,_,_)) -> checkNat key zeroC succC
         ([pairC],Px(key,_)) -> checkPair key pairC
         ([rnilC,rconsC],Rx(key,_,_)) -> checkRecord key rnilC rconsC
