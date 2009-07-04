@@ -20,7 +20,7 @@ import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 -- These should be in the same directory as this file.
 import ParserAll(Parser)
 
--- By rights these should be defined in Value.hs But then
+-- By rights these should be defined in Value.hs but then
 -- we'd have recursive import lists
 
 data Ev = Ev [(Var,V)] (V,V,V)  -- Runtime environment mapping Vars to Values
