@@ -1,32 +1,19 @@
--- import "LangPrelude.prg"
-{-
-data Shape :: *1 where
-  Vanish :: Shape
-  Assoc :: Tag ~> * ~> Shape ~> Shape
- deriving Record(s)
-
-data Env :: Shape ~> * where
-  Empty :: Env Vanish
-  Extend :: Label t -> a -> Env s -> Env (Assoc t a s)
- deriving Record(e)
--}
+import "LangPrelude.prg"
 
 data Free :: Tag ~> Row Tag * ~> * where
   Klar :: Label t -> Free t {}r
   Mehr :: Label t -> DiffLabel t t' -> Free t r -> Free t {t'=a;r}r
 -- deriving Record(f)
 
--- diffAB' = let R x = sameLabel `a `b in x -- see issue 65
-diffAB = case sameLabel `a `b of
-         R x -> x
+diffAB = let (R x) = sameLabel `a `b in x
 
 notMentionedIn :: Label a -> Record sh -> Maybe (Free a sh)
 notMentionedIn l {} = Just $ Klar l
-notMentionedIn l {m=v; r} = case sameLabel l m of
-                            L _ -> Nothing
-                            R diff -> case notMentionedIn l r of
-                                      Nothing -> Nothing
-                                      Just r' -> Just $ Mehr l diff r'
+notMentionedIn l {m=v; r} = do
+                            let (R diff) = sameLabel l m
+                            r' <- notMentionedIn l r
+                            return $ Mehr l diff r'
+                       where monad maybeM
 
 Just test1 = `a `notMentionedIn` {`g=7, `h='a'}
 Nothing = `a `notMentionedIn` {`g=7, `a='a'}
