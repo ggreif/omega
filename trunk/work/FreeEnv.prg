@@ -5,12 +5,12 @@ data Free :: Tag ~> Row Tag * ~> * where
   Mehr :: Label t -> DiffLabel t t' -> Free t r -> Free t {t'=a;r}r
 -- deriving Record(f)
 
-diffAB = let (R x) = sameLabel `a `b in x
-
 notMentionedIn :: Label a -> Record sh -> Maybe (Free a sh)
 notMentionedIn l {} = Just $ Klar l
 notMentionedIn l {m=v; r} = do
-                            let (R diff) = sameLabel l m
+                            diff <- case sameLabel l m of
+                                    R x -> Just x
+      	      	      	      	    _ -> Nothing
                             r' <- notMentionedIn l r
                             return $ Mehr l diff r'
                        where monad maybeM
