@@ -23,9 +23,6 @@ Just test1 = `a `notMentionedIn` {`g=7, `h='a'}
 ##test "`a occurs in second position"
   Just test3 = `a `notMentionedIn` {`a=7, `b='b'}
 
---setLike :: Row Tag * ~> ???
---{setLike {}r} = 
-
 
 data Environment :: Row Tag * ~> * where
   Empty :: Environment {}r
