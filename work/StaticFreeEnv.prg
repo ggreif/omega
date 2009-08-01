@@ -1,6 +1,6 @@
 import "LangPrelude.prg"
 
-data Free :: Tag ~> Row Tag * ~> * where
+prop Free :: Tag ~> Row Tag * ~> * where
   Klar :: Free t {}r
   Mehr :: DiffLabel t t' -> Free t r -> Free t {t'=a;r}r
  deriving List(f)
@@ -34,7 +34,7 @@ verifyEnv {} = Just {}e
 verifyEnv {l=v; r} = do
                      l' <- l `notMentionedIn` r
                      r' <- verifyEnv r
-                     return (let theorem l' in {l=v; r'}e)
+                     return {l=v; r'}e
                  where monad maybeM
 
 Just test4 = verifyEnv {`g=7, `a='a', `h="hey"}
