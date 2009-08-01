@@ -34,7 +34,7 @@ verifyEnv {} = Just {}e
 verifyEnv {l=v; r} = do
                      l' <- l `notMentionedIn` r
                      r' <- verifyEnv r
-                     return {l=v; r'}e
+                     return (let theorem l' in {l=v; r'}e)
                  where monad maybeM
 
 Just test4 = verifyEnv {`g=7, `a='a', `h="hey"}
