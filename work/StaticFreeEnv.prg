@@ -41,3 +41,9 @@ Just test4 = verifyEnv {`g=7, `a='a', `h="hey"}
 
 ##test "`g occurs twice"
   Just test5 = verifyEnv {`g=7, `a='a', `g="2"}
+
+testThatItReconstructs :: Environment sh -> Environment sh
+testThatItReconstructs {}e = {}e
+testThatItReconstructs {l=v; r}e = Extend l v r
+
+test6 = testThatItReconstructs test4
