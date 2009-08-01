@@ -4773,7 +4773,7 @@ sigmaToRule rclass (name,sigma) =
               ans = [(key,RW name key thclass args2 preCond lhs rhs)]
           in return ans
         NotATheorem bad -> (warnM [Ds "\nIn the theorem '",Ds name, Ds "' the type:\n   " ,Dd rho
-                              ,Ds "\nis neither a back-chaining or a left-to-right rewrite rule."
+                              ,Ds "\nis neither a back-chaining nor a left-to-right rewrite rule."
                               ,Ds "\nbecause the following are not propositions:\n   ",Dl bad "\n   "
                               ,Ds "\nThus, no rule is added.\n"])
                         >> (return[])
