@@ -47,3 +47,10 @@ testThatItReconstructs {}e = {}e
 testThatItReconstructs {l=v; r}e = Extend l v r
 
 test6 = testThatItReconstructs test4
+
+##test "this should pass --> issue 67"
+  test7 = {`a=4, `b='a', `c="what?"}e
+
+##test "this should not pass, refutable, because label `a is duplicated"
+  test8 = {`a=4, `b='a', `a="what?"}e
+
