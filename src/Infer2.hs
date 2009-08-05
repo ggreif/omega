@@ -4173,6 +4173,7 @@ instance NameStore d => Exhibit d Pat where
           (d3,listS) = exhibitL exhibit d2 ps " "
   exhibit d1 (Pann p t) = (d2,"("++ pS ++" :: "++ tS ++")")
     where (d2,pS,tS) = exhibit2 d1 (p,t)
+  exhibit d1 (ExtP ep) = (d1,show ep)
 
 instance  NameStore d => Exhibit d Var where
   exhibit d1 v = (d1,show v)
