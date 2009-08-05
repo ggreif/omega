@@ -1,6 +1,5 @@
 module LangEval(env0,vals,elaborate,Prefix(..),
-                Env,eval,mPatStrict,extendV
-                ,polyDiffLabel,tyconDiffLabel) where
+                Env,eval,mPatStrict,extendV) where
 
 import Auxillary
 import Syntax
@@ -893,7 +892,7 @@ primitives = map f xs where
 -- sameLabel:: Label a -> Label b -> Either (Equal a b) (DiffLabel a b)
 --
 -- where
--- data DiffLabel:: Tag ~> Tag ~> *0 where
+-- prop DiffLabel:: Tag ~> Tag ~> *0 where
 --   LabelNotEq:: Int -> DiffLabel x y
 --
 -- But, the type DiffLabel is abstract, and if LabelNotEq is ever
