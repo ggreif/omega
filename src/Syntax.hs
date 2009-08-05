@@ -530,7 +530,7 @@ instance Functor Body where
 --------------------------------------------------------------------------
 -- The binding structure of Exp's is complicated by embedded [Dec]. We need
 -- a function that given some "direction" on 1) how to process binding
--- ocurrences and 2) handle other occurences, then walks over an Exp and
+-- occurrences and 2) handle other occurences, then walks over an Exp and
 -- repects this complicated structure rebuilding the term under this
 -- "direction". We also want to handle the counting of levels implicit in
 -- (Bracket e) and (Escape e). We embed this direction in the (Par m)
@@ -626,11 +626,11 @@ parE (Do ss) f = do { (ss2,_) <- parThread parStmt f ss; return(Do ss2) }
 parE (Ann x t) f = do { a <- parE x f; return(Ann a t)}
 parE (ExtE y) f = do { z <- extM (\ x -> parE x f) y; return(ExtE y)}
 
--- extDs just processes the binding ocurrences in the list of Dec, and leaves
+-- extDs just processes the binding occurrences in the list of Dec, and leaves
 -- the other sub-terms alone. It also computes a new parameter data-structure.
 -- See parDs for the function that processes these subterms. This is necessary
 -- since we get lists of mutually recursive Dec's, so we need to process every
--- binding ocurrence first, get one big extended parameter data structure, and
+-- binding occurrence first, get one big extended parameter data structure, and
 -- then apply it to all subterms
 
 extDs ::  Monad m => [Dec] -> Par m -> m([Dec],Par m)
