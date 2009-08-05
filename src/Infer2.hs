@@ -55,8 +55,7 @@ import Encoding2
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
-import LangEval(vals,env0,Prefix(..),elaborate
-               ,polyDiffLabel,tyconDiffLabel)
+import LangEval(vals,env0,Prefix(..),elaborate)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import Char(isAlpha,isUpper)
 import System.IO.Unsafe(unsafePerformIO)
@@ -1247,7 +1246,7 @@ tcStmts mod m b ((NoBindSt loc e):ss) =
 tcStmts mod m b ((BindSt loc pat e):ss) =
    do { a <- newTau star
       ; (e2,oblig) <- peek (typeExp Wob e (Check(Rtau(TyApp m a))))
-      -- Smart scrutinee from "Simple Unification Based Type Inference for GADTS"
+      -- Smart scrutinee from "Simple Unification-based Type Inference for GADTs"
       ; (oblig',refinement) <- fixate (loc,pat) oblig
       ; (a2,mod2) <- rigidity (subTau refinement a)
       ; (frag,p2) <- newLoc loc $ checkBndr localRename mod (addPred oblig' nullFrag) (simpleSigma a2) pat
@@ -2052,7 +2051,7 @@ checkDataDecs decls =
      ; let proj (nm,tau,polykind,levs) = (nm,tau,polykind)
      ; (types,values) <- lift conFunMap2 (map proj tyConMap2) []
      ; let makeRule (level,False,_,(Global c,(polyk,mod,_,_))) = return []
-           makeRule (level,True,_,(Global c,(K lvs sigma,mod,_,_))) = sigmaToRule (Just (Axiom)) (c,sigma)
+           makeRule (level,True,_,(Global c,(K lvs sigma,mod,_,_))) = sigmaToRule (Just Axiom) (c,sigma)
      ; rules <- mapM makeRule conFunMap2
      ; return(simpleSigma unitT,Frag values [] types [] [] (concat rules) exts,ds2)
      }
@@ -2165,7 +2164,7 @@ range f b x = failM 1 [Ds "\nThe type: ",Dd b,Ds "\nis not a good type for a con
 
 -------------------------------
 -- The type environment currentMap already includes information for all the type names
--- in the mutually recursive binding group of GADTS (See kindsEnvForDataBindingGroup).
+-- in the mutually recursive binding group of GADTs (See kindsEnvForDataBindingGroup).
 -- We are just translating the constructors to Sigma types.
 
 ds xs = Ds (concat xs)
@@ -3589,7 +3588,7 @@ thrd e1 f (x:xs) = do { (e2,y) <- f x e1; (e3,ys) <- thrd e2 f xs; return(e3,y:y
 ----------------------------------------------------------------------
 -- This code is used to translate a sigma type into a rule.
 -- given (forall a . P a => T a -> S a -> Q a)
--- We need to test that T,S, and Q are all Proposition constructors.
+-- We need to test that T, S and Q are all Proposition constructors.
 -- The rule would be  Q a -> T a, S a  When P a
 -- we need to translate (Q a) into a pattern so that we can
 -- match Propositions against it to obtain a binding for "a"
@@ -4242,15 +4241,15 @@ trans0 s = (readName "In trans0: ") (typeConstrEnv0,Z,[],[]) s
 
 toEnvX :: ToEnv
 toEnvX =
-  [( "[]",        listT,poly star_star)
+  [( "[]",        listT, poly star_star)
   ,( "(,)",       pairT, poly (karr star (star_star)))
   ,( "()",        unitT, poly star)
   ,( "(->)",      arrowT, poly (karr star (star_star)))
   ,( "Atom",      atomT, kind4Atom)
   ,( "(+)",       sumT, poly (karr star (star_star)))
   ,( "(!=)",      notEqT, notEqKind)
-  ,( "DiffLabel", tyconDiffLabel,polyDiffLabel)
-  ,( "String",    stringT,poly star)
+  ,( "DiffLabel", tyconDiffLabel, polyDiffLabel)
+  ,( "String",    stringT, poly star)
   ,( infixEqName, TyCon Ox (lv 1) infixEqName equalKind, equalKind)
   --  ,( "Hidden",    hiddenT, kind4Hidden)
   --, declare tagT   -- ( "Tag"    , tagT, poly star1)
@@ -4269,7 +4268,7 @@ predefined =
  "data Parser (x::*0) = primitive\n"++
  "kind Tag = primitive\n"++
  "data Label (t :: Tag) = primitive\n"++
- "data DiffLabel (t ::Tag) (t :: Tag) = primitive\n"++
+ "prop DiffLabel (t :: Tag) (t :: Tag) = primitive\n"++
  "data Bool:: *0 where\n"++
  "  True:: Bool\n"++
  "  False:: Bool\n"++
