@@ -989,6 +989,7 @@ typeBody mod Unreachable expect = failD 3 [Ds "No Unreachable Yet 1"]
 -- tc (line 1,(C p1 p2),Normal e,[]) expected
 
 predicateToProblem (Rel x) = TermP x
+predicateToProblem (TagNotEqual t u) = EqP(t,u) -- negate problem! FISHY TODO
 predicateToProblem (Equality x y) = EqP(x,y)
 
 predsToProb [] ans = andP ans
@@ -3291,6 +3292,7 @@ matchPred truth question =
                           (\ _ -> return (Right pairs))
  where work = case (truth,question) of
                 (Rel x,Rel y) -> Just [(x,y)]
+                (TagNotEqual x y,TagNotEqual a b) -> Just[(x,a),(y,b)]
                 (Equality x y,Equality a b) -> Just[(x,a),(y,b)]
                 other -> Nothing
 

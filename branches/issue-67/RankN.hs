@@ -273,7 +273,7 @@ instance NameStore d => Exhibit d Level where
 type Unifier = [(TcTv,Tau)]
 type Uniq = Integer
 type TRef = IORef (Maybe Tau)
-data Pred = Equality Tau Tau | Rel Tau
+data Pred = Equality Tau Tau | Rel Tau | TagNotEqual Tau Tau
 
 equalityP (Equality _ _) = True
 equalityP _ = False
@@ -281,12 +281,15 @@ equalityP _ = False
 makeRel tau =
   case equalPartsM tau of
     Nothing -> Rel tau
-    Just(x,y) -> Equality x y
+    --Just(x,y) -> Equality x y
+    Just(x,y) -> TagNotEqual x y -- HACK
 
-equalPartsM (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = return (x,y)
+--equalPartsM (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = return (x,y)
+equalPartsM (TyApp (TyApp (TyCon sx _ "DiffLabel" k) x) y) = return (x,y) -- HACK
 equalPartsM _ = fail "Not an Equality"
 
 pred2Tau (Equality x y) = teq x y
+pred2Tau (TagNotEqual t u) = notEq t u
 pred2Tau (Rel x) = x
 
 -----------------------------------------------------------
@@ -704,6 +707,7 @@ instance Swap Rho where
 instance Swap Pred where
   swaps [] x = x
   swaps cs (Equality x y) = Equality (swaps cs x) (swaps cs y)
+  swaps cs (TagNotEqual x y) = TagNotEqual (swaps cs x) (swaps cs y)
   swaps cs (Rel ts) = makeRel (swaps cs ts)
 
 
@@ -734,6 +738,7 @@ zonkPredsTau (preds,tau) = do {ps <- mapM zonkPred preds; t <- zonkTau tau; retu
 
 zonkPred::  (HasIORef m,Fresh m) => Pred -> m Pred
 zonkPred (Equality x y) = do { a <- zonkTau x; b <- zonkTau y; return(Equality a b)}
+zonkPred (TagNotEqual x y) = do { a <- zonkTau x; b <- zonkTau y; return(TagNotEqual a b)}
 zonkPred (Rel ts) = do {ys <- zonkTau ts; return(makeRel ys)}
 
 zonkRho:: (HasIORef m,Fresh m) => Rho -> m Rho
@@ -811,6 +816,7 @@ tvs_Level x = return([],[])
 
 tvs_Pred  ::(HasIORef m,Fresh m) => Pred -> m([TcTv],[TcLv])
 tvs_Pred (Equality x y) = binaryLift unionP (tvs_Tau x) (tvs_Tau y)
+tvs_Pred (TagNotEqual x y) = binaryLift unionP (tvs_Tau x) (tvs_Tau y)
 tvs_Pred (Rel ts) = (tvs_Tau ts)
 
 -----------------------------------------------------------------
@@ -986,6 +992,7 @@ instance  TyCh m => TypeLike m Kind where
 -- TypeLike Equations
 instance TyCh m => TypeLike m Pred where
   sub env (Equality x y) = do { a <- sub env x; b <- sub env y; return(Equality a b)}
+  sub env (TagNotEqual x y) = do { a <- sub env x; b <- sub env y; return(TagNotEqual a b)}
   sub env (Rel ts) = do {ys <- sub env ts; return(makeRel ys)}
   
 --- Helper functions for unwinding the (L Rho) objects in Forall
@@ -1832,6 +1839,10 @@ typkind (t@(Tv un f k)) = (t,k)
 kindPred(Equality a b) =
   handleM 1 (do{(k1::Tau,t1) <- infer a; t2 <- check b k1; return(Equality t1 t2)})
     (\ s -> failM 0 [Ds "While checking equality constraint: "
+                    ,Dd a,Ds " = ",Dd b,Ds ("\nkinds do not match"++s)])
+kindPred(TagNotEqual a b) =
+  handleM 1 (do{(k1::Tau,t1) <- infer a; t2 <- check b k1; return(TagNotEqual t1 t2)}) -- TODO must be Tag!
+    (\ s -> failM 0 [Ds "While checking tag inequality constraint: "
                     ,Dd a,Ds " = ",Dd b,Ds ("\nkinds do not match"++s)])
 kindPred (x@(Rel ts)) =
   do { ts2 <- check ts (Star LvZero)
@@ -2980,6 +2991,7 @@ varsOfLTau (Cons (k,q) x) = union3(varsOfKind k) (rem(varsOfLTau more))
 
 varsOfPred [] = ([],[],[])
 varsOfPred ((Equality x y):xs) = union3 (union3 (varsOfTau x) (varsOfTau y)) (varsOfPred xs)
+varsOfPred ((TagNotEqual x y):xs) = union3 (union3 (varsOfTau x) (varsOfTau y)) (varsOfPred xs)
 varsOfPred ((Rel ts):xs) = union3 (varsOfTau ts) (varsOfPred xs)
 
 varsOfRho (Rarrow x y) = union3 (varsOfSigma x) (varsOfRho y)
@@ -3670,6 +3682,9 @@ instance NameStore d => Exhibit d [(Tau,Tau)] where
 -- Pred
 instance NameStore d => Exhibit d Pred where
   exhibit xs (Rel ts) = let (a,b) = exhibit xs ts in (a,b)
+  exhibit xs (TagNotEqual x y) = (zs,a++" != "++b)
+    where (ys,a) = exhibitpar xs x
+          (zs,b) = exhibitpar ys y
   exhibit xs (Equality x y) = (zs,"Equal "++a++" "++b)
     where (ys,a) = exhibitpar xs x
           (zs,b) = exhibitpar ys y
@@ -3952,6 +3967,7 @@ splitClass any (TcTv x) = MutSolve
 splitClass _ _ = Hard
 
 splitV [] (os,hs,es,ms) = (os,hs,es,ms)
+splitV ((p@(TagNotEqual _ _)):zs) (os,hs,es,ms) = splitV zs (p:os,hs,es,ms) -- WHAT IS THIS HACK?
 splitV ((p@(Equality x y)):zs) (os,hs,es,ms) =
    case (splitClass x y,x,y) of
      (Hard,_,_) -> splitV zs (os,p:hs,es,ms)
