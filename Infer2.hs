@@ -3667,8 +3667,11 @@ refineEq t vs = Nothing
 refineP (TyApp (TyApp (TyCon sx _ "(->)" k) x) y) conds = refineP y (x:conds)
 refineP last (lhs:conds) =
   do { (zs,vs) <- refineEq last []
-     ; (a,b) <- equalPartsM lhs
-     ; return(vs,reverse conds,Equality a b,zs)}
+     ; (c,a,b) <- equalPartsM lhs
+     ; eqPred <- case c a b of
+                 eq@(Equality _ _) -> Just eq
+                 _ -> Nothing -- filter out TagNotEqual
+     ; return(vs,reverse conds,eqPred,zs)}
 refineP _ _ = Nothing
 
 sigmaToRefinementRule name (Forall l) =
@@ -4725,7 +4728,9 @@ baseIsEquality (TyEx zs) vs =
      (us,(ps,t)) -> Nothing
 baseIsEquality x vs =
    case equalPartsM x of
-    Just(x,y) -> Just(vs,x,y)
+    Just(c,x,y) -> case c x y of
+                   Equality _ _ -> Just(vs,x,y)
+                   _ -> Nothing -- filter out TagNotEqual
     Nothing -> Nothing
 
 -- When adding axioms, we need to assume the type being defined
