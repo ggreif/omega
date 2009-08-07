@@ -281,11 +281,10 @@ equalityP _ = False
 makeRel tau =
   case equalPartsM tau of
     Nothing -> Rel tau
-    --Just(x,y) -> Equality x y
-    Just(x,y) -> TagNotEqual x y -- HACK
+    Just(c,x,y) -> c x y
 
---equalPartsM (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = return (x,y)
-equalPartsM (TyApp (TyApp (TyCon sx _ "DiffLabel" k) x) y) = return (x,y) -- HACK
+equalPartsM (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = return (Equality,x,y)
+equalPartsM (TyApp (TyApp (TyCon sx _ "DiffLabel" k) x) y) = return (TagNotEqual,x,y)
 equalPartsM _ = fail "Not an Equality"
 
 pred2Tau (Equality x y) = teq x y
