@@ -3985,7 +3985,7 @@ apply_mutVarSolve_ToSomeEqPreds preds =
 
 -- To add a list of bindings to the mutable unifier, run down
 -- the list overwriting the ref cells for each mutable type var.
--- we use unify (rather than unifyVar) because unification in
+-- We use unify (rather than unifyVar) because unification in
 -- earlier parts of the list may have overwritten a var further
 -- down the list, thus it needs to be zonked, before overwriting.
 

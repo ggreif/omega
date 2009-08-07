@@ -23,9 +23,9 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
             ,newLevel,unifyLevel,pruneLv,freshLevels,incLev,zonkLv,unifyLev,substLevel,instanLevel
             ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..),Zonk(..)
-            , zonkRho, zonkSigma, zonkTau
-            ,NameStore(..),useStoreName, showMdisp
-            , makeRel , equalPartsM
+            ,zonkRho,zonkSigma,zonkTau
+            ,NameStore(..),useStoreName,showMdisp
+            ,makeRel,equalPartsM
             ,failD,failK,failM,warnM,handleM,whenM
             ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
             ,extendref, failIfInConsistent
