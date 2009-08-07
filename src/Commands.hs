@@ -1,10 +1,9 @@
-
 module Commands (commands,dispatchColon,execExp,drawPatExp
                 ,letDec,commandF,notDup,foldF) where
 
-import Infer2(TcEnv(sourceFiles),varTyped,getVar,initTcEnv,getkind,parseAndKind,setCommand
-             ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
-             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC,getM)
+import Infer(TcEnv(sourceFiles),varTyped,getVar,initTcEnv,getkind,parseAndKind,setCommand
+            ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
+            ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC,getM)
 import RankN(pprint,warnM,showKinds)
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext

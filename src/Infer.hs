@@ -1,4 +1,4 @@
-module Infer2 where
+module Infer where
 
 import PureReadline
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
@@ -51,7 +51,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
-import Encoding2
+import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
@@ -4138,7 +4138,7 @@ a1 = [("a",12),("b",34),("c",23)]
 a2 = [("z",1),("a",22),("c",11),("e",99)]
 
 -- =====================================================
--- Display, Exhibit, and Show of datatypes in Infer2
+-- Display, Exhibit, and Show of datatypes in Infer
 -- To Display a name, prints it in a more concise manner by
 -- maintaining a list of concise names for each Var encountered.
 
