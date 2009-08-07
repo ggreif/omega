@@ -3,7 +3,7 @@ module LangEval(env0,vals,elaborate,Prefix(..),
 
 import Auxillary
 import Syntax
-import Encoding2
+import Encoding
 import Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..))
