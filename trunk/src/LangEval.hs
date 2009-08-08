@@ -597,7 +597,7 @@ vals =
  ,("sameLabel",(sameLabelV,gen(typeOf(undefined :: Label T1 -> Label T2 -> Either (Equal T1 T2)(DiffLabel T1 T2)))))
  ,("freshLabel",(freshLabelV,gen(typeOf(undefined:: IO HiddenLabel))))
  ,("newLabel",(newLabelV,gen(typeOf(undefined:: String -> HiddenLabel))))
- ,("LabelNotEq",(labelNotEqV,sigmaLabelNotEq))
+ ,("LabelNotEq",(labelNotEq,sigmaLabelNotEq))
  
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
  ,("run",(to run,runType))
@@ -918,8 +918,8 @@ freshLabelV = Vfio [] f where
 newLabelV =  Vprimfun "newLabel" (analyzeWith f) where
   f str = return(Vcon (Global "HideLabel",Ox) [Vlit (Tag (from str))])
 
-labelNotEqV = Vprimfun "LabelNotEqV" (analyzeWith f) where
-  f str = fail "\n*** Error ***\nLabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
+labelNotEq = Vprimfun "LabelNotEq" (analyzeWith f) where
+  f str = fail "\n*** Error ***\nLabelNotEq is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel."
 
 -- Type descriptions for Labels 
 
