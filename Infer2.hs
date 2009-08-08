@@ -2027,23 +2027,32 @@ unifyLevels xs = walk [] xs
         walk env ((x,y):more) = Nothing        
         
 ----------------------------------------------------------
+dupDiffLabel :: [Dec] -> [Dec] -> ([Dec],[a] -> [a],[b] -> [b])
+dupDiffLabel all [] = (all, id, id)
+dupDiffLabel all (d@(GADT loc True (Global "DiffLabel") tkind [] [] Ox):ds) =
+   (GADT loc True (Global "DiffLabel") tkind [con] [] Ox:all, tail, tail)
+     where con = (Z, Global "", [], [], TyApp'(TyApp'(TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u"))
+dupDiffLabel all (d:ds) = dupDiffLabel all ds
 
 checkDataDecs :: [Dec] -> TC (Sigma,Frag,[Dec])
 checkDataDecs decls =
-  do { ds <- transDataToGadt decls
+  do { ds0 <- transDataToGadt decls
+     ; let (ds, shorten, shorten') = dupDiffLabel ds0 ds0
      ; (ds2,env2,tyConMap) <- kindsEnvForDataBindingGroup ds   -- Step 1
-     ; let fakeDiffLabelCon = TyApp'(TyApp'(TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u")
-     ; let fakeDiffLabel = GADT Z True (Global "DiffLabel") (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0")))) [(Z, Global "", [], [], fakeDiffLabelCon)] [] Ox
-     ; warnM [Ds $ show fakeDiffLabel]
-     ; warnM [Ds $ show (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0"))))]
-     ; (fake:css) <- mapM (constrType env2) ((fakeDiffLabel, [], LvZero):ds2)    -- Step 2
-     --; warnM [Ds $ show ds2]
-     ; warnM [Ds $ show fake]
-     --; css <- mapM (constrType env2) ds2    -- Step 2
+     --; let fakeDiffLabelCon = TyApp'(TyApp'(TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u")
+     --; let fakeDiffLabel = GADT Z True (Global "DiffLabel") (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0")))) [(Z, Global "", [], [], fakeDiffLabelCon)] [] Ox
+     --; warnM [Ds $ show fakeDiffLabel]
+     --; warnM [Ds $ show (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0"))))]
+     --; (fake:css) <- mapM (constrType env2) ((fakeDiffLabel, [], LvZero):ds2)    -- Step 2
+     ; warnM [Ds $ show ds2]
+     --; warnM [Ds $ show fake]
+     ; css' <- mapM (constrType env2) ds2                      -- Step 2
+     ; let css = shorten css'
      -- After checking ConFuns, zonk and generalize Type Constructors
      ; (tyConMap2) <- mapM genTyCon tyConMap
      -- Then generalize the Constructor functions as well
-     ; (fakeF:conFunMap2) <- mapM (genConstrFunFrag tyConMap2) (fake:css) >>= return . concat
+     ; conFunMap2' <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
+     ; let conFunMap2 = shorten' conFunMap2'
      ; let ds3 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
            exts = filter (/= Ox) (map (\ (newd,synext,strata,isprop,zs) -> synext) css)
 
@@ -2061,9 +2070,9 @@ checkDataDecs decls =
      ; (types,values) <- lift conFunMap2 (map proj tyConMap2) []
      ; let makeRule (level,False,_,(Global c,(polyk,mod,_,_))) = return []
            makeRule (level,True,_,(Global c,(K lvs sigma,mod,_,_))) = sigmaToRule (Just Axiom) (c,sigma)
-     ; rules <- mapM makeRule (fakeF:conFunMap2)
+     ; rules <- mapM makeRule conFunMap2'
      -- ; let diffLabelRule = [(key,RW name key Axiom args2 preCond lhs rhs)]
-     ; let diffLabelRule = [("DiffLabel",RW "" "DiffLabel" Axiom [] [] (TagNotEqual undefined undefined) [])]
+     --; let diffLabelRule = [("DiffLabel",RW "" "DiffLabel" Axiom [] [] (TagNotEqual undefined undefined) [])]
      ; return(simpleSigma unitT,Frag values [] types [] [] (concat (rules)) exts,ds3)
      }
 
