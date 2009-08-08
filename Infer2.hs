@@ -1924,8 +1924,7 @@ useSigToKindArgs strata args sig = walk args sig where
 ----------------------------------------------------------------------------
 
 transDataToGadt ds = mapM getGADT ds
-  where getGADT (d@(GADT loc True (Global "DiffLabel") tkind [] [] Ox)) = warnM [Ds "YEEEA:", Ds $ show tkind] >> return d
-        getGADT (d@(GADT _ _ _ _ _ _ _)) = return d
+  where getGADT (d@(GADT _ _ _ _ _ _ _)) = return d
         getGADT (x@(Data _ _ _ nm _ _ cs derivs _)) =
            do { new <- data2gadt x
               ; if any eqConstrained cs
@@ -4221,11 +4220,11 @@ instance Exhibit (DispInfo Z) RWrule where
     displays d [Ds "Rewrite ", {- Dl vars ",", -}  Ds (nm++"("++key++"): ")
                ,Ds "[", Dl pre ", ", Ds "] => "
                ,Dd lhs,if b then Ds " -C-> " else Ds " --> ",Dd rhs]
-  exhibit d (RW "" key rclass vars pre lhs rhs) =
-    displays d [Ds (show rclass++" ("++key++"): ")
-               --,Dlg f "(exists " (foldr exf [] vars) "," ") "
-               ,Ds "[!=] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"
-              ]
+  --exhibit d (RW "" key rclass vars pre lhs rhs) =
+  --  displays d [Ds (show rclass++" ("++key++"): ")
+  --             --,Dlg f "(exists " (foldr exf [] vars) "," ") "
+  --             ,Ds "[!=] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"
+  --            ]
   exhibit d (RW nm key rclass vars pre lhs rhs) =
     displays d [Ds (show rclass++" "++nm++"("++key++"): ")
                ,Dlg f "(exists " (foldr exf [] vars) "," ") "
@@ -4818,7 +4817,7 @@ isProp propMaybe t =
    Just(sx,lev,s,k,xs) -> case propMaybe of
                     (Just new) | s==new -> return True
                     other -> do { env <- tcEnv;
-                                ; return(s == "DiffLabel" || Map.member s (rules env)) } -- ANOTHER UGLY HACK
+                                ; return(Map.member s (rules env)) } -- ANOTHER UGLY HACK
    Nothing -> return False
 
 computeTheorems :: [(Var,Maybe Exp)] -> TC [(String,RWrule)]
