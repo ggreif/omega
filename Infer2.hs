@@ -3134,6 +3134,8 @@ norm2Rho info (Rsum s r) =
 norm2Pred :: Info -> Pred -> TC(Pred,Unifier2)
 norm2Pred info (Equality x y) =
   do { ([a,b],u) <- norm2TauL info [x,y]; return(Equality a b,u)}
+norm2Pred info (TagNotEqual x y) =
+  do { ([a,b],u) <- norm2TauL info [x,y]; return(Equality a b,u)}
 norm2Pred info (Rel t) =
   do { (a,u) <- norm2Tau info t; return(Rel a,u) }
 

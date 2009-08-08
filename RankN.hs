@@ -2889,6 +2889,7 @@ sub2Pred :: Unifier2 -> [Pred] -> [Pred]
 sub2Pred ([],[]) xs = xs
 sub2Pred env xs = map f xs
    where f (Equality x y) = Equality (sub2Tau env x) (sub2Tau env y)
+         f (TagNotEqual x y) = TagNotEqual (sub2Tau env x) (sub2Tau env y)
          f (Rel ts) = makeRel (sub2Tau env ts)
 
 
