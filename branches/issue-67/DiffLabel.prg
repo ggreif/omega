@@ -8,3 +8,5 @@ prop C :: Tag ~> Row Tag * ~> * where
   Triv :: C a {}r
   Step :: DiffLabel a b -> C a r -> C a {b=Int; r}r
   Step' :: DiffLabel a b => C a r -> C a {b=Int; r}r
+
+prop (!=) (x::*1) (x::*1) = primitive

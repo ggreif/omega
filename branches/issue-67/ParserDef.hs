@@ -707,7 +707,8 @@ datadecl =
     ; (strata,prop) <- (reserved "data" >> return(0,False)) <|>
                        (reserved "prop" >> return(0,True)) <|>
                        (reserved "kind" >> return(1,False))
-    ; t <- name;
+    --; t <- name <|> (paren $ reservedOp "!=" >> return Global "!=");
+    ; t <- (name <|> (parens operator >>= return . Global))
     ; (explicit prop pos t) <|> (implicit prop pos strata t)
     }
 
