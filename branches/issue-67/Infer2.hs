@@ -2039,13 +2039,6 @@ checkDataDecs decls =
   do { ds0 <- transDataToGadt decls
      ; let (ds, shorten, shorten') = dupDiffLabel ds0 ds0
      ; (ds2,env2,tyConMap) <- kindsEnvForDataBindingGroup ds   -- Step 1
-     --; let fakeDiffLabelCon = TyApp'(TyApp'(TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u")
-     --; let fakeDiffLabel = GADT Z True (Global "DiffLabel") (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0")))) [(Z, Global "", [], [], fakeDiffLabelCon)] [] Ox
-     --; warnM [Ds $ show fakeDiffLabel]
-     --; warnM [Ds $ show (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0"))))]
-     --; (fake:css) <- mapM (constrType env2) ((fakeDiffLabel, [], LvZero):ds2)    -- Step 2
-     ; warnM [Ds $ show ds2]
-     --; warnM [Ds $ show fake]
      ; css' <- mapM (constrType env2) ds2                      -- Step 2
      ; let css = shorten css'
      -- After checking ConFuns, zonk and generalize Type Constructors
