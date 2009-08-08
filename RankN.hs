@@ -284,7 +284,7 @@ makeRel tau =
     Just(c,x,y) -> c x y
 
 equalPartsM (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = return (Equality,x,y)
-equalPartsM (TyApp (TyApp (TyCon sx _ "DiffLabel" k) x) y) = return (TagNotEqual,x,y)
+--equalPartsM (TyApp (TyApp (TyCon sx _ "DiffLabel" k) x) y) = return (TagNotEqual,x,y)
 equalPartsM _ = fail "Not an Equality"
 
 pred2Tau (Equality x y) = teq x y
