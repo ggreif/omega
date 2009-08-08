@@ -3254,7 +3254,7 @@ shttL f xs = plistf f "[" xs "," "]"
 instance Sht Kind where
   shtt (MK s) = shtt s
 instance Sht Name => Sht PolyKind where
-  shtt (K lvs z) = "(level "++shttL shtt lvs ++"."++shtt z++")"
+  shtt (K lvs z) = (if null lvs then "(" else "(level "++shttL shtt lvs ++".")++shtt z++")"
 instance Sht Name where
   shtt x = show x
 
@@ -3827,7 +3827,7 @@ instance Show Kind  where
   show x = y where (disp2,y) = exhibit () x
 
 instance Show PolyKind  where
-  show (K lvs x) = "(level "++vs++" . "++y ++")"
+  show (K lvs x) = (if null lvs then "(" else "(level "++vs++" . ")++y ++")"
    where (disp2,y) = exhibit () x
          vs = plist "" lvs " " ""
 
