@@ -648,7 +648,7 @@ importDec =
         oper = do { x <- parens operator; return(VarImport (Global x))}
         deriv = do { try(symbol "syntax")
                    ; Global n <- name
-                   ; Global tag <- parens (name)
+                   ; Global tag <- parens name
                    ; return (SyntaxImport n tag)}
 
 

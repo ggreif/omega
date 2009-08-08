@@ -2543,7 +2543,7 @@ argument q =
 
 
 typN :: Parser PT
-typN = allTyp <|> arrTyp <|> parens (typN)
+typN = allTyp <|> arrTyp <|> parens typN
 
 ------------------------------------------------
 

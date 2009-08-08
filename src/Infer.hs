@@ -4205,8 +4205,7 @@ instance Exhibit (DispInfo Z) RWrule where
   exhibit d (RW nm key rclass vars pre lhs rhs) =
     displays d [Ds (show rclass++" "++nm++"("++key++"): ")
                ,Dlg f "(exists " (foldr exf [] vars) "," ") "
-               ,Ds "[", Dl pre ", ", Ds "] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"
-              ]
+               ,Ds "[", Dl pre ", ", Ds "] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"]
    where f d (nm,k) = useStoreName nm k id d
          exf (nm,k,Ex) xs = (nm,k):xs
          exf (_,_,All) xs = xs
@@ -4728,7 +4727,7 @@ baseIsEquality x vs =
 
 -- When adding axioms, we need to assume the type being defined
 -- is a proposition, since it hasn't been added to the list of
--- propositions yet, so we must tell isProp this. let the theorem
+-- propositions yet, so we must tell isProp this. Let the theorem
 -- be a type like: dom1 -> dom2 -> rng,   where rng = (T x y z)
 
 root thClass rng =
