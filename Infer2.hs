@@ -1924,7 +1924,8 @@ useSigToKindArgs strata args sig = walk args sig where
 ----------------------------------------------------------------------------
 
 transDataToGadt ds = mapM getGADT ds
-  where getGADT (d@(GADT _ _ _ _ _ _ _)) = return d
+  where getGADT (d@(GADT loc True (Global "DiffLabel") tkind [] [] Ox)) = warnM [Ds "YEEEA:", Ds $ show tkind] >> return d
+        getGADT (d@(GADT _ _ _ _ _ _ _)) = return d
         getGADT (x@(Data _ _ _ nm _ _ cs derivs _)) =
            do { new <- data2gadt x
               ; if any eqConstrained cs
@@ -2031,7 +2032,14 @@ checkDataDecs :: [Dec] -> TC (Sigma,Frag,[Dec])
 checkDataDecs decls =
   do { ds <- transDataToGadt decls
      ; (ds2,env2,tyConMap) <- kindsEnvForDataBindingGroup ds   -- Step 1
-     ; css <- mapM (constrType env2) ds2                       -- Step 2
+     ; let fakeDiffLabelCon = TyApp'(TyApp'(TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u")
+     ; let fakeDiffLabel = GADT Z True (Global "DiffLabel") (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0")))) [(Z, Global "", [], [], fakeDiffLabelCon)] [] Ox
+     ; warnM [Ds $ show fakeDiffLabel]
+     ; warnM [Ds $ show (Karrow' (TyVar' "Tag") (Karrow' (TyVar' "Tag") (Star' 0 (Just "0"))))]
+     ; (fake:css) <- mapM (constrType env2) ((fakeDiffLabel, [], LvZero):ds2)    -- Step 2
+     --; warnM [Ds $ show ds2]
+     ; warnM [Ds $ show fake]
+     --; css <- mapM (constrType env2) ds2    -- Step 2
      -- After checking ConFuns, zonk and generalize Type Constructors
      ; (tyConMap2) <- mapM genTyCon tyConMap
      -- Then generalize the Constructor functions as well
@@ -2054,7 +2062,9 @@ checkDataDecs decls =
      ; let makeRule (level,False,_,(Global c,(polyk,mod,_,_))) = return []
            makeRule (level,True,_,(Global c,(K lvs sigma,mod,_,_))) = sigmaToRule (Just Axiom) (c,sigma)
      ; rules <- mapM makeRule conFunMap2
-     ; return(simpleSigma unitT,Frag values [] types [] [] (concat rules) exts,ds2)
+     -- ; let diffLabelRule = [(key,RW name key Axiom args2 preCond lhs rhs)]
+     ; let diffLabelRule = [("DiffLabel",RW "" "DiffLabel" Axiom [] [] (TagNotEqual undefined undefined) [])]
+     ; return(simpleSigma unitT,Frag values [] types [] [] (concat (rules)) exts,ds2)
      }
 
 -- given:  data T:: *n where ...
@@ -4209,6 +4219,11 @@ instance Exhibit (DispInfo Z) RWrule where
     displays d [Ds "Rewrite ", {- Dl vars ",", -}  Ds (nm++"("++key++"): ")
                ,Ds "[", Dl pre ", ", Ds "] => "
                ,Dd lhs,if b then Ds " -C-> " else Ds " --> ",Dd rhs]
+  exhibit d (RW "" key rclass vars pre lhs rhs) =
+    displays d [Ds (show rclass++" ("++key++"): ")
+               --,Dlg f "(exists " (foldr exf [] vars) "," ") "
+               ,Ds "[!=] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"
+              ]
   exhibit d (RW nm key rclass vars pre lhs rhs) =
     displays d [Ds (show rclass++" "++nm++"("++key++"): ")
                ,Dlg f "(exists " (foldr exf [] vars) "," ") "
