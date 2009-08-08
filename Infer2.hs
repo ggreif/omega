@@ -2043,8 +2043,8 @@ checkDataDecs decls =
      -- After checking ConFuns, zonk and generalize Type Constructors
      ; (tyConMap2) <- mapM genTyCon tyConMap
      -- Then generalize the Constructor functions as well
-     ; conFunMap2 <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
-     ; let ds2 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
+     ; (fakeF:conFunMap2) <- mapM (genConstrFunFrag tyConMap2) (fake:css) >>= return . concat
+     ; let ds3 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
            exts = filter (/= Ox) (map (\ (newd,synext,strata,isprop,zs) -> synext) css)
 
            lift [] types values = return (types,values)
@@ -2061,10 +2061,10 @@ checkDataDecs decls =
      ; (types,values) <- lift conFunMap2 (map proj tyConMap2) []
      ; let makeRule (level,False,_,(Global c,(polyk,mod,_,_))) = return []
            makeRule (level,True,_,(Global c,(K lvs sigma,mod,_,_))) = sigmaToRule (Just Axiom) (c,sigma)
-     ; rules <- mapM makeRule conFunMap2
+     ; rules <- mapM makeRule (fakeF:conFunMap2)
      -- ; let diffLabelRule = [(key,RW name key Axiom args2 preCond lhs rhs)]
      ; let diffLabelRule = [("DiffLabel",RW "" "DiffLabel" Axiom [] [] (TagNotEqual undefined undefined) [])]
-     ; return(simpleSigma unitT,Frag values [] types [] [] (concat (rules)) exts,ds2)
+     ; return(simpleSigma unitT,Frag values [] types [] [] (concat (rules)) exts,ds3)
      }
 
 -- given:  data T:: *n where ...
