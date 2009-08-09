@@ -2030,7 +2030,8 @@ dupDiffLabel :: [Dec] -> [Dec] -> ([Dec],[a] -> [a],[b] -> [b])
 dupDiffLabel all [] = (all, id, id)
 dupDiffLabel all (d@(GADT loc True (Global "DiffLabel") tkind [] [] Ox):ds) =
    (GADT loc True (Global "DiffLabel") tkind [con] [] Ox:all, tail, tail)
-     where con = (Z, Global "", [], [], TyApp'(TyApp'(TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u"))
+     where con = (Z, Global "", [], [prec], TyApp'(TyApp' (TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u"))
+           prec = TagNotEqual' (TyVar' "t") (TyVar' "u")
 dupDiffLabel all (d:ds) = dupDiffLabel all ds
 
 checkDataDecs :: [Dec] -> TC (Sigma,Frag,[Dec])

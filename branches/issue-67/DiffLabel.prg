@@ -9,4 +9,8 @@ prop C :: Tag ~> Row Tag * ~> * where
   Step :: DiffLabel a b -> C a r -> C a {b=Int; r}r
   Step' :: DiffLabel a b => C a r -> C a {b=Int; r}r
 
-prop (!=) (x::*1) (x::*1) = primitive
+--prop (!=) (x::*1) (x::*1) = primitive
+
+--prop (!=) :: *1 ~> *1 ~> *0 where
+--  Really :: (!=) a b
+

@@ -2011,7 +2011,7 @@ extract comp = do { (a,eqs) <- extractAccum comp
 --------------------------------------------------------------------------
 -- Parsing types. Note that we parse type PT, and then translate
 
-data PPred = Equality' PT PT |  Rel' String PT
+data PPred = Equality' PT PT | TagNotEqual' PT PT | Rel' String PT
 
 data PT
   = TyVar' String
@@ -2059,6 +2059,7 @@ definesValueConstr x = False
 
 instance Eq PPred where
   (Equality' pt1 pt2)==(Equality' pt3 pt4) = pt1==pt3 && pt2==pt4
+  (TagNotEqual' pt1 pt2)==(TagNotEqual' pt3 pt4) = pt1==pt3 && pt2==pt4
   (Rel' s1 pt1) == (Rel' s2 pt2) = s1==s2 && pt1==pt2
   _ == _  = False
 
@@ -2112,12 +2113,16 @@ getFree bnd (Forallx q xs eqs t) = f bnd xs t `unionTwo` g bnd xs eqs
         g bnd [] ((Equality' a b):xs) = (getFree bnd a) `unionTwo`
                                         (getFree bnd b) `unionTwo`
                                         g bnd [] xs
+        g bnd [] ((TagNotEqual' a b):xs) = (getFree bnd a) `unionTwo`
+                                        (getFree bnd b) `unionTwo`
+                                        g bnd [] xs
         g bnd [] ((Rel' nm ts):xs) = (getFree bnd ts)  `unionTwo` (g bnd [] xs)
         g bnd _ [] = ([],[])
 
         h bnd t free = unionTwo (getFree bnd t) free
 
 getFreePred bnd (Equality' x y) = getFree bnd x `unionTwo` getFree bnd y
+getFreePred bnd (TagNotEqual' x y) = getFree bnd x `unionTwo` getFree bnd y
 getFreePred bnd (Rel' nm ts) =  getFree bnd ts
 
 getFreePredL bnd xs = foldr g ([],[]) xs
@@ -2147,6 +2152,7 @@ getF union (Forallx q xs eqs t) = f xs t `union` g eqs
         f ((s,a,q):xs) t = (getF union a) `union` (f xs t)
         g [] = ([],[])
         g ((Equality' a b):xs) = (getF union a) `union` (getF union b) `union` g xs
+        g ((TagNotEqual' a b):xs) = (getF union a) `union` (getF union b) `union` g xs
         g ((Rel' nm ts):xs) =(getF union ts) `union` (g xs)
 
 
@@ -2194,6 +2200,7 @@ subPT sigma fresh x =
        ; let sigma1 = xs1 ++ sigma
              rcall1 x = subPT sigma1 fresh x
              f (Equality' x y) = do { a <- rcall1 x; b <- rcall1 y; return(Equality' a b)}
+             f (TagNotEqual' x y) = do { a <- rcall1 x; b <- rcall1 y; return(TagNotEqual' a b)}
              f (Rel' nm ts) = do { ys <- rcall1 ts; return(Rel' nm ys)}
        ; eqs1 <- mapM f eqs
        ; t1 <- rcall1 t
@@ -2227,11 +2234,13 @@ ptsub sigma x =
   (Forallx quant xs eqs t) ->
    let sub1 (nm,kind,quant) = (nm,ptsub sigma kind,quant)
        sub2 (Equality' t1 t2) = Equality' (rcall t1) (rcall t2)
+       sub2 (TagNotEqual' t1 t2) = TagNotEqual' (rcall t1) (rcall t2)
        sub2 (Rel' nm ts) = Rel' nm (rcall ts)
     in Forallx quant (map sub1 xs) (map sub2 eqs) (rcall t)
   (PolyLevel ss t) -> PolyLevel ss (rcall t)
 
 ppredsub sub (Equality' x y) = Equality' (ptsub sub x) (ptsub sub y)
+ppredsub sub (TagNotEqual' x y) = TagNotEqual' (ptsub sub x) (ptsub sub y)
 ppredsub sub (Rel' x y) = Rel' x (ptsub sub y)
 
 --------------------------------------------------------------------
@@ -2257,6 +2266,11 @@ toEqs env ((Equality' a b):xs) =
      ; n <- toTau env b
      ; ys <- toEqs env xs
      ; return((Equality m n):ys) }
+toEqs env ((TagNotEqual' a b):xs) =
+  do { m <- toTau env a
+     ; n <- toTau env b
+     ; ys <- toEqs env xs
+     ; return((TagNotEqual m n):ys) }
 toEqs env ((Rel' nm ts):xs) =
   do { zs <- toTau env ts
      ; ys <- toEqs env xs
@@ -2485,7 +2499,8 @@ simpletyp =
    <|> try (do { x <- parens(symbol "->" <|>             -- (->) (+) (,) and (==)
                              symbol "+"  <|>
                              symbol ","  <|>
-                             symbol "==")
+                             symbol "==" <|>
+                             symbol "!=")
                ; return(TyCon' ("("++x++")") Nothing)})
 
 --   <|> try(do {ts <- parens(sepBy1 typN (symbol ","))  -- (t,t,t)
@@ -2692,6 +2707,7 @@ instance (NameStore d,Exhibit d a, Exhibit d b) => Exhibit d (a,b) where
 
 instance NameStore d => Exhibit d PPred where
   exhibit d (Equality' x y) = (d,"Equal "++show x++" "++show y)
+  exhibit d (TagNotEqual' x y) = (d,"(!=) "++show x++" "++show y)
   exhibit d (Rel' nm ts) = (d,show ts)
 
 instance NameStore d => Exhibit d PT where
@@ -3796,6 +3812,9 @@ toPT d (TyEx ys) = (dn,Forallx Ex vs preds body)
         (dn,vs) = toL toTrip d2 args
 
 toPPred d (Equality x y) = (d2,Equality' a b)
+  where (d1,a) = toPT d x
+        (d2,b) = toPT d1 y
+toPPred d (TagNotEqual x y) = (d2,TagNotEqual' a b)
   where (d1,a) = toPT d x
         (d2,b) = toPT d1 y
 toPPred d (Rel x) = (d1,Rel' "" a) where (d1,a) = toPT d x
