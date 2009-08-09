@@ -1,3 +1,5 @@
+import "LangPrelude.prg"
+
 prop A :: * where
   Try :: DiffLabel a b => A
 
@@ -13,4 +15,10 @@ prop C :: Tag ~> Row Tag * ~> * where
 
 --prop (!=) :: *1 ~> *1 ~> *0 where
 --  Really :: (!=) a b
+
+test1 = Step d Triv where
+          d = case sameLabel `a `b of
+              R d -> d
+
+test2 = Step' Triv
 
