@@ -1,0 +1,25 @@
+#summary The big task of adding type-based termination analysis to Ωmega.
+#labels Phase-Design
+
+= Introduction =
+
+One of the big gaps in Ωmega's feature set is that the functions that create proof objects are not checked for termination. There is nothing that would hinder one to lie in a proof by mentioning _undefined_ or leave off a case leg or recurse indefinitely. This makes the whole logic fragment unreliable.
+
+Many researchers have put their teeth into this subject and some practical solutions emerge. The most promising solutions seem to pick _sized types_ as a vehicle. The essence of this approach is that terminating algorithms (after all) recurse on a smaller portion of the data they have been invoked with.
+
+= Literature =
+
+Here comes a selection of references to some current ideas in type based termination checking.
+
+  * [http://repositorium.sdum.uminho.pt/bitstream/1822/1977/1/TBterm.pdf Gilles Barthe et al. - 2004]
+  * [http://perso.ens-lyon.fr/colin.riba/papers/exprod.pdf Gilles Barthe et al. - 2008]
+  * [http://arxiv.org/pdf/0804.0876v2 Andreas Abel - 2008]
+
+= Slide Shows =
+
+  * [http://www.tcs.informatik.uni-muenchen.de/~abel/talkITU07.pdf]
+  * [http://www.tcs.informatik.uni-muenchen.de/~mhofmann/appsem2//LectureNotes/barthe-lec3.pdf]
+
+= Implementation =
+
+Some initial work is checked in by Tim.
