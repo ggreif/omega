@@ -15,6 +15,8 @@ Here comes a selection of references to some current ideas in type based termina
   * [http://perso.ens-lyon.fr/colin.riba/papers/exprod.pdf Gilles Barthe et al. - 2008]
   * [http://arxiv.org/pdf/0804.0876v2 Andreas Abel - 2008]
 
+_See also references at the end of above papers._
+
 = Slide Shows =
 
   * [http://www.tcs.informatik.uni-muenchen.de/~abel/talkITU07.pdf]
@@ -22,4 +24,4 @@ Here comes a selection of references to some current ideas in type based termina
 
 = Implementation =
 
-Some initial work is checked in by Tim.
+[http://code.google.com/p/omega/source/browse/trunk/work/LabelExpsWithTerminationWitnesses.prg Some initial work] is checked in by Tim.
