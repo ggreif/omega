@@ -9,12 +9,12 @@ Back when I had time to participate in ICFP contests, there was a stack based la
 
 Consider the the following faculty function:
 {{{
-fak n = if n == 1 then 1 else fak (n - 1)
+fak n = if n == 1 then 1 else n * fak (n - 1)
 }}}
 
 The version without mentioning _fak_ in the body would be:
 {{{
-fak f n = if n == 1 then 1 else f (n - 1)
+fak f n = if n == 1 then 1 else n * f f (n - 1)
 }}}
 
 Now, you have to call this function in a different way:
@@ -29,3 +29,16 @@ So the upper _fak_ is equivalent to the lower _fak fak_.
 
 The above trick does work in a dynamically typed language but, traditional static type systems fail to assign a type to the second _fak_, as the type would be infinite.
 My crazy idea is to allow infinite types in special cases. The below sections try to elaborate this idea. But be warned: it may well lead to nothing.
+
+== The Quest for the Infinite Type ==
+
+Now let's try to determine a type for the second _fak_ (my running theme). In first approximation it would be
+{{{
+fak :: (a -> Int -> Int) -> Int -> Int
+}}}
+
+But of course this would let us only compute _fak fak 2_ but not _fak fak 3_! Why? Because _a_ does not correctly type the first argument in the second unfolding.
+
+== Making the Jump ==
+
+We have to let loose to find the correct type. Because the unfolding may happen any times, _a_ must be infinitely expanded to be _a -> Int -> Int_ (note that this again contains an _a_!).
