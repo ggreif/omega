@@ -3,7 +3,7 @@
 
 = Background =
 
-Back when I had time to participate in ICFP contests, there was a stack based language for describing scenes to be rendered wit a ray tracer. I wrote a small compiler for this language and it was much fun. One of the interesting things was that recursion was not possible by calling the function to defined but you could invoke functions that were passed to them as arguments. So a simple trick was employed to get the _effect_ of recursion.
+Back when I had time to participate in ICFP contests, there was a stack based language for describing scenes to be rendered with a ray tracer. I wrote a small compiler for this language and it was much fun. One of the interesting things was that recursion was not possible by calling the function being defined but you could invoke functions that were passed to them as arguments. So a simple trick was employed to get the _effect_ of recursion.
 
 = The Trick =
 
@@ -12,7 +12,7 @@ Consider the the following faculty function:
 fak n = if n == 1 then 1 else fak (n - 1)
 }}}
 
-The version without mentioning fak in the body would be:
+The version without mentioning _fak_ in the body would be:
 {{{
 fak f n = if n == 1 then 1 else f (n - 1)
 }}}
@@ -29,4 +29,3 @@ So the upper _fak_ is equivalent to the lower _fak fak_.
 
 The above trick does work in a dynamically typed language but, traditional static type systems fail to assign a type to the second _fak_, as the type would be infinite.
 My crazy idea is to allow infinite types in special cases. The below sections try to elaborate this idea. But be warned: it may well lead to nothing.
-
