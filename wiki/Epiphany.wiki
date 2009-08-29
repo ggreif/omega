@@ -3,7 +3,7 @@
 
 = Background =
 
-Back when I had time to participate in ICFP contests, there was a stack based language for describing scenes to be rendered with a ray tracer. I wrote a small compiler for this language and it was much fun. One of the interesting things was that recursion was not possible by calling the function being defined but you could invoke functions that were passed to them as arguments. So a simple trick was employed to get the _effect_ of recursion.
+Back when I had time to participate in [http://www.cs.cornell.edu/icfp/task.htm ICFP contests], there was a stack based language for describing scenes to be rendered with a ray tracer. I wrote a small compiler for this language and it was much fun. One of the interesting things was that recursion was not possible by calling the function being defined but you could invoke functions that were passed to them as arguments. So a simple trick was employed to get the _effect_ of recursion.
 
 = The Trick =
 
