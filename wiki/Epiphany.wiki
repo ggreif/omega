@@ -42,3 +42,7 @@ But of course this would let us only compute _fak fak 2_ but not _fak fak 3_! Wh
 == Making the Jump ==
 
 We have to let loose to find the correct type. Because the unfolding may happen any times, _a_ must be infinitely expanded to be _a -> Int -> Int_ (note that this again contains an _a_!).
+
+== And Sized Types? ==
+
+We can try to extend this scheme to size types.
