@@ -53,9 +53,10 @@ conv (1 + n)v = 1 + conv n
 }}}
 We can interpret this function as a family of distinct functions indexed by _n_ and each being monomorphic:
 {{{
-^conv^n :: Nat' n -> Int
-^conv^0 0v = 0
-^conv^1+n (1 + n)v = 1 + ^conv^n n
+conv{0} :: Nat' 0t -> Int
+conv{0} 0v = 0
+conv{n} :: Nat' n -> Int
+conv{1+n} (1 + n)v = 1 + conv{n} n
 }}}
 
 
