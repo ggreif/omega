@@ -45,4 +45,18 @@ We have to let loose to find the correct type. Because the unfolding may happen 
 
 == And Sized Types? ==
 
-We can try to extend this scheme to size types.
+We can try to extend this scheme to size types. Let's change our running example to the conversion _Nat' n -> Int_. Here is the code:
+{{{
+conv :: Nat' n -> Int
+conv 0v = 0
+conv (1 + n)v = 1 + conv n
+}}}
+We can interpret this function as a family of distinct functions indexed by _n_ and each being monomorphic:
+{{{
+^conv^n :: Nat' n -> Int
+^conv^0 0v = 0
+^conv^1+n (1 + n)v = 1 + ^conv^n n
+}}}
+
+
+== Mutual recursion ==
