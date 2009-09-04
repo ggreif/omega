@@ -4818,7 +4818,7 @@ isProp propMaybe t =
    Just(sx,lev,s,k,xs) -> case propMaybe of
                     (Just new) | s==new -> return True
                     other -> do { env <- tcEnv;
-                                ; return(Map.member s (rules env)) } -- ANOTHER UGLY HACK
+                                ; return(Map.member s (rules env)) }
    Nothing -> return False
 
 computeTheorems :: [(Var,Maybe Exp)] -> TC [(String,RWrule)]
