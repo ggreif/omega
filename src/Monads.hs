@@ -6,6 +6,7 @@ import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
 import Auxillary(Loc(..),displays)
 import IO(hFlush,stdout)
+import ParserAll
 
 -------------------------------------------------------------
 
