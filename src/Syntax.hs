@@ -1,4 +1,9 @@
-
+{-# LANGUAGE ExistentialQuantification
+  , FlexibleInstances
+  , FlexibleContexts
+  , TypeSynonymInstances
+  , UndecidableInstances
+  #-}
 module Syntax where
 
 import Bind

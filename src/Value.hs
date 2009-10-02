@@ -1,4 +1,6 @@
-
+{-# LANGUAGE FlexibleContexts
+  , UndecidableInstances
+  #-}
 module Value where
 import Auxillary(plist,plistf)
 import Monads(FIO,fio,HasNext(..))

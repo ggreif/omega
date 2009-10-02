@@ -1,4 +1,4 @@
-
+{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 module Bind(Fresh(..),Freshen(..),Swap(..),Name,Perm
            ,Bind,bind
            ,swapM, swapsM, swapsMf

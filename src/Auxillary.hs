@@ -1,4 +1,6 @@
-
+{-# LANGUAGE MultiParamTypeClasses
+  , ExistentialQuantification
+  #-}
 module Auxillary where
 
 import Char(isAlpha)

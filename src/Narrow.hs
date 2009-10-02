@@ -1,4 +1,6 @@
-
+{-# LANGUAGE FlexibleContexts
+  , FlexibleInstances
+  #-}
 module Narrow(narr,defTree,Check(..),matches) where
 
 import List(union,find,partition)

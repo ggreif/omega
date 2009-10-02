@@ -1,4 +1,7 @@
-
+{-# LANGUAGE MultiParamTypeClasses
+  , FunctionalDependencies
+  , FlexibleInstances
+  #-}
 module Monads where
 
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)

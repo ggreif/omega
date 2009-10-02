@@ -1,4 +1,7 @@
-
+{-# LANGUAGE MultiParamTypeClasses
+  , FlexibleInstances
+  , FlexibleContexts
+  #-}
 module NarrowData where
 
 import System.IO.Unsafe(unsafePerformIO)
