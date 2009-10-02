@@ -1,3 +1,10 @@
+{-# LANGUAGE ScopedTypeVariables
+  , MultiParamTypeClasses
+  , FlexibleContexts
+  , FlexibleInstances
+  , UndecidableInstances
+  , TypeSynonymInstances
+  #-}
 module RankN where
 
 import Bind

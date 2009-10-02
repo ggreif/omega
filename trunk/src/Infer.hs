@@ -1,3 +1,7 @@
+{-# LANGUAGE MultiParamTypeClasses
+  , ScopedTypeVariables
+  , FlexibleInstances
+  #-}
 module Infer where
 
 import PureReadline
