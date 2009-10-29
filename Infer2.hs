@@ -3929,10 +3929,18 @@ ruleStep (truths,q:questions,open,u0) =
 
 
 goodMatch good (truths,precond,result,open,unifier) =
-  do { ans <- solv 4 [(truths,map (unRel 5) precond,open,unifier)]
+  do { warnM [Ds "\ngoodMatch precond\n  ",Dl precond "\n  "]
+     ; warnM [Ds "\ngoodMatch truths\n  ",Dl truths "\n  "]
+     ; warnM [Ds "\ngoodMatch open\n  ",Dl open "\n  "]
+     ; warnM [Ds "\ngoodMatch unifier\n  ",Dd unifier]
+     ; let precond' = filter nonInequality precond
+     ; ans <- solv 4 [(truths,map (unRel 5) precond',open,unifier)]
      ; case ans of
          [(truths2,[],nms,u)] -> return((truths2,map (sub2Tau u) (map (unRel 6) result),open,u):good)
          _ -> return good}
+
+nonInequality (TagNotEqual _ _) = False
+nonInequality _ = True
 
 unRel n (Rel x) = x
 unRel n x = error ("\nunRel applied to non Rel: "++show x++" "++show n)
