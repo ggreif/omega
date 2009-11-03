@@ -1,6 +1,6 @@
 
 
-module Toplevel where
+module Toplevel (omega) where
 
 import Time
 import Version(version,buildtime)
