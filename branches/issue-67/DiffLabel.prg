@@ -20,5 +20,5 @@ test1 = Step d Triv where
           d = case sameLabel `a `b of
               R d -> d
 
-test2 = Step' Triv
+test2 = Step' (Step' Triv)
 
