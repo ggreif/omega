@@ -1,4 +1,4 @@
-module Toplevel where
+module Toplevel (omega) where
 
 import Time
 import Version(version,buildtime)
@@ -160,7 +160,7 @@ display ss = plistf id "(" ss " " ")"
 -- Read a [Dec] from a file, then split it into imports and
 -- binding groups, uses elabDs to do the work.
 
-elabFile :: String -> (TcEnv) -> FIO(TcEnv)
+elabFile :: String -> TcEnv -> FIO(TcEnv)
 elabFile file (tenv) =
    do { all <- parseDecs file
       ; let (imports,ds) = partition importP all

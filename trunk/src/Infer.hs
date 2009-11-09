@@ -4048,7 +4048,7 @@ unique x none onef many =
   case x of
    [] -> none
    [ans] -> onef ans
-   (y:ys) -> many
+   (_:_) -> many
 
 -- Given an ambiguous list of solutions to some questions, some may be
 -- refutable, so we should filter them out. If all are refutable, then
