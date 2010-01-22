@@ -492,6 +492,7 @@ equalKind = K [](Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
 intT =    TyCon Ox (lv 1) "Int" (poly star)
 charT =   TyCon Ox (lv 1) "Char" (poly star)
 boolT =   TyCon Ox (lv 1) "Bool" (poly star)
+orderingT = TyCon Ox (lv 1) "Ordering" (poly star)
 listT =   TyCon Ox (lv 1) "[]" (poly star_star)
 parserT = TyCon Ox (lv 1) "Parser" (poly star_star)
 unitT =   TyCon Ox (lv 1) "()" (poly star)
@@ -499,7 +500,7 @@ symbolT = TyCon Ox (lv 1) "Symbol" (poly star)
 atomT =   TyCon Ox (lv 1) "Atom" kind4Atom
 maybeT =  TyCon Ox (lv 1) "Maybe" (poly star_star)
 monadT =  TyCon Ox (lv 1) "Monad" (poly (karr (star_star) star))
-pairT =   TyCon (Px("","(,)")) (lv 1) "(,)" (poly (karr star (star_star)))
+pairT =   TyCon pairx (lv 1) "(,)" (poly (karr star (star_star)))
 sumT =    TyCon Ox (lv 1) "(+)" (poly (karr star (star_star)))
 codeT =   TyCon Ox (lv 1) "Code" (poly star_star)
 ioT =     TyCon Ox (lv 1) "IO" (poly star_star)
@@ -2025,6 +2026,11 @@ data PT
   | Ext (Extension PT)
   | PolyLevel [String] PT
 
+arityPT:: PT -> Int
+arityPT (Rarrow' x y) = 1 + arityPT y
+arityPT (Karrow' x y) = 1 + arityPT y
+arityPT x = 0
+
 -------------------------------------------
 
 getLevel name (Star' n Nothing) vs = return (lv n)
@@ -2780,8 +2786,8 @@ showp x = show x
 -- show instances
 
 isRow :: Tau -> Bool
-isRow (TyApp (TyApp (TyCon sx _ "RCons" _) x) y) = True
-isRow (TyCon sx _ "RNil" _) = True
+isRow (TyApp (TyApp (TyCon sx _ c _) x) y) | recordCons c sx = True
+isRow (TyCon sx _ c _) | recordNil c sx = True
 isRow _ = False
 
 rowElem :: Tau -> [Tau] -> Either [Tau] ([Tau],Tau)
@@ -3400,10 +3406,10 @@ exhibitpar :: Exhibit a Tau => a -> Tau -> (a,String)
 exhibitpar xs z@(TyApp (TyCon sx _ "[]" _) x) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyCon (Lx _) _ _ _) _) _) = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyApp (TyCon (Rx _) _ _ _) _) _) _) = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyCon (Px _) _ _ _) _) _) = exhibit xs z
-exhibitpar xs z@(TyApp (TyCon (Nx _) _ _ _) _) = exhibit xs z
+exhibitpar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | listCons c lx  = exhibit xs z
+exhibitpar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | recordCons c rx = exhibit xs z
+exhibitpar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairExt c px = exhibit xs z
+exhibitpar xs z@(TyApp (TyCon nx _ c _) _) | natSucc c nx = exhibit xs z
 exhibitpar xs  z | isRow z = exhibit xs z
 exhibitpar xs x@(Karr _ _) = (ys,"("++ ans ++ ")")
   where (ys,ans) = exhibit xs x
@@ -3515,24 +3521,33 @@ instance NameStore d => Exhibit d Name where
 postscript "" = ""
 postscript a = a
 
-exSynNat d (TyApp (TyCon (Nx(key,zero,succ)) _ c k) x)| succ == c = f d 1 x
-  where f d n (TyCon (Nx(key,zero,succ)) _ c k)| zero == c = (d,show n++ postscript key)
-        f d n (TyApp (TyCon (Nx(key,zero,succ)) _ c k) x)| succ == c = f d (n+1) x
+exSynNat d (TyApp (TyCon synext _ c k) x)| natSucc c synext = f d 1 x
+  where f d n (TyCon ext _ c k)          | natZero c ext    = (d,show n++ postscript (synKey ext))
+        f d n (TyApp (TyCon ext _ c k) x)| natSucc c ext    = f d (n+1) x
         f d n v = let (d2,ans) = exhibit d v
-                  in (d2,"("++show n++"+"++ans++ ")" ++ postscript key)
+                  in (d2,"("++show n++"+"++ans++ ")" ++ postscript (synKey synext))
 exSynNat d v = (d,"Ill-formed Natural number extension: "++shtt v)
 
+exSynTick d (TyApp (TyCon synext _ c k) x)| tickSucc c synext = f d 1 x
+  where f d n (TyApp (TyCon ext _ c k) x) | tickSucc c ext    = f d (n+1) x
+        f d n v = let (d2,ans) = exhibit d v
+                  in (d2,"("++ ans ++"`"++ show n ++ ")" ++ postscript (synKey synext))
+exSynTick d v = (d,"Ill-formed Tick extension: "++shtt v)
 
-exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) tag) x) y))
-    | c1==cons =(d2,"{" ++ ans ++ "}"++postscript key)
+
+
+
+
+exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)) | recordCons c1 ext
+      = (d2,"{" ++ ans ++ "}"++postscript (synKey ext))
   where (d2,ans) = f d t
-        f d (TyCon (Rx(key,nil,cons)) _ c k)| nil == c = (d,"")
-        f d (TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) tag) x) y)| c1==cons =
+        f d (TyCon ext _ c k)| recordNil c ext = (d,"")
+        f d (TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)| recordCons c1 ext =
           let (d0,tags) = exhibit d tag
               (d1,elem) = exhibit d0 x
           in case y of
-              (TyCon (Rx(_,nil,_)) _ c2 _) | c2==nil -> (d1,tags++"="++elem)
-              (TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) _) _) _)| c1==cons -> (d2,ans)
+              (TyCon ext2 _ c2 _) | recordNil c2 ext2 -> (d1,tags++"="++elem)
+              (TyApp (TyApp (TyApp (TyCon ext3 _ c1 _) _) _) _)| recordCons c1 ext3 -> (d2,ans)
                 where (d2,tail) = f d1 y
                       ans = tags++"="++elem ++ "," ++ tail
               other -> (d2,tags++"="++elem++"; "++ans)
@@ -3541,15 +3556,14 @@ exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon (Rx(key,_,cons)) _ c1 _) tag) x) y)
 exSynRecord d t = (d,"2Ill-formed Record extension: "++sht t)
 
 
-
-exSynList d (t@(TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y))
-    | c1==cons =(d2,"[" ++ ans ++ "]"++postscript key)
+exSynList d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
+     = (d2,"[" ++ ans ++ "]"++postscript (synKey ext))
   where (d2,ans) = f d t
-        f d (TyCon (Lx(key,nil,cons)) _ c k)| nil == c = (d,"")
-        f d (TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y)| c1==cons =
+        f d (TyCon ext2 _ c k)| listNil c ext2 = (d,"")
+        f d (TyApp (TyApp (TyCon ext3 _ c1 _) x) y)| listCons c1 ext3 =
           case y of
-           (TyCon (Lx(_,nil,_)) _ c2 _) | c2==nil -> exhibit d x
-           (TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) _) _)| c1==cons -> (d2,ans)
+           (TyCon ext3 _ c2 _) | listNil c2 ext3 -> exhibit d x
+           (TyApp (TyApp (TyCon ext4 _ c1 _) _) _)| listCons c1 ext4 -> (d2,ans)
              where (d1,elem) = exhibit d x
                    (d2,tail) = f d1 y
                    ans = elem ++ "," ++ tail
@@ -3559,10 +3573,14 @@ exSynList d (t@(TyApp (TyApp (TyCon (Lx(key,_,cons)) _ c1 _) x) y))
         f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
 exSynList d t = (d,"2Ill-formed List extension: "++sht t)
 
-exSynPair d (t@(TyApp (TyApp (TyCon (Px(key,pair)) _ c1 _) x) y))
-    | c1==pair =(d2,"(" ++ x' ++","++ y' ++ ")"++postscript key)
-  where (d1,x') = exhibit d x
+exSynPair d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext 
+  = (d3,"(" ++ ws ++ ")"++postscript (synKey ext))
+  -- = (d2,"(" ++ x' ++","++ y' ++ ")"++postscript (synKey ext))
+  where collect (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext = x : collect y
+        collect y = [y]
+        (d1,x') = exhibit d x
         (d2,y') = exhibit d1 y
+        (d3,ws) = exhibitL exhibit d (collect t) ","
 
 exhibitNmK xs (nm,k) = useStoreName nm k ("'"++) xs          -- One or the other
                       -- (zs,"("++ans++":: "++k2++")")
@@ -3580,15 +3598,19 @@ pp x = putStrLn (snd (exhibit disp0 x))
 
 -- Exhibit Tau
 instance (NameStore d) => Exhibit d Tau where
-  exhibit xs (t@(TyCon (Nx(k,z,s)) _ c _)) | c==z = (xs,"0" ++ postscript k)
-  exhibit xs (t@(TyCon (Lx(k,n,c)) _ s _)) | s==n = (xs,"[]"++postscript k)
-  exhibit xs (t@(TyApp (TyApp (TyCon (Lx _) _ _ _) _) _)) = exSynList xs t
+  exhibit xs (t@(TyCon ext _ c _))           | natZero c ext = (xs,"0" ++ postscript (synKey ext))
+  exhibit xs (t@(TyApp (TyCon ext _ c _) x)) | natSucc c ext = exSynNat xs t
 
-  exhibit xs (t@(TyCon (Rx(k,n,c)) _ s _)) | s==n = (xs,"{}"++postscript k)
-  exhibit xs (t@(TyApp (TyApp (TyApp (TyCon (Rx _) _ _ _) _) _) _)) = exSynRecord xs t
+  exhibit xs (t@(TyApp (TyCon ext _ c _) x)) | tickSucc c ext = exSynTick xs t
+  
+  exhibit xs (t@(TyCon ext _ s _))                     | listNil s ext = (xs,"[]"++postscript (synKey ext))
+  exhibit xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | listCons c ext = exSynList xs t
 
-  exhibit xs (t@(TyApp (TyApp (TyCon (Px _) _ _ _) _) _)) = exSynPair xs t
-  exhibit xs (t@(TyApp (TyCon (Nx _) _ _ _) x)) = exSynNat xs t
+  exhibit xs (t@(TyCon ext _ s _))                     | recordNil s ext = (xs,"{}"++postscript (synKey ext))
+  exhibit xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _)) 
+                                                       | recordCons c ext = exSynRecord xs t
+
+  exhibit xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairExt c ext = exSynPair xs t
 
   exhibit xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug use something like: ["L","Bush"] 
                                      = (ys,nm++"("++l'++","++vs'++"."++k'++")")

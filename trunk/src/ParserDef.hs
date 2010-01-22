@@ -22,7 +22,7 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
 import List(partition)
 import Monads
 import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
-            ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName)
+            ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName,arityPT)
 import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
 import Auxillary(Loc(..),plistf,plist)
 import Char(isLower,isUpper)
@@ -714,14 +714,18 @@ datadecl =
 implicit b pos strata t =
   do{ args <- targs
     ; reservedOp "="
-    ; let finish cs ds = Data (loc pos) b strata t Nothing args cs ds Ox
+    ; let finish cs ds = Data (loc pos) b strata t Nothing args cs ds 
           kindf [] = Star' strata Nothing
           kindf ((_,x):xs) = Karrow' x (kindf xs)
     ; (reserved "primitive" >> return(GADT (loc pos) b t (kindf args) [] [] Ox)) <|>
       (do { cs <- sepBy1 constrdec (symbol "|")
-          ; ds <- derive
+          ; ds <- derive (map getCArity1 cs)
           ; return(finish cs ds)})
     }
+
+
+getCArity1 (Constr loc args (Global c) domains _) = (c,length domains)
+getCArity2 (loc,(Global c),args,constraints,typ) = (c,arityPT typ)
 
 polyLevel [] t = t
 polyLevel xs t = PolyLevel xs t
@@ -730,7 +734,7 @@ explicit b pos tname =
   do { (levels,kind) <- typing
      ; reserved "where"
      ; cs <- layout explicitConstr (return ())
-     ; ds <- derive
+     ; ds <- derive (map getCArity2 cs)
      ; let gadt = (GADT (loc pos) b tname (polyLevel levels kind) cs ds Ox)
      ; return(gadt)
      }
@@ -745,7 +749,6 @@ explicitConstr =
      ; return(loc l,Global c,format prefix,preds,body)
      }
 
-
 targs = many arg
   where arg = simple <|> parens kinded
         simple = do { n <- name; return(n,AnyTyp) }
@@ -753,21 +756,73 @@ targs = many arg
                     ; t<- typN
                     ; return(n,t)}
 
-derive =
+-- Deriving clauses, both new and old style
+
+derive :: [(String,Int)] -> Parser [Derivation]
+derive arityCs =
   (do { reserved "deriving"
-      ; (do {c <- extension; return [c]}) <|>
-        (parens(sepBy1 extension (symbol ","))) })
+      ; (do {c <- extension arityCs ; return [c]}) 
+      })
   <|> (return [])
 
-extension =
-  do { name <- symbol "List" <|> symbol "Nat" <|> symbol "Pair" <|> symbol "Record"
-     ; arg <- parens(many (lower <|> char '\''))
-     ; case name of
-        "List" -> return(Syntax(Lx(arg,"","")))
-        "Nat" -> return(Syntax(Nx(arg,"","")))
-        "Pair" -> return(Syntax(Px(arg,"")))
-        "Record" -> return(Syntax(Rx(arg,"",""))) }
+extension arityCs = try(newStyle arityCs) <|> (oldStyle arityCs)
 
+oldStyle arityCs =
+  do { name <- conName 
+     ; arg <- parens(many (lower <|> char '\''))
+     ; case (name,arityCs) of
+        ("List",[(nil,0),(cons,2)]) -> return(Syntax(Ix(arg,Just(nil,cons),Nothing,Nothing,Nothing,Nothing)))
+        ("List",_) -> errArity "List" arg arityCs [0,2] (length arityCs)
+        ("Nat",[(zero,0),(succ,1)]) -> return(Syntax(Ix(arg,Nothing,Just(zero,succ),Nothing,Nothing,Nothing)))
+        ("Nat",_) -> errArity "Nat" arg arityCs [0,1] (length arityCs)
+        ("Pair",[(prod,2)]) -> return(Syntax(Ix(arg,Nothing,Nothing,Just prod,Nothing,Nothing)))
+        ("Pair",_) -> errArity "Pair" arg arityCs [1] (length arityCs)
+        ("Tick",[(succ,1)]) -> return(Syntax(Ix(arg,Nothing,Nothing,Nothing,Nothing,Just succ)))
+        ("Tick",_) -> errArity "Tick" arg arityCs [1] (length arityCs)
+        ("Record",[(nil,0),(cons,3)]) -> return(Syntax(Ix(arg,Nothing,Nothing,Nothing,Just(nil,cons),Nothing)))
+        ("Record",_) -> errArity "Record" arg arityCs [0,3] (length arityCs) 
+        (name,_) -> liftEither (badName name) }
+        
+errArity nm tag args correct n = fail (s++s2)
+  where f(c,n) = concat["\n   ",c," with arity ",show n]
+        s = concat["\nThe syntax derivation ",nm,"(",tag,")"
+                  ," should be applied to a data declaration \n"
+                  ,"with ",show(length correct)," constructor(s)"]
+        s2 = if n== length correct
+                then concat[" with arities ",plistf show "" correct "," ". "
+                           ,"The declared constructors "
+                           , plistf f "" args "," ",\n"
+                           ,"don't match the expected arities.\n"]
+                else concat [". The declaration had ",show n,".\n"]
+
+computeArity printname carities c =
+  case lookup c carities of
+    Nothing -> fail (concat["\nThe name "++c++", in the syntax derivation "
+                           ,printname,",\nis not amongst the declared"
+                           ," constructors: ",plistf fst "" carities ", " ".\n"])
+    Just n -> return (c,n)
+ 
+cases carities =  
+  do { name <- conName -- symbol "List" <|> symbol "Nat" <|> symbol "Pair" <|> symbol "Record" <|> symbol "Tick"
+     ; args <- parens(sepBy1 conName (symbol ","))
+     ; let printname = name ++ plistf id "(" args "," ")"
+     ; ys <- mapM (computeArity printname carities) args
+     ; return(name,ys)}
+             
+     
+newStyle carities =
+  do { symbol "syntax"
+     ; tag <- parens(many (lower <|> char '\''))
+     ; exts <- many (cases carities)
+     ; info <- liftEither (checkMany tag exts)
+     ; return(Syntax info)
+     }
+        
+-- t24 "derive syntax(i) List(N,C) Nat(Z,C)"
+-- t23 x = testQ (derive [("Cons",0),("Nil",2)]) x
+-- t24 x = testQ (derive [("C",2),("N",0),("P",1),("Z",0),("S",1)]) x
+           
+                 
 constrdec =
  do{ pos <- getPosition
    ; exists <- forallP <|> (return [])
@@ -792,7 +847,12 @@ testP p s =
    Left err -> Left("\n'"++s++"'"++" causes error\n  "++err)
    Right (exp,[]) -> Right exp
    Right (exp,cs) -> Left("\n"++s++"\n   leaves postfix: "++cs)
-
+   
+testQ p s =
+  case parse2 (do { ans <- p; whiteSpace; return ans}) s of
+   Left err -> putStrLn ("\n'"++s++"'"++" causes error\n  "++err)
+   Right (exp,s) -> putStrLn (s++" is OK."++" trailing \n"++s)
+   
 testE = testP expr
 testD = testP decl
 testL = testP (many (literal lit2Exp extToExp))
