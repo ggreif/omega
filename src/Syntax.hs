@@ -16,7 +16,7 @@ import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
             ,getMult,PPred(..),Pred(..),Quant(..)
             ,definesValueConstr,short)
 
-import SyntaxExt(Extension(..),extList,extKey,extM,ppExt,extThread,SynExt(..))
+import SyntaxExt(Extension(..),extList,extKey,extM,ppExt,extThread,SynExt(..),synKey,synName)
 import Char(isLower,isUpper,ord,chr)
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
@@ -102,7 +102,7 @@ data Lit
   | Float Float
   | CrossStage V
 
-data Inj = L | R deriving (Eq,Show)
+data Inj = L | R deriving (Eq,Show,Ord)
 
 data Pat
   = Plit Lit                  -- { 5 or 'c' }
@@ -156,7 +156,7 @@ data Dec
   | Pat Loc Var [Var] Pat               -- { Let x y z = App (Lam x z) y
   | TypeSig Loc Var PT                  -- { id :: a -> a }
   | Prim Loc Var PT                     -- { prim bind :: a -> b }
-  | Data Loc Bool Strata Var (Maybe PT) Targs [Constr][Derivation](SynExt String)   -- { data T x (y : Nat ) = B (T x) deriving (Z,W)}
+  | Data Loc Bool Strata Var (Maybe PT) Targs [Constr][Derivation] -- { data T x (y : Nat ) = B (T x) deriving (Z,W)}
   | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)][Derivation](SynExt String)
   | Flag Var Var
   | Reject String [Dec]
@@ -184,27 +184,16 @@ monadDec location e = Val location pat (Normal e) []
 data Derivation = Syntax (SynExt String)
 
 ppDeriv (Syntax Ox) = text ""
-ppDeriv (Syntax (Lx(nm,_,_))) = text ("List("++nm++")")
-ppDeriv (Syntax (Nx(nm,_,_))) = text ("Nat("++nm++")")
-ppDeriv (Syntax (Px(nm,_))) = text ("Pair("++nm++")")
-ppDeriv (Syntax (Rx(nm,_,_))) = text ("Record("++nm++")")
+ppDeriv (Syntax z) = text (synName z++"("++synKey z++")")
 
 instance Show Derivation where
   show x = render(ppDeriv x)
 
 instance Eq Derivation where
- (Syntax Ox) == (Syntax Ox) = True
- (Syntax (Lx(n,_,_))) == (Syntax (Lx(m,_,_))) = n==m
- (Syntax (Nx(n,_,_))) == (Syntax (Nx(m,_,_))) = n==m
- (Syntax (Px(n,_))) == (Syntax (Px(m,_))) = n==m
- (Syntax (Rx(n,_,_))) == (Syntax (Rx(m,_,_))) = n==m
- _ == _ = False
-
+ (Syntax x) == (Syntax y) = x==y
+  
 bindsDeriv (Syntax Ox) = id
-bindsDeriv (Syntax (Lx(nm,_,_))) = addBind (Global ("#L"++nm))
-bindsDeriv (Syntax (Nx(nm,_,_))) = addBind (Global ("#N"++nm))
-bindsDeriv (Syntax (Px(nm,_))) = addBind (Global ("#P"++nm))
-bindsDeriv (Syntax (Rx(nm,_,_))) = addBind (Global("#R"++nm))
+bindsDeriv (Syntax x) = addBind (Global ("#"++synName x++synKey x))
 
 bindDs [] = id
 bindDs (d:ds) = bindsDeriv d . bindDs ds
@@ -231,7 +220,7 @@ strat 3 = "class"
 strat n = "data@"++show n
 
 ---------------------------------------------------
-isData (Data _ _ n _ _ _ _ _ _) = True
+isData (Data _ _ n _ _ _ _ _ ) = True
 isData (GADT loc isProp nm knd cs ders ext) = True
 isData (TypeSig loc (Global (x:xs)) pt) | isUpper x = True
 isData x = False
@@ -318,7 +307,7 @@ binop nm e1 e2 = App(App (Var (Global nm)) e1) e2
 decname (Val loc pat b ds) = patBinds pat
 decname (Fun loc nm _ cs) = [nm]
 decname (Pat loc nm ps p) = [nm]
-decname (Data loc b strata nm sig args cs ds _) = nm : map f cs
+decname (Data loc b strata nm sig args cs ds ) = nm : map f cs
   where f (Constr loc skol nm ts eqs) = nm
 decname (GADT loc isProp nm knd cs ders _) = nm : map f cs
   where f (loc,c,free,preds,typ) = c
@@ -339,7 +328,7 @@ decloc :: Dec -> [(Var,Loc)]
 decloc (Val loc pat b ds) = map (\ nm -> (nm,loc)) (patBinds pat)
 decloc (Fun loc nm _ cs) = [(nm,loc)]
 decloc (Pat loc nm ps p) = [(nm,loc)]
-decloc (Data loc b strata nm sig args cs ds _) = [(nm,loc)] ++ map f cs
+decloc (Data loc b strata nm sig args cs ds ) = [(nm,loc)] ++ map f cs
   where f (Constr loc skol nm ts eqs) = (nm,loc)
 decloc (GADT loc isProp nm knd cs ders _) = [(nm,loc)] ++ map f cs
   where f (loc,c,free,preds,typ) = (c,loc)
@@ -407,6 +396,16 @@ instance Eq Lit where
   (Tag s) == (Tag t) = s==t
   _ == _ = False
 
+  
+compLit (Int n) (Int m) = Just(compare n m)
+compLit (Char n) (Char m) = Just(compare n m)
+compLit (Symbol n) (Symbol m) = Just(compare n m)
+compLit Unit Unit = Just EQ
+compLit (ChrSeq n) (ChrSeq m) = Just(compare n m)
+compLit (Float n) (Float m) = Just(compare n m)
+compLit (Tag n) (Tag m) = Just(compare n m)
+compLit _ _ = Nothing 
+
 
 applyE :: [Exp] -> Exp
 applyE [t] = t
@@ -464,7 +463,7 @@ dt (Fun _ x _ _) = Fn x
 dt (Val _ _ _ _) = V
 dt (TypeSig loc n _) = TS n
 dt (Prim loc n _) = Pr
-dt (Data _ _ _ _ _ _ _ _ _) = D
+dt (Data _ _ _ _ _ _ _ _ ) = D
 dt (GADT _  _ _ _ _ _ _) = D
 dt (TypeSyn _ _ _ _) = Syn
 dt (TypeFun _ s _ _) = TFun s
@@ -880,13 +879,13 @@ instance Binds Dec where
      where (FX _ _ _ tbs tfs) = vars [] t emptyF
            (vs,constrs) = partition typVar tfs
 
-  boundBy (Data l b 0 nm sig vs cs ders _) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
+  boundBy (Data l b 0 nm sig vs cs ders ) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (Constr loc skol c ts eqs) = c
   boundBy (GADT loc isProp nm knd cs ders _)| definesValueConstr knd  =
             bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (loc,c,free,preds,typ) = c
 
-  boundBy (Data l b _ nm sig vs cs ders _) = bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
+  boundBy (Data l b _ nm sig vs cs ders ) = bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (Constr loc skol c ts eqs) = c
   boundBy (GADT loc isProp nm knd cs ders _) | not(definesValueConstr knd)  =
           bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
@@ -912,7 +911,7 @@ instance Vars Dec where
   vars bnd (Fun loc _ _ ms) = varsL bnd ms
   vars bnd (Pat loc nm nms p) = \ y -> foldr (addFree bnd) y (depends x)
      where x = vars [] p emptyF -- pattern C x y = (x,D y)  has "D" as free.
-  vars bnd (Data loc b strata nm sig vs cs _ _) =
+  vars bnd (Data loc b strata nm sig vs cs _ ) =
        underTs (map fst vs) (varsL bnd cs) . (varsL bnd (map snd vs)) . (vars bnd sig)
 
   vars bnd (GADT loc isProp nm knd cs _ _) =  -- | definesValueConstr knd =
@@ -1133,9 +1132,9 @@ instance Eq Dec where
   (Pat _ v1 vs1 p1) == (Pat _ v2 vs2 p2) = v1==v2 && vs1==vs2 && p1==p2
   (TypeSig _ v1 pt1) == (TypeSig _ v2 pt2) = v1==v2 && pt1==pt2
   (Prim _ v1 pt1) == (Prim _ v2 pt2) = v1==v2 && pt1==pt2
-  (Data _ b1 str1 v1 Nothing targ1 cs1 ders1 _) == (Data _ b2 str2 v2 Nothing targ2 cs2 ders2 _) =
+  (Data _ b1 str1 v1 Nothing targ1 cs1 ders1 ) == (Data _ b2 str2 v2 Nothing targ2 cs2 ders2 ) =
     b1==b2 && str1==str2 && v1==v2 && targ1==targ2 && cs1==cs2 && ders1==ders2
-  (Data _ b1 str1 v1 (Just pt1) targ1 cs1 ders1 _) == (Data _ b2 str2 v2 (Just pt2) targ2 cs2 ders2 _) =
+  (Data _ b1 str1 v1 (Just pt1) targ1 cs1 ders1 ) == (Data _ b2 str2 v2 (Just pt2) targ2 cs2 ders2 ) =
     b1==b2 && str1==str2 && v1==v2 && pt1==pt2 && targ1==targ2 && cs1==cs2 && ders1==ders2
   (GADT x1 x2 x3 x4 x5 x6 x7) == (GADT y1 y2 y3 y4 y5 y6 y7) =
      x2==y2 && x3==y3 && x4==y4 && map f x5== map f y5
@@ -1215,11 +1214,11 @@ ppDec dec =
     Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> text "=" <+> ppPat p
     TypeSig _ v pt -> ppVar v <+> text "::" <+> ppPT pt
     Prim _ v pt -> text "prim" <+> ppVar v <+> text "::" <+> ppPT pt
-    Data _ b n v sig args cs [] _ -> PP.vcat [ppSig sig v,
+    Data _ b n v sig args cs []   -> PP.vcat [ppSig sig v,
                                      ppStrat n <+> ppVar v <+>
                                      PP.hsep (map ppArg args) <+> text "=" <+>
                                      myPP PP.vcat Front (PP.nest (-2) (text "| ")) (map ppConstr cs)]
-    Data _ b n v sig args cs ders _ -> PP.vcat [ppSig sig v,
+    Data _ b n v sig args cs ders   -> PP.vcat [ppSig sig v,
                                        ppStrat n <+> ppVar v <+>
                                        PP.hsep (map ppArg args) <+> text "=" <+>
                                        myPP PP.vcat Front (PP.nest (-2) (text "| ")) (map ppConstr cs),

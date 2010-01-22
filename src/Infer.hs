@@ -23,7 +23,7 @@ import Bind
 import Syntax
 import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,Quant(..),TcTv(..),Tau(..),Rho(..),Sigma(..),Kind(..),PolyKind(..)
-            ,ForAllArgs,ToEnv,PPred,PT(..),MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
+            ,ForAllArgs,ToEnv,PPred,PT(..),arityPT, MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
             ,newLevel,unifyLevel,pruneLv,freshLevels,incLev,zonkLv,unifyLev,substLevel,instanLevel
             ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..),Zonk(..)
@@ -52,14 +52,14 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
-import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
+import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx,wExt)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
 import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
-import LangEval(vals,env0,Prefix(..),elaborate)
+import LangEval(vals,env0,Prefix(..),elaborate,eval)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import Char(isAlpha,isUpper)
 import System.IO.Unsafe(unsafePerformIO)
@@ -515,6 +515,8 @@ getLevel = Tc (\ env -> return (level env,[]))
 getSyntax :: TC [SynExt String]
 getSyntax = Tc (\ env -> return (syntaxExt env,[]))
 
+addSyntax d (Tc m) = Tc(\env -> m (env {syntaxExt = d: syntaxExt env}))
+ 
 getLoc :: TC Loc
 getLoc = Tc (\ env -> return (location env,[]))
 
@@ -780,16 +782,19 @@ typeExp mod (Run exp) (Infer ref) =
          ; return(Run e) }
 typeExp mod (Reify s v) expect = error ("Unexpected reified value: "++s)
 typeExp mod (ExtE x) expect =
+  do { new <- elabExtensionExp x
+     ; typeExp mod new expect
+     }
+
+elabExtensionExp x =
   do { exts <- getSyntax
      ; loc <- getLoc
      ; let lift0 nm = Var (Global nm)
            lift1 nm x = App (lift0 nm) x
            lift2 nm x y = App (lift1 nm x) y
            lift3 nm x y z = App (lift2 nm x y) z
-     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
-     ; typeExp mod new expect
+     ; buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
      }
-
 
 
 --------------------------------------------------------------------
@@ -1883,7 +1888,7 @@ kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) | any introLorR
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) = newLoc loc $
   do { (vs,level,sigma) <- univLevelFromPTkind name k
      ; return(decl,(isP,name,sigma,level,loc,vs))}
-kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs _)) =
+kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs )) =
   failM 1 [Ds "\nData decs should have been translated away.\n",Ds (show decl)]
 
 -- Given T :: a ~> b ~> * ; data T x y = ... OR data T (x:a) (y:b) = ...
@@ -1928,7 +1933,7 @@ useSigToKindArgs strata args sig = walk args sig where
 
 transDataToGadt ds = mapM getGADT ds
   where getGADT (d@(GADT _ _ _ _ _ _ _)) = return d
-        getGADT (x@(Data _ _ _ nm _ _ cs derivs _)) =
+        getGADT (x@(Data _ _ _ nm _ _ cs derivs)) =
            do { new <- data2gadt x
               ; if any eqConstrained cs
                    then badData nm x new
@@ -2223,8 +2228,10 @@ checkValuesDontUseKarr cname (rho@(Rtau t)) LvZero | hasKarr t =
 checkValuesDontUseKarr cname x y = return()
 
 
--------------------------------------------------------
+----------------------------------------------------------------------
 -- Check that the deriving clause is consistent with the constructors
+-- most of this is done at parsing time, and in the function
+-- checkMany in SyntaxExt.hs
 
 checkDerivs constrs [] = return Ox
 checkDerivs constrs xs =
@@ -2235,8 +2242,9 @@ checkDerivs constrs xs =
 
 checkSyn _ [] = return Ox
 checkSyn _ (x:y:_) = failM 2 [Ds "\nA data declaration can have at most one syntax extension."]
-checkSyn constrs [ext] =
-  do { exts <- getSyntax
+checkSyn constrs [ext] = return ext
+{-
+  do { exts <- getSyntax  -- List of syntaxes defined earlier in the file
      ; failWhen ((elem ext exts)&& ((synName ext) /= "Nat") && ((show(synKey ext)) /= "")) 2
                 [Ds "\nSyntax name for ",Ds (synName ext),Ds " already in use: ",Ds (show(synKey ext))]
      ; case (constrs,ext) of
@@ -2251,43 +2259,43 @@ checkSyn constrs [ext] =
            where (name,size) = nameSize z
      }
 
+
 nameSize :: SynExt a -> (String,Int)
 nameSize (Lx _) = ("List",2)
 nameSize (Nx _) = ("Nat",2)
 nameSize (Px _) = ("Pair",1)
 nameSize (Rx _) = ("Record",2)
+nameSize (Tx _) = ("Tick",1)
 nameSize Ox = ("",0)
 
-count:: PT -> Int
-count (Rarrow' x y) = 1 + count y
-count (Karrow' x y) = 1 + count y
-count x = 0
 
 checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b)
-    | count a==0 && count b==2 = return (Lx(key,nil,cons))
+    | arityPT a==0 && arityPT b==2 = return (Lx(key,nil,cons))
 checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b) =
   tell "List" ("Nil",nil,a) 0 ("Cons",cons,b) 2
 
 
 checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b)
-   | count a==0 && count b==3 = return (Rx(key,rnil,rcons))
+   | arityPT a==0 && arityPT b==3 = return (Rx(key,rnil,rcons))
 checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b) =
   tell "Record" ("Rnil",rnil,a) 0 ("Rcons",rcons,b) 3
 
 checkNat key (_,Global zero,_,_,a) (_,Global succ,_,_,b)
-   | count a==0 && count b==1 = return (Nx(key,zero,succ))
+   | arityPT a==0 && arityPT b==1 = return (Nx(key,zero,succ))
 checkNat key (_,Global zero,_,_,a) (_,Global succ,_,_,b) = tell "Nat" ("Zero",zero,a) 0 ("Succ",succ,b) 1
 
-checkPair key (_,Global pair,_,_,a) | count a==2 = return (Px(key,pair))
+checkPair key (_,Global pair,_,_,a) | arityPT a==2 = return (Px(key,pair))
 checkPair key (_,Global pair,_,_,a) =
    failM 2 [Ds"\nFor a Pair extension\n the (,) constructor (",Ds pair,Ds ":: ",Dd a
-           ,Ds ") should have 2 arguments, not ",Dd (count a)]
+           ,Ds ") should have 2 arguments, not ",Dd (arityPT a)]
 
 tell:: String -> (String,String,PT) -> Int -> (String,String,PT) -> Int -> TC a
 tell key (x1,nm1,a) n1 (x2,nm2,b) n2 =
   failM 2 [Ds"\nFor a ",Ds key,Ds " extension\n the ",Ds x1,Ds " constructor (",Ds nm1,Ds ":: ",Dd a,Ds ") should have "
           ,Dd n1,Ds " arguments and\n the ",Ds x2,Ds " constructor (",Ds nm2,Ds ":: ",Dd b,Ds ") should have ",Dd n2
           ,Ds " arguments."]
+-}
+
 
 isSyntax (Syntax _) = True
 isSyntax _ = False
@@ -2351,7 +2359,7 @@ illFormed name rho kind message =
 --   C:: forall (a:*0) (b:*0) . a -> T a b -> T a b
 --   D:: forall (a:*0) (b:*0) . T a b
 
-data2gadt (Data loc isP strat tname@(Global nm) hint args cs derivs exts) =
+data2gadt (Data loc isP strat tname@(Global nm) hint args cs derivs) =
  do { (argBinds,rng) <- newLoc loc (useSigToKindArgs strat args hint)  -- ([(a:*0),(b:*0)],*0)
     ; let name (nm,kind,quant) = nm
           range = applyT' (map TyVar' (nm : map name argBinds))     -- T a b
@@ -2368,7 +2376,7 @@ data2gadt (Data loc isP strat tname@(Global nm) hint args cs derivs exts) =
           h (variable,k) = (var variable,k)
           some (Just xs) = xs
           some Nothing = []
-    ; return(GADT loc isP tname kind (map each cs) derivs exts)
+    ; return(GADT loc isP tname kind (map each cs) derivs Ox)
     }
 
 arrowUp strata [] t = t
@@ -2806,7 +2814,7 @@ splitObligations need patVars = do { xs <- mapM f need; return(split xs ([],[]))
 
 pushHints [] d = d
 pushHints protos (Fun loc nm _ ms) = Fun loc nm (applyName protos nm) ms
-pushHints protos (Data loc b n nm sig vs cs ders exts) = Data loc b n nm (applyName protos nm) vs cs ders exts
+pushHints protos (Data loc b n nm sig vs cs ders) = Data loc b n nm (applyName protos nm) vs cs ders 
 pushHints protos (Val loc p body ds) = Val loc (applyPat protos p) body ds
 pushHints protos (Reject s d) = Reject s d
 pushHints protos (TypeFun loc nm sig ms) = TypeFun loc nm (applyName protos (Global nm)) ms
@@ -4276,6 +4284,10 @@ predefined =
  "data Bool:: *0 where\n"++
  "  True:: Bool\n"++
  "  False:: Bool\n"++
+ "data Ordering:: *0 where\n"++
+ "  EQ:: Ordering\n"++
+ "  LT:: Ordering\n"++ 
+ "  GT:: Ordering\n"++  
  "data Maybe:: *0 ~> *0 where\n"++
  "  Just :: a -> Maybe a\n"++
  "  Nothing :: Maybe a\n"++
@@ -5083,4 +5095,9 @@ renderProb f t =
      ; writeRef dispRef d2
      ; return string }
 
+-----------------------------------------------------
 
+evaluate x = runTC initTcEnv (do { a <- addSyntax wExt (elabExtensionExp x)
+                                 ; return a })  -- fio2Mtc(eval env0 a)})
+
+tickTry = (Tickx 1 (ExtE (Numx 1 (Just (Var (Global "A"))) "w")) "w")

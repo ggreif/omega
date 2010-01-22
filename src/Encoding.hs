@@ -9,7 +9,7 @@ import Syntax
 import Value
 import List(unionBy)
 import Bind
-import SyntaxExt(SynExt(..))
+import SyntaxExt(SynExt(..),listx,normalList)
 
 type Symbol = Name
 
@@ -25,6 +25,9 @@ instance Generic Int where
 instance Generic Char where
   typeOf x = charT
 
+instance Generic Ordering where
+  typeOf x = orderingT
+  
 instance Generic Float where
   typeOf x = floatT
 
@@ -115,20 +118,20 @@ class Encoding t where
 
 
 consUp :: Encoding a => [a] -> V
-consUp [] = Vcon (Global "[]",Lx("","[]",":")) []
-consUp (x:xs) = Vcon (Global ":",Lx("","[]",":")) [(to x),(consUp xs)]
+consUp [] = Vcon (Global "[]",listx) []
+consUp (x:xs) = Vcon (Global ":",listx) [(to x),(consUp xs)]
 
 toStr :: String -> V
 toStr x = consUp x
 
 consDown :: Encoding a => V -> [a]
-consDown (Vcon (Global "[]",Lx("","[]",":")) []) = []
-consDown (Vcon (Global ":",Lx("","[]",":")) [x,xs]) = (from x) : (consDown xs)
+consDown (Vcon (Global "[]",lx) [])   | normalList lx = []
+consDown (Vcon (Global ":",lx) [x,xs]) | normalList lx = (from x) : (consDown xs)
 consDown v = error ("Value not a list in from List: "++(show v))
 
 consDownf :: Encoding a => (V -> a) -> V -> [a]
-consDownf f (Vcon (Global "[]",Lx("","[]",":")) []) = []
-consDownf f (Vcon (Global ":",Lx("","[]",":")) [x,xs]) = (f x) : (consDown xs)
+consDownf f (Vcon (Global "[]",lx) [])     | normalList lx = []
+consDownf f (Vcon (Global ":",lx ) [x,xs]) | normalList lx = (f x) : (consDown xs)
 consDownf f v = error ("Value not a list in from List: "++(show v))
 
 lift1 name f = Vprimfun name (analyzeWith f)
@@ -226,6 +229,17 @@ instance Encoding a => Encoding (Maybe a) where
     from (Vcon (Global "Nothing",Ox) []) = Nothing
     from (Vcon (Global "Just",Ox) [x]) = (Just (from x))
     from v = error ("Value not a Maybe type: "++show v)
+    
+    
+instance Encoding Ordering where
+    to EQ = Vcon (Global "EQ",Ox) []
+    to LT = Vcon (Global "LT",Ox) []
+    to GT = Vcon (Global "GT",Ox) []
+    from (Vcon (Global "EQ",Ox) []) = EQ
+    from (Vcon (Global "LT",Ox) []) = LT
+    from (Vcon (Global "GT",Ox) []) = GT
+    from v = error ("Value not a Maybe type: "++show v)
+    
     
 instance (Encoding a,Encoding b) => Encoding (Either a b) where
     to (Right x) =  (Vsum R (to x))

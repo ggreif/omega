@@ -547,7 +547,7 @@ makeChainLM ::  Check m => Tau -> m[Chain TcTv Tau]
 makeChainLM x = liftN h x
   where h (FunN name args) =
           do { pairs <- generalizeLM 0 args
-             ; ans <- mapM (matchLxM name args) pairs
+             ; ans <- mapM (matchLXM name args) pairs
              ; return(concat ans)}
             
 
@@ -555,9 +555,9 @@ makeChainLM x = liftN h x
 -- generalizeL 0 [a0,a1,a2,a3]
 
 
-matchLxM ::   Check m => NName -> [Tau] -> (Path,[Tau]) -> m [Chain TcTv Tau]
-matchLxM name args ([], newArgs) = return [(Root (fun name newArgs))]
-matchLxM name args (h:t, newArgs) =
+matchLXM ::   Check m => NName -> [Tau] -> (Path,[Tau]) -> m [Chain TcTv Tau]
+matchLXM name args ([], newArgs) = return [(Root (fun name newArgs))]
+matchLXM name args (h:t, newArgs) =
   do { tails <- makeChainLM (fun name newArgs)
      ; return(map (Next (fun name args) (h:t)) tails)}
 

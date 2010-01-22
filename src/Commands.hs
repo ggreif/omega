@@ -16,6 +16,7 @@ import ParserDef(getInt,getBounds,expr,parseString)
 import Auxillary(plist,plistf,DispElem(..),prefix,maybeM)
 import Monads(report,readRef,tryAndReport)
 import Monad(when)
+import Value(pv)
 
 -- tryAndReport :: FIO a -> (Loc -> String -> FIO a) -> FIO a
 --------------------------------------------------------
@@ -184,6 +185,7 @@ execExp tenv e =
       ; writeln ((show u)++ " : "++(pprint t))
       ; verbose <- getM "kind" False
       ; when verbose (mapM_ writeln subpairs)
+      ; when verbose (writeln("\n\n"++ pv u))
       ; return (tenv) }
 
 -- (DrawCom p e)

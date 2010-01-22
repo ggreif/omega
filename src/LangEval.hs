@@ -18,7 +18,8 @@ import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
-import SyntaxExt(Extension(..),SynExt(..))
+import SyntaxExt(Extension(..),SynExt(..),listx,listExt,listCons,listNil)
+
 
 
 type Level = Int
@@ -452,9 +453,10 @@ elab prefix magic init (Fun loc nm _ cs) =
            u = makeLam patterns caseExp [] [] magic
            free = getFreeTermVars newNames caseExp
      ; return (extendV [(nm,u)] init) }
-elab prefix magic init (Data loc b strata nm sig args constrs derivs exts) =
+elab prefix magic init (Data loc b strata nm sig args constrs derivs) =
     return(extendV xs init)
- where xs = map f constrs
+ where exts = error "Get exts from derivs? line 457 LangEval.hs"
+       xs = map f constrs
        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))
 elab prefix magic init (GADT l p t k cs ds exts) =
    -- warnM [Ds "\nelab ",Ds (show t),Ds " ",Ds (show exts)] >>
@@ -569,7 +571,7 @@ vals =
  ,("True",make True)
  ,("False",make False)
 
- ,(":",makeCon2 (Global ":",Lx("","[]",":")) ((:):: A -> [A] -> [A]))
+ ,(":",makeCon2 (Global ":",listx) ((:):: A -> [A] -> [A]))
  ,("null",make1 (null:: [A] -> Bool))
  ,("[]",make([]::[A]))
  ,("++",make2((++):: [A] -> [A] -> [A]))
@@ -590,6 +592,7 @@ vals =
 
 
  ,("trace",(traceV,gen(typeOf(undefined :: String -> A -> A))))
+ ,("compare",(compareV,gen(typeOf(undefined :: A -> A -> Ordering))))
  ,("error",(to errorC,gen(typeOf(undefined :: String -> A))))
  ,("fresh",(freshV,gen(typeOf(undefined :: Char -> Symbol))))
  ,("swap",(swapV,gen(typeOf(undefined :: Symbol -> Symbol -> A -> A))))
@@ -638,6 +641,40 @@ listVals =
   ,("++",(appendV,gen(typeOf(undefined::[A] -> [A] -> [A]))))
   ]
 
+-- A pseudo compare, help make a Ord like instance inside Omega
+
+compV (Vlit m) (Vlit n) = compLit m n
+compV (Vsum i m) (Vsum j n) = 
+  case compare i j of
+    EQ -> compV m n
+    x -> Just x
+compV (Vprod x y) (Vprod m n) =
+  case compV x m of
+    Just EQ -> compV y n
+    Just x -> Just x
+    Nothing -> Nothing
+compV (Vcon (Global "[]",_) []) (Vcon (Global ":",_) [_,_]) = Just LT
+compV (Vcon (Global ":",_) [_,_]) (Vcon (Global "[]",_) []) = Just GT
+compV (Vcon (c,x) y) (Vcon (d,m) n) = 
+  case compare c d of
+    EQ -> compVL y n
+    x -> Just x
+ where compVL [] [] = Just EQ
+       compVL [] (x:xs) = Just LT
+       compVL (x:xs) [] = Just GT
+       compVL (x:xs) (y:ys) = 
+          case compV x y of
+            Just EQ -> compVL xs ys
+            t -> t
+compV x y = Nothing 
+
+compareV = lift2 "compare" g
+  where g x y = case compV x y of
+                  Just t -> return(to t)
+                  Nothing -> fail ("compare applied to bad arguments\n  "++
+                                   show x++ "\n  "++
+                                   show y++ "\n")
+
 nullV = lift1 "null" g
   where g (VChrSeq "") = return trueExp
         g (VChrSeq _) = return falseExp
@@ -651,14 +688,14 @@ nullV = lift1 "null" g
 consV = Vprimfun ":" g
   where g (Vlit (Char c)) = return(Vprimfun ("(:) "++show c) (charCons c))
         g v               = return(Vprimfun ("(:) "++show v) (f v))
-        f v vs = return(Vcon (Global ":",Lx("","[]",":")) [v,vs])
+        f v vs = return(Vcon (Global ":",listx) [v,vs])
 
 charCons :: Char -> V -> FIO V
 charCons c (VChrSeq cs) = return(VChrSeq (c:cs))
 charCons c (Vcon (Global "[]",_) []) = return(VChrSeq [c])
 charCons c (v@(Vcon (Global ":",_) [_,_])) =
      do { cs <- list2seq v; return(VChrSeq (c:cs))}
-charCons c vs = return(Vcon (Global ":",Lx("","[]",":")) [Vlit (Char c),vs])
+charCons c vs = return(Vcon (Global ":",listx) [Vlit (Char c),vs])
 
 list2seq :: V -> FIO String
 list2seq v = analyzeWith f v
@@ -680,7 +717,7 @@ appendV = lift2 "++" g
                          x -> cons x (g zs ys)
         g (Vcon (Global "[]",_) []) ys = return ys
         g x y = fail ("Bad args to (++) "++show x++" and "++show y)
-        cons x xs = do { ys <- xs; return(Vcon (Global ":",Lx("","[]",":")) [x,ys])}
+        cons x xs = do { ys <- xs; return(Vcon (Global ":",listx) [x,ys])}
 
 ----------------------------------------------------------------------
 
@@ -795,8 +832,8 @@ failIO = Vprimfun "failIO" f
                    ; return(Vfio [] (return (Left string))) }
           where stringV :: V -> FIO String
                 stringV v = analyzeWith help v where
-                   help (Vcon (Global "[]",Lx("","[]",":")) []) = return []
-                   help (Vcon (Global ":",Lx("","[]",":")) [Vlit (Char x),y]) =
+                   help (Vcon (Global "[]",lx) [])| listNil "[]" lx = return []
+                   help (Vcon (Global ":",lx) [Vlit (Char x),y])| listCons ":" lx =
                     do {xs <- stringV y; return(x:xs) }
                    help _ = fail ("Non String as arg to failIO: "++show arg)
 
