@@ -253,11 +253,11 @@ instance Show V where
             f (Vcon (Global "[]",ext) [])               | normalList ext = "\""
             f (Vswap cs u) = f (swaps cs u)
 
-  show (v@(Vcon (Global c,ext) _)) | pairExt c ext = showSynPair v
+  show (v@(Vcon (Global c,ext) _)) | pairProd c ext = showSynPair v
   show (v@(Vcon (Global c,ext) _)) | natExt c ext = showSynNat v
   show (v@(Vcon (Global c,ext) _)) | listExt c ext = showSynList v
   show (v@(Vcon (Global c,ext) _)) | recordExt c ext = showSynRecord v
-  show (v@(Vcon (Global c,ext) _)) | tickExt c ext = showSynTick v
+  show (v@(Vcon (Global c,ext) _)) | tickSucc c ext = showSynTick v
   show (Vcode e (Ev xs _)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
       where free = plistf show "" (map fst xs) "," ""
   show (Vswap cs u) =  show (swaps cs u)

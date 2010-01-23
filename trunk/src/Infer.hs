@@ -52,7 +52,8 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
-import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx,wExt)
+import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey
+                ,buildExt,listx,pairx,natx,wExt,duplicates,checkClause,checkMany,liftEither)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
 import Encoding
@@ -2230,8 +2231,10 @@ checkValuesDontUseKarr cname x y = return()
 
 ----------------------------------------------------------------------
 -- Check that the deriving clause is consistent with the constructors
--- most of this is done at parsing time, and in the function
--- checkMany in SyntaxExt.hs
+-- most of this is done in the function checkParseSynExt in SyntaxExt.hs
+-- The SynExt stored after parsing is the "Parsex" form, which records
+-- just the names of the constructors, checkParseSynExt checks these
+-- for consistency with the roles they play, and returns an "Ix" form
 
 checkDerivs constrs [] = return Ox
 checkDerivs constrs xs =
@@ -2242,60 +2245,20 @@ checkDerivs constrs xs =
 
 checkSyn _ [] = return Ox
 checkSyn _ (x:y:_) = failM 2 [Ds "\nA data declaration can have at most one syntax extension."]
-checkSyn constrs [ext] = return ext
-{-
-  do { exts <- getSyntax  -- List of syntaxes defined earlier in the file
-     ; failWhen ((elem ext exts)&& ((synName ext) /= "Nat") && ((show(synKey ext)) /= "")) 2
-                [Ds "\nSyntax name for ",Ds (synName ext),Ds " already in use: ",Ds (show(synKey ext))]
-     ; case (constrs,ext) of
-        ([nilC,consC],Lx(key,_,_)) -> checkList key nilC consC
-        (_,Nx(('o':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0o123 is reserved for octal integers."]
-        (_,Nx(('x':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0xABC is reserved for hexadecimal integers."]
-        ([zeroC,succC],Nx(key,_,_)) -> checkNat key zeroC succC
-        ([pairC],Px(key,_)) -> checkPair key pairC
-        ([rnilC,rconsC],Rx(key,_,_)) -> checkRecord key rnilC rconsC
-        (cs,z) -> failM 2 [Ds "\nWrong number of constructors for syntax extension: ",Ds (synKey z)
-                          ,Ds ". ",Ds name,Ds " extensions expect ",Dd size,Ds "."]
-           where (name,size) = nameSize z
+checkSyn constrs [ext] = checkParseSynExt ext
+
+checkParseSynExt (Parsex(tag,style,arityCs,clauses)) = 
+  do { let roles = concat(map snd clauses)
+     ; warnM [Ds ("\nThe roles are "++show roles) ]
+     ; case duplicates roles of
+         [] -> return ()
+         cs -> failM 1 [ Ds 
+                    (concat["\nThe constructor(s) ",plistf id "" cs "," ""
+                           ," appear(s) more than once in syntax extension."
+                           ,"\nEach constructor can play only one syntax role."])]
+     ; zs <- mapM (checkClause arityCs) clauses
+     ; liftEither(checkMany style tag zs)
      }
-
-
-nameSize :: SynExt a -> (String,Int)
-nameSize (Lx _) = ("List",2)
-nameSize (Nx _) = ("Nat",2)
-nameSize (Px _) = ("Pair",1)
-nameSize (Rx _) = ("Record",2)
-nameSize (Tx _) = ("Tick",1)
-nameSize Ox = ("",0)
-
-
-checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b)
-    | arityPT a==0 && arityPT b==2 = return (Lx(key,nil,cons))
-checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b) =
-  tell "List" ("Nil",nil,a) 0 ("Cons",cons,b) 2
-
-
-checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b)
-   | arityPT a==0 && arityPT b==3 = return (Rx(key,rnil,rcons))
-checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b) =
-  tell "Record" ("Rnil",rnil,a) 0 ("Rcons",rcons,b) 3
-
-checkNat key (_,Global zero,_,_,a) (_,Global succ,_,_,b)
-   | arityPT a==0 && arityPT b==1 = return (Nx(key,zero,succ))
-checkNat key (_,Global zero,_,_,a) (_,Global succ,_,_,b) = tell "Nat" ("Zero",zero,a) 0 ("Succ",succ,b) 1
-
-checkPair key (_,Global pair,_,_,a) | arityPT a==2 = return (Px(key,pair))
-checkPair key (_,Global pair,_,_,a) =
-   failM 2 [Ds"\nFor a Pair extension\n the (,) constructor (",Ds pair,Ds ":: ",Dd a
-           ,Ds ") should have 2 arguments, not ",Dd (arityPT a)]
-
-tell:: String -> (String,String,PT) -> Int -> (String,String,PT) -> Int -> TC a
-tell key (x1,nm1,a) n1 (x2,nm2,b) n2 =
-  failM 2 [Ds"\nFor a ",Ds key,Ds " extension\n the ",Ds x1,Ds " constructor (",Ds nm1,Ds ":: ",Dd a,Ds ") should have "
-          ,Dd n1,Ds " arguments and\n the ",Ds x2,Ds " constructor (",Ds nm2,Ds ":: ",Dd b,Ds ") should have ",Dd n2
-          ,Ds " arguments."]
--}
-
 
 isSyntax (Syntax _) = True
 isSyntax _ = False

@@ -18,7 +18,7 @@ import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
-import SyntaxExt(Extension(..),SynExt(..),listx,listExt,listCons,listNil)
+import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
 
 
 

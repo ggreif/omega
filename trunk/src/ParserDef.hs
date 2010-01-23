@@ -765,64 +765,27 @@ derive arityCs =
       })
   <|> (return [])
 
-extension arityCs = try(newStyle arityCs) <|> (oldStyle arityCs)
+extension arityCs = (try (newStylePx arityCs)) <|> (oldStylePx arityCs)
 
-oldStyle arityCs =
+oldStylePx arityCs =
   do { name <- conName 
-     ; arg <- parens(many (lower <|> char '\''))
-     ; case (name,arityCs) of
-        ("List",[(nil,0),(cons,2)]) -> return(Syntax(Ix(arg,Just(nil,cons),Nothing,Nothing,Nothing,Nothing)))
-        ("List",_) -> errArity "List" arg arityCs [0,2] (length arityCs)
-        ("Nat",[(zero,0),(succ,1)]) -> return(Syntax(Ix(arg,Nothing,Just(zero,succ),Nothing,Nothing,Nothing)))
-        ("Nat",_) -> errArity "Nat" arg arityCs [0,1] (length arityCs)
-        ("Pair",[(prod,2)]) -> return(Syntax(Ix(arg,Nothing,Nothing,Just prod,Nothing,Nothing)))
-        ("Pair",_) -> errArity "Pair" arg arityCs [1] (length arityCs)
-        ("Tick",[(succ,1)]) -> return(Syntax(Ix(arg,Nothing,Nothing,Nothing,Nothing,Just succ)))
-        ("Tick",_) -> errArity "Tick" arg arityCs [1] (length arityCs)
-        ("Record",[(nil,0),(cons,3)]) -> return(Syntax(Ix(arg,Nothing,Nothing,Nothing,Just(nil,cons),Nothing)))
-        ("Record",_) -> errArity "Record" arg arityCs [0,3] (length arityCs) 
-        (name,_) -> liftEither (badName name) }
-        
-errArity nm tag args correct n = fail (s++s2)
-  where f(c,n) = concat["\n   ",c," with arity ",show n]
-        s = concat["\nThe syntax derivation ",nm,"(",tag,")"
-                  ," should be applied to a data declaration \n"
-                  ,"with ",show(length correct)," constructor(s)"]
-        s2 = if n== length correct
-                then concat[" with arities ",plistf show "" correct "," ". "
-                           ,"The declared constructors "
-                           , plistf f "" args "," ",\n"
-                           ,"don't match the expected arities.\n"]
-                else concat [". The declaration had ",show n,".\n"]
+     ; tag <- parens(many (lower <|> char '\''))
+     ; return(Syntax(Parsex(tag,OLD,arityCs,[(name,map fst arityCs)]))) }
 
-computeArity printname carities c =
-  case lookup c carities of
-    Nothing -> fail (concat["\nThe name "++c++", in the syntax derivation "
-                           ,printname,",\nis not amongst the declared"
-                           ," constructors: ",plistf fst "" carities ", " ".\n"])
-    Just n -> return (c,n)
- 
-cases carities =  
-  do { name <- conName -- symbol "List" <|> symbol "Nat" <|> symbol "Pair" <|> symbol "Record" <|> symbol "Tick"
-     ; args <- parens(sepBy1 conName (symbol ","))
-     ; let printname = name ++ plistf id "(" args "," ")"
-     ; ys <- mapM (computeArity printname carities) args
-     ; return(name,ys)}
-             
-     
-newStyle carities =
+newStylePx arityCs =
   do { symbol "syntax"
      ; tag <- parens(many (lower <|> char '\''))
-     ; exts <- many (cases carities)
-     ; info <- liftEither (checkMany tag exts)
-     ; return(Syntax info)
+     ; exts <- many casesPx
+     ; return(Syntax(Parsex(tag,NEW,arityCs,exts)))
      }
-        
--- t24 "derive syntax(i) List(N,C) Nat(Z,C)"
--- t23 x = testQ (derive [("Cons",0),("Nil",2)]) x
--- t24 x = testQ (derive [("C",2),("N",0),("P",1),("Z",0),("S",1)]) x
-           
-                 
+     
+casesPx =  
+  do { name <- conName 
+     ; args <- parens(sepBy1 conName (symbol ","))
+     ; return(name,args)}
+
+
+--------------------------------------                 
 constrdec =
  do{ pos <- getPosition
    ; exists <- forallP <|> (return [])

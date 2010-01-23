@@ -38,6 +38,7 @@ data LIST :: forall a n . n ~> List a ~> *0 where
 
 ex10 = [4,True,[2]b,2jk]b
 
+
 ##test "Wrong number of constructors"
  data T:: *0 where
    M:: Int -> T
