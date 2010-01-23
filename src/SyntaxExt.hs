@@ -2,6 +2,7 @@
 module SyntaxExt where
 
 import Auxillary
+import List(nub)
 import ParserAll  -- This for defining parsers
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
@@ -10,15 +11,13 @@ import Char(isLower)
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 
+data SyntaxStyle = OLD | NEW
+
 data SynExt t -- Syntax Extension
   = Ox               -- no extension
   | Ix (String,Maybe(t,t),Maybe(t,t),Maybe t,Maybe(t,t),Maybe t)
-  | Lx (String,t,t)  -- list extension like [a,b,c]i
-  | Nx (String,t,t)  -- number extension like 4i
-  | Px (String,t)    -- pair extension like (a,b)i
-  | Rx (String,t,t)  -- record extension like {a=t,b=s}r
-  | Tx (String,t)    -- Tick extension like (e+3)i
-  
+  | Parsex (String,SyntaxStyle,[(t,Int)],[(t,[t])])
+
 data Extension t
   = Listx [t] (Maybe t) String        --  [x,y ; zs]i
   | Numx Int (Maybe t) String         --  4i   #(2+x)i
@@ -36,12 +35,7 @@ instance Show a => Show (SynExt a) where
            f nm (Just(x,y)) = " "++nm++"["++show x++","++show y++"]"
            g nm Nothing = ""
            g nm (Just x) = " "++nm++"["++show x++"]"
-  show (Lx(k,a,b)) = "Lx("++k++","++show a++","++show b++")"
-  show (Nx(k,a,b)) = "Nx("++k++","++show a++","++show b++")"
-  show (Px(k,a)) = "Px("++k++","++show a++")"
-  show (Rx(k,a,b)) = "Rx("++k++","++show a++","++show b++")"
-  show (Tx(k,a)) = "Tx("++k++","++show a++")"
-
+  show (Parsex(k,_,_,zs)) = "Px "++k++show zs           
 
 instance Show x => Show(Extension x) where
   show (Listx ts Nothing tag) = plist "[" ts "," ("]"++tag)
@@ -166,54 +160,33 @@ instance Functor Extension where
 -- Equal if the same kind and the same key,
 instance Eq a => Eq (SynExt a) where
   Ox == Ox = True
-  (Lx(k1,_,_)) == (Lx(k2,_,_)) = k1==k2
-  (Nx(k1,_,_)) == (Nx(k2,_,_)) = k1==k2
-  (Px(k1,_)) == (Px(k2,_)) = k1==k2
-  (Rx(k1,_,_)) == (Rx(k2,_,_)) = k1==k2
   (Ix(k1,_,_,_,_,_)) == (Ix(k2,_,_,_,_,_)) = k1==k2
-  (Tx(k1,_)) == (Tx(k2,_)) = k1==k2
+  (Parsex(k1,_,_,_)) == (Parsex(k2,_,_,_)) = k1==k2
   _ == _ = False
 
 synKey Ox = ""
-synKey (Lx (s,_,_)) = s
-synKey (Nx (s,_,_)) = s
-synKey (Px (s,_)) = s
-synKey (Rx (s,_,_)) = s
-synKey (Tx (s,_)) = s
 synKey (Ix (s,_,_,_,_,_)) = s
-
+synKey (Parsex(s,_,_,_)) = s
 
 synName Ox = ""
-synName (Lx (s,_,_)) = "List"
-synName (Nx (s,_,_)) = "Nat"
-synName (Px (s,_)) = "Pair"
-synName (Rx (s,_,_)) = "Record"
-synName (Tx (s,_)) = "Tick"
 synName (Ix (s,Just _,_,_,_,_)) = "List"
 synName (Ix (s,_,Just _,_,_,_)) = "Nat"
 synName (Ix (s,_,_,Just _,_,_)) = "Pair"
 synName (Ix (s,_,_,_,Just _,_)) = "Record"
 synName (Ix (s,_,_,_,_,Just _)) = "Tick"
+synName (Parsex (s,_,_,_)) = "Parse"
+
 
 
 -- Both the name and the type match. Different types (i.e. List,Nat,Pair)
 -- can use the same name.
-matchExt loc (Listx _ _ s) (Lx(t,_,_)) | s==t = return True
-matchExt loc (Listx _ _ s) (Ix(t,Just _,_,_,_,_)) | s==t = return True
-matchExt loc (Numx _ _ s)  (Nx(t,_,_)) | s==t = return True
-matchExt loc (Numx _ _ s)  (Ix(t,_,Just _,_,_,_)) | s==t = return True
-matchExt loc (Pairx _ s)   (Px(t,_)) | s==t = return True
-matchExt loc (Pairx _ s)   (Ix(t,_,_,Just _,_,_)) | s==t = return True
-matchExt loc (Recordx _ _ s)  (Rx(t,_,_)) | s==t = return True
-matchExt loc (Recordx _ _ s)  (Ix(t,_,_,_,Just _,_)) | s==t = return True
-matchExt loc (Tickx _ _ s)    (Tx(t,_)) | s==t = return True
-matchExt loc (Tickx _ _ s)    (Ix(t,_,_,_,_,Just _)) | s==t = return True
-matchExt loc (Listx _ _ "") _ = return False
-matchExt loc (Numx _ _ "") _ = return False
-matchExt loc (Pairx _ "") _ = return False
-matchExt loc (Recordx _ _ "") _ = return False
-matchExt loc (Tickx _ _ "") _ = return False
-matchExt loc _ _ = return False
+
+matchExt loc (Listx _ _ s)   (Ix(t,Just _,_,_,_,_)) | s==t = return True
+matchExt loc (Numx _ _ s)    (Ix(t,_,Just _,_,_,_)) | s==t = return True
+matchExt loc (Pairx _ s)     (Ix(t,_,_,Just _,_,_)) | s==t = return True
+matchExt loc (Recordx _ _ s) (Ix(t,_,_,_,Just _,_)) | s==t = return True
+matchExt loc (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _)) | s==t = return True
+matchExt loc _ _                = return False
 
 ----------------------------------------------------------
 -- Building such objects in an abstract manner
@@ -243,28 +216,14 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
                    extKey x++"', for "++show x++"\n  "++plistf show "" ys "\n  " "")
                   (matchExt loc x) ys
      ; case (x,y) of
-        (Listx xs (Just x) _,Lx(tag,nil,cons)) -> return(foldr (lift2 cons) x xs)
-        (Listx xs Nothing  _,Lx(tag,nil,cons)) -> return(foldr (lift2 cons) (lift0 nil) xs)
         (Listx xs (Just x) _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
 	(Listx xs Nothing  _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
-
-        (Recordx xs (Just x) _,Rx(tag,nil,cons)) -> return(foldr (uncurry(lift3 cons)) x xs)
-        (Recordx xs Nothing  _,Rx(tag,nil,cons)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
         (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) x xs)
         (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
-
-        (Tickx 0 x _,Tx(tag,tick)) -> return x
-        (Tickx n x _,Tx(tag,tick)) -> return(buildNat x (lift1 tick) n)
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick)) -> return(buildNat x (lift1 tick) n)
-        
-        (Numx n (Just x) _,Nx(tag,zero,succ)) -> return(buildNat x (lift1 succ) n)
-        (Numx n Nothing  _,Nx(tag,zero,succ)) -> return(buildNat (lift0 zero) (lift1 succ) n)
         (Numx n (Just x) _,Ix(tag,_,Just(zero,succ),_,_,_)) -> return(buildNat x (lift1 succ) n)
         (Numx n Nothing  _,Ix(tag,_,Just(zero,succ),_,_,_)) -> return(buildNat (lift0 zero) (lift1 succ) n)        
-        
-        (Pairx xs _,Px(tag,pair)) -> return(buildTuple (lift2 pair) xs)
-        (Pairx xs _,Ix(tag,_,_,Just pair,_,_)) -> return(buildTuple (lift2 pair) xs)        
-        
+        (Pairx xs _,Ix(tag,_,_,Just pair,_,_)) -> return(buildTuple (lift2 pair) xs)                
         _ -> fail ("\nSyntax extension: "++extKey x++" doesn't match use, at "++loc)}
 
 buildNat :: Num a => b -> (b -> b) -> a -> b
@@ -288,67 +247,42 @@ pairx = Ix("",Nothing,Nothing,Just "(,)",Nothing,Nothing)     -- Px("","(,)")
 recordx = Ix("",Nothing,Nothing,Nothing,Just("Rnil","Rcons"),Nothing) -- Rx("","Rnil","Rcons")
 tickx tag tick = Ix(tag,Nothing,Nothing,Nothing,Nothing,Just tick) 
 
-normalList (Lx("","[]",":")) = True
+-- normalList (Lx("","[]",":")) = True
 normalList (Ix("",Just("[]",":"),_,_,_,_)) = True
 normalList _ = False
-
------------------------------------------------------
--- recognizing extension tags
-
-listExt c (Lx _) = True
-listExt c (Ix(_,Just(i,j),_,_,_,_)) = c==i || c==j
-listExt c _ = False
-
-natExt c (Nx _) = True
-natExt c (Ix(_,_,Just(i,j),_,_,_)) = c==i || c==j
-natExt c _ = False
-
-pairExt c (Px _) = True
-pairExt c (Ix(_,_,_,Just i,_,_)) = c==i
-pairExt c _ = False
-
-recordExt c (Rx _) = True
-recordExt c (Ix(_,_,_,_,Just(i,j),_)) = c==i || c==j
-recordExt c _ = False
-
-tickExt c (Tx _) = True
-tickExt c (Ix(_,_,_,_,_,Just i)) = c==i
-tickExt c _ = False
 
 ------------------------------------------------------
 -- Recognizing Extension constructors
 
-listCons c (Lx(k,nil,cons)) = c==cons
 listCons c (Ix(k,Just(nil,cons),_,_,_,_)) = c==cons
 listCons c _ = False
 
-listNil c (Lx(k,nil,cons)) = c==nil
 listNil c (Ix(k,Just(nil,cons),_,_,_,_)) = c==nil
 listNil c _ = False
 
-natZero c (Nx(k,z,s)) = c==z
 natZero c (Ix(k,_,Just(z,s),_,_,_)) = c==z
 natZero c _ = False
 
-natSucc c (Nx(k,z,s)) = c==s
 natSucc c (Ix(k,_,Just(z,s),_,_,_)) = c==s
 natSucc c _ = False
 
-pairProd c (Px(k,prod)) = c==prod
 pairProd c (Ix(k,_,_,Just prod,_,_)) = c==prod
 pairProd c _ = False
 
-recordCons c (Rx(k,nil,cons)) = c==cons
 recordCons c (Ix(k,_,_,_,Just(nil,cons),_)) = c==cons
 recordCons c _ = False
 
-recordNil c (Rx(k,nil,cons)) = c==nil
 recordNil c (Ix(k,_,_,_,Just(nil,cons),_)) = c==nil
 recordNil c _ = False
 
-tickSucc c (Tx(k,succ)) = c==succ
 tickSucc c (Ix(k,_,_,_,_,Just succ)) = c==succ
 tickSucc c _ = False
+
+-- recognizing extension tags
+
+listExt c x = listCons c x || listNil c x 
+natExt c x = natZero c x || natSucc c x 
+recordExt c x = recordCons c x || recordNil c x 
 
 -----------------------------------------------------------
 -- Parsers for Syntactic Extensions
@@ -400,38 +334,6 @@ natP = try $ lexeme $
 
 ---------------------------------------------------------------------
 
-foldx (f@(l,n,p,r,t)) (Ix(k,Just x,nx,px,rx,tx)) = 
-  l x : foldx f (Ix(k,Nothing,nx,px,rx,tx))
-foldx (f@(l,n,p,r,t)) (Ix(k,Nothing,Just x,px,rx,tx)) = 
-  n x : foldx f (Ix(k,Nothing,Nothing,px,rx,tx))
-foldx (f@(l,n,p,r,t)) (Ix(k,Nothing,Nothing,Just x,rx,tx)) = 
-  p x : foldx f (Ix(k,Nothing,Nothing,Nothing,rx,tx))  
-foldx (f@(l,n,p,r,t)) (Ix(k,Nothing,Nothing,Nothing,Just x,tx)) = 
-  r x : foldx f (Ix(k,Nothing,Nothing,Nothing,Nothing,tx))  
-foldx (f@(l,n,p,r,t)) (Ix(k,Nothing,Nothing,Nothing,Nothing,Just x)) = 
-  t x : foldx f (Ix(k,Nothing,Nothing,Nothing,Nothing,Nothing))
-foldx f _ = []
-
-makex (f@(lf,nf,pf,rf,tf)) [] x = x
-makex (f@(lf,nf,pf,rf,tf)) (Lx x: xs) (Ix(k,l,n,p,r,t)) = makex f xs (Ix(k,Just(lf x),n,p,r,t))
-makex (f@(lf,nf,pf,rf,tf)) (Nx x: xs) (Ix(k,l,n,p,r,t)) = makex f xs (Ix(k,l,Just(nf x),p,r,t))
-makex (f@(lf,nf,pf,rf,tf)) (Px x: xs) (Ix(k,l,n,p,r,t)) = makex f xs (Ix(k,l,n,Just(pf x),r,t))
-makex (f@(lf,nf,pf,rf,tf)) (Rx x: xs) (Ix(k,l,n,p,r,t)) = makex f xs (Ix(k,l,n,p,Just(rf x),t))
-makex (f@(lf,nf,pf,rf,tf)) (Tx x: xs) (Ix(k,l,n,p,r,t)) = makex f xs (Ix(k,l,n,p,r,Just(tf x)))
-makex f (x:xs) i = makex f xs i
-
-
-wExt = Ix("w",Just("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just("RNil","RCons"),Just("Next"))
-
-
-mergex [] x = x
-mergex (Lx(_,a,b): xs) (Ix(k,l,n,p,r,t)) = mergex xs (Ix(k,Just(a,b),n,p,r,t))
-mergex (Nx(_,a,b): xs) (Ix(k,l,n,p,r,t)) = mergex xs (Ix(k,l,Just(a,b),p,r,t))
-mergex (Px(_,a)  : xs) (Ix(k,l,n,p,r,t)) = mergex xs (Ix(k,l,n,Just a,r,t))
-mergex (Rx(_,a,b): xs) (Ix(k,l,n,p,r,t)) = mergex xs (Ix(k,l,n,p,Just(a,b),t))
-mergex (Tx(_,a)  : xs) (Ix(k,l,n,p,r,t)) = mergex xs (Ix(k,l,n,p,r,Just a))
-mergex (x:xs) i = mergex xs i
-
 mergey ("List",[a,b])   (Ix(k,l,n,p,r,t)) = (Ix(k,Just(a,b),n,p,r,t))
 mergey ("Nat",[a,b])    (Ix(k,l,n,p,r,t)) = (Ix(k,l,Just(a,b),p,r,t))
 mergey ("Pair",[a])     (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,Just a,r,t))
@@ -461,10 +363,29 @@ expectedArities =
 --              2) there are extra constructors with no cooresponding role
 --              3) there are two few constructors for the roles of that extension
 
-checkArities [] [] = []
-checkArities ((c,n):xs) ((d,m):ys) = (n==m,(c,show n,d,show m)): checkArities xs ys
-checkArities [] ((d,m):ys) = (False,("       "," ",d++"  unexpected extra constructor",show m)): checkArities [] ys
-checkArities ((c,n):xs) [] = (False,(c,show n,"?  missing constructor","?")): checkArities xs []
+checkArities name style expected actual =
+     case (expected,actual) of
+       ([],[]) -> []
+       ((c,n):xs,(d,m):ys) -> (n==m,(c,show n,d,show m),arityfix (n==m) d)
+                            : checkArities name style xs ys
+       ([]      ,(d,m):ys) -> (False,("       "," ",d++"  unexpected extra constructor",show m),extrafix style d)
+                            : checkArities name style [] ys
+       ((c,n):xs,[]      ) -> (False,(c,show n,"?    - missing role.","?"),missingfix style c)
+                            : checkArities name style xs []
+  where suffix OLD = " from the deriving clause."
+        suffix NEW = " from the constructors of the data declaration."
+        arityfix True  d = ""
+        arityfix False d = "Fix the arity of "++d++" in the data declaration."
+        extrafix OLD d = "Remove, extra constructor "++detrail d++" from the data declaration."
+        extrafix NEW d = "Remove, extra constructor "++detrail d++" from the syntax clause for "++name++"."
+        missingfix OLD c = "Add a constructor for "++detrail c++" to the data declaration."
+        missingfix NEW c = "Add a constructor for "++detrail c++" to the syntax clause for "++name++"."
+                
+suggestFix style [] = ""
+suggestFix style ((True,_,fix): xs) = suggestFix style xs
+suggestFix style ((False,_,fix): xs) = "\n   "++fix ++ suggestFix style xs
+  
+detrail xs = reverse (dropWhile (==' ') (reverse xs))
 
 -- If the extension name doesn't fit, report an error
 
@@ -473,41 +394,52 @@ badName name = Right ("\n'"++name++"' is not a valid syntactic extension name, c
 
 -- Check a list of extensions, and build a Ix synExt data structure                     
 
-checkMany :: String -> [(String,[(String,Int)])] -> Either (SynExt String) String
-checkMany tag [] = Left (Ix(tag,Nothing,Nothing,Nothing,Nothing,Nothing))
-checkMany tag ((name,args):more) =
-  case checkMany tag more of
+checkMany :: SyntaxStyle -> String -> [(String,[(String,Int)])] -> Either (SynExt String) String
+checkMany style tag [] = Left (Ix(tag,Nothing,Nothing,Nothing,Nothing,Nothing))
+checkMany style tag ((name,args):more) =
+  case checkMany style tag more of
     Right x -> Right x
     Left info -> 
          case lookup name expectedArities of
            Nothing -> badName name 
            Just expected ->  if not good then Right s else Left info'
-             where ans = checkArities expected args
-                   good = all fst ans
-                   g (bool,(c,n,d,m)) = concat["\n     ",c," ",n,"           ",m,"     ",d]
-                   s = concat(["\nError in syntactic extension declaration ",name
-                             ,plistf fst "(" args "," ")"
+             where ans = checkArities name style expected args
+                   good = all (\ (x,y,z) -> x) ans
+                   printname = case style of
+                                 OLD -> name++"("++tag++")"
+                                 NEW -> name++ plistf fst "(" args "," ")"
+                   g (bool,(c,n,d,m),fix) = concat["\n     ",c," ",n,"           ",m,"     ",d]
+                   s = concat(["\nError in syntactic extension declaration ",printname
                              ,"\n     Expected           Actual"
-                             ,"\n     Role   Arity       Arity  Constructor\n"]++ map g ans)
+                             ,"\n     Role   Arity       Arity  Constructor\n"]
+                             ++ map g ans) ++ fixes
+                   fixes = if good then "" else "\n\nPossible fix(s):" ++ suggestFix style ans
                    info' = mergey (name,map fst args) info
+duplicates [] = []
+duplicates (x:xs) = nub(if elem x xs then x : duplicates xs else duplicates xs)
                    
 liftEither (Left x) = return x
 liftEither (Right x) = fail x
-     
-                                
-              
-       
 
-go x = case checkMany "tag" x of
+
+
+checkClause arityCs (name,args) = 
+   do { let printname = name++plistf id "(" args "," ")"
+      ; ys <- mapM (computeArity printname arityCs) args
+      ; return(name,ys) }                                   
+        
+computeArity printname arityCs c =
+  case lookup c arityCs of
+    Nothing -> fail (concat["\nThe name "++c++", in the syntax derivation "
+                       ,printname,",\nis not amongst the declared"
+                       ," constructors: ",plistf fst "" arityCs ", " ".\n"])
+    Just n -> return (c,n)
+      
+wExt = Ix("w",Just("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just("RNil","RCons"),Just("Next"))
+
+                                              
+go x = case checkMany OLD "tag" x of
         Left x -> putStrLn(show x)
         Right y -> putStrLn y
 
---go [("List",[("N",0),("C",2)]),("Nat",[("Z",0),("S",1)])]                        
-                     
-{-
-f (x,y) = [x,y]
-g x = [x]
-h = (f,f,g,f,g)
-test x = foldx h x
-w=Ix("",Just("[]",":"),Nothing,Nothing,Just("Z","S"),Nothing)
--}
+ 

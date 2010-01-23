@@ -3408,7 +3408,7 @@ exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | listCons c lx  = exhibit xs z
 exhibitpar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | recordCons c rx = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairExt c px = exhibit xs z
+exhibitpar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairProd c px = exhibit xs z
 exhibitpar xs z@(TyApp (TyCon nx _ c _) _) | natSucc c nx = exhibit xs z
 exhibitpar xs  z | isRow z = exhibit xs z
 exhibitpar xs x@(Karr _ _) = (ys,"("++ ans ++ ")")
@@ -3610,7 +3610,7 @@ instance (NameStore d) => Exhibit d Tau where
   exhibit xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _)) 
                                                        | recordCons c ext = exSynRecord xs t
 
-  exhibit xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairExt c ext = exSynPair xs t
+  exhibit xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext = exSynPair xs t
 
   exhibit xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug use something like: ["L","Bush"] 
                                      = (ys,nm++"("++l'++","++vs'++"."++k'++")")
