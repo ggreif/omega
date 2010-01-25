@@ -193,7 +193,7 @@ instance Eq Derivation where
  (Syntax x) == (Syntax y) = x==y
   
 bindsDeriv (Syntax Ox) = id
-bindsDeriv (Syntax x) = addBind (Global ("#"++synName x++synKey x))
+bindsDeriv (Syntax x) = id -- addBind (Global ("#"++synName x++synKey x))
 
 bindDs [] = id
 bindDs (d:ds) = bindsDeriv d . bindDs ds

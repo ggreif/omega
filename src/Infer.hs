@@ -2249,7 +2249,7 @@ checkSyn constrs [ext] = checkParseSynExt ext
 
 checkParseSynExt (Parsex(tag,style,arityCs,clauses)) = 
   do { let roles = concat(map snd clauses)
-     ; warnM [Ds ("\nThe roles are "++show roles) ]
+     -- ; warnM [Ds ("\nThe roles are "++show roles) ]
      ; case duplicates roles of
          [] -> return ()
          cs -> failM 1 [ Ds 

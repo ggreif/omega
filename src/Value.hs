@@ -237,7 +237,11 @@ instance Show V where
     case boolV v of
       Nothing -> "("++show inj++" "++show x++")"
       Just t -> if t then "True" else "False"
-  show (Vprod x y) = "("++show x++","++show y++")"
+  show (v@(Vprod x y)) =  plistf show "(" (collect v []) "," ")"
+    where collect (Vprod x y) ans = collect y (x:ans)
+          collect other ans = reverse( (other : ans))
+    
+    --  "("++show x++","++show y++")"
   show (Vprimfun s f) = "<primfun "++s++">"
   show (Vfun p e (Ev xs _)) = "(fn" ++ show (map fst xs)++")"
   show (Vf f push swap) = "<fn>"
