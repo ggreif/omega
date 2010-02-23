@@ -1,6 +1,7 @@
 #summary Proposed feature of generating isomorphic datatypes at many levels in one definition.
-#labels speculative
+#labels speculative,crazy,Phase-Requirements
 
+----
 = Introduction =
 
 Consider the `Nat'` datatype:
@@ -22,6 +23,7 @@ This is a very common pattern of defining _singleton types_ in Ωmega. Its essen
 
 But sometimes _n_ becomes more than 1 and the definition at the different levels gets very tedious, which is aggravated by the fact that new names must be invented for levels _n > 1_. `[`Witness the 2008 Summer School video and progress proof.`]` Our idea is to extend Ωmega's syntax with two multi-level definition constructs that hopefully take out the tedium of these patterns and make them enjoyable.
 
+----
 = Proposal =
 
 We define a syntax for _descending-levelled_ datatype definitions first. Then, in the spirit of Monnier's suggestion, add the syntax for descending-level _functions_, that is define the rule system at the highest applicable level (where no indices appear yet) and then the lower level equations are derived automatically. Finally we perform the fixpoint trick and introduce these once more but rooting at infinite level (`*∞`).
@@ -65,10 +67,12 @@ data «Foo» where
   Quux :: Foo ~> Foo
 }}}
 
+----
 = Open Issues =
 
   * Do we need unicode to spell out these new syntactic entities?
 
+----
 = References =
   # http://www.iro.umontreal.ca/~monnier/comp-deptypes.pdf
   # Sheard video
