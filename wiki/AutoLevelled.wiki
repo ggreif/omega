@@ -37,7 +37,7 @@ data ‹Nat› where
   S :: Nat ~> Nat
 }}}
 
-This definition is actually a multi-level definition: `Nat :: *1` and `‹Nat› :: Nat`. The constructors are given at the highest applicable level, here: `Z :: Nat :: *1` and `S :: Nat ~> Nat :: *1`, but implicitly define the object-level ones too `‹Z› :: ‹Nat› Z :: *0` and `‹S› :: ‹Nat› n -> ‹Nat› (S n) :: *0` too.
+This definition is actually a multi-level definition: `Nat :: *1` and `‹Nat› :: Nat`. The constructors are given at the highest applicable level, here: `Z :: Nat :: *1` and `S :: Nat ~> Nat :: *1`, but implicitly define the object-level ones, `‹Z› :: ‹Nat› Z :: *0` and `‹S› :: ‹Nat› n -> ‹Nat› (S n) :: *0` too.
 
 Of course, by adding more angle brackets we can root the construction higher up in the level hierarchy.
 
