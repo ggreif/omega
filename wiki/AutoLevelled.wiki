@@ -44,12 +44,15 @@ Of course, by adding more angle brackets we can root the construction higher up 
 A common annoyance in Ωmega is that type-level functions must be defined first before object-level functions can be defining that use the former for index calculation `[`Monnier`]`. Our syntax comes in here too.
 
 {{{
-plus :: ‹Nat› -> ‹Nat› -> ‹Nat›
+‹plus› :: ‹Nat› -> ‹Nat› -> ‹Nat›
 {plus Z n} = n
 {plus (S m) n} = S {plus m n}
 }}}
 
-Again, the type rule mentions the lowest applicable level, while the equations are written out for the highest applicable level.
+Again, the type rule mentions the lowest applicable level, while the equations are written out for the highest applicable level. Please note that the typing invokes the descending level shorthand notation and defines the following functions:
+|| *Level* || *Name* || *Signature* ||
+|| `*1` || plus || `Nat ~> Nat ~> Nat` ||
+|| `*0` || ‹plus› || `‹Nat› m -> ‹Nat› n -> ‹Nat› {plus m n}` ||
 
 == Rooting below `*∞`: the fixpoint ==
 
