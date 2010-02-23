@@ -74,6 +74,7 @@ data «Foo» where
 
   * Do we need unicode to spell out these new syntactic entities?
   * Expand out an `‹‹Example››`, i.e. is a nullary constructor at level 0 `‹‹Zunk›› :: ‹‹Example›› (‹Example› Example)` or what?
+  * How can we fit this syntax into the pun that is used to call things from value and type levels the same? Can we automatically add the angle quotes?
 
 ----
 = References =
