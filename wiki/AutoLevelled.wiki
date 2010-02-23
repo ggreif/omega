@@ -71,6 +71,7 @@ data «Foo» where
 = Open Issues =
 
   * Do we need unicode to spell out these new syntactic entities?
+  * Expand out an `‹‹Example››`, i.e. is a nullary constructor at level 0 `‹‹Zunk›› :: ‹‹Example›› (‹Example› Example)` or what?
 
 ----
 = References =
