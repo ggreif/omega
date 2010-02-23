@@ -53,6 +53,7 @@ Again, the type rule mentions the lowest applicable level, while the equations a
 || *Level* || *Name* || *Signature* ||
 || `*1` || plus || `Nat ~> Nat ~> Nat` ||
 || `*0` || ‹plus› || `‹Nat› m -> ‹Nat› n -> ‹Nat› {plus m n}` ||
+Also this level shorthand in the type rule is the distinguishing factor that teaches Ωmega to create a multi-level function definition.
 
 == Rooting below `*∞`: the fixpoint ==
 
