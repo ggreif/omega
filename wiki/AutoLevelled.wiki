@@ -75,5 +75,6 @@ data «Foo» where
 ----
 = References =
   # http://www.iro.umontreal.ca/~monnier/comp-deptypes.pdf
-  # Sheard video
+  # [http://www.cs.uoregon.edu/research/summerschool/summer08/video/July26Lect1.wmv Tim Sheard's 2008 Lecture Video]
   # http://code.google.com/p/omega/source/browse/trunk/tests/Progress.prg
+  # http://personal.cis.strath.ac.uk/~conor/pub/she/fun/talk.pdf
