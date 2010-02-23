@@ -68,3 +68,8 @@ data «Foo» where
 = Open Issues =
 
   * Do we need unicode to spell out these new syntactic entities?
+
+= References =
+  # http://www.iro.umontreal.ca/~monnier/comp-deptypes.pdf
+  # Sheard video
+  # http://code.google.com/p/omega/source/browse/trunk/tests/Progress.prg
