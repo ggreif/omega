@@ -1,0 +1,52 @@
+#summary Proposed feature of generating isomorphic datatypes at many levels in one definition.
+#labels speculative
+
+= Introduction =
+
+Consider the `Nat'` datatype:
+
+{{{
+data Nat' :: Nat ~> *0 where
+  Z :: Nat' Z
+  S :: Nat' n -> Nat' (S n)
+}}}
+
+where `Nat` is defined thus:
+{{{
+data Nat ::  *1 where
+  Z :: Nat
+  S :: Nat -> Nat
+}}}
+
+This is a very common pattern of defining _singleton types_ in Ωmega. Its essence is that a _level n+1_ type is used to index an isomorphic _level n_ datatype, descending down to _level 0_.
+
+But sometimes _n_ becomes more than 1 and the definition at the different levels gets very tedious, which is aggravated by the fact that new names must be invented for levels _n>1_. [Witness the 2008 Summer School video and progress proof] Our idea is to extend Ωmega's syntax with two multi-level definition constructs that hopefully take out the tedium of these patterns and make them enjoyable.
+
+= Proposal =
+
+We define a syntax for _descending-levelled_ datatype definitions first. Then, in the spirit of Monnier's suggestion, add the syntax for descending-level _functions_, that is define the rule system at the highest applicable level (where no indices appear yet) and then the lower level equations are derived automatically. Finally we perform the fixpoint trick and introduce these once more but rooting at infinite level (`*∞`).
+
+== Defining data types rooting at `*n` ==
+
+Consider the following syntax:
+{{{
+data ‹Nat› where
+  Z :: Nat
+  S :: Nat ~> Nat
+}}}
+
+This definition is actually a multi-level definition: `Nat :: *1` and `‹Nat› :: Nat`. The constructors are given at the highest applicable level, here `Z :: Nat :: *1` and `S :: Nat ~> Nat :: *1`, but implicitly define `‹Z› :: ‹Nat› :: *0` and `‹Nat› :: ‹Nat› -> ‹Nat› :: *0` too.
+
+Of course, by adding more angle brackets we can root the construction higher up in the level hierarchy.
+
+== Defining functions at the highest level and descending ==
+
+A common annoyance in Ωmega is that type-level functions must be defined first before object-level functions can be defining that use the former for index calculation [Monnier]. Our syntax comes in here too.
+
+{{{
+plus :: ‹Nat› -> ‹Nat› -> ‹Nat›
+{plus Z n} = n
+{plus (S m) n} = S {plus m n}
+}}}
+
+Again, the type rule mentions the lowest applicable level, while the equations are written out for the highest applicable level.
