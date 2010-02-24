@@ -89,8 +89,6 @@ data «Foo» where
 
 `‹‹Pat››` is like `‹Nat›` but rooted under `*2`:
 {{{
-import "LangPrelude.prg"
-
 data Pat :: *2 where
   Y :: Pat
   Q :: Pat ~> Pat
