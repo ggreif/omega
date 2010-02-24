@@ -9,14 +9,14 @@ Consider the `Nat'` datatype:
 {{{
 data Nat' :: Nat ~> *0 where
   Z :: Nat' Z
-  S :: Nat' n ~> Nat' (S n)
+  S :: Nat' n -> Nat' (S n)
 }}}
 
 where `Nat` is defined thus:
 {{{
 data Nat ::  *1 where
   Z :: Nat
-  S :: Nat -> Nat
+  S :: Nat ~> Nat
 }}}
 
 This is a very common pattern of defining _singleton types_ in Ωmega. Its essence is that a _level n+1_ type is used to index an isomorphic _level n_ datatype, descending down to _level 0_.
