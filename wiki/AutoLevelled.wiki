@@ -111,3 +111,22 @@ Testing:
 prompt> Q (Q Y)
 2r : Pat'' 2q
 }}}
+
+== Ωmega example for `‹‹plus››` ==
+
+{{{
+plus :: Pat ~> Pat ~> Pat
+{plus Y n} = n
+{plus (Q m) n} = Q {plus m n}
+
+plus' :: Pat' m ~> Pat' n ~> Pat' {plus m n}
+{plus' Y' n} = n
+{plus' (Q' m) n} = Q' {plus' m n}
+
+plus'' :: Pat'' m -> Pat'' n -> Pat'' {plus' m n}
+plus'' Y n = n
+plus'' (Q m) n = Q (plus'' m n)
+}}}
+Again, this is nice and regular.
+
+_Note: unfortunately this does not compile with Ωmega 1.4.3 due to issue 23 :-(_
