@@ -82,3 +82,35 @@ data «Foo» where
   # [http://www.cs.uoregon.edu/research/summerschool/summer08/video/July26Lect1.wmv Tim Sheard's 2008 Lecture Video]
   # http://code.google.com/p/omega/source/browse/trunk/tests/Progress.prg
   # http://personal.cis.strath.ac.uk/~conor/pub/she/fun/talk.pdf
+
+----
+= Examples =
+
+== Omega example for `‹‹Pat››` ==
+
+`‹‹Pat››` is like `‹Nat›` but rooted under `*2`:
+{{{
+import "LangPrelude.prg"
+
+data Pat :: *2 where
+  Y :: Pat
+  Q :: Pat ~> Pat
+ deriving Nat(p)
+
+data Pat' :: Pat ~> *1 where
+  Y' :: Pat' Y
+  Q' :: Pat' n ~> Pat' (Q n)
+ deriving Nat(q)
+
+data Pat'' :: Pat' p ~> *0 where
+  Y :: Pat'' Y'
+  Q :: Pat'' n -> Pat'' (Q' n)
+ deriving Nat(r)
+}}}
+We can see that all is pretty regular.
+
+Testing:
+{{{
+prompt> Q (Q Y)
+2r : Pat'' 2q
+}}}
