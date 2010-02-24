@@ -69,6 +69,8 @@ data «Foo» where
   Quux :: Foo ~> Foo
 }}}
 
+This syntax uses the _ guillemets_-style double quotes. The types arising at any level are _infinite_, but it is certainly possible to create values `«Bar»` or `«Quux» «Bar»`.
+
 ----
 = Open Issues =
 
