@@ -114,6 +114,8 @@ prompt> Q (Q Y)
 2r : Pat'' 2q
 }}}
 
+_Note: Issue 70 is hindering us rooting this under `*3`._
+
 == Ωmega example for `‹‹plus››` ==
 
 {{{
