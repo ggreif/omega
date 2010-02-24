@@ -9,7 +9,7 @@ Consider the `Nat'` datatype:
 {{{
 data Nat' :: Nat ~> *0 where
   Z :: Nat' Z
-  S :: Nat' n -> Nat' (S n)
+  S :: Nat' n ~> Nat' (S n)
 }}}
 
 where `Nat` is defined thus:
