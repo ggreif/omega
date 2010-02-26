@@ -1,0 +1,28 @@
+#summary Syntax for name juxtaposition being more general than function application.
+#labels crazy
+
+= Introduction =
+
+Currently when we juxtapose expressions in Ωmega we get function application. Look at this: expression `map ord "Hello"`; once written you'll get value of `[Int]` and you cannot control the process. This is pretty much unavoidable, just like the type constraints that are imposed on `map` and `ord`.
+
+We propose a new syntactical element that liberates juxtaposition from these fixed rules and allows us to assign semantics to it in a flexible fashion by the `do data` syntax.
+
+= Details =
+
+We'll define the syntactical sugar for our proposed language feature and define its expansion.
+
+== The New Syntax ==
+
+Here is an example:
+
+{{{
+do data (,) { "Hello" (ord map) }
+  where data a b = b, a
+}}}
+
+This would expand to `((map, ord), "Hello") :: (((a->b)->[a]->[b],Char->Int), [Char])`.
+The `where data` clause forces the AST builder to rearrange juxtapositions to their reversals inserting a comma in between, and the `do data (,)` determines that the the type rules are according to the _pair_ type constructor.
+
+== Lambdas? ==
+
+This clause could change the lambda syntax' behaviour: `where data \x -> "x"` as an example of the "C" stringize operator.
