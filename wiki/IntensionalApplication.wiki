@@ -17,7 +17,7 @@ Here is an example:
 
 {{{
 do data (,) { "Hello" (ord map) }
-  where data a b = b, a
+  where do a b = b, a
 }}}
 
 This would expand to `((map, ord), "Hello") :: (((a->b)->[a]->[b],Char->Int), [Char])`.
@@ -25,4 +25,4 @@ The `where data` clause forces the AST builder to rearrange juxtapositions to th
 
 == Lambdas? ==
 
-This clause could change the lambda syntax' behaviour: `where data \x -> "x"` as an example of the "C" stringize operator.
+This clause could change the lambda syntax' behaviour: `where do \x -> "x"` as an example of the "C" stringize operator.
