@@ -7,6 +7,11 @@ Currently when we juxtapose expressions in Ωmega we get function application. L
 
 We propose a new syntactical element that liberates juxtaposition from these fixed rules and allows us to assign semantics to it in a flexible fashion by the `do data` syntax.
 
+== Why at all? ==
+
+The most important reason is that we want to use the syntax for constructing other types of data than executable code. For example we may want to write down hardware descriptions just like we do haskell. Of course we cannot (and usually don't want to) execute it, but capture it for later transformations.
+The idea to this proposal came after digesting Wadler et al.'s paper about the _arrow calculus_. There he introduces _arrow applications_, _lambdas_ and _let_s. For each arrow, presumably.
+
 = Details =
 
 We'll define the syntactical sugar for our proposed language feature and define its expansion.
@@ -26,3 +31,8 @@ The `where data` clause forces the AST builder to rearrange juxtapositions to th
 == Lambdas? ==
 
 This clause could change the lambda syntax' behaviour: `where do \x -> "x"` as an example of the "C" stringize operator.
+
+= References =
+
+  * http://web.cecs.pdx.edu/~sheard/papers/HFL07Sheard.pdf
+  * http://homepages.inf.ed.ac.uk/wadler/papers/arrows/arrows.pdf
