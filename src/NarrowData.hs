@@ -258,7 +258,7 @@ termWild t = case kindOf t of
 wild = unsafePerformIO (do { n <- nextInteger; r <- newRef Nothing; return(Tv n (Flexi r))})
 
 ---------------------------------------------------
--- Manipulating and copmbining Answers
+-- Manipulating and combining Answers
 
 -- nCons:: NTerm z n v t => (t,Un v t) -> NResult v t -> NResult v t
 nCons x (Answers xs) = Answers(x : xs)
