@@ -664,18 +664,18 @@ trans n (Step z) Base = unreachable
 trans n Base (Step z) = Base
 trans n (Step x) (Step y) = (Step(trans n x y))
 
-compare :: Nat' a -> Nat' b -> (LE' a b + LE' b a)
-compare Z Z     = L LE
-compare (a@Z) (b@(S x)) = 
-   case compare Z x of  
+cmpare :: Nat' a -> Nat' b -> (LE' a b + LE' b a)
+cmpare Z Z     = L LE
+cmpare (a@Z) (b@(S x)) = 
+   case cmpare Z x of  
       L LE -> L LE
       R LE -> L LE
-compare (a@(S x)) (b@Z) = 
-   case compare x Z of  
+cmpare (a@(S x)) (b@Z) = 
+   case cmpare x Z of  
       R LE -> R LE
       L LE -> R LE
-compare (S x) (S y) =  
-   case compare x y of  
+cmpare (S x) (S y) =  
+   case cmpare x y of  
       R LE -> R LE
       L LE -> L LE  
       
