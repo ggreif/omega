@@ -930,11 +930,11 @@ primitives = map f xs where
 --
 -- where
 -- prop DiffLabel:: Tag ~> Tag ~> *0 where
---   LabelNotEq:: Int -> DiffLabel x y
+--   LabelNotEq:: Ordering -> DiffLabel x y
 --
 -- But, the type DiffLabel is abstract, and if LabelNotEq is ever
 -- applied, it diverges. Fortunately we can create instances with sameLabel.
--- It is safe to pattern match against (LabelNotEq n).
+-- It is safe to pattern match against (LabelNotEq o).
 
 -- Values for Labels
 
@@ -945,7 +945,7 @@ sameLabelV = Vprimfun "sameLabel" (analyzeWith f) where
      g ptr2@(Vlit (Tag t))  = return comp where
          comp = if s == t
                    then (Vsum L (Vcon (Global "Eq",Ox) []))
-                   else (Vsum R (Vcon (Global "LabelNotEq",Ox) [Vlit (Int 0)]))
+                   else (Vsum R (Vcon (Global "LabelNotEq",Ox) [to LT]))
      g v = fail ("Non Tag as 2nd argument to sameLabel: "++show v)
   f v = fail ("Non Tag as 1st argument to sameLabel: "++show v)
 
@@ -962,7 +962,7 @@ labelNotEq = Vprimfun "LabelNotEq" (analyzeWith f) where
 
 
 sigmaLabelNotEq = sigma
- where tau = typeOf(undefined :: Int -> (DiffLabel T1 T2))
+ where tau = typeOf(undefined :: Ordering -> (DiffLabel T1 T2))
        sigma = gen tau
 
 tyconLabelNotEq = TyCon Ox LvZero "LabelNotEq" (K [] sigmaLabelNotEq)
