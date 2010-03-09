@@ -238,7 +238,7 @@ instance Encoding Ordering where
     from (Vcon (Global "EQ",Ox) []) = EQ
     from (Vcon (Global "LT",Ox) []) = LT
     from (Vcon (Global "GT",Ox) []) = GT
-    from v = error ("Value not a Maybe type: "++show v)
+    from v = error ("Value not an Ordering: "++show v)
     
     
 instance (Encoding a,Encoding b) => Encoding (Either a b) where
