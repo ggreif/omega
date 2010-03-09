@@ -945,7 +945,7 @@ sameLabelV = Vprimfun "sameLabel" (analyzeWith f) where
      g ptr2@(Vlit (Tag t))  = return comp where
          comp = if s == t
                    then (Vsum L (Vcon (Global "Eq",Ox) []))
-                   else (Vsum R (Vcon (Global "LabelNotEq",Ox) [to LT]))
+                   else (Vsum R (Vcon (Global "LabelNotEq",Ox) [to $ compare s t]))
      g v = fail ("Non Tag as 2nd argument to sameLabel: "++show v)
   f v = fail ("Non Tag as 1st argument to sameLabel: "++show v)
 
