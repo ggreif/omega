@@ -64,10 +64,10 @@ leToEq Base_LE Base_LE = Base_EQ
 leToEq (Step_LE x) (Step_LE y) = Step_EQ (leToEq x y)
 
 -- Tests for ordering between two naturals..
-compare :: Nat' a -> Nat' b -> (LE a b + LE b a)
-compare Z _ = L Base_LE
-compare (S x) Z = R Base_LE
-compare (S x) (S y) = mapP Step_LE Step_LE (compare x y)
+cmpare :: Nat' a -> Nat' b -> (LE a b + LE b a)
+cmpare Z _ = L Base_LE
+cmpare (S x) Z = R Base_LE
+cmpare (S x) (S y) = mapP Step_LE Step_LE (cmpare x y)
 
 -- Tests for equality or inequality between two naturals.
 eqOrNe :: Nat' x -> Nat' y -> (EQ x y + NE x y)

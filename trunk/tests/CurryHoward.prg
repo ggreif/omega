@@ -114,21 +114,21 @@ data Sss:: Nat ~> *0 where
 data LE' :: Nat ~> Nat ~> *0 where
    LE :: LE m n => LE' m n
    
-compare :: Nat' a -> Nat' b -> (LE' a b + LE' b a)
-compare Z Z     = L LE
-compare Z (S x) = L LE
-compare (S x) Z =  R LE
-compare (a@(S x)) (b@(S y)) =  
-   case compare x y of  
+cmpare :: Nat' a -> Nat' b -> (LE' a b + LE' b a)
+cmpare Z Z     = L LE
+cmpare Z (S x) = L LE
+cmpare (S x) Z =  R LE
+cmpare (a@(S x)) (b@(S y)) =  
+   case cmpare x y of  
       R (p@LE) -> (R LE)
       L LE -> (L LE)
 {-
-compare Z (S x) = 
-   case compare Z x of  
+cmpare Z (S x) = 
+   case cmpare Z x of  
       L LE -> L LE
       R LE -> L LE
-compare (S x) Z = 
-   case compare x Z of  
+cmpare (S x) Z = 
+   case cmpare x Z of  
       R LE -> R LE
       L LE -> R LE
 -}
@@ -138,7 +138,7 @@ merge2 :: Sss n -> Sss m -> (Sss n + Sss m)
 merge2 Snil ys = R ys
 merge2 xs Snil = L xs
 merge2 (a@(Scons x xs)) (b@(Scons y ys)) =
-  case compare x y of
+  case cmpare x y of
     L LE -> case merge2 a ys of
              L ws -> R(Scons y ws)           
              R ws -> R(Scons y ws)

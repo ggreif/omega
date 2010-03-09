@@ -126,14 +126,14 @@ data Rep:: ObjType ~> *0 where
  I:: Rep IntT
  Ar:: Rep a -> Rep b -> Rep (ArrT a b)
 
-compare:: Rep a -> Rep b -> (String + Equal a b)
-compare I I = R Eq
-compare (Ar x y) (Ar s t) =
-  do { Eq <- compare x s
-     ; Eq <- compare y t
+cmpare:: Rep a -> Rep b -> (String + Equal a b)
+cmpare I I = R Eq
+cmpare (Ar x y) (Ar s t) =
+  do { Eq <- cmpare x s
+     ; Eq <- cmpare y t
      ; R Eq}
-compare I (Ar x y) = L "I /= (Ar _ _)"
-compare (Ar x y) I = L "(Ar _ _) /= I"
+cmpare I (Ar x y) = L "I /= (Ar _ _)"
+cmpare (Ar x y) I = L "(Ar _ _) /= I"
 
 data Env:: Row Tag ObjType ~> *0 where
    Enil:: Env RNil

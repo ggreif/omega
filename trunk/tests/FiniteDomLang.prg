@@ -52,7 +52,7 @@ data Exp :: *0 ~> *0 ~> *0 where
    RelOp :: RelOp -> (Exp e (Range m n)) -> (Exp e (Range p q)) -> Exp e Bool
    
 data BoolOp = And | Or | Not | Implies
-data RelOp = EQ | LT | GT | NE | LTE | GTE
+data RelOp = EQ' | LT' | GT' | NE' | LTE' | GTE'
 
 data Defs :: *0 ~> *0 where
    First :: (Ty t) -> (Exp e t) -> Defs e
