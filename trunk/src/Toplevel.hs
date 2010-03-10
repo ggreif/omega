@@ -19,7 +19,7 @@ import Infer(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
             ,var_env,type_env,rules,runtime_env,syntaxExt)
 import RankN(pprint,Z,failD,disp0,dispRef)
 import System(getArgs)
-import Data.Map(Map,toList)
+import Data.Map(Map,toList,empty)
 import Directory
 import Char(isAlpha,isDigit)
 import System.IO(hClose)
@@ -219,7 +219,7 @@ importFile :: Dec -> TcEnv -> FIO TcEnv
 importFile (Import name vs) tenv =
   case lookup name (imports tenv) of
      Just previous -> return tenv
-     Nothing -> do { new <- elabFile name initTcEnv
+     Nothing -> do { new <- elabFile name (initTcEnv{rules = empty})
                    ; unknownExt vs (syntaxExt new)
                    ; return(importNames name vs new tenv) }
 
