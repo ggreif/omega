@@ -12,8 +12,12 @@ liftM f ma = do { a <- ma; return (f a) }
 liftM2 f ma mb = do { a <- ma; b <- mb; return (f a b) }
 
 ------- FINITE (VARIABLE) SETS & TERMS --------------
-data Fin n = ex m. Fz where n = S m
-           | ex m. Fs (Fin m) where n = S m
+--data Fin n = ex m. Fz where n = S m
+--           | ex m. Fs (Fin m) where n = S m
+data Fin:: Nat ~> *0 where
+   Fz:: forall m n . Fin (S m)
+   Fs:: forall m n . Fin m -> Fin (S m)
+
 data Term n = Var(Fin n) | Leaf | Fork(Term n)(Term n)
 
 ------- SUBSTITUTIONS -------------------------------
@@ -44,8 +48,14 @@ for n t' x y = case thick n x y of
 
 -----------------------------------------------------
 -- substitution lists
-data AList m n = Anil where m=n
-               | ex m'. Asnoc(AList m' n)(Term m')(Fin (S m')) where m = S m'
+--data AList m n = Anil where m=n
+--               | ex m'. Asnoc(AList m' n)(Term m')(Fin (S m')) where m = S m'
+data AList:: (Nat ~> (Nat ~> *0)) where
+   Anil:: forall m n . AList n n
+   Asnoc::
+      forall m' m n .
+      AList m' n -> Term m' -> Fin (S m') -> AList (S m') n
+
 sub :: Nat' m -> AList m n -> (Fin m -> Term n)
 sub _ (Anil) = Var
 sub (S n) (Asnoc s t x) = compose(sub n s)(for n t x)
@@ -82,4 +92,5 @@ flexFlex (S m) x y = case thick m x y of
 
 flexRigid :: Nat' m -> Fin m -> Term m -> Maybe (SomeSub m)
 flexRigid (S m) x t = do
-                      t' <- chk m x t Just (SomeSub m (Asnoc Anil t' x))
+                      t' <- chk m x t
+                      return (SomeSub m (Asnoc Anil t' x))
