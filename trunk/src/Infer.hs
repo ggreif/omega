@@ -2274,7 +2274,7 @@ toPred env (Just xs) = toEqs env xs
 
 badKind name tau message =
   failM 3 [Ds "\nWhile checking the data declaration for: ",Ds name
-          ,Ds "\nwe checked the well formedness of its kind: ",Dd tau
+          ,Ds "\nwe checked the well-formedness of its kind: ",Dd tau
           ,Ds "\nAn error was found.\n",Ds message]
 
 -- checkRng makes sure the range is the type being defined.
