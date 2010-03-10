@@ -8,9 +8,8 @@ bind Nothing g = Nothing
 bind (Just x) g = g x
 liftM :: (a -> b) -> Maybe a -> Maybe b
 liftM2 :: (a -> b -> c) -> Maybe a -> Maybe b -> Maybe c
-liftM f ma = do a <- ma;
-             return (f a)
-liftM2 f ma mb = do a <- ma; b <- mb; return (f a b)
+liftM f ma = do { a <- ma; return (f a) }
+liftM2 f ma mb = do { a <- ma; b <- mb; return (f a b) }
 
 ------- FINITE (VARIABLE) SETS & TERMS --------------
 data Fin n = ex m. Fz where n = S m
@@ -74,7 +73,7 @@ amgu m (Var x) t (SomeSub _ Anil) = flexRigid m x t
 amgu m s (Var x) (SomeSub _ Anil) = flexRigid m x s
 amgu (S m) s t (SomeSub n (Asnoc sub r z)) =
      do sub <- amgu m (subst (for m r z) s) (subst (for m r z) t) (SomeSub n sub)
-     return (asnoc sub r z)
+        return (asnoc sub r z)
 
 flexFlex :: Nat' m -> Fin m -> Fin m -> SomeSub m
 flexFlex (S m) x y = case thick m x y of
