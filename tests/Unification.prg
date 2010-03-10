@@ -67,7 +67,7 @@ amgu m (Leaf) (Leaf) acc = Just acc
 amgu m (Leaf) (Fork s t) acc = Nothing
 amgu m (Fork s t) (Leaf) acc = Nothing
 amgu m (Fork s1 t1) (Fork s2 t2) acc =
-     do acc <- amgu m s1 t1 acc; amgu m s2 t2 acc
+     do { acc <- amgu m s1 t1 acc; amgu m s2 t2 acc }
 amgu m (Var x) (Var y) (SomeSub _ Anil) = Just (flexFlex m x y)
 amgu m (Var x) t (SomeSub _ Anil) = flexRigid m x t
 amgu m s (Var x) (SomeSub _ Anil) = flexRigid m x s
