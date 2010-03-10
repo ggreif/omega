@@ -12,11 +12,9 @@ liftM f ma = do { a <- ma; return (f a) }
 liftM2 f ma mb = do { a <- ma; b <- mb; return (f a b) }
 
 ------- FINITE (VARIABLE) SETS & TERMS --------------
---data Fin n = ex m. Fz where n = S m
---           | ex m. Fs (Fin m) where n = S m
 data Fin:: Nat ~> *0 where
-   Fz:: forall m n . Fin (S m)
-   Fs:: forall m n . Fin m -> Fin (S m)
+   Fz:: Fin (S m)
+   Fs:: Fin m -> Fin (S m)
 
 data Term n = Var(Fin n) | Leaf | Fork(Term n)(Term n)
 
@@ -48,13 +46,9 @@ for n t' x y = case thick n x y of
 
 -----------------------------------------------------
 -- substitution lists
---data AList m n = Anil where m=n
---               | ex m'. Asnoc(AList m' n)(Term m')(Fin (S m')) where m = S m'
-data AList:: (Nat ~> (Nat ~> *0)) where
-   Anil:: forall m n . AList n n
-   Asnoc::
-      forall m' m n .
-      AList m' n -> Term m' -> Fin (S m') -> AList (S m') n
+data AList:: Nat ~> Nat ~> *0 where
+   Anil:: AList n n
+   Asnoc:: AList m' n -> Term m' -> Fin (S m') -> AList (S m') n
 
 sub :: Nat' m -> AList m n -> (Fin m -> Term n)
 sub _ (Anil) = Var
