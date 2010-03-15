@@ -13,7 +13,11 @@ The most important reason is that we want to use the familiar syntax for constru
 
 The idea to this proposal came after digesting Wadler et al.'s paper about the _arrow calculus_. There he introduces _arrow applications_, _lambdas_ and _lets_. For each arrow, presumably.
 
-Accidentally, in Haskell and Ωmega already use a similar mechanism, namely on the right hand side of the _::_ notation. Here juxtaposition means application of kind arrows for parameterized data types (or type families/functions).
+Accidentally, in Haskell and Ωmega already use a similar mechanisms
+  * namely on the right hand side of the _::_ notation, where juxtaposition means application of kind arrows for parameterized data types (or type families/functions)
+  * on the left hand side of equations, where juxtaposition means pattern construction and analysis
+  * in Ωmega's `{typefun arg1 arg2}` brackets (or Haskell's _type family_ calls) it is type function application
+  * following `type` or `data` keyword in definitions, the type parameters.
 
 = Details =
 
