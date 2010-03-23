@@ -435,8 +435,7 @@ instance Eq (Label tag)  where
 tagOfLabel :: Label t -> t
 tagOfLabel x = error "Someone pulled on tagOfLabel"
 
-data HiddenLabel = -- forall tag . 
-                      Hidden (Label String)
+data HiddenLabel = Hidden (Label String)
 
 instance Show HiddenLabel where
  show (Hidden l) = "(Hidden "++show l++")"
