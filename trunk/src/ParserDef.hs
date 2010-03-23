@@ -28,7 +28,7 @@ import Auxillary(Loc(..),plistf,plist)
 import Char(isLower,isUpper)
 ---------------------------------------------------------
 
-loc p = SrcLoc (sourceLine p) (sourceColumn p)
+loc p = SrcLoc (sourceName p) (sourceLine p) (sourceColumn p)
 
 -------------------------------------------------------------
 -- Parsers exported, and those defined for easy testing

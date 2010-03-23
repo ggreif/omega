@@ -2292,7 +2292,7 @@ extToTpatLift = (lift0,lift1,lift2,lift3)
 -- of nodes we are under. The parameter "n" counts this number. Note how
 -- in most recursive calls it is 0.
 
-readName mess ([],loc,exts,levels) s = failM 1 [Ds (mess++" unknown type: "++s++", at "),Ds (show loc)]
+readName mess ([],loc,exts,levels) s = failM 1 [Ds (mess++" unknown type: "++s)]
 readName mess ((x,tau,k):xs,loc,exts,levels) s =
   if s==x
      then --   prune tau 
