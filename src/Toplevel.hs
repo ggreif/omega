@@ -19,7 +19,7 @@ import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio,fioFailD
              ,errF,report,writeRef)
 import IO
-import List(partition,(\\),nub,find)
+import List(partition,(\\),nub,find,deleteBy)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
 import Monad(when)
@@ -187,8 +187,9 @@ elabFile file (tenv) =
       ; multDef ds (concat (map fst pairs))
       -- Check if any names are already declared
       ; mapM (notDup tenv file) (foldr (\ (exs,deps) ss -> exs++ss) [] pairs)
+      ; writeln("\nLoading import "++file++".")
       ; tenv3 <- foldF elabDs (tenv2) dss
-      ; writeln ("\n File "++file++" loaded.\n")
+      ; writeln ("\n"++file++" loaded.\n")
       ; return tenv3
       }
 
@@ -232,15 +233,21 @@ importManyFiles (d:ds) tenv =
 
 importFile :: Dec -> TcEnv -> FIO TcEnv
 importFile (Import name vs) tenv =
+  -- writeln ("\nLooking to import "++name++"\nAlready loaded\n   "++plistf fst "" (imports tenv) "\n   " "") >>
   case lookup name (imports tenv) of
-     Just previous -> return tenv
-     Nothing -> do { new <- elabFile name initTcEnv
+     Just previous -> do { writeln ("Import "++name++" already loaded."); return tenv }
+     Nothing -> do { new <- elabFile name tenv -- initTcEnv
                    ; unknownExt vs (syntaxExt new)
                    ; return(importNames name vs new tenv) }
 
+
+addI [] old = old
+addI ((nm,env):more) old = (nm,env): (addI more (deleteBy same (nm,env) old))
+  where same (nm,_) (nm2,_) = nm == nm2
+
 importNames :: String -> Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
 importNames name items new old =
-  old { imports = (name,new):(imports old)
+  old { imports = addI ((name,new):(imports new)) (imports old)
       , var_env = addListToFM (var_env old) (filter okToAddVar (toList (var_env new)))
       , type_env = (filter q (type_env new)) ++ (type_env old)
       , runtime_env = add (runtime_env new) (runtime_env old)
@@ -287,7 +294,7 @@ multDef ds names = if null dups then return () else fail (foldr report "" dups)
         locs = concat(map decloc ds)
         report :: Var -> String -> String
         report nm s = show nm ++ " is multiply defined at lines "++show (foldr acc [] locs)++"\n"++s
-            where acc (name,SrcLoc line col) ls = if nm==name then line:ls else ls
+            where acc (name,SrcLoc _ line col) ls = if nm==name then line:ls else ls
                   acc (name,Z) ls = ls
 
 -----------------------------------------------------
