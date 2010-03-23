@@ -1,4 +1,13 @@
-module Toplevel (omega) where
+-- Copyright (c) Tim Sheard
+-- OGI School of Science & Engineering, Oregon Health & Science University
+-- Maseeh College of Engineering, Portland State University
+-- Subject to conditions of distribution and use; see LICENSE.txt for details.
+-- Thu Jul 31 23:22:09 Pacific Daylight Time 2008
+-- Omega Interpreter: version 1.4.3
+
+
+
+module Toplevel where
 
 import Time
 import Version(version,buildtime)
@@ -15,19 +24,23 @@ import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem
 import SCC(topSortR)
 import Monad(when)
 import Infer(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
-            ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
-            ,var_env,type_env,rules,runtime_env,syntaxExt)
+             ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
+             ,var_env,type_env,rules,runtime_env,syntaxExt)
 import RankN(pprint,Z,failD,disp0,dispRef)
 import System(getArgs)
-import Data.Map(Map,toList,empty)
+import Data.Map(Map,toList)
 import Directory
 import Char(isAlpha,isDigit)
 import System.IO(hClose)
 import System.IO.Error(try,ioeGetErrorString)
+import System.FilePath
 import Monads(handleP)
 import Manual(makeManual)
 import Commands
 import SyntaxExt(synName,synKey)
+
+-- import System.Console.Readline(setCompletionEntryFunction)
+-- setCompletionEntryFunction :: Maybe (String -> IO [String]) -> IO ()
 
 -------------------------------------------------------------
 -- The programmer interface: the top level loop.
@@ -100,7 +113,9 @@ go s =
 
 -- Don't load the prelude, just load "s" then go into the toplevel loop.
 run :: String -> IO ()
-run s = runFIO(do { writeRef modes mode0
+run s = runFIO(do { let (dir,name) = splitFileName s
+                  ; fio (setCurrentDirectory dir)
+                  ; writeRef modes mode0
                   ; writeln ("Loading source files = "++show [s])
                   ; let init = (initTcEnv{sourceFiles = [s]})
                   ; env1 <- tryAndReport (elabFile s init)
@@ -160,7 +175,7 @@ display ss = plistf id "(" ss " " ")"
 -- Read a [Dec] from a file, then split it into imports and
 -- binding groups, uses elabDs to do the work.
 
-elabFile :: String -> TcEnv -> FIO(TcEnv)
+elabFile :: String -> (TcEnv) -> FIO(TcEnv)
 elabFile file (tenv) =
    do { all <- parseDecs file
       ; let (imports,ds) = partition importP all
@@ -219,7 +234,7 @@ importFile :: Dec -> TcEnv -> FIO TcEnv
 importFile (Import name vs) tenv =
   case lookup name (imports tenv) of
      Just previous -> return tenv
-     Nothing -> do { new <- elabFile name (initTcEnv{rules = empty})
+     Nothing -> do { new <- elabFile name initTcEnv
                    ; unknownExt vs (syntaxExt new)
                    ; return(importNames name vs new tenv) }
 
@@ -297,6 +312,7 @@ alltests dir =
 work = run "work.prg"
 ky = run "D:/IntelWork/Kyung2.prg"
 bad = run "D:/work/sheard/research/omega/badPrograms/shaped.prg"
+qq = run "d:/LogicBlox/Code/LogicMetaGenerator/Text/meaning.prg"
 
 add = run "D:/IntelWork/adder.prg"
 
