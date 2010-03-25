@@ -4,9 +4,16 @@
   #-}
 module Infer where
 
-import PureReadline
+import Char(isAlpha,isUpper)
+import qualified Data.Map as Map
+   -- (Map,empty,member,insertWith,union,fromList,toList,lookup)
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
+import System.Time(getClockTime)
+import System.IO.Unsafe(unsafePerformIO)
+import System.Time(ClockTime)
+
+import PureReadline
 
 import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
@@ -62,14 +69,8 @@ import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backsp
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
 import LangEval(vals,env0,Prefix(..),elaborate,eval)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
-import Char(isAlpha,isUpper)
-import System.IO.Unsafe(unsafePerformIO)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
-
-import qualified Data.Map as Map
-   -- (Map,empty,member,insertWith,union,fromList,toList,lookup)
-
 import NarrowData(DefTree(..),NName(..),Rule(..),Prob(..),NResult(..),Rel(..)
                  ,andR,andP,andf,freshX,dProb)
 import Narrow(narr,defTree,Check(..),matches)
@@ -229,7 +230,7 @@ data TcEnv
           , rules :: FiniteMap String [RWrule] -- Proposition simplifying rules
           , refutations :: FiniteMap String Refutation
           , runtime_env :: Ev            -- current value bindings
-          , imports :: [(String,TcEnv)]  -- already imported Modules
+          , imports :: [(String,ClockTime,[(String,ClockTime)],TcEnv)]  -- already imported Modules
           , tyfuns :: [(String,DefTree TcTv Tau)]
           , sourceFiles :: [String]
           , syntaxExt :: [SynExt String]
