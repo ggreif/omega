@@ -5,11 +5,13 @@
 -- Thu Jul 31 23:22:09 Pacific Daylight Time 2008
 -- Omega Interpreter: version 1.4.3
 
-
-
 module Toplevel where
 
-import Time
+import Char(isAlpha,isDigit)
+import List(partition,(\\),nub,find,deleteBy)
+import Data.Map(Map,toList)
+import IO
+
 import Version(version,buildtime)
 import Syntax
 import ParserDef(getInt,pCommand,parseString,Command(..)
@@ -18,8 +20,6 @@ import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio,fioFailD
              ,errF,report,writeRef)
-import IO
-import List(partition,(\\),nub,find,deleteBy)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
 import Monad(when)
@@ -27,17 +27,18 @@ import Infer(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
              ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
              ,var_env,type_env,rules,runtime_env,syntaxExt)
 import RankN(pprint,Z,failD,disp0,dispRef)
-import System(getArgs)
-import Data.Map(Map,toList)
-import Directory
-import Char(isAlpha,isDigit)
-import System.IO(hClose)
-import System.IO.Error(try,ioeGetErrorString)
-import System.FilePath
 import Monads(handleP)
 import Manual(makeManual)
 import Commands
 import SyntaxExt(synName,synKey)
+
+import System(getArgs)
+import System.Time(ClockTime,getClockTime)
+import System.IO(hClose)
+import System.IO.Error(try,ioeGetErrorString)
+import System.FilePath(splitFileName)
+import System.Directory(setCurrentDirectory,getDirectoryContents,getModificationTime)
+
 
 -- import System.Console.Readline(setCompletionEntryFunction)
 -- setCompletionEntryFunction :: Maybe (String -> IO [String]) -> IO ()
@@ -89,10 +90,11 @@ main = runFIO(do { let sources = ["LangPrelude.prg"]
                  ; writeln ("Loading source files = "++show sources)
                  ; fio $ hSetBuffering stdout NoBuffering
                  ; fio $ hSetBuffering stdin  NoBuffering
-                 ; env1 <- tryAndReport (elabFile "LangPrelude.prg" initTcEnv)
-                                        (report (return initTcEnv))
+                 ; (env1,time) <- 
+                       tryAndReport (elabFile 0 "LangPrelude.prg" initTcEnv)
+                                    (report (return(initTcEnv,undefined)))
                  ; let sources2 = sourceFiles env1
-                 ; topLoop (commandF elabFile) sources2 env1
+                 ; topLoop (commandF (elabFile 0)) sources2 env1
                  ; return () }) errF
 
 
@@ -103,11 +105,11 @@ go s =
             ; let sources = ["LangPrelude.prg",s]
             ; writeln ("Loading source files = "++show sources)
             ; writeln "loading the prelude (LangPrelude.prg)"
-            ; env <- tryAndReport (elabFile "LangPrelude.prg" initTcEnv)
-                                 (report (return initTcEnv))
-            ; env2 <- elabFile s env
+            ; (env,time) <- tryAndReport (elabFile 0 "LangPrelude.prg" initTcEnv)
+                                            (report (return (initTcEnv,undefined)))
+            ; (env2,time2) <- elabFile 0 s env
             ; let sources2 = sourceFiles env2
-            ; topLoop (commandF elabFile) sources2 env2
+            ; topLoop (commandF (elabFile 0)) sources2 env2
             ; return () }) errF
 
 
@@ -118,10 +120,10 @@ run s = runFIO(do { let (dir,name) = splitFileName s
                   ; writeRef modes mode0
                   ; writeln ("Loading source files = "++show [s])
                   ; let init = (initTcEnv{sourceFiles = [s]})
-                  ; env1 <- tryAndReport (elabFile s init)
-                                         (report (return init))
+                  ; (env1,time) <- tryAndReport (elabFile 0 s init)
+                                                (report (return (init,undefined)))
                   ; let sources2 = sourceFiles env1
-                  ; topLoop (commandF elabFile) sources2 env1
+                  ; topLoop (commandF (elabFile 0)) sources2 env1
                   ; return () }) errF
 
 
@@ -130,7 +132,7 @@ run s = runFIO(do { let (dir,name) = splitFileName s
 -- a major error, something very bad (and unexpected), has happened
 try_to_load s =
    runFIO(do { writeln ("loading "++s)
-             ; env1 <- tryAndReport (elabFile s initTcEnv) err2
+             ; (env1,time) <- tryAndReport (elabFile 0 s initTcEnv) err2
              ; writeln (s++" successfully loaded")
              ; return () }) errF
   where err2 loc mess = error ("At "++show loc++"\n"++mess)
@@ -157,7 +159,7 @@ omega =
 elabDs :: [Dec] -> TcEnv -> FIO TcEnv
 elabDs ds (tenv) =
   do { let nam (Global s) = s
-     ; write ((display (map nam (concat (map decname ds))))++" ")
+     -- ; write ((display (map nam (concat (map decname ds))))++" ")
      ; (tenv1,ds1,cs1) <- checkDecs tenv ds   -- type check the list
      --; mapM (writeln .show) ds
      --; mapM (writeln . show) ds1
@@ -169,29 +171,6 @@ elabDs ds (tenv) =
 
 display [s] = s
 display ss = plistf id "(" ss " " ")"
-
-
-------------------------------------------------------------
--- Read a [Dec] from a file, then split it into imports and
--- binding groups, uses elabDs to do the work.
-
-elabFile :: String -> (TcEnv) -> FIO(TcEnv)
-elabFile file (tenv) =
-   do { all <- parseDecs file
-      ; let (imports,ds) = partition importP all
-            (dss,pairs) = topSortR freeOfDec ds
-      --; mapM (writeln . (++"\n"). show) ds
-      --; writeln (show(map freeOfDec ds))
-      ; tenv2 <- importManyFiles imports tenv
-      -- Check for multiple definitions in the file
-      ; multDef ds (concat (map fst pairs))
-      -- Check if any names are already declared
-      ; mapM (notDup tenv file) (foldr (\ (exs,deps) ss -> exs++ss) [] pairs)
-      ; writeln("\nLoading import "++file++".")
-      ; tenv3 <- foldF elabDs (tenv2) dss
-      ; writeln ("\n"++file++" loaded.\n")
-      ; return tenv3
-      }
 
 
 
@@ -212,9 +191,6 @@ parseDecs file =
         Left s -> fail s
         Right(Program ds) -> return ds   -- mapM gadt2Data ds
      }
-
-
-
 -------------------------------------------------------------------------
 -- Omega has a very simple importing mechanism. A user writes:
 -- import "xx.prg" (f,g,T)
@@ -227,27 +203,80 @@ parseDecs file =
 importP (Import s vs) = True
 importP _ = False
 
-importManyFiles [] tenv = return tenv
-importManyFiles (d:ds) tenv =
-  do { next <- importFile d tenv; importManyFiles ds next }
+importName (Import s vs) = s
 
-importFile :: Dec -> TcEnv -> FIO TcEnv
-importFile (Import name vs) tenv =
-  -- writeln ("\nLooking to import "++name++"\nAlready loaded\n   "++plistf fst "" (imports tenv) "\n   " "") >>
-  case lookup name (imports tenv) of
-     Just previous -> do { writeln ("Import "++name++" already loaded."); return tenv }
-     Nothing -> do { new <- elabFile name tenv -- initTcEnv
-                   ; unknownExt vs (syntaxExt new)
-                   ; return(importNames name vs new tenv) }
+------------------------------------------------------------
+-- Read a [Dec] from a file, then split it into imports and
+-- binding groups, uses elabDs to do the work.
 
+indent n = replicate ((n-1)*3) ' '
+nameOf (name,time,deps,env) = name
+ 
+elabFile :: Int -> String -> TcEnv -> FIO(TcEnv,ClockTime)
+elabFile count file (tenv) =
+   do { time <- fio getClockTime
+      ; all <- parseDecs file
+      ; let (importL,ds) = partition importP all
+            (dss,pairs) = topSortR freeOfDec ds
+      ; writeln(indent count++"->Loading import "++basename file)
+      ; (tenv2,importList) <- importManyFiles (count + 1) importL tenv      
+      --; mapM (writeln . (++"\n"). show) ds
+      --; writeln ("\nelaborating "++file++"\n"++show(map freeOfDec ds)++"\n pairs\n"++show pairs)
+      -- Check for multiple definitions in the file
+      ; multDef ds (concat (map fst pairs))
+      -- Check if any names are already declared
+      ; mapM (notDup tenv2 file) (foldr (\ (exs,deps) ss -> exs++ss) [] pairs)      
+      ; tenv3 <- foldF elabDs (tenv2) dss
+      ; let tenv4 = adjustImports file time importList tenv3
+      ; writeln ((indent (count+1))++"<-"++file++" loaded.")
+      ; return (tenv4,time)
+      }
+
+adjustImports name time deps new = new2 
+  where -- a little recursive knot tying so the env being defined (new2) is
+        -- also stored in the imports list of the function being added
+        new2 = new {imports = m : (filter pred (imports new))}
+        m = (name,time,deps,new2)
+        keepers = map fst deps
+        pred (nm1,time1,deps1,env1) = elem nm1 keepers
+          
 
 addI [] old = old
-addI ((nm,env):more) old = (nm,env): (addI more (deleteBy same (nm,env) old))
-  where same (nm,_) (nm2,_) = nm == nm2
+addI ((m@(nm,time,deps,env)):more) old = (nm,time,deps,env): (addI more (deleteBy same m old))
+  where same (nm1,time1,deps1,env1) (nm2,time2,deps2,env2) = nm1 == nm2
 
-importNames :: String -> Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
-importNames name items new old =
-  old { imports = addI ((name,new):(imports new)) (imports old)
+lookupDeps nm env = case find match (imports env) of 
+                        Nothing -> fail ("Unknown module when lokking up dependency list: "++nm)
+                        Just(nm,time,deps,env) -> return deps
+  where match (name,time,deps,env) = name==nm                        
+ 
+showimp message env = message++plistf nameOf "(" (imports env) "," ")."
+
+importManyFiles:: Int -> [Dec] -> TcEnv -> FIO (TcEnv, [(String, ClockTime)])
+importManyFiles count [] tenv = return (tenv,[])
+importManyFiles count (d:ds) tenv =
+  do { (next,name,time) <- importFile count d tenv
+     ; (next2,ts) <- importManyFiles count ds next
+     ; return(next2,(name,time):ts) }
+
+importFile :: Int -> Dec -> TcEnv -> FIO(TcEnv,String,ClockTime)
+importFile count (Import name vs) tenv =
+  case find (\(nm,time,deps,env)->name==nm) (imports tenv) of
+     Just (nm,time,deps,env) -> 
+                do { writeln (indent count++"Import "++name++" already loaded.")
+                   ; return (importNames nm vs env tenv,nm,time) }
+     Nothing -> do { (new,time) <- elabFile count name tenv 
+                   ; deps <- lookupDeps name new
+                   ; unknownExt vs (syntaxExt new)
+                   ; let new2 = adjustImports name time deps new
+                   ; return(importNames name vs new2 tenv,name,time) }
+
+
+importNames :: String -> -- ClockTime -> [(String,ClockTime)] -> 
+                        Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
+importNames name -- time deps 
+            items new old =
+  old { imports = addI (imports new) (imports old) -- addI ((name,time,deps,new):(imports new)) (imports old),
       , var_env = addListToFM (var_env old) (filter okToAddVar (toList (var_env new)))
       , type_env = (filter q (type_env new)) ++ (type_env old)
       , runtime_env = add (runtime_env new) (runtime_env old)
