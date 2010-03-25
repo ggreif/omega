@@ -1582,16 +1582,16 @@ heterogeneous tuples. For example in Haskell lists are often
 written with bracketed syntax, \verb+[1,2,3]+, rather than a constructor function syntax, \verb+(Cons 1 (Cons 2 (Cons 3 Nil)))+, and
 tuples are often written as \verb+(5,"abc")+ and \verb+(2,True,[])+
 rather than \verb+(Pair 5 "abc")+ and \verb+(Triple 2 True [])+. In \om\
-we supply special syntax for four different kinds of data, and allow users to
+we supply special syntax for five different kinds of data, and allow users to
 use this syntax for data they define themselves. \om\ has
-special syntax for list-like, natural-number-like, pair-like, and record-like types.
+special syntax for list-like, natural-number-like, pair-like, and record-like, and unary-increment types.
 Some examples in the supported syntax are: \verb+[4,5]i+, \verb|(2+n)j|
-\verb+(4,True)k+, and \verb+{"a"=5, "b"=6}h+ In general, the syntax starts 
-with list-like, natural-number-like, record-like, or pair-like syntax,
+\verb+(4,True)k+, \verb+{"a"=5, "b"=6}h+, and \verb+(x'3)w+. In general, the syntax starts 
+with list-like, natural-number-like, record-like, pair-like, or unary-increment syntax,
 and is terminated by a tag. A user may specify that 
 a user defined type should be displayed using the special syntax with a given tag. Each
 tag is associated with a set of functions (a different set for
-list-like, natural-number-like, record-like, and pair-like types). Each
+list-like, natural-number-like, record-like, pair-like, and unary-increment types). Each
 term expands into a call of the functions specified by the tag
 in the special syntax.
 
@@ -1646,12 +1646,39 @@ the functions {\tt (RC,RN)}, then the expansion is as follows.
 {a=x,b=y ; zs}i ---> RC a x (RC b y zs)
 \end{verbatim}
 
+The unary-increment syntax associates one function with each tag. This function
+plays the role of an increment function {\tt Tick}. 
+For example if the tag "{\tt w}" is associated with
+the function {\tt Tick}, then the expansion is as follows.
+\begin{verbatim}
+(x`0)w     ---> x
+(x`1)w     ---> Tick x
+(x`2)w     ---> Tick(Tick x)
+(x`3)w     ---> Tick(Tick(Tick x))
+\end{verbatim}
+
+
+
 Syntactic extension can be applied to any GADT, at either the value or type level. The
 new syntax can be used by the programmer for terms, types, or patterns. \om\ uses the
 new syntax to display such terms. The constructor based mechanism can also still
-be used. The tags are specified using a deriving clause in a GADT. 
+be used. The tags are specified using a deriving clause in a GADT. As of the March 2010
+release there are two style of syntax derivations: old-style, and new-style. Both are
+supported. The new-style is more expressive, and all old-style derivations
+can be replaced by equivalent new style ones. Eventually the old-style will
+be deprecated and removed from the system.
 
-\subsection{Example: Tuples are Lists that Reflect the Type of Their Components}
+\subsection{Old-style derivations}
+
+Old-style derivations specify a single tag to be associated with the syntax
+extension for a particular dataype. That datatype can use only one type
+of syntax extension, and the number of constructor functions of the datatype
+must agree with the number of functions associated with that extension. For example
+to use the List extension the dataype must have two constructors, and to use the Pair
+extension the datatype must have one constructor.
+
+
+\subsubsection{Example: Tuples are Lists that Reflect the Type of Their Components}
 
 An example where the
 list-like extension is used both at the value and type level follows.
@@ -1694,7 +1721,7 @@ testfun :: Tuple (n+2)t [Int,Bool; w]a -> (Int,Bool,Tuple n w)
 testfun [x,y;zs]b = (x+1,not y,zs) 
 \end{verbatim} 
 
-\subsection{Example: A $n$-ary Summing Function}
+\subsubsection{Example: A $n$-ary Summing Function}
 
 An example of a type that makes good
 use of the natural-number like syntax is the type {\tt SumSpec}.
@@ -1755,7 +1782,7 @@ prompt> sum 3s 3 5
 <fn> : Int -> Int
 \end{verbatim}
 
-\subsection{Example: Records and Rows}
+\subsubsection{Example: Records and Rows}
 Finally, we demonstrate how using Tags and Labels (see Section \ref{tag})
 we can roll our own record structures. 
 
@@ -1786,6 +1813,24 @@ The empty tag for {\tt Nat} is reserved for ordinary {\tt Int},
 the empty tag for {\tt List} is reserved for ordinary lists,
 and the empty tag for {\tt Pair} is reserved for \om's builtin binary
 product.
+
+\subsection{New-style derivations}
+
+\begin{verbatim}
+data Test:: *0 where
+  Nil :: Test
+  Cons :: Test -> Test -> Test
+  RNil :: Test
+  RCons :: String -> Test -> Test -> Test
+  Zero :: Test
+  Succ :: Test -> Test
+  Pair :: Test -> Test -> Test
+  Next :: Test -> Test
+  A:: Test
+ deriving syntax(w) List(Nil,Cons) Nat(Zero,Succ) Pair(Pair) Tick(Next) Record(RNil,RCons)
+
+\end{verbatim}
+
 
 \section{Level Polymorphism}
 Some times we wish to use the same structure at both the value and type level.
