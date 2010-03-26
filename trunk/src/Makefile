@@ -7,8 +7,9 @@ GHCI_FLAGS       = $(GHC_FLAGS_COMMON)
 GHC_FLAGS_COMMON = -fglasgow-exts -XUndecidableInstances
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
+SVN              = svn
 
-.PHONY: all tests clean manual
+.PHONY: all tests clean manual update
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
@@ -37,4 +38,7 @@ OmegaManual.ps: version.tex OmegaManual.tex
 	bibtex.exe OmegaManual
 	latex OmegaManual.tex && latex OmegaManual.tex
 	dvips.exe OmegaManual
+
+update:
+	$(SVN) update ..
 
