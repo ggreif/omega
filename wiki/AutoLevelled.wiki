@@ -134,3 +134,14 @@ plus'' (Q m) n = Q (plus'' m n)
 Again, this is nice and regular.
 
 _Note: unfortunately this does not compile with Ωmega 1.4.3 due to issue 23 :-(_
+
+== Ωmega example for `«Foo»` ==
+
+`«Foo»` has an isomorphic copy at every level up to infinity, we can tentatively sketch a definition here, not sure if the circularity is accepted:
+{{{
+data Foo :: level n . Foo ~> *n where
+  Bar :: Foo
+  Quux :: Foo ~> Foo
+ deriving Nat(p)
+}}}
+Level 0 is standard.
