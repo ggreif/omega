@@ -1,10 +1,3 @@
--- Copyright (c) Tim Sheard
--- OGI School of Science & Engineering, Oregon Health & Science University
--- Maseeh College of Engineering, Portland State University
--- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Thu Jul 31 23:22:09 Pacific Daylight Time 2008
--- Omega Interpreter: version 1.4.3
-
 module Toplevel where
 
 import Char(isAlpha,isDigit)
