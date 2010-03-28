@@ -13,14 +13,14 @@ data Stage :: *1 where
   
 data Typ :: *1 where
   Arr:: Typ ~> Termination ~> Typ ~> Typ
-  L:: Stage ~> Typ ~> Typ
+  Li :: Stage ~> Typ ~> Typ
   I:: Typ
   P:: Typ ~> Typ ~> Typ
 
 mean:: Typ ~> *0
 {mean I} = Int
 {mean (Arr a n b)} = {mean a} -> {mean b}
-{mean (L n a)} = [{mean a}]
+{mean (Li n a)} = [{mean a}]
 {mean (P x y)} = ({mean x},{mean y})
 
 data Prim:: Typ ~> *0 where
@@ -41,22 +41,22 @@ data Exp:: Typ ~> Row Tag Typ ~> Termination ~> *0 where
   Oper:: Prim t -> Exp t g Total 
   Pair:: Exp x g m -> Exp y g n -> Exp (P x y) g {lub m n}
   App:: Exp (Arr x m b) g n -> Exp x g p -> Exp b g {lub m {lub n p}}
-  Cons:: Exp a g n -> Exp (L s a) g m -> Exp (L (Succ s) a) g {lub m n}
-  Nil:: Exp (L (Succ s) a) g Total
+  Cons:: Exp a g n -> Exp (Li s a) g m -> Exp (Li (Succ s) a) g {lub m n}
+  Nil:: Exp (Li (Succ s) a) g Total
   Abs:: Exp rng (RCons a dom g) n -> Exp (Arr dom n rng) g Total
   Fix:: Exp b
-            (RCons body (L (Succ s) a)
-            (RCons f (Arr (L s a) n b) env))
+            (RCons body (Li (Succ s) a)
+            (RCons f (Arr (Li s a) n b) env))
             Total ->
-        Exp (Arr (L Inf a) Total b) env Total 
+        Exp (Arr (Li Inf a) Total b) env Total 
   PFix:: Exp b
             (RCons body a
             (RCons f (Arr a n b) env))
             m ->
         Exp (Arr a Partial b) env Total           
-  Case:: Exp (L (Succ s) a) env p -> 
+  Case:: Exp (Li (Succ s) a) env p -> 
          Exp t env n ->
-         Exp t (RCons xs (L s a)(RCons x a env)) m ->
+         Exp t (RCons xs (Li s a)(RCons x a env)) m ->
          Exp t env {lub {lub p n} m}                                
 
 length = Fix

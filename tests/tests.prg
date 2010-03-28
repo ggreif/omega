@@ -536,12 +536,14 @@ okSearch = case find `b testpairs of
     case find `q testpairs of
      (Just (_,_)) -> error "We expect to fall off the case arms without matching"
 
-
+{- imported
 maybeM = (Monad Just bind fail)
   where return x = Just x
         fail s = Nothing
         bind Nothing g = Nothing
         bind (Just x) g = g x    
+-}
+
 
 ans = run [| let monad maybeM in do {return 42} |]
 
@@ -664,18 +666,18 @@ trans n (Step z) Base = unreachable
 trans n Base (Step z) = Base
 trans n (Step x) (Step y) = (Step(trans n x y))
 
-cmpare :: Nat' a -> Nat' b -> (LE' a b + LE' b a)
-cmpare Z Z     = L LE
-cmpare (a@Z) (b@(S x)) = 
-   case cmpare Z x of  
+compareN:: Nat' a -> Nat' b -> (LE' a b + LE' b a)
+compareN Z Z     = L LE
+compareN (a@Z) (b@(S x)) = 
+   case compareN Z x of  
       L LE -> L LE
       R LE -> L LE
-cmpare (a@(S x)) (b@Z) = 
-   case cmpare x Z of  
+compareN (a@(S x)) (b@Z) = 
+   case compareN x Z of  
       R LE -> R LE
       L LE -> R LE
-cmpare (S x) (S y) =  
-   case cmpare x y of  
+compareN (S x) (S y) =  
+   case compareN x y of  
       R LE -> R LE
       L LE -> L LE  
       

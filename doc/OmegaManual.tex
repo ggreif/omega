@@ -1580,20 +1580,22 @@ derived from.
 \section{Syntax Extensions} \label{synext}
 
 Many languages supply syntactic sugar for constructing homogeneous sequences and
-heterogeneous tuples. For example in Haskell lists are often
+heterogeneous tuples. For example, in Haskell lists are often
 written with bracketed syntax, \verb+[1,2,3]+, rather than a constructor function syntax, \verb+(Cons 1 (Cons 2 (Cons 3 Nil)))+, and
 tuples are often written as \verb+(5,"abc")+ and \verb+(2,True,[])+
 rather than \verb+(Pair 5 "abc")+ and \verb+(Triple 2 True [])+. In \om\
 we supply special syntax for five different kinds of data, and allow users to
 use this syntax for data they define themselves. \om\ has
-special syntax for list-like, natural-number-like, pair-like, and record-like, and unary-increment types.
+special syntax for list-like, natural-number-like, pair-like, record-like, and unary-increment types.
 Some examples in the supported syntax are: \verb+[4,5]i+, \verb|(2+n)j|
 \verb+(4,True)k+, \verb+{"a"=5, "b"=6}h+, and \verb+(x'3)w+. In general, the syntax starts 
 with list-like, natural-number-like, record-like, pair-like, or unary-increment syntax,
 and is terminated by a tag. A user may specify that 
 a user defined type should be displayed using the special syntax with a given tag. Each
 tag is associated with a set of functions (a different set for
-list-like, natural-number-like, record-like, pair-like, and unary-increment types). Each
+list-like, natural-number-like, record-like, pair-like, and unary-increment types). 
+Each type of syntax, has an asociated tag-table, so the same tag can be used once for
+each kind of syntax. Each
 term expands into a call of the functions specified by the tag
 in the special syntax.
 
@@ -1667,20 +1669,20 @@ new syntax to display such terms. The constructor based mechanism can also still
 be used. The tags are specified using a deriving clause in a GADT. As of the March 2010
 release there are two style of syntax derivations: old-style, and new-style. Both are
 supported. The new-style is more expressive, and all old-style derivations
-can be replaced by equivalent new style ones. Eventually the old-style will
+can be replaced by equivalent new-style ones. Eventually the old-style will
 be deprecated and removed from the system.
 
 \subsection{Old-style derivations}
 
-Old-style derivations specify a single tag to be associated with the syntax
-extension for a particular dataype. That datatype can use only one type
-of syntax extension, and the number of constructor functions of the datatype
+Old-style derivations specify a single tag to be associated with a single syntax
+extension for a particular dataype. Using the old-style, each datatype can can be associated with a
+sungle syntax extension, and the number of constructor functions of the datatype
 must agree with the number of functions associated with that extension. For example
 to use the List extension the dataype must have two constructors, and to use the Pair
 extension the datatype must have one constructor.
 
 
-\subsubsection{Example: Tuples are Lists that Reflect the Type of Their Components}
+\subsubsection{Old-style List Example: Tuples are Lists that Reflect the Type of Their Components}
 
 An example where the
 list-like extension is used both at the value and type level follows.
@@ -1723,7 +1725,7 @@ testfun :: Tuple (n+2)t [Int,Bool; w]a -> (Int,Bool,Tuple n w)
 testfun [x,y;zs]b = (x+1,not y,zs) 
 \end{verbatim} 
 
-\subsubsection{Example: A $n$-ary Summing Function}
+\subsubsection{Old-style Nat example: A $n$-ary Summing Function}
 
 An example of a type that makes good
 use of the natural-number like syntax is the type {\tt SumSpec}.
@@ -1784,7 +1786,7 @@ prompt> sum 3s 3 5
 <fn> : Int -> Int
 \end{verbatim}
 
-\subsubsection{Example: Records and Rows}
+\subsubsection{Old-style Record example: Records and Rows}
 Finally, we demonstrate how using Tags and Labels (see Section \ref{tag})
 we can roll our own record structures. 
 
@@ -1818,6 +1820,67 @@ product.
 
 \subsection{New-style derivations}
 
+The old-style syntax extension allows the user to choose only one style of syntactic extension
+per datatype declaration, and limits the number of constructors of the datatype to exactly the number
+of syntax functions associated with the extension. The new-style of derivation lifts both these restrictions.
+
+\subsubsection{New-style Unary increment example: Cdr}
+
+This example illustrates why it is often desireable to allow more constructors than those supported by a
+single extension. It is inspired by the family of Lisp functions {\it cdr}, {\it cddr}, {\it cdddr}, {\it
+cddddr}, etc. Which select the {\it n}th second component of a set of nested pairs, where {\it n}
+corresponds to the number of {\it d}s. The idea is to write \verb+(x`n)c+ as specification
+for the function (c$d^n$r y), where {\it c}
+is the syntax extension tag for the datatype. The idea is to support a {\tt Projection}
+specification type, such that {\tt Projection a b} specifies a projection from the type {\tt a}
+to the type {\tt b}, and the function {\tt cdr:: (Projection a b) -> a -> b}. For
+example the partial applications of {\tt cdr} will have the following types:
+
+\begin{verbatim}
+cdr (Id`0)p :: a -> a
+cdr (Id`1)p :: (a,b) -> b
+cdr (Id`2)p :: (a,(b,c)) -> c
+cdr (Id`3)p :: (a,(b,(c,d))) -> d
+\end{verbatim}
+
+We define this by using the following dattype declaration with a new-style {\tt Tick}
+extension.
+
+\begin{verbatim}
+data Projection :: *0 ~> *0 ~> *0 where
+  Car:: Projection e t -> Projection (e,s) t
+  Cdr:: Projection e t -> Projection (s,e) t
+  Id:: Projection t t
+ deriving syntax(p) Tick(Cdr) 
+\end{verbatim} 
+
+In a newstyle extention, the keyword {\tt syntax} is followed by the tag, and the 
+types of extensions are followed by the names of the constructors that will be associated
+with that extensions functions. Thus {\tt (x`2)p} stands for {\tt (Cdr(Cdr x))}.
+Note the types of a few terms constructed this way.
+
+\begin{verbatim}
+zero = (Id`0)p :: Projection a a
+one  = (Id`1)p :: Projection (a,b) b
+two  = (Id`2)p :: Projection (a,(b,c)) c
+\end{verbatim} 
+
+Of course the purpose of this type is to serve as the specification for a family
+of {\tt cdr} functions. We write this below, illustrating that the syntax extension
+can also be used in the pattern matching language.
+
+\begin{verbatim} 
+cdr :: Projection a b -> a -> b
+cdr Id x = x
+cdr (Car x) (a,b) = cdr x a
+cdr (x`1)p  (a,b) = cdr x b
+\end{verbatim} 
+
+\subsubsection{New-style multiple syntax example: Test}
+
+Finally we illustrate that one datatype can support multiple syntax extensions.
+
+
 \begin{verbatim}
 data Test:: *0 where
   Nil :: Test
@@ -1829,9 +1892,26 @@ data Test:: *0 where
   Pair :: Test -> Test -> Test
   Next :: Test -> Test
   A:: Test
- deriving syntax(w) List(Nil,Cons) Nat(Zero,Succ) Pair(Pair) Tick(Next) Record(RNil,RCons)
-
+ deriving syntax(w) List(Nil,Cons) Nat(Zero,Succ) 
+                    Pair(Pair) Tick(Next) Record(RNil,RCons)
 \end{verbatim}
+This allows one to write things like the following.
+
+\begin{verbatim}
+test = { "name" = A
+       , "age"= 2w
+       , "xs" = [ (A`1)w ]w
+       , "ps" = (0w,1w)w }w
+\end{verbatim}
+Rather than the much more verbose
+\begin{verbatim}
+verbose = RCons "name" A (
+          RCons "age" (Succ (Succ Zero)) (
+          RCons "xs" (Cons (Next A) Nil) (
+          RCons "ps" (Pair Zero (Succ Zero)) RNil)))
+\end{verbatim}
+
+
 
 
 \section{Level Polymorphism}
