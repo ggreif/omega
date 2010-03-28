@@ -11,7 +11,7 @@ data Pair0 :: forall a b . Pair a b ~> *0 where
 
 data Cmp :: forall a b . a ~> b ~> *1 where
     G :: forall a b . a ~> b ~> Cmp a b
-    L :: forall a b . a ~> b ~> Cmp a b
+    Lx :: forall a b . a ~> b ~> Cmp a b
     E :: forall a b . a ~> b ~> Cmp a b
     N :: forall a b . a ~> b ~> Cmp a b -- No comparison possible
 
@@ -32,12 +32,12 @@ data Set0 :: Set1 ~> *0 where
 -- Compare the first elements of the pairs,
 -- then return a tag telling which one was larger
 -- along with the second elements of each pair...
--- i.e. cmp (a,x) (b,y)     -> L x y if (a < b)
+-- i.e. cmp (a,x) (b,y)     -> Lx x y if (a < b)
 --                          -> G x y if (a > b)
 --                          -> E x y if (a = b)
 cmp :: forall a b . Pair Nat a ~> Pair Nat b ~> Cmp a b
 {cmp (P Z s1) (P Z s2)} = E s1 s2
-{cmp (P Z s1) (P (S m) s2)} = L s1 s2
+{cmp (P Z s1) (P (S m) s2)} = Lx s1 s2
 {cmp (P (S n) s1) (P Z s2)} = G s1 s2
 {cmp (P (S n) s1) (P (S m) s2)} = {cmp (P n s1) (P m s2)}
 
@@ -60,7 +60,7 @@ setInsert :: Nat ~> Set1 ~> Set1
 setInsert':: Cmp Nat Set1 ~> Set1
 {setInsert' (N n Empty)} = U n Empty
 {setInsert' (E n s)} = s
-{setInsert' (L n (U m s))} = U m {setInsert' {natCmp n s}}
+{setInsert' (Lx n (U m s))} = U m {setInsert' {natCmp n s}}
 {setInsert' (G n s)} = U n s
 
 -- Produce a set that does not contain
@@ -70,7 +70,7 @@ setRemove :: Nat ~> Set1 ~> Set1
 setRemove' :: Cmp Nat Set1 ~> Set1
 {setRemove' (N n Empty)} = Empty
 {setRemove' (E n (U n s))} = s -- remove n
-{setRemove' (L n (U m s))} = U m {setRemove' {natCmp n s}}
+{setRemove' (Lx n (U m s))} = U m {setRemove' {natCmp n s}}
 {setRemove' (G n s)} = s
 
 -- Definition of union', which uses this strange Cmp nonsense
@@ -82,7 +82,7 @@ union' :: Cmp Set1 Set1 ~> Set1
 {union' (N (U n s1) Empty)} = (U n s1)
 {union' (N Empty (U m s2))} = (U m s2)
 {union' (E (U n s1) (U n s2))} = U n {union' {setCmp s1 s2}}
-{union' (L (U n s1) (U m s2))} = U m {union' {setCmp (U n s1) s2}}
+{union' (Lx (U n s1) (U m s2))} = U m {union' {setCmp (U n s1) s2}}
 {union' (G (U n s1) (U m s2))} = U n {union' {setCmp s1 (U m s2)}}
 
 -- Definition of intersect', which also uses Cmp
@@ -91,7 +91,7 @@ intersect :: Set1 ~> Set1 ~> Set1
 
 intersect' :: Cmp Set1 Set1 ~> Set1
 {intersect' (N x y)} = Empty
-{intersect' (L s1 (U m s2'))} = {intersect' {setCmp s1 s2'}}
+{intersect' (Lx s1 (U m s2'))} = {intersect' {setCmp s1 s2'}}
 {intersect' (G (U n s1') s2)} = {intersect' {setCmp s1' s2}}
 {intersect' (E (U n s1') (U n s2'))} = U n {intersect' {setCmp s1' s2'}}
 
@@ -104,7 +104,7 @@ difference' :: Cmp Set1 Set1 ~> Set1
 {difference' (N (U n s1') Empty)} = U n s1'
 {difference' (N Empty (U m s2'))} = Empty
 {difference' (E (U n s1') (U n s2'))} = {difference' {setCmp s1' s2'}}
-{difference' (L s1 (U m s2'))} = {difference' {setCmp s1 s2'}}
+{difference' (Lx s1 (U m s2'))} = {difference' {setCmp s1 s2'}}
 {difference' (G (U n s1') s2)} = U n {difference' {setCmp s1' s2}}
 ---
 ---

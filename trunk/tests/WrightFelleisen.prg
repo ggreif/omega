@@ -126,14 +126,14 @@ data Rep:: ObjType ~> *0 where
  I:: Rep IntT
  Ar:: Rep a -> Rep b -> Rep (ArrT a b)
 
-cmpare:: Rep a -> Rep b -> (String + Equal a b)
-cmpare I I = R Eq
-cmpare (Ar x y) (Ar s t) =
-  do { Eq <- cmpare x s
-     ; Eq <- cmpare y t
+compareRep :: Rep a -> Rep b -> (String + Equal a b)
+compareRep I I = R Eq
+compareRep (Ar x y) (Ar s t) =
+  do { Eq <- compareRep x s
+     ; Eq <- compareRep y t
      ; R Eq}
-cmpare I (Ar x y) = L "I /= (Ar _ _)"
-cmpare (Ar x y) I = L "(Ar _ _) /= I"
+compareRep I (Ar x y) = L "I /= (Ar _ _)"
+compareRep (Ar x y) I = L "(Ar _ _) /= I"
 
 data Env:: Row Tag ObjType ~> *0 where
    Enil:: Env RNil
@@ -160,11 +160,11 @@ tc (Ap f x) env =
      ; Ex(x',xt) <- tc x env
      ; case ft of 
         (Ar a b) -> 
-           do { Eq <- compare a xt
+           do { Eq <- compareRep a xt
               ; R(Ex(App f' x',b)) }
         _ -> fail "Non fun in Ap" }
 tc (Ab s t body) env = 
-  do { let (Hidden l) = newLabel s
+  do { let (HideLabel l) = newLabel s
      ; Ex(body',et) <- tc body {l=(s,t); env}e
      ; R(Ex(Lam l body',Ar t et)) }
 tc (C n) env = R(Ex(Const IntR n,I))

@@ -9,7 +9,7 @@
 
 import "Covert.prg" (Covert,Hide,toNat)
 import "Library.prg" (mapP,unP,map)
-import "Nat.prg" (LE,Base_LE,Step_LE, compare, magnitude, eqOrNe)
+import "Nat.prg" (LE,Base_LE,Step_LE, compareN, magnitude, eqOrNe)
 
 -------------------------------------------------
 -- Sorted Sequence data
@@ -21,12 +21,12 @@ data SSeq :: Nat ~> *0 where
 --------------------------------------------------
 -- insertion sort
 
---less a b = case compare a b of {L x -> x; R y -> error "Not less"}
+--less a b = case compareN a b of {L x -> x; R y -> error "Not less"}
         
 insert :: Nat' a -> SSeq b -> ((SSeq a)+(SSeq b))
 insert z Snil = L(Scons z (magnitude z) Snil)
 insert x (xs@(Scons y p zs)) = 
-   case compare x y of
+   case compareN x y of
      R q -> L(Scons x q xs)
      L q -> case insert x zs of
               L (mm) -> R(Scons y q mm)
@@ -55,7 +55,7 @@ merge :: SSeq n -> SSeq m -> (SSeq n + SSeq m)
 merge Snil ys = R ys
 merge xs Snil = L xs
 merge (a@(Scons x px xs)) (b@(Scons y py ys)) =
-  case compare x y of
+  case compareN x y of
     L p -> case merge a ys of
              L ws -> R(Scons y p ws)
              R ws -> R(Scons y py ws)
@@ -88,7 +88,7 @@ data BSeq :: Nat ~> Nat ~> *0 where
 qsplit :: (LE min piv, LE piv max) => Nat' piv -> BSeq min max -> (BSeq min piv,BSeq piv max)
 qsplit piv Nil = (Nil,Nil)
 qsplit piv (Cons x xs) = 
-    case compare x piv of
+    case compareN x piv of
       L p1 -> (Cons x small, large)
       R p1 -> (small, Cons x large)
   where (small,large) = qsplit piv xs
@@ -104,7 +104,7 @@ minmax (min,max) (x:xs) = minmax (small min x,large max x) xs
 
 small :: Nat' x -> Nat' y -> LE x y
 small x y = 
-  case compare x y of 
+  case compareN x y of 
     L p -> p 
     R p -> error ("not smaller: "++show x++" "++show y)
 

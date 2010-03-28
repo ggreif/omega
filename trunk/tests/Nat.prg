@@ -21,9 +21,9 @@ prop LE :: Nat ~> Nat ~> *0 where
   Step_LE:: LE a b -> LE (S a) (S b)
 
 -- Equality property.
-prop EQ :: Nat ~> Nat ~> *0 where
-  Base_EQ :: EQ Z Z
-  Step_EQ :: EQ x y -> EQ (S x) (S y)
+prop EQNat:: Nat ~> Nat ~> *0 where
+  Base_EQ :: EQNat Z Z
+  Step_EQ :: EQNat x y -> EQNat(S x) (S y)
 
 -- Inequality property.
 prop NE :: Nat ~> Nat ~> *0 where
@@ -39,12 +39,12 @@ trans_LE Base_LE (Step_LE z) = Base_LE
 trans_LE (Step_LE x) (Step_LE y) = Step_LE(trans_LE x y)
 
 -- Transitivity of equality.
-trans_EQ :: EQ a b -> EQ b c -> EQ a c
+trans_EQ :: EQNat a b -> EQNat b c -> EQNat a c
 trans_EQ Base_EQ Base_EQ = Base_EQ
 trans_EQ (Step_EQ x) (Step_EQ y) = Step_EQ (trans_EQ x y)
 
 -- Commutativity of equality.
-comm_EQ :: EQ a b -> EQ b a
+comm_EQ :: EQNat a b -> EQNat b a
 comm_EQ Base_EQ = Base_EQ
 comm_EQ (Step_EQ x) = Step_EQ (comm_EQ x)
 
@@ -52,25 +52,25 @@ magnitude :: Nat' x -> LE Z x
 magnitude n = Base_LE
 
 -- If a=b then a<=b.
-eqToLe :: EQ a b -> LE a b
+eqToLe :: EQNat a b -> LE a b
 eqToLe Base_EQ = Base_LE
 eqToLe (Step_EQ x) = Step_LE (eqToLe x)
 
 -- If a<=b and b<=a, then a=b.
-leToEq :: LE a b -> LE b a -> EQ a b
+leToEq :: LE a b -> LE b a -> EQNat a b
 leToEq Base_LE Base_LE = Base_EQ
 -- leEq2 Base_LE (Step_LE z) = unreachable
 -- leEq2 (Step_LE z) Base_LE = unreachable
 leToEq (Step_LE x) (Step_LE y) = Step_EQ (leToEq x y)
 
 -- Tests for ordering between two naturals..
-cmpare :: Nat' a -> Nat' b -> (LE a b + LE b a)
-cmpare Z _ = L Base_LE
-cmpare (S x) Z = R Base_LE
-cmpare (S x) (S y) = mapP Step_LE Step_LE (cmpare x y)
+compareN :: Nat' a -> Nat' b -> (LE a b + LE b a)
+compareN Z _ = L Base_LE
+compareN (S x) Z = R Base_LE
+compareN (S x) (S y) = mapP Step_LE Step_LE (compareN x y)
 
 -- Tests for equality or inequality between two naturals.
-eqOrNe :: Nat' x -> Nat' y -> (EQ x y + NE x y)
+eqOrNe :: Nat' x -> Nat' y -> (EQNat x y + NE x y)
 eqOrNe Z Z = L Base_EQ
 eqOrNe Z (S x) = R (Right_NE)
 eqOrNe (S x) Z = R (Left_NE)

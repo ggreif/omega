@@ -109,7 +109,7 @@ go s =
 -- Don't load the prelude, just load "s" then go into the toplevel loop.
 run :: String -> IO ()
 run s = runFIO(do { let (dir,name) = splitFileName s
-                  ; fio (setCurrentDirectory dir)
+                  ; fio (when (not (null dir)) (setCurrentDirectory dir))
                   ; writeRef modes mode0
                   ; writeln ("Loading source files = "++show [s])
                   ; let init = (initTcEnv{sourceFiles = [s]})

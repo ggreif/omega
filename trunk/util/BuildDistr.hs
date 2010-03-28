@@ -35,8 +35,8 @@ sources =
    (srcDir, "ParserDef", ".hs"),
    (srcDir, "PrimParser", ".hs"),
    (srcDir, "CommentDef", ".hs"),
-   (srcDir, "Encoding2", ".hs"),
-   (srcDir, "Infer2", ".hs"),
+   (srcDir, "Encoding", ".hs"),
+   (srcDir, "Infer", ".hs"),
    (srcDir, "LangEval", ".hs"),
    (srcDir, "Main", ".hs"),
    (srcDir, "RankN", ".hs"),
@@ -51,6 +51,7 @@ sources =
    (srcDir, "NarrowData", ".hs"),
    (srcDir, "Cooper", ".hs"),
    (srcDir, "SyntaxExt", ".hs"),
+   (srcDir, "PureReadline",".hs"),
    (srcDir, "Version", ".hs"),
 
    (srcDir, "LangPrelude", ".prg"),
