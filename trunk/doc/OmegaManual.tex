@@ -204,8 +204,7 @@ no way to be selective.
 
 
 \section{Type Synonyms} \label{syn}
-Starting with release 1.1 \om\ supports both parameterized 
-and non-parameterized type synomyms.
+\om\ supports both parameterized  and non-parameterized type synomyms.
 For example:
 \begin{verbatim}
 type String = [Char]
@@ -394,7 +393,7 @@ a whole must be classified by \verb+*+$n$, for some $n$. See the rest of this
 manual, and many of the papers about \om\
 listed in Section \ref{examples}, for many more examples.
 
-Note that all Algebraic Data Types, like {\tt Tree}, can be expressed using
+Note that all algebraic data types, like {\tt Tree}, can be expressed using
 the explicit GADT form. We retain the ADT form for backward compatibility.
 
 \subsection{The Off-side Rule in GADT Declaration}
@@ -562,7 +561,7 @@ data Nat:: *1 where
   S:: Nat ~> Nat
 \end{verbatim}
 
-The system infers that this is a {\em kind} declarartion by observing
+The system infers that this is a {\em kind} declaration by observing
 that {\tt Nat} is kinded by \verb+*1+ (GADTs kinded by {\tt *0} would
 be types, and those kinded by {\tt *2} would be sorts). 
 There is
@@ -603,7 +602,7 @@ functions at the type level.
 
 
 
-Kinds (Sorts, etc.) are useful because we can use them to index new types. For example
+Kinds (sorts, etc.) are useful because we can use them to index new types. For example
 the type constructor {\tt List} is indexed by {\tt Nat}, and the {\tt Nat} valued
 index is a static indication of the length of the list.
 \begin{verbatim}
@@ -628,11 +627,11 @@ by \verb+(Prod Nat)+. The value level term \verb+(Tcons 5 (Tcons True Tnil)))+ i
 classified by the type \verb+(Tuple (Rcons Int (Rcons Bool Rnil)))+.
 
 \subsection{Polymorphic kinds}
-In \om\ it is possible to give a type contructor
+In \om\ it is possible to give a type constructor
 introduced using the GADT form a polymorphic classification.
 This allows users to specify kinds
 for type constructors that cannot be inferred. In the example
-below we specify a polymorphic kind for the type {\tt TRep}
+below we specify a polymorphic kind for the type {\tt TRep}:
 \begin{verbatim} 
 data TRep:: forall (k :: *1) . (k ~> *0) where
   Int:: TRep Int   
@@ -672,7 +671,7 @@ constructors they pun. In {\tt Nat'}, the singleton relationship
 between a {\tt Nat'} value and its type is emphasized 
 strongly, as witnessed by the example {\tt three'}. Here the
 shape of the value, and the type index appear isomorphic. The table
-below illustrates the sdeparate name spaces and the levels within the type
+below illustrates the separate name spaces and the levels within the type
 hierarchy where each constructor resides.
 
 
@@ -756,7 +755,7 @@ must return a structure where the
 to {\tt freshLabel} generates a different label, the {\tt freshLabel}
 operation must be an action in the {\tt IO} monad. The function
 {\tt newLabel} coerces a string into a label. It too, must
-existentially hide the Tag indexing the returned label. But,
+existentially hide the {\tt Tag} indexing the returned label. But,
 because it always returns the same label when given the same input
 it can be a pure function.
 
@@ -765,7 +764,7 @@ freshLabel :: IO HiddenLabel
 newLabel:: String -> HiddenLabel
 
 data HiddenLabel :: *0 where 
- Hidden:: Label t -> HiddenLabel
+ HideLabel:: Label t -> HiddenLabel
 \end{verbatim}
 We illustrate this at the top-level loop. The \om\ top-level loop executes
 {\tt IO} actions (see Section \ref{command}), and evaluates and prints
@@ -773,17 +772,17 @@ out the value of expressions with other types.
 \begin{verbatim}
 prompt> freshLabel
 Executing IO action               -- An IO action
-(Hidden `#cbp) : IO HiddenLabel
+(HideLabel `#cbp) : IO HiddenLabel
 
 
 prompt> temp <- freshLabel        -- An IO action
 Executing IO action
-(Hidden `#sbq) : HiddenLabel
+(HideLabel `#sbq) : HiddenLabel
 prompt> temp
-(Hidden `#sbq) : HiddenLabel
+(HideLabel `#sbq) : HiddenLabel
 
 prompt> newLabel "a"              -- A pure value
-(Hidden `a) : HiddenLabel
+(HideLabel `a) : HiddenLabel
 \end{verbatim}
 
 \section{Staging}
@@ -858,7 +857,7 @@ command editor also implements tab completion by looking up
 prefixes in the \om\ symbol table. I'd like to thank 
 Nils Anders Danielsson for the initial implementation.
 
-The command line editor is also installed in the Read-typecheck-print
+The command line editor is also installed in the read-typecheck-print
 loop described in the next section.
 
 
@@ -1221,7 +1220,7 @@ narrowing, but are evaluating its effectiveness for future releases of \om.
 \subsubsection{Narrowing Strategies} \label{ISEQ}
 
 While narrowing is non-deterministic, it is both sound and complete with an
-appropriate strategy\cite{Antoy:2005:ESF}. All answers found are real answers, and if
+appropriate strategy \cite{Antoy:2005:ESF}. All answers found are real answers, and if
 there exists an answer, good strategies will find it. When a question has an infinite
 number of answers, a good implementation will produce these answers lazily.  In our
 type-checking context, finding 2 or more answers is a sign that a program being type
@@ -1605,7 +1604,7 @@ For example if the tag "{\tt i}" is associated with
 the functions {\tt (C,N)}, then the expansion is as follows.
 \begin{verbatim}
 []i         ---> N
-[x,y,z]i    ---> C x(C y (C z N))
+[x,y,z]i    ---> C x (C y (C z N))
 [x;xs]i     ---> (C x xs)
 [x,y ; zs]i ---> C x (C y zs)
 \end{verbatim}
@@ -1616,7 +1615,7 @@ In this case, the last element stands for the tail of the resulting list.
 The natural-number-like syntax associates two functions with each
 tag. These functions play the role of {\tt Zero} and {\tt Succ}.
 For example if the tag "{\tt i}" is associated with
-the functions {\tt (Z,S)}, then the expansion is as follows.
+the functions {\tt (Z,S)}, then the expansion is as follows:
 \begin{verbatim}
 4i     ---> S(S(S(S Z)))
 0i     ---> Z
@@ -1631,7 +1630,7 @@ to either \verb+4t+ ({\tt  S(S(S(S Z)))}) in the type name space, and \verb+4v+
 The pair-like syntax associates one function with each
 tag. This function plays the role of a binary constructor.
 For example if the tag "{\tt i}" is associated with
-the function {\tt (P)}, then the expansion is as follows.
+the function {\tt (P)}, then the expansion is as follows:
 \begin{verbatim}
 (a,b)i      ---> P a b
 (a,b,c)i    ---> P a (P b c)
@@ -1642,11 +1641,11 @@ The record-like syntax associates two functions with each
 tag. These functions play the role of the constant {\tt RowNil} and 
 the ternary function {\tt RowCons}.
 For example if the tag "{\tt i}" is associated with
-the functions {\tt (RC,RN)}, then the expansion is as follows.
+the functions {\tt (RC,RN)}, then the expansion is as follows:
 \begin{verbatim}
-{}i            ---> RN
-{a=x,b=y}i    ---> RC a x (RC b y RN)
-{a=x;xs}i     ---> (RC a x xs)
+{}i             ---> RN
+{a=x,b=y}i      ---> RC a x (RC b y RN)
+{a=x;xs}i       ---> (RC a x xs)
 {a=x,b=y ; zs}i ---> RC a x (RC b y zs)
 \end{verbatim}
 
@@ -1667,18 +1666,18 @@ Syntactic extension can be applied to any GADT, at either the value or type leve
 new syntax can be used by the programmer for terms, types, or patterns. \om\ uses the
 new syntax to display such terms. The constructor based mechanism can also still
 be used. The tags are specified using a deriving clause in a GADT. As of the March 2010
-release there are two style of syntax derivations: old-style, and new-style. Both are
+release there are two styles of syntax derivations: old-style, and new-style. Both are
 supported. The new-style is more expressive, and all old-style derivations
 can be replaced by equivalent new-style ones. Eventually the old-style will
 be deprecated and removed from the system.
 
-\subsection{Old-style derivations}
+\subsection{Old-style Derivations}
 
 Old-style derivations specify a single tag to be associated with a single syntax
-extension for a particular dataype. Using the old-style, each datatype can can be associated with a
+extension for a particular datatype. Using the old-style, each datatype can can be associated with a
 single syntax extension, and the number of constructor functions of the datatype
 must agree with the number of functions associated with that extension. For example
-to use the List extension the dataype must have two constructors, and to use the Pair
+to use the List extension the datatype must have two constructors, and to use the Pair
 extension the datatype must have one constructor.
 
 
@@ -1812,13 +1811,13 @@ prompt> { `name="tim", `age=21}
 {`name="tim",`age=21} : Record {`name=[Char],`age=Int}r
 \end{verbatim} 
 
-Here we demostrate that the tag for {\tt Records} is the empty tag.
+Here we demonstrate that the tag for {\tt Records} is the empty tag.
 The empty tag for {\tt Nat} is reserved for ordinary {\tt Int},
 the empty tag for {\tt List} is reserved for ordinary lists,
 and the empty tag for {\tt Pair} is reserved for \om's builtin binary
 product.
 
-\subsection{New-style derivations}
+\subsection{New-style Derivations}
 
 The old-style syntax extension allows the user to choose only one style of syntactic extension
 per datatype declaration, and limits the number of constructors of the datatype to exactly the number
@@ -1843,7 +1842,7 @@ cdr (Id`2)p :: (a,(b,c)) -> c
 cdr (Id`3)p :: (a,(b,(c,d))) -> d
 \end{verbatim}
 
-We define this by using the following dattype declaration with a new-style {\tt Tick}
+We define this by using the following datatype declaration with a new-style {\tt Tick}
 extension.
 
 \begin{verbatim}
@@ -1854,10 +1853,10 @@ data Projection :: *0 ~> *0 ~> *0 where
  deriving syntax(p) Tick(Cdr) 
 \end{verbatim} 
 
-In a new-style extension, the keyword {\tt syntax} is followed by the tag, and the 
+In a new-style extension, the keyword {\tt syntax} is followed by the tag, and the
 types of extensions are followed by the names of the constructors that will be associated
-with that extensions functions. Thus {\tt (x`2)p} stands for {\tt (Cdr(Cdr x))}.
-Note the types of a few terms constructed this way.
+with those extension functions. Thus {\tt (x`2)p} stands for {\tt (Cdr(Cdr x))}.
+Note the types of a few terms constructed this way:
 
 \begin{verbatim}
 zero = (Id`0)p :: Projection a a
@@ -1895,7 +1894,7 @@ data Test:: *0 where
  deriving syntax(w) List(Nil,Cons) Nat(Zero,Succ) 
                     Pair(Pair) Tick(Next) Record(RNil,RCons)
 \end{verbatim}
-This allows one to write things like the following.
+This allows one to write things like the following:
 
 \begin{verbatim}
 test = { "name" = A
@@ -1903,7 +1902,7 @@ test = { "name" = A
        , "xs" = [ (A`1)w ]w
        , "ps" = (0w,1w)w }w
 \end{verbatim}
-Rather than the much more verbose
+rather than the much more verbose
 \begin{verbatim}
 verbose = RCons "name" A (
           RCons "age" (Succ (Succ Zero)) (
@@ -1918,7 +1917,7 @@ verbose = RCons "name" A (
 Some times we wish to use the same structure at both the value and type level.
 One way to do this is to build isomorphic, but different, data structures
 at different levels. In \om, we can define a structure to live
-at many levels. We call this level polymorphism. For example
+at many levels. We call this {\it level polymorphism}. For example
 a {\tt Tree} type that lives at all levels can be defined by:
 
 \begin{verbatim}
