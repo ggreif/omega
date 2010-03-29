@@ -97,6 +97,6 @@ funcDepend (Plus0,Plus1 p) = unreachable
 funcDepend (Plus1 p,Plus0) = unreachable
 funcDepend (Plus1 p,Plus1 q) = 
    case funcDepend(p,q) of
-     (Eq) -> Eq
+     Eq -> Eq
 
 --\end{verbatim} 
