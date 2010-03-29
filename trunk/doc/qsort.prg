@@ -1,6 +1,4 @@
-
-
--- \begin{verbatim}
+--\begin{verbatim}
 --------------------------------------------------------
 -- (LE n m) A witness that n is less than or equal to m
 
@@ -19,7 +17,7 @@ data BSeq :: Nat ~> Nat ~> *0 where
   Cons :: (LE min m, LE m max) => Nat' m -> BSeq min max -> BSeq min max
 
 --------------------------------------------------------
--- helper function for applying one of two functions
+-- Helper function for applying one of two functions
 -- over a sum type, depending upon the sum injection.
 
 mapP :: (a -> b) -> (c -> d) -> (a+c) -> (b+d)
@@ -36,7 +34,7 @@ compare (S x) Z = R Base_LE
 compare (S x) (S y) = mapP Step_LE Step_LE (compare x y)
 
 ------------------------------------------------------
--- split a Bounded sequence into bounded sequences
+-- Split a bounded sequence into bounded sequences.
 
 qsplit :: (LE min piv, LE piv max) => 
           Nat' piv -> BSeq min max -> (BSeq min piv,BSeq piv max)
@@ -59,14 +57,14 @@ data SL :: Nat ~> Nat ~> *0 where
   SCons :: LE min min' => Nat' min -> SL min' max -> SL min max
 
 ------------------------------------------------------
--- append two sorted sequences.
+-- Append two sorted sequences.
 
 app :: SL min piv -> SL piv max -> SL min max
 app SNil ys = ys
 app (SCons min xs) ys = SCons min (app xs ys)
 
 ------------------------------------------------------
--- rearranges a bounded list into a sorted list. Note
+-- Rearranges a bounded list into a sorted list. Note
 -- qsort1 maintains the static invariant that the 
 -- first element of the bounded list is less than or
 -- equal to the first element of the output.
