@@ -323,7 +323,7 @@ modes_and_doc =
   ,("theorem",False,"Reports when a lemma is added by a 'theorem' declaration, and when such a lemma is applicable.")
   ,("kind",False,"Displays kinds of subterms when using the :k or :t commands.")
   ,("unreachable",False,"Displays information when checking for unreachable clauses.")
-  ,("verbose",False,"For Debugging the compiler")
+  ,("verbose",False,"For debugging the compiler.")
   ]
 
 mode0 = map (\ (name,value,doc) -> (name,value)) modes_and_doc
