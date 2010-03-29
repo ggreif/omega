@@ -1594,7 +1594,7 @@ and is terminated by a tag. A user may specify that
 a user defined type should be displayed using the special syntax with a given tag. Each
 tag is associated with a set of functions (a different set for
 list-like, natural-number-like, record-like, pair-like, and unary-increment types). 
-Each type of syntax, has an asociated tag-table, so the same tag can be used once for
+Each type of syntax, has an associated tag-table, so the same tag can be used once for
 each kind of syntax. Each
 term expands into a call of the functions specified by the tag
 in the special syntax.
@@ -1676,13 +1676,13 @@ be deprecated and removed from the system.
 
 Old-style derivations specify a single tag to be associated with a single syntax
 extension for a particular dataype. Using the old-style, each datatype can can be associated with a
-sungle syntax extension, and the number of constructor functions of the datatype
+single syntax extension, and the number of constructor functions of the datatype
 must agree with the number of functions associated with that extension. For example
 to use the List extension the dataype must have two constructors, and to use the Pair
 extension the datatype must have one constructor.
 
 
-\subsubsection{Old-style List Example: Tuples are Lists that Reflect the Type of Their Components}
+\subsubsection{Old-style List example: Tuples are Lists that Reflect the Type of Their Components}
 
 An example where the
 list-like extension is used both at the value and type level follows.
@@ -1854,7 +1854,7 @@ data Projection :: *0 ~> *0 ~> *0 where
  deriving syntax(p) Tick(Cdr) 
 \end{verbatim} 
 
-In a newstyle extention, the keyword {\tt syntax} is followed by the tag, and the 
+In a new-style extension, the keyword {\tt syntax} is followed by the tag, and the 
 types of extensions are followed by the names of the constructors that will be associated
 with that extensions functions. Thus {\tt (x`2)p} stands for {\tt (Cdr(Cdr x))}.
 Note the types of a few terms constructed this way.
