@@ -626,7 +626,7 @@ by \verb+(Prod *0)+, but the type \verb+(PCons Z (PCons (S Z) PNil))+ is classif
 by \verb+(Prod Nat)+. The value level term \verb+(Tcons 5 (Tcons True Tnil)))+ is
 classified by the type \verb+(Tuple (Rcons Int (Rcons Bool Rnil)))+.
 
-\subsection{Polymorphic kinds}
+\subsection{Polymorphic Kinds}
 In \om\ it is possible to give a type constructor
 introduced using the GADT form a polymorphic classification.
 This allows users to specify kinds
@@ -837,7 +837,7 @@ The {\tt :set} and {\tt :clear} command are discussed
 in much more detail in Section \ref{tracing} where we discuss 
 user controlled tracing inside the type-checker.
 
-\subsection{The command line editor}
+\subsection{The Command Line Editor}
 Starting with \om\ version 1.2, the read eval print loop comes
 equipped with a command line editor. The editor is implemented
 by the {\em GNU Readline Library}. This is the same
@@ -1339,17 +1339,17 @@ of the {\tt prop} declaration. A {\tt prop} declaration is
 identical in form to a {\tt data} declaration. It introduces
 a new type constructor and it's associated (value) constructor functions.
 But it also informs the compiler that this type can be used as
-a static level proposition which can be used as a constraint.
-For example consider the proposition {\tt Le} (which is a slight
+a static level {\tt prop}osition which can be used as a constraint.
+For example consider the {\tt prop}osition {\tt Le} (which is a slight
 variant of the {\tt LE} witness from section \ref{typechecker}).
 \begin{verbatim}
 prop Le :: Nat ~> Nat ~> *0 where
   Base:: Le Z a
   Step:: Le a b -> Le (S a) (S b)
 \end{verbatim}
-The type {\tt LE} is introduced as a witness type with constructor
+The type {\tt Le} is introduced as a witness type with constructor
 functions {\tt Base} and {\tt Step}. These construct ordinary values.
-But the type {\tt LE} can now also be used as static constraint.
+But the type {\tt Le} can now also be used as static constraint.
 For example, we might define statically ordered lists as follows:
 
 \begin{verbatim}
@@ -1369,7 +1369,7 @@ These constraints are propagated like equality constraints
 term: \verb+\ x y z -> Scons x (Scons y z)+ is assigned the 
 constrained type:
 \begin{verbatim}
-(LE a b,LE b c) => Nat' c -> Nat' b -> SSeq a -> SSeq c
+(Le a b,Le b c) => Nat' c -> Nat' b -> SSeq a -> SSeq c
 \end{verbatim}
 
 The compiler uses the type of the constructor functions
@@ -1389,7 +1389,7 @@ by propositional types.
 The user can introduce
 new propositional facts by writing functions over types
 introduced by the {\tt prop} declaration. For example
-we can show that {\tt LE} is transitive by exhibiting
+we can show that {\tt Le} is transitive by exhibiting
 the total function {\tt trans} with the following type.
 
 \begin{verbatim}
@@ -1957,7 +1957,7 @@ Equal :: level b . forall (a:*(1+b)).a ~> a ~> *0
 Eq :: level b . forall (a:*(1+b)) (c:a:*(1+b)).Equal c c
 \end{verbatim}
 Without level polymorphism, the {\tt Equal} type constructor could only
-witness equality between types a single level. I.e. types classified by
+witness equality between types a single level, i.e. types classified by
 {\tt *0} but not {\tt *1}. So {\tt (Equal Int Bool)} is well formed
 but {\tt (Equal Nat (Prod *0))} would not be, since both {\tt Nat}
 and {\tt (Prod *0)} are classified by {\tt *1}. For a useful
