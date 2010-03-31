@@ -73,9 +73,9 @@ plusCom Z (Plus1 p) = pluS(plusCom Z p)
 plusCom (S n) (Plus1 p) = pluS(plusCom (S n) p)
 
 --------------------------------------------------
--- To show that the two approaches are equivalent
--- show that we can convert or translate from each
--- to the other.
+-- To show that the two approaches are equivalent,
+-- we show that we can convert or translate from
+-- each to the other.
 
 trans:: Plus a b c -> Equal {plus a b} c
 trans Plus0 = Eq
@@ -87,8 +87,8 @@ transInv Z Eq = Plus0
 transInv (x@(S n)) (p@Eq) = Plus1(transInv n Eq)
 
 ---------------------------------------------------
--- Show that the relation Plus is functional. I.e.
--- if we know the first two argument, we can 
+-- Show that the relation Plus is functional, i.e.
+-- if we know the first two arguments, we can 
 -- determine the third.
 
 funcDepend:: (Plus a b c,Plus a b d) -> Equal c d
