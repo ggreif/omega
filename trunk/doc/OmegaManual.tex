@@ -13,7 +13,7 @@
 \newcommand{\plus}[2]{\{plus {#1} {#2}\}}
 \newcommand{\existsH}[3]{\begin{tabular}[t]{l}
                           {\small exists} {\small {#1}} . \\
-                          ({\small {#2}} \\ 
+                          ({\small {#2}} \\
                           ,{\small {#3}}) \\
                        \end{tabular}}
 
@@ -224,10 +224,10 @@ The typing rule is:
 
 $
 \begin{array}{l}
- \Gamma(x,d) \vdash {\tt e_2} :: m\;\; c \\ 
- \Gamma \vdash {\tt e_1} :: m\;\; d \\ 
- \Gamma \vdash {\tt fail} ::  \forall\, a\, .\;String \rightarrow m\;\; a\\ 
- \Gamma \vdash {\tt bind} :: \forall\, a\, b\, .\; m\;\;a \rightarrow (a \rightarrow m\;\; b) \rightarrow m\;\; b\\ 
+ \Gamma(x,d) \vdash {\tt e_2} :: m\;\; c \\
+ \Gamma \vdash {\tt e_1} :: m\;\; d \\
+ \Gamma \vdash {\tt fail} ::  \forall\, a\, .\;String \rightarrow m\;\; a\\
+ \Gamma \vdash {\tt bind} :: \forall\, a\, b\, .\; m\;\;a \rightarrow (a \rightarrow m\;\; b) \rightarrow m\;\; b\\
  \Gamma \vdash {\tt return} :: \forall\, a\, .\; a \rightarrow m\;\; a \\ \hline
  \Gamma \vdash \;{\tt do}\; \{ x  \leftarrow e_1; \; e_2 \} :: m\;\;c \
  \end{array}
@@ -339,7 +339,7 @@ data Tree a
 This declaration defines the polymorphic {\tt Tree} type constructor. Example tree
 types include {\tt (Tree Int)} and {\tt (Tree Bool)}. 
 Note how the constructor functions ({\tt Fork},\ {\tt Node}) and constants ({\tt Tip})
-are given polymorphic types.\vspace*{0.1in} \\ 
+are given polymorphic types.\vspace*{0.1in} \\
 \noindent
 {\tt Fork :: forall a . Tree a -> Tree a -> \underline{Tree a}}\\
 {\tt Node :: forall a . a -> \underline{Tree a}}\\
