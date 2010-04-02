@@ -76,6 +76,7 @@ This syntax uses the _ guillemets_-style double quotes. The types arising at any
 
   * Do we need unicode to spell out these new syntactic entities?
   * How can we fit this syntax into the pun that is used to call things from value and type levels the same? Can we automatically add the angle quotes?
+  * Support the Haskell-like notation `data ‹Nat› = Z | S Nat`. Suggested by Edward Kmett. Makes sense, because at highest level the GADT-ness is seldom needed.
 
 ----
 = References =
