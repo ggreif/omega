@@ -229,6 +229,7 @@ execExp tenv e =
       ; v <- (eval (runtime_env tenv) e')
       ; u <- runAction v
       ; writeln ((show u)++ " : "++(pprint t))
+      -- ; writeln ("\n pv x = \n"++pv u)
       ; verbose <- getM "kind" False
       ; when verbose (mapM_ writeln subpairs)
       ; when verbose (writeln("\n\n"++ pv u))
