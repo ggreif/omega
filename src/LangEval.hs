@@ -733,9 +733,13 @@ reify :: Monad m => V -> m Exp
 reify (Vlit x) = return(Lit x)
 reify (Vsum j v) = do { x <- reify v; return(Sum j x)}
 reify (Vprod x y) = do { a <- reify x; b <- reify y; return(Prod a b)}
-reify (Vcon (c,_) vs) = do { us <- mapM reify vs; return(f (Var c) us)}
-  where f g [] = g
+reify (Vcon (c,exts) vs) = do { us <- mapM reify vs; return(f constr us)}
+  where constr = Reify (show c) (mkFun (show c) (Vcon (c,exts)) (length vs) [])
+        f g [] = g
         f g (x:xs) = f (App g x) xs
+        
+        
+--        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))        
 reify v = return(Lit(CrossStage v))
 -- reify v = fail ("\nRun-time error ******\nCannot reify: "++show v)
 
