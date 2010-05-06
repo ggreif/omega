@@ -3555,7 +3555,7 @@ exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)) | recordCon
         f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
 exSynRecord d t = (d,"2Ill-formed Record extension: "++sht t)
 
-
+exSynList :: forall t. (NameStore t) => t -> Tau -> (t, [Char])
 exSynList d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
      = (d2,"[" ++ ans ++ "]"++postscript (synKey ext))
   where (d2,ans) = f d t
@@ -3596,9 +3596,155 @@ polyLevel x = True
 pp:: Exhibit (DispInfo Z) t => t -> IO ()
 pp x = putStrLn (snd (exhibit disp0 x))
 
+-- =====================================
+-- exhibit like using Doc
+
+simple (d,s) = (d,text s)
+
+exSynListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
+exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
+     = (d2, text "[" <> PP.cat ans <> text ("]"++postscript (synKey ext)))
+  where (d2,ans) = f d t
+        f d (TyCon ext2 _ c k)| listNil c ext2 = (d,[])
+        f d (TyApp (TyApp (TyCon ext3 _ c1 _) x) y)| listCons c1 ext3 =
+          case y of
+           (TyCon ext3 _ c2 _) | listNil c2 ext3 -> (d,[w])
+                   where (d,w) = dTau d x            
+           (TyApp (TyApp (TyCon ext4 _ c1 _) _) _)| listCons c1 ext4 -> (d2,ans)
+             where (d1,elem) = dTau d x
+                   (d2,tail) = f d1 y
+                   ans = (elem <> text ","): tail
+           other -> (d2, [elem <> text "; ", ans])
+             where (d1,elem) = dTau d x
+                   (d2,ans) = dTau d1 other                   
+        f d t = (d2,[text "; " <> ans]) where (d2,ans) = dTau d t
+exSynListD d t = (d,text ("2Ill-formed List extension: "++sht t))
+
+exSynRecordD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
+exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)) | recordCons c1 ext
+      = (d2, text "{" <> PP.cat ans <> text ("}"++postscript (synKey ext)))
+  where (d2,ans) = f d t
+        f d (TyCon ext _ c k)| recordNil c ext = (d,[])
+        f d (TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)| recordCons c1 ext =
+          let (d0,tags) = dTau d tag
+              (d1,elem) = dTau d0 x
+          in case y of
+              (TyCon ext2 _ c2 _) | recordNil c2 ext2 -> (d1,[tags<> text "=" <>elem])
+              (TyApp (TyApp (TyApp (TyCon ext3 _ c1 _) _) _) _)| recordCons c1 ext3 -> (d2,ans)
+                where (d2,tail) = f d1 y
+                      ans = (tags <> text "=" <> elem <> text ","):tail
+              other -> (d2,[tags<> text "=" <> elem <> text ";",ans])
+                where (d2,ans) = dTau d1 other
+        f d t = (d2,[text ";" <> ans]) where (d2,ans) = dTau d t
+exSynRecordD d t = (d,text("2Ill-formed Record extension: "++sht t))
+
+exSynPairD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
+exSynPairD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext 
+     = (d3,text "(" <> PP.cat ws <> text (")"++postscript (synKey ext)))
+  where collect (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext = x : collect y
+        collect y = [y]
+        (d1,x') = dTau d x
+        (d2,y') = dTau d1 y
+        (d3,ws) = thread dTau (text ",") d (collect t) 
+
+thread:: (d -> x -> (d,Doc)) -> Doc -> d -> [x] -> (d,[Doc])
+thread f sep d [] = (d,[])
+thread f sep d [x] = (d2,[ans])
+  where (d2,ans) = f d x
+thread f sep d (x:xs) = (d2,y<>sep:ys) 
+  where (d1,y) = f d x
+        (d2,ys) = thread f sep d1 xs 
+
+dTau:: (NameStore d) => d -> Tau -> (d,Doc)
+dTau xs (t@(TyCon ext _ c _))           | natZero c ext = (xs,text ("0" ++ postscript (synKey ext)))
+dTau xs (t@(TyApp (TyCon ext _ c _) x)) | natSucc c ext = simple (exSynNat xs t) 
+dTau xs (t@(TyApp (TyCon ext _ c _) x)) | tickSucc c ext = simple (exSynTick xs t)
+dTau xs (t@(TyCon ext _ s _))           | listNil s ext = (xs, text("[]"++postscript (synKey ext)))
+dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | listCons c ext = exSynListD xs t
+dTau xs (t@(TyCon ext _ s _))                     | recordNil s ext = (xs, text ("{}"++postscript (synKey ext)))
+dTau xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _)) 
+                                                  | recordCons c ext = exSynRecordD xs t
+dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext = exSynPairD xs t                                                  
+{-
+dTau xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug, use something like: ["L","Bush"] 
+         = (ys,text nm <> text "(" <> text l' <> text "," <> PP.hcat vs' <> text "." <> k' <> text ")")
+     where (ys,l') = exhibit xs l
+           (ws,vs') = thread dSigma (text ",") ys (map LvVar vs) 
+           (zs,k') = dTau ws k 
+-} 
+
+dTau xs (t@(TyCon _ l s k))| polyLevel l = (ys,text (s++"_")<> text y)
+      where (ys,y) = exhibit xs l 
+dTau xs (t@(TyCon _ l s k)) = (xs,text s)
+dTau e (TyApp (TyCon sx _ "[]" _) x) = (ys,text "[" <> ans <> text "]")
+    where (ys,ans) = dTau e x
+dTau e (TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = (zs, text "(" <> a <> text "," <>  b <> text ")")
+    where (ys,a) = dTau e x
+          (zs,b) = dTau ys y
+dTau e (TyApp (TyApp (TyCon sx _ "(->)" _) x) y) = (zs,a <> text " -> " <> b)
+    where (ys,a) = dArrow e x
+          (zs,b) = dTau ys y
+dTau e (TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = (zs,text "(" <> a <> text "+" <> b <> text ")")
+    where (ys,a) = dPar e x
+          (zs,b) = dPar ys y
+dTau xs (TyApp x y) = (zs,a <> text " " <> b)
+    where (ys,a) = dTau xs x
+          (zs,b) = dPar ys y
+dTau xs (Star LvZero) = (xs,text "*0")
+dTau xs (Star n) = (ys, text ("*" ++ str))
+     where (ys,str) = exhibit xs n
+dTau xs (TyVar nm k) = (d,text ans)
+   where (d,ans) = exhibitNmK xs (nm,k)   
+dTau xs (Karr x y) = (zs,a <> text " ~> " <> b)
+    where (ys,a) = dArrow xs x
+          (zs,b) = dTau ys y
+dTau info (TcTv v) = (d,text s)
+  where (d,s) = exhibitTv info v
+dTau info (TyFun f k xs) = (d2,text ("{"++f++" ")<> PP.cat body <> text "}")
+    where (d2,body) = thread dPar (text " ") info xs 
+dTau info (TySyn nm n fs as t) = (d2,text (nm++" ")<> PP.cat xs)
+    where (d2,xs) = thread dPar (text " ") info as 
+dTau xs (TyEx x) = (d,text s)
+   where (d,s) = exhibitLdata Ex xs x   
+   
+
+dPar xs z@(TyApp (TyCon sx _ "[]" _) x) = dTau xs z
+dPar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = dTau xs z
+dPar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = dTau xs z
+dPar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | listCons c lx  = dTau xs z
+dPar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | recordCons c rx = dTau xs z
+dPar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairProd c px = dTau xs z
+dPar xs z@(TyApp (TyCon nx _ c _) _) | natSucc c nx = dTau xs z
+dPar xs  z | isRow z = dTau xs z
+dPar xs x@(Karr _ _) = (ys,text "(" <>  ans <> text ")")
+  where (ys,ans) = dTau xs x
+dPar xs x@(TyApp _ _) = (ys,text "(" <> ans <> text ")")
+  where (ys,ans) = dTau xs x
+dPar xs x@(TySyn nm n fs as t) | n>=1 =  (ys,text "(" <> ans <> text ")")
+  where (ys,ans) = dTau xs x
+dPar xs x@(TyEx _) = (ys, text "(" <> ans <> text ")")
+  where (ys,ans) = dTau xs x
+dPar xs x = dTau xs x
+
+
+dArrow xs (t@(TyApp (TyApp (TyCon sx _ "(->)" _) x) y)) = (ys,text "(" <> z <> text ")")
+  where (ys,z) = dTau xs t
+dArrow xs (t@(Karr _ _)) = (ys, text "(" <> z <> text ")")
+  where (ys,z) = dTau xs t
+dArrow xs x@(TyEx _) = (ys,text "(" <>  ans <> text ")")
+  where (ys,ans) = dTau xs x
+dArrow xs t = dTau xs t
+          
+-- =======================================          
+          
 -- Exhibit Tau
 instance (NameStore d) => Exhibit d Tau where
+  exhibit xs t = (d,render y)
+    where (d,y) = dTau xs t
+ 
+{-
   exhibit xs (t@(TyCon ext _ c _))           | natZero c ext = (xs,"0" ++ postscript (synKey ext))
+
   exhibit xs (t@(TyApp (TyCon ext _ c _) x)) | natSucc c ext = exSynNat xs t
 
   exhibit xs (t@(TyApp (TyCon ext _ c _) x)) | tickSucc c ext = exSynTick xs t
@@ -3657,6 +3803,9 @@ instance (NameStore d) => Exhibit d Tau where
   exhibit info (TySyn nm n fs as t) = (d2,nm++" "++xs)
     where (d2,xs) = exhibitL exhibitpar info as " "
   exhibit xs (TyEx x) = exhibitLdata Ex xs x
+-}
+
+
 
 -- Rho
 instance NameStore d => Exhibit d Rho where
@@ -4224,3 +4373,4 @@ subtermsSigma (Forall l) ans = subtermsRho rho ans
 
 ------------------------------------------------------------------
 ------------------------------------------------------------------
+

@@ -3,7 +3,7 @@ module BuildSpecific where
 -- ====================================================================
 -- Everytime you make a distribution you need to edit the following
 
-version = "Omega Interpreter: version 1.4.4"
+version = "Omega Interpreter: version 1.4.6"
 
 distrDir = "D:/Omega/distr/"
 srcDir = "D:/Omega/src/"
