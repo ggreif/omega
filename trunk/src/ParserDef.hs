@@ -707,8 +707,9 @@ datadecl =
     ; (strata,prop) <- (reserved "data" >> return(0,False)) <|>
                        (reserved "prop" >> return(0,True)) <|>
                        (reserved "kind" >> return(1,False))
-    ; t <- name;
-    ; (explicit prop pos t) <|> (implicit prop pos strata t)
+    ; t <- conName;
+    ; (explicit prop pos (Global t)) <|> 
+      (implicit prop pos strata (Global t))
     }
 
 implicit b pos strata t =
