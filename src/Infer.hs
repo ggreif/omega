@@ -1564,7 +1564,8 @@ okRange c (Rtau t) = help t
              ; case (un,ps) of
                 ([],[]) -> do { warnM [Ds "\nTYFUN\n ",Dd new ]; help new}
                 _ -> fail "TyFun in okRange" }
-        help t = failD 2 [Ds "\nNon type constructor: ",Dd t,Ds " as range of constructor: ",Dd c]
+        help t = failD 2 [Ds "While infering the type of a pattern involving the constructor ",Dd c,
+                          Ds "\nThe context supplied a non-type-constructor is as it's range: ",Dd t]
 okRange c rho = failD 2 [Ds "\nNon tau type: ",Dd rho
                         ,Ds " as range of constructor: ",Dd c]
 
@@ -2262,7 +2263,7 @@ checkParseSynExt (Parsex(tag,style,arityCs,clauses)) =
      }
 
 isSyntax (Syntax _) = True
-isSyntax _ = False
+-- isSyntax _ = False
 
 failWhen test n xs = if test then failM n xs else return ()
 
@@ -3146,6 +3147,7 @@ liftNf f tau =
 
 nfTau = liftNf norm2Tau
 nfPredL = liftNf norm2PredL
+nfRho = liftNf norm2Rho
 
 
 -- Does a term normalize to a non-TyFun term, and not extend the refinement?
@@ -4425,13 +4427,15 @@ checkReadEvalPrint (hint,env) =
                       ; when verbose (showKinds varsOfPoly s1)
                       ; return (True)}
                 Nothing -> do { putS ("Unknown name: "++x); return (True)}
-          (ColonCom "o" e) ->
-             do { exp <- getExp e
-                ; (t,exp2) <- inferExp exp
-                ; t1 <- zonk t
-                ; updateDisp
-                ; warnM [Ds (show exp ++ " :: "),Dd t1]
-                ; return (True)
+          (ColonCom "norm" e) ->
+	     do { exp <- getExp e
+	        ; (t,exp2) <- inferExp exp
+	        ; t1 <- zonk t
+	        ; (t2,_,_) <- nfRho t1
+	        ; updateDisp
+	        ; warnM [Ds (show exp ++ " :: "),Dd t1]
+	        ; warnM [Ds"\n",Dd t1,Ds "\n   Normalizes to:\n",Dd t2]
+	        ; return (True)
                 }
           (ColonCom "try" e) ->
              do {  exp <- getExp e
@@ -4444,18 +4448,30 @@ checkReadEvalPrint (hint,env) =
                              Infer _ -> failD 1 [Ds "Can't try and match an expression against expected type if expected type is infer."]
                 ; (vs,_) <- get_tvs expect
                 ; eitherX <- morepolyRR vs typ expect
+                
                 ; case eitherX of
                    Left(unifier,preds) ->  
                       do { (u2@(_,unifier2),preds2) <- solveByUnify unifier preds
-                         ; warnM [Ds(show exp ++ " :: "),Dd (sub2Rho u2 typ)]
+                         ; let t1 = sub2Rho u2 typ
+                         ; (t2,_,_) <- nfRho t1
+                         ; warnM [Ds(show exp ++ " :: "),Dd t1]
                          ; warnM [Ds "\nUnder the refinement:\n  ",Dl unifier2 "\n  "]
-                         ; warnM [Ds "\nOnly when we can solve\n  ",Dl (subPred unifier (obs++preds2)) "\n  "]
+                         ; warnM [Ds "\nOnly when we can solve\n",Dl (subPred unifier (obs++preds2)) "\n  "]
+                         ; whenM (not(similar t1 t2))
+                                 [Ds "\nThe type:\n",Dd t1,Ds "\n\n   normalizes to\n\n",Dd t2]
                          }
                    Right(message,t1,t2) ->
-                      warnM [Ds "\nThe typing ",Dd exp, Ds " :: ",Dd ty
-                            ,Ds "\ndoes not match the expected type:\n  ",Dd expect
-                            ,Ds "\nBecause: ",Ds message,Ds "\n  "
-                            ,Dd t1, Ds " =/= ",Dd t2]
+                      do { warnM [Ds "\nThe typing ",Dd exp, Ds " :: ",Dd ty
+                                 ,Ds "\ndoes not match the expected type:\n  ",Dd expect
+                                 ,Ds "\nBecause: ",Ds message,Ds "\n  "
+                                 ,Dd t1, Ds " =/= ",Dd t2]
+                         ; (t2,_,_) <- nfRho ty
+                         ; (e2,_,_) <- nfRho expect
+                         ; whenM (not(similar ty t2))
+                                 [Ds "\nThe type:\n",Dd ty,Ds "\n\nnormalizes to\n\n",Dd t2]
+                         ; whenM (not(similar expect e2))
+                                 [Ds "\nThe expected type:\n",Dd expect,Ds "\n\n   normalizes to\n\n",Dd e2]                                 
+                         }
                 ; return True
                 }
           (ExecCom exp) ->
@@ -4474,6 +4490,10 @@ checkReadEvalPrint (hint,env) =
           EmptyCom -> return True
           other -> putS "unknown command" >> return (True)
      }
+
+similar:: Rho -> Rho -> Bool  -- An approximation of Equality
+similar (Rtau x) (Rtau y) = x==y
+similar _ _ = False
 
 checkLoop :: Expected Rho -> TcEnv -> TC ()
 checkLoop typ env = interactiveLoop checkReadEvalPrint (typ,env)
