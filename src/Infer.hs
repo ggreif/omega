@@ -1565,7 +1565,9 @@ okRange c (Rtau t) = help t
                 ([],[]) -> do { warnM [Ds "\nTYFUN\n ",Dd new ]; help new}
                 _ -> fail "TyFun in okRange" }
         help t = failD 2 [Ds "While infering the type of a pattern involving the constructor ",Dd c,
-                          Ds "\nThe context supplied a non-type-constructor is as it's range: ",Dd t]
+                          Ds ",\nThe context supplied a non-type-constructor: ",
+                          Dd t,Ds ", as it's range. This could be caused by a prototype with",
+                          Ds "an incorrect or too general type."]
 okRange c rho = failD 2 [Ds "\nNon tau type: ",Dd rho
                         ,Ds " as range of constructor: ",Dd c]
 

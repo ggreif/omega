@@ -71,8 +71,8 @@ extName ((Tickx n _ s)) = "Tick"
 -- Creating formatted documents
 
 ppExt :: (a -> Doc) -> Extension a -> Doc
-ppExt f((Listx xs (Just x) s)) = PP.sep ((text "["):(map f xs)++[text ";",f x,text ("]"++s)])
-ppExt f((Listx xs Nothing s)) = PP.sep ((text "["):(map f xs)++[text ("]"++s)])
+ppExt f((Listx xs (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)])
+ppExt f((Listx xs Nothing s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
 ppExt f((Numx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"++s)]
 ppExt f((Numx n Nothing s)) = PP.hcat [PP.int n,text s]
 ppExt f((Pairx xs s)) = text "(" <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
