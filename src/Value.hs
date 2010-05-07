@@ -8,8 +8,10 @@ import Monad
 import Syntax
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Bind
-import RankN(Z,postscript)
+import RankN(Z,postscript,DocReady(..))
 import SyntaxExt
+import Text.PrettyPrint.HughesPJ(Doc,text)
+
 -----------------------------------------------
 {- These are now defined in the Syntax file
 
@@ -44,6 +46,8 @@ data V
 --------------------------------------
 -}
 
+instance DocReady V where
+  dDoc d x = (d,text (show x))
 
 class Push t where
   push :: Ev -> t -> t

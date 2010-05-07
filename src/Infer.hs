@@ -58,7 +58,8 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
-            ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
+            ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift
+            ,Docs(..),docs)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey
                 ,buildExt,listx,pairx,natx,wExt,duplicates,checkClause,checkMany,liftEither)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
@@ -4435,8 +4436,8 @@ checkReadEvalPrint (hint,env) =
 	        ; t1 <- zonk t
 	        ; (t2,_,_) <- nfRho t1
 	        ; updateDisp
-	        ; warnM [Ds (show exp ++ " :: "),Dd t1]
-	        ; warnM [Ds"\n",Dd t1,Ds "\n   Normalizes to:\n",Dd t2]
+	        ; warnM [docs [Dds(show exp),Dds " :: ",Dx t1]]
+	        ; warnM[Ds"\n\n",docs[Dds "Normalizes to:",Dsp,Dx t2]]
 	        ; return (True)
                 }
           (ColonCom "try" e) ->
@@ -4456,23 +4457,24 @@ checkReadEvalPrint (hint,env) =
                       do { (u2@(_,unifier2),preds2) <- solveByUnify unifier preds
                          ; let t1 = sub2Rho u2 typ
                          ; (t2,_,_) <- nfRho t1
-                         ; warnM [Ds(show exp ++ " :: "),Dd t1]
-                         ; warnM [Ds "\nUnder the refinement:\n  ",Dl unifier2 "\n  "]
-                         ; warnM [Ds "\nOnly when we can solve\n",Dl (subPred unifier (obs++preds2)) "\n  "]
+                         ; warnM [docs [Dds(show exp),Dds " :: ",Dx t1]]
+                         ; warnM [Ds "\n*** Under the refinement:\n  ",Dl unifier2 "\n  "]
+                         ; warnM [Ds "\n*** Only when we can solve:\n\n",Dl (subPred unifier (obs++preds2)) "\n  "]
                          ; whenM (not(similar t1 t2))
-                                 [Ds "\nThe type:\n",Dd t1,Ds "\n\n   normalizes to\n\n",Dd t2]
+                                 [Ds "\n*** The type:\n\n",Dd t1,Ds "\n\n*** normalizes to\n\n",Dd t2]
                          }
                    Right(message,t1,t2) ->
-                      do { warnM [Ds "\nThe typing ",Dd exp, Ds " :: ",Dd ty
+                      do { warnM [Ds "\n*** The typing ",Dd exp, Ds " :: ",Dd ty
                                  ,Ds "\ndoes not match the expected type:\n  ",Dd expect
                                  ,Ds "\nBecause: ",Ds message,Ds "\n  "
                                  ,Dd t1, Ds " =/= ",Dd t2]
                          ; (t2,_,_) <- nfRho ty
                          ; (e2,_,_) <- nfRho expect
                          ; whenM (not(similar ty t2))
-                                 [Ds "\nThe type:\n",Dd ty,Ds "\n\nnormalizes to\n\n",Dd t2]
+                         	 [Ds"\n\n",docs[Dds "*** Normalizes to:",Dsp,Dx t2]]
                          ; whenM (not(similar expect e2))
-                                 [Ds "\nThe expected type:\n",Dd expect,Ds "\n\n   normalizes to\n\n",Dd e2]                                 
+                                 [Ds "\n*** The expected type:\n",
+                                  docs[Dx expect,Dsp,Dds "*** normalizes to",Dsp,Dx e2]]                             
                          }
                 ; return True
                 }
@@ -4483,7 +4485,7 @@ checkReadEvalPrint (hint,env) =
                 ; (u2@(_,unifier2),preds2) <- solveByUnify [] oblig
                 ; let t3 = sub2Rho u2 t2
                 ; updateDisp
-                ; warnM [Ds(show exp ++ " :: "),Dd t3]
+                ; warnM [docs[Dds(show exp ++ " :: "),Dx t3]]
                 ; verbose <- getMode "kind"
                 ; when verbose (showKinds varsOfRho t3)
                 ; whenM (not (null preds2)) [Ds "Only when we can solve\n   ",Dd preds2]
@@ -4909,7 +4911,7 @@ partByFree oblig = do { ps <- mapM free oblig; return(foldr acc ([],[],[]) ps)}
         acc ([],p) (free,hasVars,ground) = (free,hasVars,p:ground)
         acc (vs,p) (free,hasVars,ground) = (vs++free,p:hasVars,ground)
 
-wellTyped :: TcEnv -> Exp -> FIO (String,Exp,[String])
+wellTyped :: TcEnv -> Exp -> FIO (String,PolyKind,Exp,[String])
 wellTyped env e = tcInFIO env
   (do { ((t::Rho,term),oblig) <- collectPred(inferExp e)
       ; truths <- getAssume
@@ -4934,7 +4936,7 @@ wellTyped env e = tcInFIO env
       ; let subterms = (subtermsSigma sigma2 [])
       ; pairs <-  handleM 2  (mapM kind subterms) (\ _ -> return[])
       ; (_,typeString) <- showThruDisplay [Dd polyk,Ds "\n"]
-      ; return(typeString,term,pairs)})
+      ; return(typeString,polyk,term,pairs)})
 
 
             
