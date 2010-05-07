@@ -4,7 +4,7 @@ module Commands (commands,dispatchColon,execExp,drawPatExp
 import Infer(TcEnv(sourceFiles,imports),varTyped,getVar,initTcEnv,getkind,parseAndKind,setCommand
             ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC,getM)
-import RankN(pprint,warnM,showKinds)
+import RankN(pprint,warnM,showKinds,docs,Docs(..))
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio,writeRef)
@@ -40,7 +40,7 @@ tCom tenv x =
                            ; case ans of
                                Left message -> fail message
                                Right(e,more) ->
-                                 do { (typ,_,subpairs) <- wellTyped tenv e
+                                 do { (typ,_,_,subpairs) <- wellTyped tenv e
                                     ; writeln (x++" :: "++(pprint typ)++"\n")
                                     ; verbose <- getM "kind" False
                                     ; when verbose (mapM_ writeln subpairs)
@@ -225,12 +225,13 @@ commands = concat ([
 -- (ExecCom e)
 -- 5 + 2
 execExp tenv e =
-   do { (t,e',subpairs) <- wellTyped tenv e
+   do { (t,polyk,e',subpairs) <- wellTyped tenv e
       ; v <- (eval (runtime_env tenv) e')
       ; u <- runAction v
       ; writeln ((show u)++ " : "++(pprint t))
       -- ; writeln ("\n pv x = \n"++pv u)
       ; verbose <- getM "kind" False
+      ; warnM [Ds "\nNEW\n", docs[Dds (show u ++ " : "),Dx polyk]]
       ; when verbose (mapM_ writeln subpairs)
       ; when verbose (writeln("\n\n"++ pv u))
       ; return (tenv) }

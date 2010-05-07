@@ -3311,11 +3311,7 @@ shtL xs = let (ys,(eqs,a)) = unsafeUnwind xs
 -- =============================================================
 -- New style Display
 -- =============================================================
-
-class DocReady t where
-   dDoc:: NameStore d => d -> t -> (d,Doc)
-  
-
+                
 class NameStore d where
    useStore:: Integer -> (String -> String) -> d -> (d,String)
    useStoreChoose:: [String] -> Integer -> (String -> String) -> d -> (d,String)
@@ -3324,6 +3320,35 @@ class NameStore d where
    useStore uniq f d = useStoreChoose infiniteNames uniq f d
 
 infiniteNames = makeNames "abcdefghijklmnopqrstuvwxyz"
+
+
+-----------------------------------------------------
+-- lifting this to types that can produce documents
+
+class DocReady t where
+   dDoc:: NameStore d => d -> t -> (d,Doc)
+  
+data Docs  where
+   Dx:: DocReady x => x -> Docs
+   Dsp :: Docs
+   Doc:: Doc -> Docs
+   Dds:: String -> Docs
+
+docs :: [Docs] -> DispElem Z
+docs xs = Df f xs
+ where f d xs = (d2,render (PP.cat docs))
+           where (d2,docs) = threadx d xs
+       threadx :: (NameStore t) => t -> [Docs] -> (t, [Doc])
+       threadx d [] = (d,[]) 
+       threadx d (Dx x :xs ) = (d2,y : ys ) 
+          where (d1,y) = dDoc d x
+                (d2,ys) = threadx d1 xs 
+       threadx d (Dsp :xs ) = (d,text " " : ys)
+          where  (d2,ys) = threadx d xs 
+       threadx d (Dds s :xs ) = (d,text s : ys)
+          where  (d2,ys) = threadx d xs           
+       threadx d (Doc doc : xs) = (d2,doc : ys)    
+          where  (d2,ys) = threadx d xs 
 
 ---------------------------------------------------------
 -- NameStore instances
@@ -3403,27 +3428,6 @@ exhibit3 xs1 (x,y,z) = (xs4,sx,sy,sz)
 -- exhibit a list, given a function to exhibit an element
 exhibitL :: (a -> b -> (a,[Char])) -> a -> [b] -> [Char] -> (a,[Char])
 exhibitL = dispL
-
--- Put parenthesis around Tau's that need them
-
-exhibitpar :: Exhibit a Tau => a -> Tau -> (a,String)
-exhibitpar xs z@(TyApp (TyCon sx _ "[]" _) x) = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | listCons c lx  = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | recordCons c rx = exhibit xs z
-exhibitpar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairProd c px = exhibit xs z
-exhibitpar xs z@(TyApp (TyCon nx _ c _) _) | natSucc c nx = exhibit xs z
-exhibitpar xs  z | isRow z = exhibit xs z
-exhibitpar xs x@(Karr _ _) = (ys,"("++ ans ++ ")")
-  where (ys,ans) = exhibit xs x
-exhibitpar xs x@(TyApp _ _) = (ys,"("++ans++ ")")
-  where (ys,ans) = exhibit xs x
-exhibitpar xs x@(TySyn nm n fs as t) | n>=1 =  (ys,"("++ans++ ")")
-  where (ys,ans) = exhibit xs x
-exhibitpar xs x@(TyEx _) = (ys,"("++ ans ++ ")")
-  where (ys,ans) = exhibit xs x
-exhibitpar xs x = exhibit xs x
 
 -- exhibit a TcTv
 exhibitTv :: NameStore a => a -> TcTv -> (a,String)
@@ -3585,6 +3589,20 @@ thread f sep d (x:xs) = (d2,y<>sep:ys)
   where (d1,y) = f d x
         (d2,ys) = thread f sep d1 xs 
 
+arrowTau d (TyApp (TyApp (TyCon sx _ "(->)" _) x) y) = (d3, (doc <> text " -> "):docs)
+  where (d2,doc) = dTau d x
+        (d3,docs) = arrowTau d2 y
+arrowTau d x = (d2,[doc])
+  where (d2,doc) = dTau d x
+
+arrowRho d (Rarrow s r) = (d3,lhs : docs)
+  where (d2,doc) = dSigma d s
+        (d3,docs) = arrowRho d2 r
+        lhs = (PP.parens doc) <> text " -> "
+arrowRHo d (Rtau x) = arrowTau d x
+arrowRHo d x = (d2,[doc])
+  where (d2,doc) = dRho d x
+
 dTau:: (NameStore d) => d -> Tau -> (d,Doc)
 dTau xs (t@(TyCon ext _ c _))           | natZero c ext = (xs,text ("0" ++ postscript (synKey ext)))
 dTau xs (t@(TyApp (TyCon ext _ c _) x)) | natSucc c ext = simple (exSynNat xs t) 
@@ -3611,9 +3629,8 @@ dTau e (TyApp (TyCon sx _ "[]" _) x) = (ys,text "[" <> ans <> text "]")
 dTau e (TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = (zs, text "(" <> a <> text "," <>  b <> text ")")
     where (ys,a) = dTau e x
           (zs,b) = dTau ys y
-dTau e (TyApp (TyApp (TyCon sx _ "(->)" _) x) y) = (zs,a <> text " -> " <> b)
-    where (ys,a) = dArrow e x
-          (zs,b) = dTau ys y
+dTau e (t@(TyApp (TyApp (TyCon sx _ "(->)" _) x) y)) = (d3,PP.cat list)
+    where (d3,list) = arrowTau e t
 dTau e (TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = (zs,text "(" <> a <> text "+" <> b <> text ")")
     where (ys,a) = dPar e x
           (zs,b) = dPar ys y
@@ -3639,9 +3656,8 @@ dTau xs (TyEx x) = (d,s)
    
 dRho:: (NameStore d) => d -> Rho -> (d,Doc)
 dRho xs (Rtau x) = dTau xs x
-dRho xs (Rarrow x y) = (zs,a <> text " -> " <> b)
-  where (ys,a) = dSigma xs x
-        (zs,b) = dRho ys y
+dRho xs (t@(Rarrow x y)) = (d3,PP.cat list)
+    where (d3,list) = arrowRho xs t
 dRho xs (Rpair x y) = (zs,PP.parens (a <> text "," <> b))
   where (ys,a) = dSigma xs x
         (zs,b) = dSigma ys y
@@ -3669,7 +3685,7 @@ dPoly d1 (K lvs (Forall args)) = (d3,levels <> s1)
 
 dPred:: (NameStore d) => d -> Pred -> (d,Doc)
 dPred xs (Rel ts) = dTau xs ts
-dPred xs (Equality x y) = (zs, text "Equal " <> a <> b)
+dPred xs (Equality x y) = (zs,text "Equal " <> PP.cat[a,b])
     where (ys,a) = dPar xs x
           (zs,b) = dPar ys y
 
@@ -3692,15 +3708,15 @@ dKinding d1 x = (d1,text (":"++show x))
      
 dLdata:: (Swap t,DocReady t,NameStore d) => 
          Quant -> d -> L([Pred],t) -> (d,Doc)
-dLdata quant d1 args = (d4, PP.cat [prefix, eqsS, rhoS] )
+dLdata quant d1 args = (d4, PP.cat [prefix, eqsS,indent rhoS] )
     where (trips,(eqs,rho)) = unsafeUnwind args
-          (d2,prefix) = tripf d1 trips
+          (d2,prefix,indent) = tripf d1 trips
           (d3,eqsS) = feqs d2 eqs
           (d4,rhoS) = dDoc d3 rho
           sh All = text "forall "
           sh Ex  = text "exists "
-          tripf d [] = (d,PP.empty)
-	  tripf d1 trips = (d2,sh quant <> (PP.cat argsStr) <> text ".")
+          tripf d [] = (d,PP.empty,PP.nest 0)
+	  tripf d1 trips = (d2,sh quant <> (PP.cat argsStr) <> text ".",PP.nest 7)
 	     where (d2,argsStr) = thread pp (text " ") d1 trips 
           feqs d [] = (d,PP.empty)
           feqs d [x::Pred] = (d1,s <> text " => ") where (d1,s) = dPred d x
