@@ -23,7 +23,7 @@ This is a very common pattern of defining _singleton types_ in Ωmega. Its essen
 
 But sometimes _n_ becomes more than 1 and the definition at the different levels gets very tedious, which is aggravated by the fact that new names must be invented for levels _n > 1_. `[`Witness the 2008 Summer School video and progress proof.`]` Our idea is to extend Ωmega's syntax with two multi-level definition constructs that hopefully take out the tedium of these patterns and make them enjoyable.
 
-Actually there is some dogmatism here, because we want to keep the _phase distinction_, that is an intuitive virtue and has brought us so far.
+Actually there is some dogmatism here, because we want to keep the _phase distinction_, that is an intuitive virtue, which has brought us so far.
 
 ----
 = Proposal =
