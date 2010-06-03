@@ -3675,13 +3675,14 @@ dPoly d1 (K lvs (Forall args)) = (d3,levels <> s1)
    where (d2,s1) = dLdata All d1 args
          (d3,s2) = if null lvs
                       then (d2,PP.empty)
-                      else let (d2,list) = thread dBind (text " ") d2 lvs
-                           in (d2,PP.sep list)
+                      else let (d4,list) = thread dBind (text " ") d2 lvs
+                           in (d4,PP.sep list)
          dBind d x = (d2,text s) where (d2,s) = exhibit d x
          levels = if null lvs
                      then PP.empty
                      else (text "level " <> s2 <> text " . ")
 
+ppPoly x = render (snd(dPoly (initDI :: DispInfo Z) x))
 
 dPred:: (NameStore d) => d -> Pred -> (d,Doc)
 dPred xs (Rel ts) = dTau xs ts
@@ -3705,10 +3706,10 @@ dKinding d1 (TyCon sx l s k) = (d2,text (":"++s++":") <> sorting) --
 dKinding d1 (x@(Karr _ _)) = (d2,text ":" <> s) where (d2,s)= dDoc d1 x
 dKinding d1 (x@(TyApp _ _)) = (d2,text ":" <> s) where (d2,s)= dDoc d1 x
 dKinding d1 x = (d1,text (":"++show x))
-     
+                          
 dLdata:: (Swap t,DocReady t,NameStore d) => 
          Quant -> d -> L([Pred],t) -> (d,Doc)
-dLdata quant d1 args = (d4, PP.cat [prefix, eqsS,indent rhoS] )
+dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS] )
     where (trips,(eqs,rho)) = unsafeUnwind args
           (d2,prefix,indent) = tripf d1 trips
           (d3,eqsS) = feqs d2 eqs
@@ -3729,17 +3730,17 @@ dLdata quant d1 args = (d4, PP.cat [prefix, eqsS,indent rhoS] )
             in case k of
                 (Star LvZero) -> (d3,text name)
                 _ -> let (d4,kind) = dKinding d3 k
-                     in (d4,PP.parens(text name <> kind))
+                     in (d4,PP.parens(text name <> kind))                     
                      
 exSynListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
      = (d2, text "[" <> PP.cat ans <> text ("]"++postscript (synKey ext)))
   where (d2,ans) = f d t
-        f d (TyCon ext2 _ c k)| listNil c ext2 = (d,[])
-        f d (TyApp (TyApp (TyCon ext3 _ c1 _) x) y)| listCons c1 ext3 =
+        f d (TyCon ext2 _ c k) | listNil c ext2 = (d,[])
+        f d (TyApp (TyApp (TyCon ext3 _ c1 _) x) y) | listCons c1 ext3 =
           case y of
-           (TyCon ext3 _ c2 _) | listNil c2 ext3 -> (d,[w])
-                   where (d,w) = dTau d x            
+           (TyCon ext3 _ c2 _) | listNil c2 ext3 -> (d2,[w])
+                   where (d2,w) = dTau d x            
            (TyApp (TyApp (TyCon ext4 _ c1 _) _) _)| listCons c1 ext4 -> (d2,ans)
              where (d1,elem) = dTau d x
                    (d2,tail) = f d1 y

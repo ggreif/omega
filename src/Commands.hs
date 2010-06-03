@@ -4,7 +4,7 @@ module Commands (commands,dispatchColon,execExp,drawPatExp
 import Infer(TcEnv(sourceFiles,imports),varTyped,getVar,initTcEnv,getkind,parseAndKind,setCommand
             ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC,getM)
-import RankN(pprint,warnM,showKinds,docs,Docs(..))
+import RankN(pprint,warnM,showKinds,docs,Docs(..),ppPoly)
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio,writeRef)
@@ -13,7 +13,7 @@ import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
 import ParserDef(getInt,getBounds,expr,parseString)
-import Auxillary(plist,plistf,DispElem(..),prefix,maybeM,anyM,ifM,foldrM)
+import Auxillary(plist,plistf,DispElem(..),prefix,maybeM,anyM,ifM,foldrM,initDI)
 import Monads(report,readRef,tryAndReport)
 import Monad(when)
 import Value(pv)
@@ -228,10 +228,8 @@ execExp tenv e =
    do { (t,polyk,e',subpairs) <- wellTyped tenv e
       ; v <- (eval (runtime_env tenv) e')
       ; u <- runAction v
-      ; writeln ((show u)++ " : "++(pprint t))
-      -- ; writeln ("\n pv x = \n"++pv u)
       ; verbose <- getM "kind" False
-      ; warnM [Ds "\nNEW\n", docs[Dds (show u ++ " : "),Dx polyk]]
+      ; warnM [Ds "\n", docs[Dds (show u ++ " : "),Dx polyk]]
       ; when verbose (mapM_ writeln subpairs)
       ; when verbose (writeln("\n\n"++ pv u))
       ; return (tenv) }

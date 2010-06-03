@@ -59,7 +59,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift
-            ,Docs(..),docs)
+            ,Docs(..),docs,dPoly)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey
                 ,buildExt,listx,pairx,natx,wExt,duplicates,checkClause,checkMany,liftEither)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
@@ -67,7 +67,8 @@ import List((\\),partition,sort,sortBy,nub,union,unionBy
 import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
-                ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
+                ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns
+                ,initDI)
 import LangEval(vals,env0,Prefix(..),elaborate,eval)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import SCC(topSortR)
