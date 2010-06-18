@@ -61,3 +61,9 @@ conv{1+n} (1 + n)v = 1 + conv{n} n
 
 
 == Mutual recursion ==
+
+
+== Other Implementations ==
+
+Andreas Abel has released code and a companion paper for his [http://www2.tcs.ifi.lmu.de/~abel/par10.pdf MiniAgda] system. He employs sized types to prove termination of recursive functions and coinductive algorithms' productivity.
+The funny thing is that he tracks the sizes in a very similar manner as me above. His size parameter is currently exposed to the algorithm in first position, but he expects to hide it. It is a value, but must be used parametrically (not referencable from the value world).
