@@ -146,3 +146,6 @@ data Foo :: level n . Foo ~> *n where
  deriving Nat(p)
 }}}
 Level 0 is standard.
+
+_Note: it does not compile (with v1.4.6)_
+`While parsing a type constructor, unknown type: Foo`
