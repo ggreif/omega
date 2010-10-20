@@ -3599,8 +3599,8 @@ arrowRho d (Rarrow s r) = (d3,lhs : docs)
   where (d2,doc) = dSigma d s
         (d3,docs) = arrowRho d2 r
         lhs = (PP.parens doc) <> text " -> "
-arrowRHo d (Rtau x) = arrowTau d x
-arrowRHo d x = (d2,[doc])
+arrowRho d (Rtau x) = arrowTau d x
+arrowRho d x = (d2,[doc])
   where (d2,doc) = dRho d x
 
 dTau:: (NameStore d) => d -> Tau -> (d,Doc)
