@@ -1,4 +1,3 @@
-
 module SyntaxExt where
 
 import Auxillary
