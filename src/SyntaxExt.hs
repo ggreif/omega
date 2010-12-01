@@ -413,7 +413,7 @@ checkMany style tag ((name,args):more) =
                              ,"\n     Expected           Actual"
                              ,"\n     Role   Arity       Arity  Constructor\n"]
                              ++ map g ans) ++ fixes
-                   fixes = if good then "" else "\n\nPossible fix(s):" ++ suggestFix style ans
+                   fixes = if good then "" else "\n\nPossible fix(es):" ++ suggestFix style ans
                    info' = mergey (name,map fst args) info
 duplicates [] = []
 duplicates (x:xs) = nub(if elem x xs then x : duplicates xs else duplicates xs)
