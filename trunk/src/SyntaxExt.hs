@@ -19,10 +19,10 @@ data SynExt t -- Syntax Extension
 
 data Extension t
   = Listx [t] (Maybe t) String        --  [x,y ; zs]i
-  | Numx Int (Maybe t) String         --  4i   #(2+x)i
+  | Numx Int (Maybe t) String         --  4i   (2+x)i
   | Pairx [t] String                  --  (a,b,c)i
   | Recordx [(t,t)] (Maybe t) String  --  {x=t,y=s ; zs}i
-  | Tickx Int t String                --  (e+3)i
+  | Tickx Int t String                --  (e`3)i
 
 -------------------------------------------------------------
 -- Show instances
