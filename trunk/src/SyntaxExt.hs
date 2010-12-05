@@ -172,7 +172,7 @@ instance Functor Extension where
 --------------------------------------------------------
 -- Other primitive operations like selection and equality
 
--- Equal if the same kind and the same key,
+-- Equal if the same kind and the same key
 instance Eq a => Eq (SynExt a) where
   Ox == Ox = True
   (Ix(k1,_,_,_,_,_)) == (Ix(k2,_,_,_,_,_)) = k1==k2
@@ -373,10 +373,10 @@ expectedArities =
   ,("Tick"  ,[("Tick   ",1)])
   ]
 
--- Check a list of arities agianst the expected arities, indicate with
+-- Check a list of arities against the expected arities, indicate with
 -- (False,_) if 1) arities don't match
---              2) there are extra constructors with no cooresponding role
---              3) there are two few constructors for the roles of that extension
+--              2) there are extra constructors with no corresponding role
+--              3) there are too few constructors for the roles of that extension
 
 checkArities name style expected actual =
      case (expected,actual) of
