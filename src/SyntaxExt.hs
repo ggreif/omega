@@ -29,11 +29,11 @@ data Extension t
 
 instance Show a => Show (SynExt a) where
   show Ox = "Ox"
-  show (Ix(k,l,n,p,r,t)) = "Ix "++k++f' "List" l++f "Nat" n++g "Pair" p++f "Record" r++g "Tick" t
+  show (Ix(k,l,n,p,r,t)) = "Ix "++k++f' l++f "Nat" n++g "Pair" p++f "Record" r++g "Tick" t
      where f nm Nothing = ""
            f nm (Just(x,y)) = " "++nm++"["++show x++","++show y++"]"
-           f' nm (Just (Right x)) = f nm (Just x)
-           f' nm (Just (Left x)) = f nm (Just x)
+           f' (Just (Right x)) = f "List" (Just x)
+           f' (Just (Left x)) = f "LeftList" (Just x)
            g nm Nothing = ""
            g nm (Just x) = " "++nm++"["++show x++"]"
   show (Parsex(k,_,_,zs)) = "Px "++k++show zs           
@@ -56,20 +56,20 @@ instance Show x => Show(Extension x) where
   show (Tickx n t tag) = "("++show t++"`"++show n++")"++tag
 
 extKey :: Extension a -> String
-extKey ((Listx xs _ s)) = s
-extKey ((Recordx xs _ s)) = s
-extKey ((Numx n _ s)) = s
-extKey ((Pairx xs s)) = s
-extKey ((Tickx n x s)) = s
+extKey (Listx xs _ s) = s
+extKey (Recordx xs _ s) = s
+extKey (Numx n _ s) = s
+extKey (Pairx xs s) = s
+extKey (Tickx n x s) = s
 
 
 extName :: Extension a -> String
-extName ((Listx (Right xs) _ s)) = "List"
-extName ((Listx (Left xs) _ s)) = "LeftList"
-extName ((Recordx xs _ s)) = "Record"
-extName ((Numx n _ s)) = "Nat"
-extName ((Pairx xs s)) = "Pair"
-extName ((Tickx n _ s)) = "Tick"
+extName (Listx (Right xs) _ s) = "List"
+extName (Listx (Left xs) _ s) = "LeftList"
+extName (Recordx xs _ s) = "Record"
+extName (Numx n _ s) = "Nat"
+extName (Pairx xs s) = "Pair"
+extName (Tickx n _ s) = "Tick"
 
 ----------------------------------------------------
 -- Creating formatted documents
