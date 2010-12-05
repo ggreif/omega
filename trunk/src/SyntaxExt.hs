@@ -14,11 +14,11 @@ data SyntaxStyle = OLD | NEW
 
 data SynExt t -- Syntax Extension
   = Ox        -- no extension
-  | Ix (String,Maybe(t,t),Maybe(t,t),Maybe t,Maybe(t,t),Maybe t)
+  | Ix (String,Maybe (Either (t,t) (t,t)),Maybe(t,t),Maybe t,Maybe(t,t),Maybe t)
   | Parsex (String,SyntaxStyle,[(t,Int)],[(t,[t])])
 
 data Extension t
-  = Listx (Either [t] [t]) (Maybe t) String        --  [x,y ; zs]i
+  = Listx (Either [t] [t]) (Maybe t) String --  [x,y ; zs]i  [x ; y,z]i
   | Numx Int (Maybe t) String         --  4i   (2+x)i
   | Pairx [t] String                  --  (a,b,c)i
   | Recordx [(t,t)] (Maybe t) String  --  {x=t,y=s ; zs}i
@@ -29,9 +29,11 @@ data Extension t
 
 instance Show a => Show (SynExt a) where
   show Ox = "Ox"
-  show (Ix(k,l,n,p,r,t)) = "Ix "++k++f "List" l++f "Nat" n++g "Pair" p++f "Record" r++g "Tick" t
+  show (Ix(k,l,n,p,r,t)) = "Ix "++k++f' "List" l++f "Nat" n++g "Pair" p++f "Record" r++g "Tick" t
      where f nm Nothing = ""
            f nm (Just(x,y)) = " "++nm++"["++show x++","++show y++"]"
+           f' nm (Just (Right x)) = f nm (Just x)
+           f' nm (Just (Left x)) = f nm (Just x)
            g nm Nothing = ""
            g nm (Just x) = " "++nm++"["++show x++"]"
   show (Parsex(k,_,_,zs)) = "Px "++k++show zs           
@@ -231,8 +233,8 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
                    extKey x++"', for "++show x++"\n  "++plistf show "" ys "\n  " "")
                   (matchExt loc x) ys
      ; case (x,y) of
-        (Listx (Right xs) (Just x) _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
-	(Listx (Right xs) Nothing  _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
+        (Listx (Right xs) (Just x) _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
+	(Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
         (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) x xs)
         (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick)) -> return(buildNat x (lift1 tick) n)
@@ -256,23 +258,23 @@ flat2 ((a,b):xs) = a : b : flat2 xs
 -----------------------------------------------------------------------
 -- extensions for predefined data structures
 
-listx = Ix("",Just("[]",":"),Nothing,Nothing,Nothing,Nothing) -- Lx("","[]",":")
+listx = Ix("",Just$Right("[]",":"),Nothing,Nothing,Nothing,Nothing) -- Lx("","[]",":")
 natx = Ix("n",Nothing,Just("Z","S"),Nothing,Nothing,Nothing)  -- Nx("n","Z","S")
 pairx = Ix("",Nothing,Nothing,Just "(,)",Nothing,Nothing)     -- Px("","(,)")
 recordx = Ix("",Nothing,Nothing,Nothing,Just("Rnil","Rcons"),Nothing) -- Rx("","Rnil","Rcons")
 tickx tag tick = Ix(tag,Nothing,Nothing,Nothing,Nothing,Just tick) 
 
 -- normalList (Lx("","[]",":")) = True
-normalList (Ix("",Just("[]",":"),_,_,_,_)) = True
+normalList (Ix("",Just(Right("[]",":")),_,_,_,_)) = True
 normalList _ = False
 
 ------------------------------------------------------
 -- Recognizing Extension constructors
 
-listCons c (Ix(k,Just(nil,cons),_,_,_,_)) = c==cons
+listCons c (Ix(k,Just(Right(nil,cons)),_,_,_,_)) = c==cons
 listCons c _ = False
 
-listNil c (Ix(k,Just(nil,cons),_,_,_,_)) = c==nil
+listNil c (Ix(k,Just(Right(nil,cons)),_,_,_,_)) = c==nil
 listNil c _ = False
 
 natZero c (Ix(k,_,Just(z,s),_,_,_)) = c==z
@@ -349,7 +351,7 @@ natP = try $ lexeme $
 
 ---------------------------------------------------------------------
 
-mergey ("List",[a,b])   (Ix(k,l,n,p,r,t)) = (Ix(k,Just(a,b),n,p,r,t))
+mergey ("List",[a,b])   (Ix(k,l,n,p,r,t)) = (Ix(k,Just$Right(a,b),n,p,r,t))
 mergey ("Nat",[a,b])    (Ix(k,l,n,p,r,t)) = (Ix(k,l,Just(a,b),p,r,t))
 mergey ("Pair",[a])     (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,Just a,r,t))
 mergey ("Record",[a,b]) (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,p,Just(a,b),t))
@@ -450,7 +452,7 @@ computeArity printname arityCs c =
                        ," constructors: ",plistf fst "" arityCs ", " ".\n"])
     Just n -> return (c,n)
       
-wExt = Ix("w",Just("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just("RNil","RCons"),Just("Next"))
+wExt = Ix("w",Just$Right("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just("RNil","RCons"),Just("Next"))
 
                                               
 go x = case checkMany OLD "tag" x of
