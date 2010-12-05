@@ -184,15 +184,15 @@ name = terminal identifier Global
 -- turn it into the normal kind of syntactic sugar
 
 extToExp (Pairx xs "") = expTuple xs
-extToExp (Listx xs Nothing "") = listExp xs
-extToExp (Listx xs (Just tail) "") = listExp2 xs tail
+extToExp (Listx (Right xs) Nothing "") = listExp xs
+extToExp (Listx (Right xs) (Just tail) "") = listExp2 xs tail
 extToExp (Numx n Nothing "") = Lit(Int n)
 extToExp (Numx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
 
 extToPat (Pairx xs "") =  patTuple xs
-extToPat (Listx xs Nothing "") =  pConsUp patNil xs
-extToPat (Listx xs (Just tail) "") =  pConsUp tail xs
+extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
+extToPat (Listx (Right xs) (Just tail) "") =  pConsUp tail xs
 extToPat (Numx n Nothing "") = Plit(Int n)
 extToPat x = ExtP x
 
