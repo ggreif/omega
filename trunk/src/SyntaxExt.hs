@@ -93,7 +93,7 @@ ppExt f((Tickx n x s)) = PP.hcat [text "(",f x,text "`",PP.int n,text (")"++s)]
 -- map and fold-like operations
 
 extList :: Extension a -> [a]
-extList ((Listx (Right xs) (Just x) _)) = (x:xs)
+extList ((Listx (Right xs) (Just x) _)) = x:xs
 extList ((Listx (Left xs) (Just x) _)) = foldr (:) [x] xs
 extList ((Listx (Right xs) Nothing _)) = xs
 extList ((Listx (Left xs) Nothing _)) = xs
@@ -237,7 +237,9 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
                   (matchExt loc x) ys
      ; case (x,y) of
         (Listx (Right xs) (Just x) _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
+        (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> error "buildExt SNOC just" --return(x: foldr (lift2 cons) [] xs)
 	(Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
+        (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> error "buildExt SNOC nothing" --return(lift0 nil: foldr (lift2 cons) [] xs)
         (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) x xs)
         (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick)) -> return(buildNat x (lift1 tick) n)
@@ -279,6 +281,12 @@ listCons c _ = False
 listNil c (Ix(k,Just(Right(nil,cons)),_,_,_,_)) = c==nil
 listNil c _ = False
 
+leftListCons c (Ix(k,Just(Left(nil,cons)),_,_,_,_)) = c==cons
+leftListCons c _ = False
+
+leftListNil c (Ix(k,Just(Left(nil,cons)),_,_,_,_)) = c==nil
+leftListNil c _ = False
+
 natZero c (Ix(k,_,Just(z,s),_,_,_)) = c==z
 natZero c _ = False
 
@@ -299,9 +307,10 @@ tickSucc c _ = False
 
 -- recognizing extension tags
 
-listExt c x = listCons c x || listNil c x 
-natExt c x = natZero c x || natSucc c x 
-recordExt c x = recordCons c x || recordNil c x 
+listExt c x = listCons c x || listNil c x
+leftListExt c x = leftListCons c x || leftListNil c x
+natExt c x = natZero c x || natSucc c x
+recordExt c x = recordCons c x || recordNil c x
 
 -----------------------------------------------------------
 -- Parsers for Syntactic Extensions

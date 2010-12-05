@@ -200,6 +200,8 @@ showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f x
           f v = showVcon v
 showSynList v = showVcon v
 
+showSynLeftList (Vcon (Global c,ext) []) | leftListNil c ext = "[]" ++ postscript (synKey ext)
+showSynLeftList v = showVcon v
 
 showSynRecord (Vcon (Global c,ext) [])         | recordNil c ext = "{}" ++ postscript (synKey ext)
 showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext   = "{" ++ show tag++"="++show x ++ f xs
@@ -264,6 +266,7 @@ instance Show V where
   show (v@(Vcon (Global c,ext) _)) | pairProd c ext = showSynPair v
   show (v@(Vcon (Global c,ext) _)) | natExt c ext = showSynNat v
   show (v@(Vcon (Global c,ext) _)) | listExt c ext = showSynList v
+  show (v@(Vcon (Global c,ext) _)) | leftListExt c ext = showSynLeftList v
   show (v@(Vcon (Global c,ext) _)) | recordExt c ext = showSynRecord v
   show (v@(Vcon (Global c,ext) _)) | tickSucc c ext = showSynTick v
   show (Vcode e (Ev xs _)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
