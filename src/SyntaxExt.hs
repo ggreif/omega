@@ -186,7 +186,8 @@ synKey (Ix (s,_,_,_,_,_)) = s
 synKey (Parsex(s,_,_,_)) = s
 
 synName Ox = ""
-synName (Ix (s,Just _,_,_,_,_)) = "List"
+synName (Ix (s,Just(Right _),_,_,_,_)) = "List"
+synName (Ix (s,Just(Left _),_,_,_,_)) = "LeftList"
 synName (Ix (s,_,Just _,_,_,_)) = "Nat"
 synName (Ix (s,_,_,Just _,_,_)) = "Pair"
 synName (Ix (s,_,_,_,Just _,_)) = "Record"
@@ -264,7 +265,6 @@ pairx = Ix("",Nothing,Nothing,Just "(,)",Nothing,Nothing)     -- Px("","(,)")
 recordx = Ix("",Nothing,Nothing,Nothing,Just("Rnil","Rcons"),Nothing) -- Rx("","Rnil","Rcons")
 tickx tag tick = Ix(tag,Nothing,Nothing,Nothing,Nothing,Just tick) 
 
--- normalList (Lx("","[]",":")) = True
 normalList (Ix("",Just(Right("[]",":")),_,_,_,_)) = True
 normalList _ = False
 
@@ -351,12 +351,13 @@ natP = try $ lexeme $
 
 ---------------------------------------------------------------------
 
-mergey ("List",[a,b])   (Ix(k,l,n,p,r,t)) = (Ix(k,Just$Right(a,b),n,p,r,t))
-mergey ("Nat",[a,b])    (Ix(k,l,n,p,r,t)) = (Ix(k,l,Just(a,b),p,r,t))
-mergey ("Pair",[a])     (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,Just a,r,t))
-mergey ("Record",[a,b]) (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,p,Just(a,b),t))
-mergey ("Tick",[a])     (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,p,r,Just a))
-mergey _                i                 = i
+mergey ("List",[a,b])     (Ix(k,l,n,p,r,t)) = (Ix(k,Just$Right(a,b),n,p,r,t))
+mergey ("LeftList",[a,b]) (Ix(k,l,n,p,r,t)) = (Ix(k,Just$Left(a,b),n,p,r,t))
+mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t)) = (Ix(k,l,Just(a,b),p,r,t))
+mergey ("Pair",[a])       (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,Just a,r,t))
+mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,p,Just(a,b),t))
+mergey ("Tick",[a])       (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,p,r,Just a))
+mergey _                  i                 = i
 
 -----------------------------------------------------------
 -- check that in a syntactic extension like:
@@ -368,11 +369,12 @@ mergey _                i                 = i
 -- for each extension, the name of the roles, and their expected arities
 
 expectedArities =
-  [("List"  ,[("Nil    ",0),("Cons   ",2::Int)])
-  ,("Nat"   ,[("Zero   ",0),("Succ   ",1)])
-  ,("Pair"  ,[("Pair   ",2)])
-  ,("Record",[("RecNil ",0),("RecCons",3)])
-  ,("Tick"  ,[("Tick   ",1)])
+  [("List"    ,[("Nil    ",0),("Cons   ",2::Int)])
+  ,("LeftList",[("Nil    ",0),("Cons   ",2::Int)])
+  ,("Nat"     ,[("Zero   ",0),("Succ   ",1)])
+  ,("Pair"    ,[("Pair   ",2)])
+  ,("Record"  ,[("RecNil ",0),("RecCons",3)])
+  ,("Tick"    ,[("Tick   ",1)])
   ]
 
 -- Check a list of arities against the expected arities, indicate with
