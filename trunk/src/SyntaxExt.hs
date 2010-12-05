@@ -76,7 +76,7 @@ extName (Tickx n _ s) = "Tick"
 
 ppExt :: (a -> Doc) -> Extension a -> Doc
 ppExt f((Listx (Right xs) (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)])
-ppExt f((Listx (Left xs) (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)]) -- FIXME
+ppExt f((Listx (Left xs) (Just x) s)) = PP.sep ((text "["): f x: text ";": PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
 ppExt f((Listx xs' Nothing s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
                                  where xs = case (xs') of { Right xs -> xs; Left xs -> xs }
 ppExt f((Numx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"++s)]
@@ -107,12 +107,12 @@ extList ((Tickx n x _)) = [x]
 instance Eq t => Eq (Extension t) where
  (Listx (Right ts1) (Just t1) s1) == (Listx (Right xs1) (Just x1) s2) = s1==s2 && (t1:ts1)==(x1:xs1)
  (Listx (Left ts1) (Just t1) s1) == (Listx (Left xs1) (Just x1) s2) = s1==s2 && (t1:ts1)==(x1:xs1)
- (Listx ts1 Nothing s1) == (Listx xs1 Nothing s2) = s1==s2 && (ts1)==(xs1)
+ (Listx ts1 Nothing s1) == (Listx xs1 Nothing s2) = s1==s2 && ts1==xs1
  (Numx n (Just t1) s1) == (Numx m (Just x1) s2) = s1==s2 && t1==x1 && n==m
  (Numx n Nothing s1) == (Numx m Nothing s2) = s1==s2 && n==m
  (Pairx xs s) == (Pairx ys t) = xs==ys && s==t
  (Recordx ts1 (Just t1) s1) == (Recordx xs1 (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
- (Recordx ts1 Nothing s1) == (Recordx xs1 Nothing s2) = s1==s2 && (ts1)==(xs1)
+ (Recordx ts1 Nothing s1) == (Recordx xs1 Nothing s2) = s1==s2 && ts1==xs1
  (Tickx n t1 s1) == (Tickx m x1 s2) = s1==s2 && t1==x1 && n==m
  _ == _ = False
 
@@ -199,7 +199,8 @@ synName (Parsex (s,_,_,_)) = "Parse"
 -- Both the name and the type match. Different types (i.e. List,Nat,Pair)
 -- can use the same name.
 
-matchExt loc (Listx (Right _) _ s)   (Ix(t,Just _,_,_,_,_)) | s==t = return True
+matchExt loc (Listx (Right _) _ s)   (Ix(t,Just(Right _),_,_,_,_)) | s==t = return True
+matchExt loc (Listx (Left _) _ s)   (Ix(t,Just(Left _),_,_,_,_)) | s==t = return True
 matchExt loc (Numx _ _ s)    (Ix(t,_,Just _,_,_,_)) | s==t = return True
 matchExt loc (Pairx _ s)     (Ix(t,_,_,Just _,_,_)) | s==t = return True
 matchExt loc (Recordx _ _ s) (Ix(t,_,_,_,Just _,_)) | s==t = return True
@@ -212,6 +213,7 @@ matchExt loc _ _                = return False
 build (cons,nil,succ,zero,pair,rcons,rnil,tick) x =
   case x of
    (Listx (Right xs) (Just x) _) -> foldr cons x xs
+   (Listx (Left xs) hhh _) -> error "cannot build SNOC yet"
    (Listx (Right xs) Nothing _) -> foldr cons nil xs
    (Numx n (Just x) _) -> buildNat x succ n
    (Numx n Nothing _) -> buildNat zero succ n
