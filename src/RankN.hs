@@ -2429,7 +2429,7 @@ parse_tag inject =
                   } <?> "identifier"
 
 extToPT (Pairx xs "") = tprods' xs
-extToPT (Listx [x] Nothing "") = list' x
+extToPT (Listx (Right [x]) Nothing "") = list' x
 extToPT x = Ext x
 
 conName = lexeme (try construct)

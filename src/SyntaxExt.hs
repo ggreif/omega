@@ -13,12 +13,12 @@ import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 data SyntaxStyle = OLD | NEW
 
 data SynExt t -- Syntax Extension
-  = Ox               -- no extension
+  = Ox        -- no extension
   | Ix (String,Maybe(t,t),Maybe(t,t),Maybe t,Maybe(t,t),Maybe t)
   | Parsex (String,SyntaxStyle,[(t,Int)],[(t,[t])])
 
 data Extension t
-  = Listx [t] (Maybe t) String        --  [x,y ; zs]i
+  = Listx (Either [t] [t]) (Maybe t) String        --  [x,y ; zs]i
   | Numx Int (Maybe t) String         --  4i   (2+x)i
   | Pairx [t] String                  --  (a,b,c)i
   | Recordx [(t,t)] (Maybe t) String  --  {x=t,y=s ; zs}i
@@ -37,8 +37,10 @@ instance Show a => Show (SynExt a) where
   show (Parsex(k,_,_,zs)) = "Px "++k++show zs           
 
 instance Show x => Show(Extension x) where
-  show (Listx ts Nothing tag) = plist "[" ts "," ("]"++tag)
-  show (Listx ts (Just t) tag) = plist "[" ts "," "; " ++ show t ++"]"++tag
+  show (Listx (Right ts) Nothing tag) = plist "[" ts "," ("]"++tag)
+  show (Listx (Left ts) Nothing tag) = plist "[" ts "," ("]"++tag)
+  show (Listx (Right ts) (Just t) tag) = plist "[" ts "," "; " ++ show t ++"]"++tag
+  show (Listx (Left ts) (Just t) tag) = "[" ++ show t ++ "; " ++ plist "" ts "," "" ++"]"++tag
   show (Numx n Nothing tag) = show n++tag
   show (Numx n (Just t) tag) = "("++show n++"+"++show t++")"++tag
   show (Pairx ts tag) = "("++ help ts++ ")"++tag
@@ -60,7 +62,8 @@ extKey ((Tickx n x s)) = s
 
 
 extName :: Extension a -> String
-extName ((Listx xs _ s)) = "List"
+extName ((Listx (Right xs) _ s)) = "List"
+extName ((Listx (Left xs) _ s)) = "LeftList"
 extName ((Recordx xs _ s)) = "Record"
 extName ((Numx n _ s)) = "Nat"
 extName ((Pairx xs s)) = "Pair"
@@ -70,8 +73,10 @@ extName ((Tickx n _ s)) = "Tick"
 -- Creating formatted documents
 
 ppExt :: (a -> Doc) -> Extension a -> Doc
-ppExt f((Listx xs (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)])
-ppExt f((Listx xs Nothing s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
+ppExt f((Listx (Right xs) (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)])
+ppExt f((Listx (Left xs) (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)]) -- FIXME
+ppExt f((Listx xs' Nothing s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
+                                 where xs = case (xs') of { Right xs -> xs; Left xs -> xs }
 ppExt f((Numx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"++s)]
 ppExt f((Numx n Nothing s)) = PP.hcat [PP.int n,text s]
 ppExt f((Pairx xs s)) = text "(" <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
@@ -86,8 +91,10 @@ ppExt f((Tickx n x s)) = PP.hcat [text "(",f x,text "`",PP.int n,text (")"++s)]
 -- map and fold-like operations
 
 extList :: Extension a -> [a]
-extList ((Listx xs (Just x) _)) = (x:xs)
-extList ((Listx xs Nothing _)) = xs
+extList ((Listx (Right xs) (Just x) _)) = (x:xs)
+extList ((Listx (Left xs) (Just x) _)) = foldr (:) [x] xs
+extList ((Listx (Right xs) Nothing _)) = xs
+extList ((Listx (Left xs) Nothing _)) = xs
 extList ((Recordx xs (Just x) _)) = (x: flat2 xs)
 extList ((Recordx xs Nothing _)) = flat2 xs
 extList ((Numx n (Just x) _)) = [x]
@@ -96,7 +103,8 @@ extList ((Pairx xs _)) = xs
 extList ((Tickx n x _)) = [x]
 
 instance Eq t => Eq (Extension t) where
- (Listx ts1 (Just t1) s1) == (Listx xs1 (Just x1) s2) = s1==s2 && (t1:ts1)==(x1:xs1)
+ (Listx (Right ts1) (Just t1) s1) == (Listx (Right xs1) (Just x1) s2) = s1==s2 && (t1:ts1)==(x1:xs1)
+ (Listx (Left ts1) (Just t1) s1) == (Listx (Left xs1) (Just x1) s2) = s1==s2 && (t1:ts1)==(x1:xs1)
  (Listx ts1 Nothing s1) == (Listx xs1 Nothing s2) = s1==s2 && (ts1)==(xs1)
  (Numx n (Just t1) s1) == (Numx m (Just x1) s2) = s1==s2 && t1==x1 && n==m
  (Numx n Nothing s1) == (Numx m Nothing s2) = s1==s2 && n==m
@@ -107,8 +115,10 @@ instance Eq t => Eq (Extension t) where
  _ == _ = False
 
 extM :: Monad a => (b -> a c) -> Extension b -> a (Extension c)
-extM f (Listx xs (Just x) s) = do { ys <- mapM f  xs; y<- f  x;return((Listx ys (Just y) s))}
-extM f (Listx xs Nothing s) = do { ys <- mapM f  xs; return((Listx ys Nothing s))}
+extM f (Listx (Right xs) (Just x) s) = do { ys <- mapM f xs; y <- f x; return((Listx (Right ys) (Just y) s))}
+extM f (Listx (Left xs) (Just x) s) = do { y <- f x; ys <- mapM f xs; return((Listx (Left ys) (Just y) s))}
+extM f (Listx (Right xs) Nothing s) = do { ys <- mapM f xs; return((Listx (Right ys) Nothing s))}
+extM f (Listx (Left xs) Nothing s) = do { ys <- mapM f xs; return((Listx (Left ys) Nothing s))}
 extM f (Numx n (Just x) s) = do { y<- f  x; return((Numx n (Just y) s))}
 extM f (Numx n Nothing s) = return((Numx n Nothing s))
 extM f (Pairx xs s) =  do { ys <- mapM f  xs; return((Pairx ys s))}
@@ -128,10 +138,14 @@ threadL f (x:xs) n =
 threadPair f (x,y) n = do { (a,n1) <- f x n; (b,n2) <- f y n1; return((a,b),n2)}
 
 extThread :: Monad m => (b -> c -> m(d,c)) -> c -> Extension b -> m(Extension d,c)
-extThread f n (Listx xs (Just x) s) =
-  do { (ys,n1) <- threadL f xs n; (y,n2) <- f x n1; return(Listx ys (Just y) s,n2)}
-extThread f n (Listx xs Nothing s) =
-  do { (ys,n1) <- threadL f xs n; return(Listx ys Nothing s,n1)}
+extThread f n (Listx (Right xs) (Just x) s) =
+  do { (ys,n1) <- threadL f xs n; (y,n2) <- f x n1; return(Listx (Right ys) (Just y) s,n2)}
+extThread f n (Listx (Left xs) (Just x) s) =
+  do { (y,n1) <- f x n; (ys,n2) <- threadL f xs n1; return(Listx (Left ys) (Just y) s,n2)}
+extThread f n (Listx (Right xs) Nothing s) =
+  do { (ys,n1) <- threadL f xs n; return(Listx (Right ys) Nothing s,n1)}
+extThread f n (Listx (Left xs) Nothing s) =
+  do { (ys,n1) <- threadL f xs n; return(Listx (Left ys) Nothing s,n1)}
 extThread f n (Numx m (Just x) s) = do { (y,n1) <- f x n; return(Numx m (Just y) s,n1)}
 extThread f n (Numx m Nothing s) = return(Numx m Nothing s,n)
 extThread f n (Pairx xs s) =  do { (ys,n1) <- threadL f xs n; return(Pairx ys s,n1)}
@@ -144,8 +158,10 @@ extThread f n (Tickx m x s) = do { (y,n1) <- f x n; return(Tickx m y s,n1)}
 cross f (x,y) = (f x,f y)
 
 instance Functor Extension where
-  fmap f (Listx xs (Just x) s) = (Listx (map f xs) (Just(f x)) s)
-  fmap f (Listx xs Nothing s) = (Listx (map f xs) Nothing s)
+  fmap f (Listx (Right xs) (Just x) s) = (Listx (Right (map f xs)) (Just(f x)) s)
+  fmap f (Listx (Left xs) (Just x) s) = (Listx (Left (map f xs)) (Just(f x)) s)
+  fmap f (Listx (Right xs) Nothing s) = (Listx (Right (map f xs)) Nothing s)
+  fmap f (Listx (Left xs) Nothing s) = (Listx (Left (map f xs)) Nothing s)
   fmap f (Numx n (Just x) s) = (Numx n (Just (f x)) s)
   fmap f (Numx n Nothing s) = (Numx n Nothing s)
   fmap f (Pairx xs s) =  (Pairx (map f xs) s)
@@ -180,7 +196,7 @@ synName (Parsex (s,_,_,_)) = "Parse"
 -- Both the name and the type match. Different types (i.e. List,Nat,Pair)
 -- can use the same name.
 
-matchExt loc (Listx _ _ s)   (Ix(t,Just _,_,_,_,_)) | s==t = return True
+matchExt loc (Listx (Right _) _ s)   (Ix(t,Just _,_,_,_,_)) | s==t = return True
 matchExt loc (Numx _ _ s)    (Ix(t,_,Just _,_,_,_)) | s==t = return True
 matchExt loc (Pairx _ s)     (Ix(t,_,_,Just _,_,_)) | s==t = return True
 matchExt loc (Recordx _ _ s) (Ix(t,_,_,_,Just _,_)) | s==t = return True
@@ -192,8 +208,8 @@ matchExt loc _ _                = return False
 
 build (cons,nil,succ,zero,pair,rcons,rnil,tick) x =
   case x of
-   (Listx xs (Just x) _) -> foldr cons x xs
-   (Listx xs Nothing _) -> foldr cons nil xs
+   (Listx (Right xs) (Just x) _) -> foldr cons x xs
+   (Listx (Right xs) Nothing _) -> foldr cons nil xs
    (Numx n (Just x) _) -> buildNat x succ n
    (Numx n Nothing _) -> buildNat zero succ n
    (Pairx xs _) -> buildTuple pair xs
@@ -215,8 +231,8 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
                    extKey x++"', for "++show x++"\n  "++plistf show "" ys "\n  " "")
                   (matchExt loc x) ys
      ; case (x,y) of
-        (Listx xs (Just x) _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
-	(Listx xs Nothing  _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
+        (Listx (Right xs) (Just x) _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
+	(Listx (Right xs) Nothing  _,Ix(tag,Just(nil,cons),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
         (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) x xs)
         (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick)) -> return(buildNat x (lift1 tick) n)
@@ -298,7 +314,7 @@ semiTailSeq left right elem tail buildf =
 
 extP :: Parser a -> Parser (Extension a)
 extP p = try(lexeme(listP p <|> parensP p <|> recP p))
-  where listP p = semiTailSeq (char '[') (char ']') p p Listx
+  where listP p = semiTailSeq (char '[') (char ']') p p (\xs x t -> Listx (Right xs) x t)
         recP p = semiTailSeq (char '{') (char '}') pair p Recordx
           where pair = do { x <- p; symbol "="; y <- p; return(x,y)}
 
