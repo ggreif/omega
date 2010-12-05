@@ -38,7 +38,7 @@ map (w@Star) (Ap List Int) = (map (Arr Star Star) List) (map Star Int)
 
 --map (Arr (Arr Star Star) (Arr Star Star)) Ftree = mapF
 -- the problem with this is that the "a" in (Rl k t t a) isn't
--- polymorhic enough. It returns: 
+-- polymorphic enough. It returns: 
 -- ((a -> b) -> (t a) -> s b) -> (c -> d) -> (f t c) -> g s d)
 -- but it needs to be
 -- (forall a b . (a -> b) -> (t a) -> s b) -> (c -> d) -> (f t c) -> g s d)

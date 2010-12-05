@@ -200,7 +200,7 @@ t2x :: Exp (Arr [a] Partial a) b Total
 t2x = Abs d2
 
 ---- This should fail 
-##test "Unifier shows too polymorhic"
+##test "Unifier shows too polymorphic"
   t2xBad :: Exp (Arr [a] c a) b Total
   t2xBad = Abs d2  
 
