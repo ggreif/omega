@@ -326,9 +326,19 @@ semiTailSeq left right elem tail buildf =
      ; tag <- many (lower <|> char '\'')
      ; return(buildf xs x tag)}
 
+semiHeadSeq left right head elem buildf =
+  do { lexeme left
+     ; x <- head
+     ; semi
+     ; xs <- sepBy elem comma
+     ; right  -- No lexeme here because the tag must follow immediately
+     ; tag <- many (lower <|> char '\'')
+     ; return(buildf (Just x) xs tag)}
+
 extP :: Parser a -> Parser (Extension a)
-extP p = try(lexeme(listP p <|> parensP p <|> recP p))
+extP p = try(lexeme(listP p <|> leftListP p <|> parensP p <|> recP p))
   where listP p = semiTailSeq (char '[') (char ']') p p (\xs x t -> Listx (Right xs) x t)
+        leftListP p = semiHeadSeq (char '[') (char ']') p p (\x xs t -> Listx (Left xs) x t)
         recP p = semiTailSeq (char '{') (char '}') pair p Recordx
           where pair = do { x <- p; symbol "="; y <- p; return(x,y)}
 
