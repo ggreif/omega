@@ -202,10 +202,12 @@ showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f x
 showSynList v = showVcon v
 
 showSynLeftList (Vcon (Global c,ext) []) | leftListNil c ext = "[]" ++ postscript (synKey ext)
-showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ show x ++ f xs
-    where f (Vlazy cs _) = " ...]"++tag
-          --f (Vcon (Global c,ext) []) | listListNil c ext = ""
-          f v = showVcon v
+showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs ++ show x ++ "]"++tag
+    where f (Vlazy cs _) = "... ; "
+          f (Vcon (Global c,ext) [xs,x])| leftListCons c ext = f xs ++ show x ++ ","
+          f (Vcon (Global c,ext) []) | leftListNil c ext = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f v = showVcon v ++ " ; " -- should not trigger
           tag = postscript (synKey ext)
 showSynLeftList v = showVcon v
 
