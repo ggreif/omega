@@ -206,7 +206,6 @@ matchExt loc (Numx _ _ s)    (Ix(t,_,Just _,_,_,_)) | s==t = return True
 matchExt loc (Pairx _ s)     (Ix(t,_,_,Just _,_,_)) | s==t = return True
 matchExt loc (Recordx _ _ s) (Ix(t,_,_,_,Just _,_)) | s==t = return True
 matchExt loc (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _)) | s==t = return True
-matchExt loc (Listx (Right []) Nothing s)   (Ix(t,Just(Left _),_,_,_,_)) | s==t = return True
 matchExt loc _ _                = return False
 
 ----------------------------------------------------------
@@ -230,10 +229,19 @@ findM mes p (x:xs) =
   do { b <- p x
      ; if b then return x else findM mes p xs}
 
+
+harmonizeExt x@(Listx (Right []) Nothing s) ys = case findM "" (matchExt undefined x') ys of
+                                                  Nothing -> return x
+                                                  Just _ -> return x'
+                                                 where x' = Listx (Left []) Nothing s
+harmonizeExt x _ = return x
+
+
 buildExt :: (Show c,Show b,Monad m) => String -> (b -> c,b -> c -> c,b -> c -> c -> c,b -> c -> c -> c -> c) ->
                       Extension c -> [SynExt b] -> m c
 buildExt loc (lift0,lift1,lift2,lift3) x ys =
-  do { y <- findM ("\nAt "++loc++
+  do { x <- harmonizeExt x ys
+     ; y <- findM ("\nAt "++loc++
                    "\nCan't find a "++extName x++" syntax extension called: '"++
                    extKey x++"', for "++show x++"\n  "++plistf show "" ys "\n  " "")
                   (matchExt loc x) ys
@@ -242,7 +250,6 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> error "buildExt SNOC just" --return(x: foldr (lift2 cons) [] xs)
 	(Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
         (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> error "buildExt SNOC nothing" --return(lift0 nil: foldr (lift2 cons) [] xs)
-        (Listx (Right []) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> return(lift0 nil)
         (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) x xs)
         (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick)) -> return(buildNat x (lift1 tick) n)
