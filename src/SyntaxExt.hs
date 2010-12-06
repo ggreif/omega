@@ -238,13 +238,6 @@ harmonizeExt x@(Listx (Right xs) Nothing s) ys = case findM "" (matchExt undefin
 harmonizeExt x _ = return x
 
 
---buildLeftList [] leftNil cons lift0 = leftNil
---buildLeftList (x:xs) leftNil cons lift0 = buildLeftList xs (lift0 (cons leftNil (lift0 x))) cons lift0
-
-buildLeftList [] leftNil cons lift2 = leftNil
-buildLeftList (x:xs) leftNil cons lift2 = buildLeftList xs ((lift2 cons) x leftNil) cons lift2
-
-
 buildExt :: (Show c,Show b,Monad m) => String -> (b -> c,b -> c -> c,b -> c -> c -> c,b -> c -> c -> c -> c) ->
                       Extension c -> [SynExt b] -> m c
 buildExt loc (lift0,lift1,lift2,lift3) x ys =
@@ -255,9 +248,9 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
                   (matchExt loc x) ys
      ; case (x,y) of
         (Listx (Right xs) (Just x) _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
-        (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> error "buildExt SNOC just" --return(x: foldr (lift2 cons) [] xs)
+        (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> return(foldr (flip $ lift2 cons) x (reverse xs))
 	(Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
-        (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) (reverse xs)) --return(buildLeftList (reverse xs) (lift0 nil) (flip cons) lift2)
+        (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> return(foldr (flip $ lift2 cons) (lift0 nil) (reverse xs))
         (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) x xs)
         (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick)) -> return(buildNat x (lift1 tick) n)
