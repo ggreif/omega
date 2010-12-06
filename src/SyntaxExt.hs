@@ -230,11 +230,14 @@ findM mes p (x:xs) =
   do { b <- p x
      ; if b then return x else findM mes p xs}
 
-
 harmonizeExt x@(Listx (Right xs) Nothing s) ys = case findM "" (matchExt undefined x') ys of
                                                   Nothing -> return x
                                                   Just _ -> return x'
                                                  where x' = Listx (Left xs) Nothing s
+harmonizeExt x@(Listx (Right [h]) (Just t) s) ys = case findM "" (matchExt undefined x') ys of
+                                                    Nothing -> return x
+                                                    Just _ -> return x'
+                                                   where x' = Listx (Left [t]) (Just h) s
 harmonizeExt x _ = return x
 
 
