@@ -201,6 +201,11 @@ showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f x
 showSynList v = showVcon v
 
 showSynLeftList (Vcon (Global c,ext) []) | leftListNil c ext = "[]" ++ postscript (synKey ext)
+showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ show x ++ f xs
+    where f (Vlazy cs _) = " ...]"++tag
+          --f (Vcon (Global c,ext) []) | listListNil c ext = ""
+          f v = showVcon v
+          tag = postscript (synKey ext)
 showSynLeftList v = showVcon v
 
 showSynRecord (Vcon (Global c,ext) [])         | recordNil c ext = "{}" ++ postscript (synKey ext)
