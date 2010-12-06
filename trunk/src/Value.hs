@@ -193,11 +193,12 @@ showSynPair v = showVcon v
 
 showSynList (Vcon (Global c,ext) []) | listNil c ext = "[]" ++ postscript (synKey ext)
 showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f xs
-    where f (Vlazy cs _) = " ...]"
+    where f (Vlazy cs _) = " ; ...]"++tag
           f (Vcon (Global c,ext) [x,xs])| listCons c ext = "," ++ show x ++ f xs
-          f (Vcon (Global c,ext) []) | listNil c ext = "]" ++ postscript (synKey ext)
+          f (Vcon (Global c,ext) []) | listNil c ext = "]"++tag
           f (Vswap cs u) = f (swaps cs u)
           f v = showVcon v
+          tag = postscript (synKey ext)
 showSynList v = showVcon v
 
 showSynLeftList (Vcon (Global c,ext) []) | leftListNil c ext = "[]" ++ postscript (synKey ext)
