@@ -336,7 +336,7 @@ semiHeadSeq left right head elem buildf =
      ; return(buildf (Just x) xs tag)}
 
 extP :: Parser a -> Parser (Extension a)
-extP p = try(lexeme(listP p <|> leftListP p <|> parensP p <|> recP p))
+extP p = try(lexeme(try(listP p) <|> leftListP p <|> parensP p <|> recP p))
   where listP p = semiTailSeq (char '[') (char ']') p p (\xs x t -> Listx (Right xs) x t)
         leftListP p = semiHeadSeq (char '[') (char ']') p p (\x xs t -> Listx (Left xs) x t)
         recP p = semiTailSeq (char '{') (char '}') pair p Recordx
