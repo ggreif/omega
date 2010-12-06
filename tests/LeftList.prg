@@ -25,6 +25,8 @@ t1 = len [lazy [1, 2]f; 3, 4]f
 
 [t3; t4]z = [[1]z; 2]z
 
+t5 [[1,2,3]z; 4]z = 42
+
 ##test "these do not match up"
- [[1,2,3]z; 4]z = [[1]z; 2, 3]z
+ t6 = t5 [[1]z; 2, 3]z
 
