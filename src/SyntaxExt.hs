@@ -34,6 +34,7 @@ instance Show a => Show (SynExt a) where
            f nm (Just(x,y)) = " "++nm++"["++show x++","++show y++"]"
            f' (Just (Right x)) = f "List" (Just x)
            f' (Just (Left x)) = f "LeftList" (Just x)
+           f' Nothing = ""
            g nm Nothing = ""
            g nm (Just x) = " "++nm++"["++show x++"]"
   show (Parsex(k,_,_,zs)) = "Px "++k++show zs           
