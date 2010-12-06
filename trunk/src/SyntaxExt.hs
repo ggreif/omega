@@ -211,19 +211,6 @@ matchExt loc _ _                = return False
 ----------------------------------------------------------
 -- Building such objects in an abstract manner
 
-build (cons,nil,succ,zero,pair,rcons,rnil,tick) x =
-  case x of
-   (Listx (Right xs) (Just x) _) -> foldr cons x xs
-   (Listx (Left xs) (Just hhh) _) -> error "cannot build SNOC yet"
-   (Listx (Right xs) Nothing _) -> foldr cons nil xs
-   (Listx (Left xs) Nothing _) -> error "foldr (flip cons) nil (reverse xs)"
-   (Numx n (Just x) _) -> buildNat x succ n
-   (Numx n Nothing _) -> buildNat zero succ n
-   (Pairx xs _) -> buildTuple pair xs
-   (Recordx xs (Just x) _) -> foldr (uncurry rcons) x xs
-   (Recordx xs Nothing _) -> foldr (uncurry rcons) rnil xs
-   (Tickx n x _) -> buildNat x tick n
-
 findM:: Monad m => String -> (a -> m Bool) -> [a] -> m a
 findM mes p [] = fail mes
 findM mes p (x:xs) =
