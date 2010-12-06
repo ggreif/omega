@@ -207,6 +207,7 @@ showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs
           f (Vcon (Global c,ext) [xs,x])| leftListCons c ext = f xs ++ show x ++ ","
           f (Vcon (Global c,ext) []) | leftListNil c ext = ""
           f (Vswap cs u) = f (swaps cs u)
+          f Vbottom = show Vbottom ++ " ; "
           f v = showVcon v ++ " ; " -- should not trigger
           tag = postscript (synKey ext)
 showSynLeftList v = showVcon v
