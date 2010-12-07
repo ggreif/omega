@@ -17,13 +17,8 @@ import Text.PrettyPrint.HughesPJ(Doc,text)
 
 data Ev = Ev [(Var,V)] (V,V,V)
 
-showenv (Ev xs) =
-  "Ev with \n   "++show (map fst xs)
-
 type EnvFrag = [(Var,V)]
 type Perm = [(Name,Name)]
-
-compose = Vprimfun "(.)" (\
 
 data V
   = Vlit Lit
