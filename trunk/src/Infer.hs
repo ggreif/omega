@@ -3625,7 +3625,7 @@ instance TypeLike (Mtc TcEnv Pred) RWrule where
                ; return((nm,k2,q):ys,envN)}
 
 -- ======================================================================
--- refinement lemma has one of the two the forms
+-- refinement lemma has one of the two forms
 -- 1)   cond1 -> ... -> condN -> Equal term1 term2 -> Equal var1 term3
 -- 2)   cond1 -> ... -> condN -> Equal term1 term2 -> (Equal var3 term3, ... , Equal varN termN)
 -- As a RWRule  (RW name key Refinement vars [cond1 ... condN]
