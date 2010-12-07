@@ -1,4 +1,3 @@
-
 data T:: *0 ~> *0 where
  TI :: T Int
  TB :: T Bool
@@ -52,8 +51,8 @@ h1 TB x = 0
   bad1 TI x = x+1
 
 ##test "Expected has too few args"
- bad2:: Int -> a -> Int
- bad2 TI x = x+1
+  bad2:: Int -> a -> Int
+  bad2 TI x = x+1
 
 ##test "Wrong Constructor 2"
   bad3:: (Int -> Int) -> a -> Int
@@ -63,9 +62,9 @@ h1 TB x = 0
   g2:: a -> T a -> Int 
   g2 3 TI = 1
 
-##test "Nested oncrete pattern before refinement"
- f:: [a] -> T a -> Int 
- f (x:1:xs) TI = x+1
+##test "Nested concrete pattern before refinement"
+  f:: [a] -> T a -> Int 
+  f (x:1:xs) TI = x+1
 
 mp f [] = []
 mp f (x:xs) = f x : (mp f xs)
