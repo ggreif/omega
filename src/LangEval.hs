@@ -487,7 +487,7 @@ elab prefix magic init d = fail ("Unknown type of declaration:\n"++(show d))
 
 elaborate prefix ds env0 =
     do { env1 <- fixFIO h
-       ; fixup ((foldr count 0 ds)) env1 }
+       ; fixup (foldr count 0 ds) env1 }
   where h magic = foldM (elab prefix magic) env0 ds
 
 
