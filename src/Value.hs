@@ -257,7 +257,7 @@ instance Show V where
       Just t -> if t then "True" else "False"
   show (v@(Vprod x y)) =  plistf show "(" (collect v []) "," ")"
     where collect (Vprod x y) ans = collect y (x:ans)
-          collect other ans = reverse( (other : ans))
+          collect other ans = reverse (other:ans)
     
     --  "("++show x++","++show y++")"
   show (Vprimfun s f) = "<primfun "++s++">"
@@ -387,7 +387,7 @@ newPtr = Vfio [] action
             ; return(Right (Vcon (Global "Nil",Ox) [Vptr [] n r]))}
 
 myIo :: V -> FIO (Either String V)
-myIo v = (return(Right v))
+myIo v = return (Right v)
 
 initPtr :: V
 initPtr = Vprimfun "initPtr" (analyzeWith f) where
@@ -432,7 +432,7 @@ nullPtr = Vprimfun "nullPtr" (analyzeWith f) where
 samePtr :: V
 samePtr = Vprimfun "samePtr" (analyzeWith f) where
   f ptr1@(Vptr cs n ref) = return(Vprimfun name (analyzeWith g)) where
-     name = ("samePtr "++show ptr1)
+     name = "samePtr "++show ptr1
      g ptr2@(Vptr cs2 n2 ref2)  = return(Vfio [] comp) where
          comp = if ref == ref2
                    then myIo(Vcon (Global "Eq",Ox) [])
@@ -446,7 +446,7 @@ samePtr = Vprimfun "samePtr" (analyzeWith f) where
 newtype Label tag = Label String
 
 instance Show (Label tag)  where
-  show (Label x) = "`" ++ (show x)
+  show (Label x) = "`" ++ show x
 
 instance Eq (Label tag)  where
   (Label x) == (Label y) = x==y
