@@ -130,7 +130,6 @@ data Exp
   | CheckT Exp
   | Lazy Exp
   | Exists Exp
-  | Under Exp Exp
   | Bracket Exp
   | Escape Exp
   | Run Exp
@@ -600,7 +599,6 @@ parE (Prod x y) f = do { a <- parE x f; b <- parE y f; return(Prod a b) }
 parE (CheckT x) f = do { a <- parE x f; return(CheckT a)}
 parE (Lazy x) f = do { a <- parE x f; return(Lazy a)}
 parE (Exists x) f = do { a <- parE x f; return(Exists a)}
-parE (Under x y) f = do { a <- parE x f; b <- parE y f; return(Under a b) }
 parE (App x y) f = do { a <- parE x f; b <- parE y f; return(App a b) }
 parE (Bracket x) f = do { a <- parE x (incP f); return (Bracket a) }
 parE (Escape x) f = escFun f x
@@ -1022,7 +1020,6 @@ instance Vars Exp where
   vars bnd (CheckT x) = vars bnd x
   vars bnd (Lazy x) = vars bnd x
   vars bnd (Exists x) = vars bnd x
-  vars bnd (Under e1 e2) = (vars bnd e1) . (vars bnd e2)
   vars bnd (Bracket e) = vars bnd e
   vars bnd (Escape e) = vars bnd e
   vars bnd (Run e) = vars bnd e
@@ -1102,7 +1099,6 @@ instance Eq Exp where
   (CheckT e1) == (CheckT e2) = e1==e2
   (Lazy e1) == (Lazy e2) = e1==e2
   (Exists e1) == (Exists e2) = e1==e2
-  (Under e1 e2) ==(Under e3 e4) = e1==e3 && e2==e4
   (Bracket e1) == (Bracket e2) = e1==e2
   (Escape e1) == (Escape e2) = e1==e2
   (Run e1) == (Run e2) = e1==e2
@@ -1377,7 +1373,6 @@ ppExp e =
     CheckT e -> PP.parens $ text "Check" <+> ppExp e
     Lazy e -> PP.parens $ text "lazy" <+> ppExp e
     Exists e -> PP.parens $ text "Ex" <+> ppExp e
-    Under e1 e2 -> PP.parens $ text "under" <+> PP.hsep [ppExp e1,ppExp e2]
     Bracket e -> PP.brackets $ text "|" <+> ppExp e <+> text "|"
     Escape (Var v) -> text "$" <> ppVar v
     Escape e -> text "$" <> PP.parens (ppExp e)

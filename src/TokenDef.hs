@@ -12,7 +12,7 @@ stratusStyle = haskellStyle
    , reservedNames = ["let","case","in","of","data","kind","prop","where"
                      ,"type","then","else","deriving"
                      ,"circuit", "theorem"
-                     ,"forall","exists","Ex","check","lazy","under","flag"
+                     ,"forall","exists","Ex","check","lazy","flag"
                      , "monad", "primitive", "unreachable"
                      ]
    , reservedOpNames= ["=","\\"

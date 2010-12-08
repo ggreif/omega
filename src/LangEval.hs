@@ -125,7 +125,6 @@ evalZ env (Prod x y) =
 evalZ env (CheckT x) = eval env x
 evalZ env (Lazy x) = vlazy (eval env x)
 evalZ env (Exists x) = eval env x
-evalZ env (Under p x) = eval env x
 evalZ env exp@(App f x) =
   do { g <- eval env f
      ; y <- eval env x

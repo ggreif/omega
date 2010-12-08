@@ -120,7 +120,6 @@ instance Swap Exp where
   swaps cs (CheckT e) = CheckT (swaps cs e)
   swaps cs (Lazy e) = Lazy (swaps cs e)
   swaps cs (Exists e) = Exists (swaps cs e)
-  swaps cs (Under e f) = Under (swaps cs e) (swaps cs f)
   swaps cs (Bracket e) = Bracket (swaps cs e)
   swaps cs (Escape e) = Escape(swaps cs e)
   swaps cs (Run e) = Run (swaps cs e)
