@@ -29,6 +29,9 @@ tests: all
 clean:
 	rm -f *.hi *.o *.prof
 
+cleaner: clean
+	rm -f $(EXEC)
+
 manual: all
 	./$(EXEC) -manual ../doc
 	$(MAKE) -C ../doc -f `pwd`/Makefile OmegaManual.ps
