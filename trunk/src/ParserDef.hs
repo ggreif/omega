@@ -294,7 +294,6 @@ expr =  lambdaExpression
     <|> checkExp
     <|> lazyExp
     <|> existExp
-    <|> underExp
     <|> try (do { p <- simpleExpression; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
@@ -325,13 +324,6 @@ existExp =
     do { reserved "Ex"
        ; e <- expr
        ; return(Exists e)
-       }
-
-underExp =
-    do { reserved "under"
-       ; e1 <- simpleExpression
-       ; e2 <- simpleExpression
-       ; return(Under e1 e2)
        }
 
 lambdaExpression =

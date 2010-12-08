@@ -760,7 +760,6 @@ typeExp mod (p@(Exists e)) expect =
             ,Ds "\n   The type expected is:\n   ", Dd expect
             ,Ds "\n   which does not have form (exist s . type_exp)."
             ,Ds "\n   Probable fix: Remove the 'Ex' packing operator, or add 'exists' to the prototype."]
-typeExp mod (Under e1 e2) expect = error "Under"
 typeExp mod (Bracket exp) expect =
      do { a <- unifyCode expect
         ; e <- levelInc (typeExp mod exp (Check a))
