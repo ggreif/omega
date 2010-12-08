@@ -200,13 +200,13 @@ synName (Parsex (s,_,_,_)) = "Parse"
 -- Both the name and the type match. Different types (i.e. List,Nat,Pair)
 -- can use the same name.
 
-matchExt loc (Listx (Right _) _ s)   (Ix(t,Just(Right _),_,_,_,_)) | s==t = return True
-matchExt loc (Listx (Left _) _ s)   (Ix(t,Just(Left _),_,_,_,_)) | s==t = return True
-matchExt loc (Numx _ _ s)    (Ix(t,_,Just _,_,_,_)) | s==t = return True
-matchExt loc (Pairx _ s)     (Ix(t,_,_,Just _,_,_)) | s==t = return True
-matchExt loc (Recordx _ _ s) (Ix(t,_,_,_,Just _,_)) | s==t = return True
-matchExt loc (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _)) | s==t = return True
-matchExt loc _ _                = return False
+matchExt (Listx (Right _) _ s)   (Ix(t,Just(Right _),_,_,_,_)) | s==t = return True
+matchExt (Listx (Left _) _ s)   (Ix(t,Just(Left _),_,_,_,_)) | s==t = return True
+matchExt (Numx _ _ s)    (Ix(t,_,Just _,_,_,_)) | s==t = return True
+matchExt (Pairx _ s)     (Ix(t,_,_,Just _,_,_)) | s==t = return True
+matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just _,_)) | s==t = return True
+matchExt (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _)) | s==t = return True
+matchExt _ _                = return False
 
 ----------------------------------------------------------
 -- Building such objects in an abstract manner
@@ -217,11 +217,11 @@ findM mes p (x:xs) =
   do { b <- p x
      ; if b then return x else findM mes p xs}
 
-harmonizeExt x@(Listx (Right xs) Nothing s) ys = case findM "" (matchExt undefined x') ys of
+harmonizeExt x@(Listx (Right xs) Nothing s) ys = case findM "" (matchExt x') ys of
                                                   Nothing -> return x
                                                   Just _ -> return x'
                                                  where x' = Listx (Left xs) Nothing s
-harmonizeExt x@(Listx (Right [h]) (Just t) s) ys = case findM "" (matchExt undefined x') ys of
+harmonizeExt x@(Listx (Right [h]) (Just t) s) ys = case findM "" (matchExt x') ys of
                                                     Nothing -> return x
                                                     Just _ -> return x'
                                                    where x' = Listx (Left [t]) (Just h) s
@@ -235,7 +235,7 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
      ; y <- findM ("\nAt "++loc++
                    "\nCan't find a "++extName x++" syntax extension called: '"++
                    extKey x++"', for "++show x++"\n  "++plistf show "" ys "\n  " "")
-                  (matchExt loc x) ys
+                  (matchExt x) ys
      ; case (x,y) of
         (Listx (Right xs) (Just x) _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
         (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> return(foldr (flip $ lift2 cons) x (reverse xs))
