@@ -758,7 +758,7 @@ typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
 typeExp mod (p@(Exists e)) expect =
     failD 2 [Ds "Existential expressions cannot have their type inferred:\n   ", Dd p
             ,Ds "\n   The type expected is:\n   ", Dd expect
-            ,Ds "\n   which does not have form (exist s . type_exp)."
+            ,Ds "\n   which does not have form (exists s . type_exp)."
             ,Ds "\n   Probable fix: Remove the 'Ex' packing operator, or add 'exists' to the prototype."]
 typeExp mod (Bracket exp) expect =
      do { a <- unifyCode expect
@@ -801,7 +801,7 @@ elabExtensionExp x =
 
 
 --------------------------------------------------------------------
--- Functions to report reasonably readable  errors
+-- Functions to report reasonably readable errors
 
 notfun e fun_ty s =
    failK "notfun" 2 [Ds "\nIn the expression: "
