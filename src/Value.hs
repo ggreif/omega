@@ -242,6 +242,7 @@ showVcon (Vcon (c,_) vs) =
    [] -> show c  -- ++ g exts
    vs -> show c ++ plistf show " " vs " " ""
 
+showVconInParens v@(Vcon (_,_) []) = showVcon v
 showVconInParens v = "(" ++ showVcon v ++ ")"
 
 instance Show V where
