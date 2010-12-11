@@ -180,10 +180,9 @@ instance Show Ev where
 
 showSynPair (p@(Vcon (Global c,ext) [x,y])) | pairProd c ext =
    plistf show "(" (collect p) "," ")" ++ postscript (synKey ext)
-   -- "(" ++ show x ++","++show y++")"++postscript (synKey ext)
   where collect (Vcon (Global c,ext) [x,y]) | pairProd c ext = x: collect y
         collect y = [y]
-showSynPair v = showVcon v
+showSynPair v = showVconInParens v
 
 showSynList (Vcon (Global c,ext) []) | listNil c ext = "[]" ++ postscript (synKey ext)
 showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f xs ++ "]"++tag
@@ -194,7 +193,7 @@ showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f x
           f Vbottom = " ; " ++ show Vbottom
           f v = " ; " ++ showVcon v
           tag = postscript (synKey ext)
-showSynList v = showVcon v
+showSynList v = showVconInParens v
 
 showSynLeftList (Vcon (Global c,ext) []) | leftListNil c ext = "[]" ++ postscript (synKey ext)
 showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs ++ show x ++ "]"++tag
@@ -205,7 +204,7 @@ showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs
           f Vbottom = show Vbottom ++ " ; "
           f v = showVcon v ++ " ; "
           tag = postscript (synKey ext)
-showSynLeftList v = showVcon v
+showSynLeftList v = showVconInParens v
 
 showSynRecord (Vcon (Global c,ext) [])         | recordNil c ext = "{}" ++ postscript (synKey ext)
 showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext = "{" ++ show tag ++ "=" ++ show x ++ f xs ++ "}" ++ syntag
@@ -216,7 +215,7 @@ showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext = "{" ++ show 
           f Vbottom = " ; " ++ show Vbottom
           f v = " ; " ++ showVcon v
           syntag = postscript (synKey ext)
-showSynRecord v = showVcon v
+showSynRecord v = showVconInParens v
 
 
 showSynNat (Vcon (Global c,ext) []) | natZero c ext = "0" ++ postscript (synKey ext)
@@ -226,7 +225,7 @@ showSynNat (Vcon (Global c,ext) [x])| natSucc c ext = (f 1 x)++ postscript (synK
             f n (Vswap cs u) = f n (swaps cs u)
             f n (Vlazy cs _) = "("++show n++"+ ...)"
             f n v = "("++show n++"+"++show v++")"
-showSynNat v = showVcon v
+showSynNat v = showVconInParens v
 
 
 showSynTick (Vcon (Global c,ext) [x])     | tickSucc c ext = (f 1 x)++ postscript (synKey ext)
@@ -234,14 +233,16 @@ showSynTick (Vcon (Global c,ext) [x])     | tickSucc c ext = (f 1 x)++ postscrip
             f n (Vswap cs u) = f n (swaps cs u)
             f n (Vlazy cs _) = "("++show n++"+ ...)"
             f n v = "("++show v++"`"++show n++")"
-showSynTick v = showVcon v
+showSynTick v = showVconInParens v
 
 tim = Vcon (Global "A",wExt) [] 
 
 showVcon (Vcon (c,_) vs) =
   case vs of
    [] -> show c  -- ++ g exts
-   vs -> "("++show c++plistf show " " vs " " ")"
+   vs -> show c ++ plistf show " " vs " " ""
+
+showVconInParens v = "(" ++ showVcon v ++ ")"
 
 instance Show V where
   show (Vlit x) = show x
@@ -283,7 +284,7 @@ instance Show V where
   show (Vptr cs n ref) = "<ptr "++show n++">"
   show (Vparser p) = "<parser>"
   show Vbottom = "**undefined**"
-  show (v@(Vcon (_,_) _)) = showVcon v
+  show (v@(Vcon (_,_) _)) = showVconInParens v
  
 
 listV :: Monad m => V -> m [V]    -- Particularly useful when m is Maybe
