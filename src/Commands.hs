@@ -7,21 +7,19 @@ import Infer(TcEnv(sourceFiles,imports),varTyped,getVar,initTcEnv,getkind,parseA
 import RankN(pprint,warnM,showKinds,docs,Docs(..),ppPoly)
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
-             ,write,writeln,readln,unTc,tryAndReport,fio,writeRef)
+             ,write,writeln,readln,unTc,report,readRef,tryAndReport,fio,writeRef)
 import Version(version,buildtime)
 import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
 import ParserDef(getInt,getBounds,expr,parseString)
 import Auxillary(plist,plistf,DispElem(..),prefix,maybeM,anyM,ifM,foldrM,initDI)
-import Monads(report,readRef,tryAndReport)
 import Monad(when)
 import Value(pv)
 import SCC(topSortR)
 import System.Directory(getModificationTime)
 import System.FilePath(splitFileName)
 
--- tryAndReport :: FIO a -> (Loc -> String -> FIO a) -> FIO a
 --------------------------------------------------------
 -- Build a table of    :com str    commands
 
