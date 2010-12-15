@@ -74,7 +74,7 @@ topLoop commandTable sources env = tryAndReport
  where init = (env{sourceFiles=sources})
 
 ------------------------------------------------------------------
--- Commands for load files, then going into the Toplevel loop
+-- Commands for load files, then going into the toplevel loop
 ------------------------------------------------------------------
 
 -- load just the prelude and then go into the toplevel loop
@@ -142,7 +142,7 @@ omega =
         [] -> run "LangPrelude.prg"
         ("-tests" : dir : _) -> alltests dir
         ("-manual" : dir : _) -> makeManual dir
-        ( file : _) -> run file
+        (file : _) -> run file
      }
 
 -------------------------------------------------------------------------------
