@@ -346,25 +346,31 @@ parensP p =
    do { f <- try(incr p) <|> try(seqX p) <|> try(tickP p)
       ; tag <- many lower
       ; return(f tag)}
+
 incr p =
    do { lexeme (char '(')
       ; n <- lexeme natNoSpace
       ; symbol "+"; x <- p
       ; char ')'
       ; return(Numx n (Just x))}
+
 tickP p =
    do { lexeme (char '(')
       ; x <- p
       ; symbol "`"; 
       ; n <- lexeme natNoSpace
       ; char ')'
-      ; return(Tickx n x)}      
+      ; return(Tickx n x)}
       
 seqX p =
   do { lexeme (char '(')
      ; xs <- sepBy p comma
      ; char ')'
-     ; return(Pairx xs)}
+     ; return(pairlike xs)}
+  where pairlike xs "" = Pairx xs ""
+        pairlike [] _ = error "Unit syntax not implemented yet"
+        pairlike [_] _ = error "Item syntax not implemented yet"
+        pairlike xs tag = Pairx xs tag
 
 natP :: Parser (Extension a)
 natP = try $ lexeme $
@@ -373,12 +379,12 @@ natP = try $ lexeme $
 
 ---------------------------------------------------------------------
 
-mergey ("List",[a,b])     (Ix(k,l,n,p,r,t)) = (Ix(k,Just$Right(a,b),n,p,r,t))
-mergey ("LeftList",[a,b]) (Ix(k,l,n,p,r,t)) = (Ix(k,Just$Left(a,b),n,p,r,t))
-mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t)) = (Ix(k,l,Just(a,b),p,r,t))
-mergey ("Pair",[a])       (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,Just a,r,t))
-mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,p,Just(a,b),t))
-mergey ("Tick",[a])       (Ix(k,l,n,p,r,t)) = (Ix(k,l,n,p,r,Just a))
+mergey ("List",[a,b])     (Ix(k,l,n,p,r,t)) = Ix(k,Just$Right(a,b),n,p,r,t)
+mergey ("LeftList",[a,b]) (Ix(k,l,n,p,r,t)) = Ix(k,Just$Left(a,b),n,p,r,t)
+mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t)) = Ix(k,l,Just(a,b),p,r,t)
+mergey ("Pair",[a])       (Ix(k,l,n,p,r,t)) = Ix(k,l,n,Just a,r,t)
+mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t)) = Ix(k,l,n,p,Just(a,b),t)
+mergey ("Tick",[a])       (Ix(k,l,n,p,r,t)) = Ix(k,l,n,p,r,Just a)
 mergey _                  i                 = i
 
 -----------------------------------------------------------
