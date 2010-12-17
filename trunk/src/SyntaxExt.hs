@@ -23,6 +23,8 @@ data Extension t
   | Pairx [t] String                  --  (a,b,c)i
   | Recordx [(t,t)] (Maybe t) String  --  {x=t,y=s ; zs}i
   | Tickx Int t String                --  (e`3)i
+  | Unitx String                      --  ()i
+  | Itemx t String                    --  (e)i
 
 -------------------------------------------------------------
 -- Show instances
@@ -345,7 +347,10 @@ extP p = try(lexeme(try(listP p) <|> leftListP p <|> parensP p <|> recP p))
 parensP p =
    do { f <- try(incr p) <|> try(seqX p) <|> try(tickP p)
       ; tag <- many lower
-      ; return(f tag)}
+      ; case f tag of
+        Unitx tag -> fail ("Unit syntax '()"++tag++"' not implemented yet")
+        Itemx _ tag -> fail ("Item syntax '(_)"++tag++"' not implemented yet")
+        synt -> return synt}
 
 incr p =
    do { lexeme (char '(')
@@ -368,8 +373,8 @@ seqX p =
      ; char ')'
      ; return(pairlike xs)}
   where pairlike xs "" = Pairx xs ""
-        pairlike [] _ = error "Unit syntax not implemented yet"
-        pairlike [_] _ = error "Item syntax not implemented yet"
+        pairlike [] tag = Unitx tag
+        pairlike [x] tag = Itemx x tag
         pairlike xs tag = Pairx xs tag
 
 natP :: Parser (Extension a)
