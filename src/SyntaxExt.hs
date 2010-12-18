@@ -48,7 +48,9 @@ instance Show x => Show(Extension x) where
   show (Listx (Left ts) (Just t) tag) = "[" ++ show t ++ "; " ++ plist "" ts "," "" ++"]"++tag
   show (Numx n Nothing tag) = show n++tag
   show (Numx n (Just t) tag) = "("++show n++"+"++show t++")"++tag
-  show (Pairx ts tag) = "("++ help ts++ ")"++tag
+  show (Unitx tag) = "()"++tag
+  show (Itemx x tag) = "("++show x++")"++tag
+  show (Pairx ts tag) = "("++ help ts ++")"++tag
     where help [] = ""
           help [x] = show x
           help (x:xs) = show x++","++help xs
@@ -62,6 +64,8 @@ extKey :: Extension a -> String
 extKey (Listx xs _ s) = s
 extKey (Recordx xs _ s) = s
 extKey (Numx n _ s) = s
+extKey (Unitx s) = s
+extKey (Itemx x s) = s
 extKey (Pairx xs s) = s
 extKey (Tickx n x s) = s
 
@@ -71,6 +75,8 @@ extName (Listx (Right xs) _ s) = "List"
 extName (Listx (Left xs) _ s) = "LeftList"
 extName (Recordx xs _ s) = "Record"
 extName (Numx n _ s) = "Nat"
+extName (Unitx s) = "Unit"
+extName (Itemx _ s) = "Item"
 extName (Pairx xs s) = "Pair"
 extName (Tickx n _ s) = "Tick"
 
@@ -84,6 +90,8 @@ ppExt f((Listx xs' Nothing s)) = PP.sep ((text "["): PP.punctuate PP.comma (map 
                                  where xs = case (xs') of { Right xs -> xs; Left xs -> xs }
 ppExt f((Numx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"++s)]
 ppExt f((Numx n Nothing s)) = PP.hcat [PP.int n,text s]
+ppExt f((Unitx s)) = text ("()"++s)
+ppExt f((Itemx x s)) = text "(" <> f x <> text (")"++s)
 ppExt f((Pairx xs s)) = text "(" <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
 ppExt f((Recordx xs (Just x) s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> PP.semi <> f x <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
@@ -104,6 +112,8 @@ extList ((Recordx xs (Just x) _)) = (x: flat2 xs)
 extList ((Recordx xs Nothing _)) = flat2 xs
 extList ((Numx n (Just x) _)) = [x]
 extList ((Numx n Nothing _)) = []
+extList ((Unitx _)) = []
+extList ((Itemx x _)) = [x]
 extList ((Pairx xs _)) = xs
 extList ((Tickx n x _)) = [x]
 
@@ -113,6 +123,8 @@ instance Eq t => Eq (Extension t) where
  (Listx ts1 Nothing s1) == (Listx xs1 Nothing s2) = s1==s2 && ts1==xs1
  (Numx n (Just t1) s1) == (Numx m (Just x1) s2) = s1==s2 && t1==x1 && n==m
  (Numx n Nothing s1) == (Numx m Nothing s2) = s1==s2 && n==m
+ (Unitx s) == (Unitx t) = s==t
+ (Itemx x s) == (Itemx y t) = x==y && s==t
  (Pairx xs s) == (Pairx ys t) = xs==ys && s==t
  (Recordx ts1 (Just t1) s1) == (Recordx xs1 (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
  (Recordx ts1 Nothing s1) == (Recordx xs1 Nothing s2) = s1==s2 && ts1==xs1
@@ -124,15 +136,17 @@ extM f (Listx (Right xs) (Just x) s) = do { ys <- mapM f xs; y <- f x; return((L
 extM f (Listx (Left xs) (Just x) s) = do { y <- f x; ys <- mapM f xs; return((Listx (Left ys) (Just y) s))}
 extM f (Listx (Right xs) Nothing s) = do { ys <- mapM f xs; return((Listx (Right ys) Nothing s))}
 extM f (Listx (Left xs) Nothing s) = do { ys <- mapM f xs; return((Listx (Left ys) Nothing s))}
-extM f (Numx n (Just x) s) = do { y<- f  x; return((Numx n (Just y) s))}
+extM f (Numx n (Just x) s) = do { y <- f x; return((Numx n (Just y) s))}
 extM f (Numx n Nothing s) = return((Numx n Nothing s))
-extM f (Pairx xs s) =  do { ys <- mapM f  xs; return((Pairx ys s))}
-extM f (Recordx xs (Just x) s) = do { ys <- mapM g  xs; y<- f  x;return((Recordx ys (Just y) s))}
+extM f (Unitx s) =  return(Unitx s)
+extM f (Itemx x s) =  do { y <- f x; return((Itemx y s))}
+extM f (Pairx xs s) =  do { ys <- mapM f xs; return((Pairx ys s))}
+extM f (Recordx xs (Just x) s) = do { ys <- mapM g xs; y<- f x; return((Recordx ys (Just y) s))}
   where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
-extM f (Recordx xs Nothing s) = do { ys <- mapM g  xs; return((Recordx ys Nothing s))}
+extM f (Recordx xs Nothing s) = do { ys <- mapM g xs; return((Recordx ys Nothing s))}
  where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
-extM f (Tickx n x s) = do { y<- f  x; return((Tickx n y s))} 
- 
+extM f (Tickx n x s) = do { y <- f x; return((Tickx n y s))} 
+
 
 threadL f [] n = return([],n)
 threadL f (x:xs) n =
@@ -153,6 +167,8 @@ extThread f n (Listx (Left xs) Nothing s) =
   do { (ys,n1) <- threadL f xs n; return(Listx (Left ys) Nothing s,n1)}
 extThread f n (Numx m (Just x) s) = do { (y,n1) <- f x n; return(Numx m (Just y) s,n1)}
 extThread f n (Numx m Nothing s) = return(Numx m Nothing s,n)
+extThread f n (Unitx s) =  return(Unitx s,n)
+extThread f n (Itemx x s) =  do { (y,n1) <- f x n; return(Itemx y s,n1)}
 extThread f n (Pairx xs s) =  do { (ys,n1) <- threadL f xs n; return(Pairx ys s,n1)}
 extThread f n (Recordx xs (Just x) s) =
   do { (ys,n1) <- threadL (threadPair f) xs n; (y,n2) <- f x n1; return(Recordx ys (Just y) s,n2)}
@@ -169,6 +185,8 @@ instance Functor Extension where
   fmap f (Listx (Left xs) Nothing s) = (Listx (Left (map f xs)) Nothing s)
   fmap f (Numx n (Just x) s) = (Numx n (Just (f x)) s)
   fmap f (Numx n Nothing s) = (Numx n Nothing s)
+  fmap f (Unitx s) =  (Unitx s)
+  fmap f (Itemx x s) =  (Itemx (f x) s)
   fmap f (Pairx xs s) =  (Pairx (map f xs) s)
   fmap f (Recordx xs (Just x) s) = (Recordx (map (cross f) xs) (Just(f x)) s)
   fmap f (Recordx xs Nothing s) = (Recordx (map (cross f) xs) Nothing s)
