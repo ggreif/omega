@@ -270,14 +270,18 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick,_,_)) -> return(buildNat x (lift1 tick) n)
         (Numx n (Just x) _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat x (lift1 succ) n)
         (Numx n Nothing  _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat (lift0 zero) (lift1 succ) n)        
-        (Unitx _,Ix(tag,_,_,_,_,_,Just unit,_)) -> undefined -- return(buildUnit (lift0 unit))
-        (Itemx x _,Ix(tag,_,_,_,_,_,_,Just item)) -> undefined -- return(buildItem (lift1 item) x)
+        (Unitx _,Ix(tag,_,_,_,_,_,Just unit,_)) -> return(buildUnit (lift0 unit))
+        (Itemx x _,Ix(tag,_,_,_,_,_,_,Just item)) -> return(buildItem (lift1 item) x)
         (Pairx xs _,Ix(tag,_,_,Just pair,_,_,_,_)) -> return(buildTuple (lift2 pair) xs)                
         _ -> fail ("\nSyntax extension: "++extKey x++" doesn't match use, at "++loc)}
 
 buildNat :: Num a => b -> (b -> b) -> a -> b
 buildNat z s 0 = z
 buildNat z s n = s(buildNat z s (n-1))
+
+buildUnit unit = unit
+
+buildItem item i = item i
 
 buildTuple pair [] = error "No empty tuples: ()"
 buildTuple pair [p] = p
@@ -371,10 +375,7 @@ extP p = try(lexeme(try(listP p) <|> leftListP p <|> parensP p <|> recP p))
 parensP p =
    do { f <- try(incr p) <|> try(seqX p) <|> try(tickP p)
       ; tag <- many lower
-      ; case f tag of
-        Unitx tag -> fail ("Unit syntax '()"++tag++"' not implemented yet")
-        Itemx _ tag -> fail ("Item syntax '(_)"++tag++"' not implemented yet")
-        synt -> return synt}
+      ; return(f tag)}
 
 incr p =
    do { lexeme (char '(')
@@ -411,6 +412,8 @@ natP = try $ lexeme $
 mergey ("List",[a,b])     (Ix(k,l,n,p,r,t,u,i)) = Ix(k,Just$Right(a,b),n,p,r,t,u,i)
 mergey ("LeftList",[a,b]) (Ix(k,l,n,p,r,t,u,i)) = Ix(k,Just$Left(a,b),n,p,r,t,u,i)
 mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,Just(a,b),p,r,t,u,i)
+mergey ("Unit",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,t,Just a,i)
+mergey ("Item",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,t,u,Just a)
 mergey ("Pair",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,Just a,r,t,u,i)
 mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,Just(a,b),t,u,i)
 mergey ("Tick",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,Just a,u,i)
