@@ -178,6 +178,14 @@ instance Show Ev where
 
 --------- instances for V ---------------------------------------------------
 
+showSynUnit (Vcon (Global c,ext) []) | unitUnit c ext =
+   "()" ++ postscript (synKey ext)
+showSynUnit v = showVconInParens v
+
+showSynItem (Vcon (Global c,ext) [x]) | itemItem c ext =
+   "(" ++ show x ++ ")" ++ postscript (synKey ext)
+showSynItem v = showVconInParens v
+
 showSynPair (p@(Vcon (Global c,ext) [x,y])) | pairProd c ext =
    plistf show "(" (collect p) "," ")" ++ postscript (synKey ext)
   where collect (Vcon (Global c,ext) [x,y]) | pairProd c ext = x: collect y
@@ -271,6 +279,8 @@ instance Show V where
             f (Vcon (Global "[]",ext) [])               | normalList ext = "\""
             f (Vswap cs u) = f (swaps cs u)
 
+  show (v@(Vcon (Global c,ext) _)) | unitUnit c ext = showSynUnit v
+  show (v@(Vcon (Global c,ext) _)) | itemItem c ext = showSynItem v
   show (v@(Vcon (Global c,ext) _)) | pairProd c ext = showSynPair v
   show (v@(Vcon (Global c,ext) _)) | natExt c ext = showSynNat v
   show (v@(Vcon (Global c,ext) _)) | listExt c ext = showSynList v

@@ -324,6 +324,12 @@ natZero c _ = False
 natSucc c (Ix(k,_,Just(z,s),_,_,_,_,_)) = c==s
 natSucc c _ = False
 
+unitUnit c (Ix(k,_,_,_,_,_,Just unit,_)) = c==unit
+unitUnit c _ = False
+
+itemItem c (Ix(k,_,_,_,_,_,_,Just item)) = c==item
+itemItem c _ = False
+
 pairProd c (Ix(k,_,_,Just prod,_,_,_,_)) = c==prod
 pairProd c _ = False
 
