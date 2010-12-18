@@ -14,7 +14,7 @@ data SyntaxStyle = OLD | NEW
 
 data SynExt t -- Syntax Extension
   = Ox        -- no extension
-  | Ix (String,Maybe (Either (t,t) (t,t)),Maybe(t,t),Maybe t,Maybe(t,t),Maybe t)
+  | Ix (String,Maybe (Either (t,t) (t,t)),Maybe(t,t),Maybe t,Maybe(t,t),Maybe t,Maybe t,Maybe t)
   | Parsex (String,SyntaxStyle,[(t,Int)],[(t,[t])])
 
 data Extension t
@@ -31,7 +31,7 @@ data Extension t
 
 instance Show a => Show (SynExt a) where
   show Ox = "Ox"
-  show (Ix(k,l,n,p,r,t)) = "Ix "++k++f' l++f "Nat" n++g "Pair" p++f "Record" r++g "Tick" t
+  show (Ix(k,l,n,p,r,t,u,i)) = "Ix "++k++f' l++f "Nat" n++g "Pair" p++f "Record" r++g "Tick" t++g "Unit" u++g "Item" i
      where f nm Nothing = ""
            f nm (Just(x,y)) = " "++nm++"["++show x++","++show y++"]"
            f' (Just (Right x)) = f "List" (Just x)
@@ -198,21 +198,23 @@ instance Functor Extension where
 -- Equal if the same kind and the same key
 instance Eq a => Eq (SynExt a) where
   Ox == Ox = True
-  (Ix(k1,_,_,_,_,_)) == (Ix(k2,_,_,_,_,_)) = k1==k2
+  (Ix(k1,_,_,_,_,_,_,_)) == (Ix(k2,_,_,_,_,_,_,_)) = k1==k2
   (Parsex(k1,_,_,_)) == (Parsex(k2,_,_,_)) = k1==k2
   _ == _ = False
 
 synKey Ox = ""
-synKey (Ix (s,_,_,_,_,_)) = s
+synKey (Ix (s,_,_,_,_,_,_,_)) = s
 synKey (Parsex(s,_,_,_)) = s
 
 synName Ox = ""
-synName (Ix (s,Just(Right _),_,_,_,_)) = "List"
-synName (Ix (s,Just(Left _),_,_,_,_)) = "LeftList"
-synName (Ix (s,_,Just _,_,_,_)) = "Nat"
-synName (Ix (s,_,_,Just _,_,_)) = "Pair"
-synName (Ix (s,_,_,_,Just _,_)) = "Record"
-synName (Ix (s,_,_,_,_,Just _)) = "Tick"
+synName (Ix (s,Just(Right _),_,_,_,_,_,_)) = "List"
+synName (Ix (s,Just(Left _),_,_,_,_,_,_)) = "LeftList"
+synName (Ix (s,_,Just _,_,_,_,_,_)) = "Nat"
+synName (Ix (s,_,_,Just _,_,_,_,_)) = "Pair"
+synName (Ix (s,_,_,_,Just _,_,_,_)) = "Record"
+synName (Ix (s,_,_,_,_,Just _,_,_)) = "Tick"
+synName (Ix (s,_,_,_,_,_,Just _,_)) = "Unit"
+synName (Ix (s,_,_,_,_,_,_,Just _)) = "Item"
 synName (Parsex (s,_,_,_)) = "Parse"
 
 
@@ -220,12 +222,14 @@ synName (Parsex (s,_,_,_)) = "Parse"
 -- Both the name and the type match. Different types (i.e. List,Nat,Pair)
 -- can use the same name.
 
-matchExt (Listx (Right _) _ s)   (Ix(t,Just(Right _),_,_,_,_)) | s==t = return True
-matchExt (Listx (Left _) _ s)   (Ix(t,Just(Left _),_,_,_,_)) | s==t = return True
-matchExt (Numx _ _ s)    (Ix(t,_,Just _,_,_,_)) | s==t = return True
-matchExt (Pairx _ s)     (Ix(t,_,_,Just _,_,_)) | s==t = return True
-matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just _,_)) | s==t = return True
-matchExt (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _)) | s==t = return True
+matchExt (Listx (Right _) _ s)   (Ix(t,Just(Right _),_,_,_,_,_,_)) | s==t = return True
+matchExt (Listx (Left _) _ s)   (Ix(t,Just(Left _),_,_,_,_,_,_)) | s==t = return True
+matchExt (Numx _ _ s)    (Ix(t,_,Just _,_,_,_,_,_)) | s==t = return True
+matchExt (Unitx s)       (Ix(t,_,_,_,_,_,Just _,_)) | s==t = return True
+matchExt (Itemx _ s)     (Ix(t,_,_,_,_,_,_,Just _)) | s==t = return True
+matchExt (Pairx _ s)     (Ix(t,_,_,Just _,_,_,_,_)) | s==t = return True
+matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just _,_,_,_)) | s==t = return True
+matchExt (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _,_,_)) | s==t = return True
 matchExt _ _                = return False
 
 ----------------------------------------------------------
@@ -257,16 +261,18 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
                    extKey x++"', for "++show x++"\n  "++plistf show "" ys "\n  " "")
                   (matchExt x) ys
      ; case (x,y) of
-        (Listx (Right xs) (Just x) _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) x xs)
-        (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> return(foldr (flip $ lift2 cons) x (reverse xs))
-	(Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
-        (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_)) -> return(foldr (flip $ lift2 cons) (lift0 nil) (reverse xs))
-        (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) x xs)
-        (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
-        (Tickx n x _,Ix(tag,_,_,_,_,Just tick)) -> return(buildNat x (lift1 tick) n)
-        (Numx n (Just x) _,Ix(tag,_,Just(zero,succ),_,_,_)) -> return(buildNat x (lift1 succ) n)
-        (Numx n Nothing  _,Ix(tag,_,Just(zero,succ),_,_,_)) -> return(buildNat (lift0 zero) (lift1 succ) n)        
-        (Pairx xs _,Ix(tag,_,_,Just pair,_,_)) -> return(buildTuple (lift2 pair) xs)                
+        (Listx (Right xs) (Just x) _,Ix(tag,Just(Right(nil,cons)),_,_,_,_,_,_)) -> return(foldr (lift2 cons) x xs)
+        (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_,_,_)) -> return(foldr (flip $ lift2 cons) x (reverse xs))
+        (Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
+        (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_,_,_)) -> return(foldr (flip $ lift2 cons) (lift0 nil) (reverse xs))
+        (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_,_,_)) -> return(foldr (uncurry(lift3 cons)) x xs)
+        (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_,_,_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
+        (Tickx n x _,Ix(tag,_,_,_,_,Just tick,_,_)) -> return(buildNat x (lift1 tick) n)
+        (Numx n (Just x) _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat x (lift1 succ) n)
+        (Numx n Nothing  _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat (lift0 zero) (lift1 succ) n)        
+        (Unitx _,Ix(tag,_,_,_,_,_,Just unit,_)) -> undefined -- return(buildUnit (lift0 unit))
+        (Itemx x _,Ix(tag,_,_,_,_,_,_,Just item)) -> undefined -- return(buildItem (lift1 item) x)
+        (Pairx xs _,Ix(tag,_,_,Just pair,_,_,_,_)) -> return(buildTuple (lift2 pair) xs)                
         _ -> fail ("\nSyntax extension: "++extKey x++" doesn't match use, at "++loc)}
 
 buildNat :: Num a => b -> (b -> b) -> a -> b
@@ -284,46 +290,46 @@ flat2 ((a,b):xs) = a : b : flat2 xs
 -----------------------------------------------------------------------
 -- extensions for predefined data structures
 
-listx = Ix("",Just$Right("[]",":"),Nothing,Nothing,Nothing,Nothing) -- Lx("","[]",":")
-natx = Ix("n",Nothing,Just("Z","S"),Nothing,Nothing,Nothing)  -- Nx("n","Z","S")
-pairx = Ix("",Nothing,Nothing,Just "(,)",Nothing,Nothing)     -- Px("","(,)")
-recordx = Ix("",Nothing,Nothing,Nothing,Just("Rnil","Rcons"),Nothing) -- Rx("","Rnil","Rcons")
-tickx tag tick = Ix(tag,Nothing,Nothing,Nothing,Nothing,Just tick) 
+listx = Ix("",Just$Right("[]",":"),Nothing,Nothing,Nothing,Nothing,Nothing,Nothing) -- Lx("","[]",":")
+natx = Ix("n",Nothing,Just("Z","S"),Nothing,Nothing,Nothing,Nothing,Nothing)  -- Nx("n","Z","S")
+pairx = Ix("",Nothing,Nothing,Just "(,)",Nothing,Nothing,Nothing,Nothing)     -- Px("","(,)")
+recordx = Ix("",Nothing,Nothing,Nothing,Just("Rnil","Rcons"),Nothing,Nothing,Nothing) -- Rx("","Rnil","Rcons")
+tickx tag tick = Ix(tag,Nothing,Nothing,Nothing,Nothing,Just tick,Nothing,Nothing) 
 
-normalList (Ix("",Just(Right("[]",":")),_,_,_,_)) = True
+normalList (Ix("",Just(Right("[]",":")),_,_,_,_,_,_)) = True
 normalList _ = False
 
 ------------------------------------------------------
 -- Recognizing Extension constructors
 
-listCons c (Ix(k,Just(Right(nil,cons)),_,_,_,_)) = c==cons
+listCons c (Ix(k,Just(Right(nil,cons)),_,_,_,_,_,_)) = c==cons
 listCons c _ = False
 
-listNil c (Ix(k,Just(Right(nil,cons)),_,_,_,_)) = c==nil
+listNil c (Ix(k,Just(Right(nil,cons)),_,_,_,_,_,_)) = c==nil
 listNil c _ = False
 
-leftListCons c (Ix(k,Just(Left(nil,cons)),_,_,_,_)) = c==cons
+leftListCons c (Ix(k,Just(Left(nil,cons)),_,_,_,_,_,_)) = c==cons
 leftListCons c _ = False
 
-leftListNil c (Ix(k,Just(Left(nil,cons)),_,_,_,_)) = c==nil
+leftListNil c (Ix(k,Just(Left(nil,cons)),_,_,_,_,_,_)) = c==nil
 leftListNil c _ = False
 
-natZero c (Ix(k,_,Just(z,s),_,_,_)) = c==z
+natZero c (Ix(k,_,Just(z,s),_,_,_,_,_)) = c==z
 natZero c _ = False
 
-natSucc c (Ix(k,_,Just(z,s),_,_,_)) = c==s
+natSucc c (Ix(k,_,Just(z,s),_,_,_,_,_)) = c==s
 natSucc c _ = False
 
-pairProd c (Ix(k,_,_,Just prod,_,_)) = c==prod
+pairProd c (Ix(k,_,_,Just prod,_,_,_,_)) = c==prod
 pairProd c _ = False
 
-recordCons c (Ix(k,_,_,_,Just(nil,cons),_)) = c==cons
+recordCons c (Ix(k,_,_,_,Just(nil,cons),_,_,_)) = c==cons
 recordCons c _ = False
 
-recordNil c (Ix(k,_,_,_,Just(nil,cons),_)) = c==nil
+recordNil c (Ix(k,_,_,_,Just(nil,cons),_,_,_)) = c==nil
 recordNil c _ = False
 
-tickSucc c (Ix(k,_,_,_,_,Just succ)) = c==succ
+tickSucc c (Ix(k,_,_,_,_,Just succ,_,_)) = c==succ
 tickSucc c _ = False
 
 -- recognizing extension tags
@@ -402,12 +408,12 @@ natP = try $ lexeme $
 
 ---------------------------------------------------------------------
 
-mergey ("List",[a,b])     (Ix(k,l,n,p,r,t)) = Ix(k,Just$Right(a,b),n,p,r,t)
-mergey ("LeftList",[a,b]) (Ix(k,l,n,p,r,t)) = Ix(k,Just$Left(a,b),n,p,r,t)
-mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t)) = Ix(k,l,Just(a,b),p,r,t)
-mergey ("Pair",[a])       (Ix(k,l,n,p,r,t)) = Ix(k,l,n,Just a,r,t)
-mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t)) = Ix(k,l,n,p,Just(a,b),t)
-mergey ("Tick",[a])       (Ix(k,l,n,p,r,t)) = Ix(k,l,n,p,r,Just a)
+mergey ("List",[a,b])     (Ix(k,l,n,p,r,t,u,i)) = Ix(k,Just$Right(a,b),n,p,r,t,u,i)
+mergey ("LeftList",[a,b]) (Ix(k,l,n,p,r,t,u,i)) = Ix(k,Just$Left(a,b),n,p,r,t,u,i)
+mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,Just(a,b),p,r,t,u,i)
+mergey ("Pair",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,Just a,r,t,u,i)
+mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,Just(a,b),t,u,i)
+mergey ("Tick",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,Just a,u,i)
 mergey _                  i                 = i
 
 -----------------------------------------------------------
@@ -421,8 +427,10 @@ mergey _                  i                 = i
 
 expectedArities =
   [("List"    ,[("Nil    ",0),("Cons   ",2::Int)])
-  ,("LeftList",[("Nil    ",0),("Cons   ",2::Int)])
+  ,("LeftList",[("Nil    ",0),("Cons   ",2)])
   ,("Nat"     ,[("Zero   ",0),("Succ   ",1)])
+  ,("Unit"    ,[("Unit   ",0)])
+  ,("Item"    ,[("Item   ",1)])
   ,("Pair"    ,[("Pair   ",2)])
   ,("Record"  ,[("RecNil ",0),("RecCons",3)])
   ,("Tick"    ,[("Tick   ",1)])
@@ -465,7 +473,7 @@ badName name = Right ("\n'"++name++"' is not a valid syntactic extension name, c
 -- Check a list of extensions, and build a Ix synExt data structure                     
 
 checkMany :: SyntaxStyle -> String -> [(String,[(String,Int)])] -> Either (SynExt String) String
-checkMany style tag [] = Left (Ix(tag,Nothing,Nothing,Nothing,Nothing,Nothing))
+checkMany style tag [] = Left (Ix(tag,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing))
 checkMany style tag ((name,args):more) =
   case checkMany style tag more of
     Right x -> Right x
@@ -505,7 +513,7 @@ computeArity printname arityCs c =
                        ," constructors: ",plistf fst "" arityCs ", " ".\n"])
     Just n -> return (c,n)
       
-wExt = Ix("w",Just$Right("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just("RNil","RCons"),Just("Next"))
+wExt = Ix("w",Just$Right("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just("RNil","RCons"),Just("Next"),Just("Unit"),Just("Item"))
 
                                               
 go x = case checkMany OLD "tag" x of
