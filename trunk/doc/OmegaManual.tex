@@ -178,7 +178,7 @@ or a syntax item. A syntax item names one of the extensible syntactical extensio
 (see Section \ref{synext}). A syntax
 item has the form: 
 \begin{verbatim}
-"syntax" ("Num" | "List" | "Record" | "Pair") "(" id ")"
+"syntax" ("Nat" | "List" | "LeftList" | "Record" | "Pair" | "Tick" | "Unit" | "Item" ) "(" id ")"
 \end{verbatim}
 Some examples are illustrated below.
 \begin{verbatim}
@@ -193,7 +193,7 @@ An \om\ program can contain multiple imports.
 \begin{verbatim}
 import "fileAll"
 
-import "generic.prg" (name, syntax List(i), syntax Num(n))
+import "generic.prg" (name, syntax List(i), syntax Nat(n))
 \end{verbatim}
 
 Like Haskell, \om\ has
@@ -1584,15 +1584,17 @@ heterogeneous tuples. For example, in Haskell lists are often
 written with bracketed syntax, \verb+[1,2,3]+, rather than a constructor function syntax, \verb+(Cons 1 (Cons 2 (Cons 3 Nil)))+, and
 tuples are often written as \verb+(5,"abc")+ and \verb+(2,True,[])+
 rather than \verb+(Pair 5 "abc")+ and \verb+(Triple 2 True [])+. In \om\
-we supply special syntax for five different kinds of data, and allow users to
+we supply special syntax for seven different kinds of data, and allow users to
 use this syntax for data they define themselves. \om\ has
-special syntax for list-like, natural-number-like, pair-like, record-like, and unary-increment types.
+special syntax for list-like, natural-number-like, pair-like, record-like,
+unary-increment-like, unit-like and item-like types.
 Some examples in the supported syntax are: \verb+[4,5]i+, \verb|(2+n)j|
-\verb+(4,True)k+, \verb+{"a"=5, "b"=6}h+, and \verb+(x'3)w+. In general, the syntax starts 
-with list-like, natural-number-like, record-like, pair-like, or unary-increment syntax,
-and is terminated by a tag. A user may specify that 
-a user defined type should be displayed using the special syntax with a given tag. Each
-tag is associated with a set of functions (a different set for
+\verb+(4,True)k+, \verb+{"a"=5, "b"=6}h+, \verb+(x`3)w+, \verb+()u+, and \verb+(42)l+.
+In general, the syntax starts with list-like, natural-number-like, record-like, pair-like,
+or unary-increment syntax, and is terminated by a tag. Unit-like and item-like syntax are
+specialcases of the pair-like syntax with zero or one item between parentheses. A user
+may specify that a user defined type should be displayed using the special syntax with
+a given tag. Each tag is associated with a set of functions (a different set for
 list-like, natural-number-like, record-like, pair-like, and unary-increment types). 
 Each type of syntax, has an associated tag-table, so the same tag can be used once for
 each kind of syntax. Each
@@ -1611,7 +1613,9 @@ the functions {\tt (C,N)}, then the expansion is as follows.
 \end{verbatim}
 \noindent
 The semicolon may only appear before the last element in the square brackets.
-In this case, the last element stands for the tail of the resulting list.
+In this case, the last element stands for the tail of the resulting list. There
+is a left-associative variant of the list-like syntax too, derived with \verb+LeftList+,
+which is constructed in a way that the tail of the list appears to the left: \verb+[t; 2, 1]i+.
 
 The natural-number-like syntax associates two functions with each
 tag. These functions play the role of {\tt Zero} and {\tt Succ}.
@@ -1636,6 +1640,13 @@ the function {\tt (P)}, then the expansion is as follows:
 (a,b)i      ---> P a b
 (a,b,c)i    ---> P a (P b c)
 (a,b,c,d)i  ---> P a (P b (P c d))
+\end{verbatim}
+The unit-like syntax is a nullary variant of the pair-like syntax,
+and the item-like syntax corresponds to the unary variant. Following
+lines demonstrate their expansion:
+\begin{verbatim}
+()i   ---> U
+(a)i  ---> I a
 \end{verbatim}
 
 The record-like syntax associates two functions with each
@@ -1808,7 +1819,7 @@ the first part of the pair to a {\tt Label} we can build labeled
 tuples or records.
 
 \begin{verbatim}
-prompt> { `name="tim", `age=21}
+prompt> {`name="tim", `age=21}
 {`name="tim",`age=21} : Record {`name=[Char],`age=Int}r
 \end{verbatim} 
 
@@ -1891,24 +1902,28 @@ data Test:: *0 where
   Succ :: Test -> Test
   Pair :: Test -> Test -> Test
   Next :: Test -> Test
-  A:: Test
+  A :: Test
+  Charge :: Float -> Test
  deriving syntax(w) List(Nil,Cons) Nat(Zero,Succ) 
                     Pair(Pair) Tick(Next) Record(RNil,RCons)
+                    Unit(A) Item(Charge)
 \end{verbatim}
 This allows one to write things like the following:
 
 \begin{verbatim}
-test = { "name" = A
+test = { "name" = ()w
        , "age"= 2w
-       , "xs" = [ (A`1)w ]w
+       , "charge" = (25.7)w
+       , "xs" = [ (()w`1)w ]w
        , "ps" = (0w,1w)w }w
 \end{verbatim}
 rather than the much more verbose
 \begin{verbatim}
 verbose = RCons "name" A (
           RCons "age" (Succ (Succ Zero)) (
+          RCons "charge" (Charge 25.7) (
           RCons "xs" (Cons (Next A) Nil) (
-          RCons "ps" (Pair Zero (Succ Zero)) RNil)))
+          RCons "ps" (Pair Zero (Succ Zero)) RNil))))
 \end{verbatim}
 
 
