@@ -178,7 +178,8 @@ or a syntax item. A syntax item names one of the extensible syntactical extensio
 (see Section \ref{synext}). A syntax
 item has the form: 
 \begin{verbatim}
-"syntax" ("Nat" | "List" | "LeftList" | "Record" | "Pair" | "Tick" | "Unit" | "Item" ) "(" id ")"
+"syntax" ( "Nat" | "List" | "LeftList" | "Record" | "Pair"
+                 | "Tick" | "Unit" | "Item" ) "(" id ")"
 \end{verbatim}
 Some examples are illustrated below.
 \begin{verbatim}
@@ -699,10 +700,10 @@ syntactic extension. See Section \ref{synext} for further examples.
 For backward compatibility reasons one may also write {\tt \#0},
 {\tt \#1}, {\tt \#2}, etc.
 
-\section {Tags and Labels} \label{tag}
+\section {{\tt Tag}s and {\tt Label}s} \label{tag}
 
 Many object languages have a notion of name. To make representing names in the
-type system easy we introduce the notion of Tags and Labels. As a {\em first
+type system easy we introduce the notion of {\tt Tag}s and {\tt Label}s. As a {\em first
 approximation}, consider the finite kind {\tt Tag} and its singleton type {\tt
 Label}:
 
@@ -1597,9 +1598,8 @@ may specify that a user defined type should be displayed using the special synta
 a given tag. Each tag is associated with a set of functions (a different set for
 list-like, natural-number-like, record-like, pair-like, and unary-increment types). 
 Each type of syntax, has an associated tag-table, so the same tag can be used once for
-each kind of syntax. Each
-term expands into a call of the functions specified by the tag
-in the special syntax.
+each kind of syntax. Each term expands into a call of the functions specified by the
+tag in the special syntax.
 
 The list-like syntax associates two functions with each
 tag. These functions play the role of {\tt Nil} and {\tt Cons}.
@@ -1689,11 +1689,11 @@ Old-style derivations specify a single tag to be associated with a single syntax
 extension for a particular datatype. Using the old-style, each datatype can can be associated with a
 single syntax extension, and the number of constructor functions of the datatype
 must agree with the number of functions associated with that extension. For example
-to use the List extension the datatype must have two constructors, and to use the Pair
-extension the datatype must have one constructor.
+to use the {\tt List} extension the datatype must have two constructors, and to use
+the {\tt Pair} extension the datatype must have one constructor.
 
 
-\subsubsection{Old-style List example: Tuples are Lists that Reflect the Type of Their Components}
+\subsubsection{Old-style {\tt List} example: Tuples are Lists that Reflect the Type of Their Components}
 
 An example where the
 list-like extension is used both at the value and type level follows.
@@ -1736,7 +1736,7 @@ testfun :: Tuple (n+2)t [Int,Bool; w]a -> (Int,Bool,Tuple n w)
 testfun [x,y;zs]b = (x+1,not y,zs) 
 \end{verbatim} 
 
-\subsubsection{Old-style Nat example: A $n$-ary Summing Function}
+\subsubsection{Old-style {\tt Nat} example: A $n$-ary Summing Function}
 
 An example of a type that makes good
 use of the natural-number like syntax is the type {\tt SumSpec}.
@@ -1760,7 +1760,7 @@ is the type of the corresponding function in the series of functions below.
 \ x -> \ y -> \ z -> x+y+z
 \end{verbatim}
 This series of terms are the functions that sum 0, 1, 2, 3, etc. integers.
-We can can observe the relationship between the types of the terms and
+We can observe the relationship between the types of the terms and
 the type indexes of {\tt SumSpec}, by typing a series of {\tt SumSpec} examples into the \om\ interactive loop.
 \begin{verbatim}
 prompt> 0s
@@ -1797,9 +1797,9 @@ prompt> sum 3s 3 5
 <fn> : Int -> Int
 \end{verbatim}
 
-\subsubsection{Old-style Record example: Records and Rows}
-Finally, we demonstrate how using Tags and Labels (see Section \ref{tag})
-we can roll our own record structures. 
+\subsubsection{Old-style {\tt Record} example: Records and Rows}
+Finally, we demonstrate how using {\tt Tag}s and {\tt Label}s
+(see Section \ref{tag}) we can roll our own record structures. 
 
 \begin{verbatim}
 data Row :: a ~> b ~> *1 where
@@ -1823,11 +1823,13 @@ prompt> {`name="tim", `age=21}
 {`name="tim",`age=21} : Record {`name=[Char],`age=Int}r
 \end{verbatim} 
 
-Here we demonstrate that the tag for {\tt Records} is the empty tag.
+Here we demonstrate that the tag for {\tt Record}s is the empty tag.
 The empty tag for {\tt Nat} is reserved for ordinary {\tt Int},
 the empty tag for {\tt List} is reserved for ordinary lists,
 and the empty tag for {\tt Pair} is reserved for \om's builtin binary
-product.
+product. Further the empty tag for {\tt Unit} is reserved for \om's builtin
+unit value (and type), spelled as \verb+()+, while empty tag for {\tt Item} is
+the regular parenthesis syntax for the grouping of expressions.
 
 \subsection{New-style Derivations}
 
@@ -1835,7 +1837,7 @@ The old-style syntax extension allows the user to choose only one style of synta
 per datatype declaration, and limits the number of constructors of the datatype to exactly the number
 of syntax functions associated with the extension. The new-style of derivation lifts both these restrictions.
 
-\subsubsection{New-style Unary increment example: Cdr}
+\subsubsection{New-style Unary Increment Example: Cdr}
 
 This example illustrates why it is often desireable to allow more constructors than those supported by a
 single extension. It is inspired by the family of Lisp functions {\it cdr}, {\it cddr}, {\it cdddr}, {\it
@@ -1887,9 +1889,10 @@ cdr (Car x) (a,b) = cdr x a
 cdr (x`1)p  (a,b) = cdr x b
 \end{verbatim} 
 
-\subsubsection{New-style multiple syntax example: Test}
+\subsubsection{New-style Multiple Syntax Example: Test}
 
-Finally we illustrate that one datatype can support multiple syntax extensions.
+Finally we illustrate that one datatype can support multiple syntax extensions
+(albeit with the same tag.)
 
 
 \begin{verbatim}
