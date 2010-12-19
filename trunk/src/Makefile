@@ -1,5 +1,6 @@
 MAIN             = Main
-EXEC             = omega.exe
+EXT              = .exe
+EXEC             = omega$(EXT)
 GHC              = ghc
 GHCI             = ghci
 GHC_FLAGS        = -auto-all $(GHC_OPT_FLAGS) $(GHC_FLAGS_COMMON)
@@ -38,10 +39,10 @@ manual: all
 	$(MAKE) -C ../doc -f `pwd`/Makefile OmegaManual.ps
 
 OmegaManual.ps: version.tex OmegaManual.tex
-	latex OmegaManual.tex
-	bibtex.exe OmegaManual
-	latex OmegaManual.tex && latex OmegaManual.tex
-	dvips.exe OmegaManual
+	latex$(EXT) OmegaManual.tex
+	bibtex$(EXT) OmegaManual
+	latex$(EXT) OmegaManual.tex && latex$(EXT) OmegaManual.tex
+	dvips$(EXT) OmegaManual
 
 update:
 	$(SVN) update ..
