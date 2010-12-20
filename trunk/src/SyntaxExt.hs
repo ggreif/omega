@@ -483,6 +483,10 @@ dropMid (x,y,z) = (x,z)
 badName name = Right ("\n'"++name++"' is not a valid syntactic extension name, choose from: "++
                      plistf fstOfTriple "" expectedArities ", " ".\n")
 
+wellFormed (("List", Just no, _):rest) "List" (Ix(tag,Just(Right _),_,_,_,_,_,_)) = Just "'List' syntactic extension cannot be specified twice."
+wellFormed (("List", Just no, _):rest) "List" (Ix(tag,Just(Left _),_,_,_,_,_,_)) = Just "'List' and 'LeftList' syntactic extensions cannot be specified together."
+wellFormed _ _ _ = Nothing
+
 -- Check a list of extensions, and build a Ix synExt data structure                     
 
 checkMany :: SyntaxStyle -> String -> [(String,[(String,Int)])] -> Either (SynExt String) String
@@ -491,9 +495,10 @@ checkMany style tag ((name,args):more) =
   case checkMany style tag more of
     Right x -> Right x
     Left info -> 
-         case lookup name (map dropMid expectedArities) of
-           Nothing -> badName name 
-           Just expected -> if not good then Right s else Left info'
+         case (lookup name (map dropMid expectedArities), wellFormed expectedArities name info) of
+           (Nothing, _) -> badName name
+           (_, Just problem) -> Right problem
+           (Just expected, _) -> if not good then Right s else Left info'
              where ans = checkArities name style expected args
                    good = all fstOfTriple ans
                    printname = case style of
