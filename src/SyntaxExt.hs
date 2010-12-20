@@ -483,8 +483,13 @@ dropMid (x,y,z) = (x,z)
 badName name = Right ("\n'"++name++"' is not a valid syntactic extension name, choose from: "++
                      plistf fstOfTriple "" expectedArities ", " ".\n")
 
-wellFormed (("List", Just no, _):rest) "List" (Ix(tag,Just(Right _),_,_,_,_,_,_)) = Just "'List' syntactic extension cannot be specified twice."
-wellFormed (("List", Just no, _):rest) "List" (Ix(tag,Just(Left _),_,_,_,_,_,_)) = Just "'List' and 'LeftList' syntactic extensions cannot be specified together."
+reportRepeated name = Just ("'"++name++"' syntactic extension cannot be specified twice.")
+
+reportIncompatible (name, Just reversed, _) = Just ("'"++name++"' and '"++reversed++"' syntactic extensions cannot be specified together.")
+
+wellFormed (("List", Just no, _):rest) "List" (Ix(tag,Just(Right _),_,_,_,_,_,_)) = reportRepeated "List"
+wellFormed (syn@("List", Just no, _):rest) "List" (Ix(tag,Just(Left _),_,_,_,_,_,_)) = reportIncompatible syn
+
 wellFormed _ _ _ = Nothing
 
 -- Check a list of extensions, and build a Ix synExt data structure                     
