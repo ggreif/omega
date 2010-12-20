@@ -435,14 +435,14 @@ mergey _                  i                 = i
 -- for each extension, the name of the roles, and their expected arities
 
 expectedArities =
-  [("List"    ,[("Nil    ",0),("Cons   ",2::Int)])
-  ,("LeftList",[("Nil    ",0),("Cons   ",2)])
-  ,("Nat"     ,[("Zero   ",0),("Succ   ",1)])
-  ,("Unit"    ,[("Unit   ",0)])
-  ,("Item"    ,[("Item   ",1)])
-  ,("Pair"    ,[("Pair   ",2)])
-  ,("Record"  ,[("RecNil ",0),("RecCons",3)])
-  ,("Tick"    ,[("Tick   ",1)])
+  [("List",Just "LeftList",[("Nil    ",0),("Cons   ",2::Int)])
+  ,("LeftList",Just "List",[("Nil    ",0),("Cons   ",2)])
+  ,("Nat"     ,Nothing    ,[("Zero   ",0),("Succ   ",1)])
+  ,("Unit"    ,Nothing    ,[("Unit   ",0)])
+  ,("Item"    ,Nothing    ,[("Item   ",1)])
+  ,("Pair"    ,Nothing    ,[("Pair   ",2)])
+  ,("Record"  ,Nothing    ,[("RecNil ",0),("RecCons",3)])
+  ,("Tick"    ,Nothing    ,[("Tick   ",1)])
   ]
 
 -- Check a list of arities against the expected arities, indicate with
@@ -474,10 +474,14 @@ suggestFix style ((False,_,fix): xs) = "\n   "++fix ++ suggestFix style xs
   
 detrail xs = reverse (dropWhile (==' ') (reverse xs))
 
+fstOfTriple (x,y,z) = x
+
+dropMid (x,y,z) = (x,z)
+
 -- If the extension name doesn't fit, report an error
 
 badName name = Right ("\n'"++name++"' is not a valid syntactic extension name, choose from: "++
-                     plistf fst "" expectedArities ", " ".\n")
+                     plistf fstOfTriple "" expectedArities ", " ".\n")
 
 -- Check a list of extensions, and build a Ix synExt data structure                     
 
@@ -487,11 +491,11 @@ checkMany style tag ((name,args):more) =
   case checkMany style tag more of
     Right x -> Right x
     Left info -> 
-         case lookup name expectedArities of
+         case lookup name (map dropMid expectedArities) of
            Nothing -> badName name 
-           Just expected ->  if not good then Right s else Left info'
+           Just expected -> if not good then Right s else Left info'
              where ans = checkArities name style expected args
-                   good = all (\ (x,y,z) -> x) ans
+                   good = all fstOfTriple ans
                    printname = case style of
                                  OLD -> name++"("++tag++")"
                                  NEW -> name++ plistf fst "(" args "," ")"
