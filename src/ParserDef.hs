@@ -186,14 +186,14 @@ name = terminal identifier Global
 extToExp (Pairx xs "") = expTuple xs
 extToExp (Listx (Right xs) Nothing "") = listExp xs
 extToExp (Listx (Right xs) (Just tail) "") = listExp2 xs tail
-extToExp (Numx n Nothing "") = Lit(Int n)
-extToExp (Numx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
+extToExp (Natx n Nothing "") = Lit(Int n)
+extToExp (Natx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
 
 extToPat (Pairx xs "") =  patTuple xs
 extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
 extToPat (Listx (Right xs) (Just tail) "") =  pConsUp tail xs
-extToPat (Numx n Nothing "") = Plit(Int n)
+extToPat (Natx n Nothing "") = Plit(Int n)
 extToPat x = ExtP x
 
 patNil = Pcon (Global "[]") []
