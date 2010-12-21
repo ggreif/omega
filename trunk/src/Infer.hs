@@ -5088,4 +5088,4 @@ renderProb f t =
 evaluate x = runTC initTcEnv (do { a <- addSyntax wExt (elabExtensionExp x)
                                  ; return a })  -- fio2Mtc(eval env0 a)})
 
-tickTry = (Tickx 1 (ExtE (Numx 1 (Just (Var (Global "A"))) "w")) "w")
+tickTry = (Tickx 1 (ExtE (Natx 1 (Just (Var (Global "A"))) "w")) "w")

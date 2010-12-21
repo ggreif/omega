@@ -201,7 +201,7 @@ depExt x = addDepend(Global(extPrefix x ++ extKey x))
 
 extPrefix :: Extension a -> String
 extPrefix ((Listx xs _ s)) = "#L"
-extPrefix ((Numx n x s)) = "#N"
+extPrefix ((Natx n x s)) = "#N"
 extPrefix ((Pairx xs s)) = "#P"
 extPrefix ((Recordx xs _ s)) = "#R"
 -- extPrefix ((Cseqx s)) = ""
