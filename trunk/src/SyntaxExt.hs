@@ -487,16 +487,16 @@ reportRepeated name = Just ("'"++name++"' syntactic extension cannot be specifie
 
 reportIncompatible (name, Just reversed, _) = Just ("'"++name++"' and '"++reversed++"' syntactic extensions cannot be specified together.")
 
-wellFormed (("List",_,_):rest) (name@"List") (Ix(tag,Just(Right _),_,_,_,_,_,_)) = reportRepeated name
-wellFormed (syn@("List", Just no, _):rest) "List" (Ix(tag,Just(Left _),_,_,_,_,_,_)) = reportIncompatible syn
-wellFormed (("LeftList",_,_):rest) (name@"LeftList") (Ix(tag,Just(Left _),_,_,_,_,_,_)) = reportRepeated name
-wellFormed (syn@("LeftList", Just no, _):rest) "LeftList" (Ix(tag,Just(Right _),_,_,_,_,_,_)) = reportIncompatible syn
-wellFormed (("Nat",_,_):rest) (name@"Nat") (Ix(tag,_,Just _,_,_,_,_,_)) = reportRepeated name
-wellFormed (("Unit",_,_):rest) (name@"Unit") (Ix(tag,_,_,_,_,_,Just _,_)) = reportRepeated name
-wellFormed (("Item",_,_):rest) (name@"Item") (Ix(tag,_,_,_,_,_,_,Just _)) = reportRepeated name
-wellFormed (("Pair",_,_):rest) (name@"Pair") (Ix(tag,_,_,Just _,_,_,_,_)) = reportRepeated name
-wellFormed (("Record",_,_):rest) (name@"Record") (Ix(tag,_,_,_,Just _,_,_,_)) = reportRepeated name
-wellFormed (("Tick",_,_):rest) (name@"Tick") (Ix(tag,_,_,_,_,Just _,_,_)) = reportRepeated name
+wellFormed (("List",_,_):_) (name@"List") (Ix(tag,Just(Right _),_,_,_,_,_,_)) = reportRepeated name
+wellFormed (syn@("List", Just no, _):_) "List" (Ix(tag,Just(Left _),_,_,_,_,_,_)) = reportIncompatible syn
+wellFormed (("LeftList",_,_):_) (name@"LeftList") (Ix(tag,Just(Left _),_,_,_,_,_,_)) = reportRepeated name
+wellFormed (syn@("LeftList", Just no, _):_) "LeftList" (Ix(tag,Just(Right _),_,_,_,_,_,_)) = reportIncompatible syn
+wellFormed (("Nat",_,_):_) (name@"Nat") (Ix(tag,_,Just _,_,_,_,_,_)) = reportRepeated name
+wellFormed (("Unit",_,_):_) (name@"Unit") (Ix(tag,_,_,_,_,_,Just _,_)) = reportRepeated name
+wellFormed (("Item",_,_):_) (name@"Item") (Ix(tag,_,_,_,_,_,_,Just _)) = reportRepeated name
+wellFormed (("Pair",_,_):_) (name@"Pair") (Ix(tag,_,_,Just _,_,_,_,_)) = reportRepeated name
+wellFormed (("Record",_,_):_) (name@"Record") (Ix(tag,_,_,_,Just _,_,_,_)) = reportRepeated name
+wellFormed (("Tick",_,_):_) (name@"Tick") (Ix(tag,_,_,_,_,Just _,_,_)) = reportRepeated name
 wellFormed (_:rest) name info = wellFormed rest name info
 wellFormed [] _ _ = Nothing
 
