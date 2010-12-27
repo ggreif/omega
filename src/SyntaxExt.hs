@@ -264,6 +264,7 @@ findM mes p (x:xs) =
   do { b <- p x
      ; if b then return x else findM mes p xs}
 
+-- harmonizeExt: correct inevitable little errors that happened during parsing
 harmonizeExt x@(Listx (Right xs) Nothing s) ys = case findM "" (matchExt x') ys of
                                                   Nothing -> return x
                                                   Just _ -> return x'
@@ -272,6 +273,12 @@ harmonizeExt x@(Listx (Right [h]) (Just t) s) ys = case findM "" (matchExt x') y
                                                     Nothing -> return x
                                                     Just _ -> return x'
                                                    where x' = Listx (Left [t]) (Just h) s
+
+harmonizeExt x@(Recordx (Right xs) Nothing s) ys = case findM "" (matchExt x') ys of
+                                                    Nothing -> return x
+                                                    Just _ -> return x'
+                                                   where x' = Recordx (Left xs) Nothing s
+
 harmonizeExt x _ = return x
 
 
@@ -292,6 +299,8 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Recordx (Left xs) (Just x) _,Ix(tag,_,_,_,Just(Left(nil,cons)),_,_,_)) -> return(foldr (uncurry(flip3 $ lift3 cons)) x (reverse xs))
           where flip3 f a b c = f c a b
         (Recordx (Right xs) Nothing  _,Ix(tag,_,_,_,Just(Right(nil,cons)),_,_,_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
+        (Recordx (Left xs) Nothing  _,Ix(tag,_,_,_,Just(Left(nil,cons)),_,_,_)) -> return(foldr (uncurry(flip3 $ lift3 cons)) (lift0 nil) (reverse xs))
+          where flip3 f a b c = f c a b
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick,_,_)) -> return(buildNat x (lift1 tick) n)
         (Natx n (Just x) _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat x (lift1 succ) n)
         (Natx n Nothing  _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat (lift0 zero) (lift1 succ) n)        
