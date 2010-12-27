@@ -85,6 +85,10 @@ extName (Itemx _ s) = "Item"
 extName (Pairx xs s) = "Pair"
 extName (Tickx n _ s) = "Tick"
 
+
+outLR (Right xs) = (Right, xs)
+outLR (Left xs) = (Left, xs)
+
 ----------------------------------------------------
 -- Creating formatted documents
 
@@ -104,9 +108,7 @@ ppExt f((Recordx (Left xs) (Just x) s)) = text "{" <> f x <> PP.semi <> PP.hcat(
   where g (x,y) = f x <> text "=" <> f y
 ppExt f (Recordx xs' Nothing s) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
-        xs = out xs'
-        out (Right xs) = xs
-        out (Left xs) = xs
+        (_, xs) = outLR xs'
 ppExt f((Tickx n x s)) = PP.hcat [text "(",f x,text "`",PP.int n,text (")"++s)]
 
 
