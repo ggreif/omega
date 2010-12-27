@@ -96,7 +96,7 @@ ppExt :: (a -> Doc) -> Extension a -> Doc
 ppExt f((Listx (Right xs) (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)])
 ppExt f((Listx (Left xs) (Just x) s)) = PP.sep ((text "["): f x: text ";": PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
 ppExt f((Listx xs' Nothing s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
-                                 where xs = case (xs') of { Right xs -> xs; Left xs -> xs }
+                                 where (_, xs) = outLR xs'
 ppExt f((Natx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"++s)]
 ppExt f((Natx n Nothing s)) = PP.hcat [PP.int n,text s]
 ppExt f((Unitx s)) = text ("()"++s)
@@ -118,12 +118,12 @@ ppExt f((Tickx n x s)) = PP.hcat [text "(",f x,text "`",PP.int n,text (")"++s)]
 extList :: Extension a -> [a]
 extList ((Listx (Right xs) (Just x) _)) = x:xs
 extList ((Listx (Left xs) (Just x) _)) = foldr (:) [x] xs
-extList ((Listx (Right xs) Nothing _)) = xs
-extList ((Listx (Left xs) Nothing _)) = xs
+extList ((Listx xs' Nothing _)) = xs
+  where (_, xs) = outLR xs'
 extList ((Recordx (Right xs) (Just x) _)) = (x: flat2 xs)
-extList ((Recordx (Left xs) (Just x) _)) = (x: flat2 xs)
-extList ((Recordx (Right xs) Nothing _)) = flat2 xs
-extList ((Recordx (Left xs) Nothing _)) = flat2 xs
+extList ((Recordx (Left xs) (Just x) _)) = foldr (:) [x] (flat2 xs)
+extList ((Recordx xs' Nothing _)) = flat2 xs
+  where (_, xs) = outLR xs'
 extList ((Natx n (Just x) _)) = [x]
 extList ((Natx n Nothing _)) = []
 extList ((Unitx _)) = []
