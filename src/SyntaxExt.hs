@@ -100,12 +100,13 @@ ppExt f((Itemx x s)) = text "(" <> f x <> text (")"++s)
 ppExt f((Pairx xs s)) = text "(" <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
 ppExt f((Recordx (Right xs) (Just x) s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> PP.semi <> f x <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
-ppExt f((Recordx (Left xs) (Just x) s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> PP.semi <> f x <> text ("}"++s)
+ppExt f((Recordx (Left xs) (Just x) s)) = text "{" <> f x <> PP.semi <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
-ppExt f((Recordx (Right xs) Nothing s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
+ppExt f (Recordx xs' Nothing s) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
-ppExt f((Recordx (Left xs) Nothing s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
-  where g (x,y) = f x <> text "=" <> f y
+        xs = out xs'
+        out (Right xs) = xs
+        out (Left xs) = xs
 ppExt f((Tickx n x s)) = PP.hcat [text "(",f x,text "`",PP.int n,text (")"++s)]
 
 
@@ -154,9 +155,9 @@ extM f (Natx n Nothing s) = return((Natx n Nothing s))
 extM f (Unitx s) =  return(Unitx s)
 extM f (Itemx x s) =  do { y <- f x; return((Itemx y s))}
 extM f (Pairx xs s) =  do { ys <- mapM f xs; return((Pairx ys s))}
-extM f (Recordx (Right xs) (Just x) s) = do { ys <- mapM g xs; y<- f x; return(Recordx (Right ys) (Just y) s)}
+extM f (Recordx (Right xs) (Just x) s) = do { ys <- mapM g xs; y <- f x; return(Recordx (Right ys) (Just y) s)}
   where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
-extM f (Recordx (Left xs) (Just x) s) = do { ys <- mapM g xs; y<- f x; return(Recordx (Left ys) (Just y) s)}
+extM f (Recordx (Left xs) (Just x) s) = do { y <- f x; ys <- mapM g xs; return(Recordx (Left ys) (Just y) s)}
   where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
 extM f (Recordx (Right xs) Nothing s) = do { ys <- mapM g xs; return(Recordx (Right ys) Nothing s)}
  where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
@@ -190,7 +191,7 @@ extThread f n (Pairx xs s) =  do { (ys,n1) <- threadL f xs n; return(Pairx ys s,
 extThread f n (Recordx (Right xs) (Just x) s) =
   do { (ys,n1) <- threadL (threadPair f) xs n; (y,n2) <- f x n1; return(Recordx (Right ys) (Just y) s,n2)}
 extThread f n (Recordx (Left xs) (Just x) s) =
-  do { (ys,n1) <- threadL (threadPair f) xs n; (y,n2) <- f x n1; return(Recordx (Left ys) (Just y) s,n2)}
+  do { (y,n1) <- f x n; (ys,n2) <- threadL (threadPair f) xs n1; return(Recordx (Left ys) (Just y) s,n2)}
 extThread f n (Recordx (Right xs) Nothing s) =
   do { (ys,n1) <- threadL (threadPair f) xs n; return(Recordx (Right ys) Nothing s,n1)}
 extThread f n (Recordx (Left xs) Nothing s) =
