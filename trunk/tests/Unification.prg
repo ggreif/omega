@@ -57,7 +57,7 @@ cat :: AList m n -> AList l m -> AList l n
 cat xs (Anil) = xs
 cat xs (Asnoc ys t x) = Asnoc (cat xs ys) t x
 
-data SomeSub m = ex n. SomeSub (Nat' n) (AList m n)
+data SomeSub m = exists n . SomeSub (Nat' n) (AList m n)
 asnoc :: SomeSub m -> Term m -> Fin (S m) -> SomeSub (S m)
 asnoc (SomeSub m s) t x = SomeSub m (Asnoc s t x)
 
