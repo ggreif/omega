@@ -198,8 +198,8 @@ extThread f n (Tickx m x s) = do { (y,n1) <- f x n; return(Tickx m y s,n1)}
 cross f (x,y) = (f x,f y)
 
 instance Functor Extension where
-  fmap f (Listx (Right xs) (Just x) s) = (Listx (Right (map f xs)) (Just(f x)) s)
-  fmap f (Listx (Left xs) (Just x) s) = (Listx (Left (map f xs)) (Just(f x)) s)
+  fmap f (Listx xs' (Just x) s) = (Listx (lr (map f xs)) (Just(f x)) s)
+    where (lr, xs) = outLR xs'
   fmap f (Listx xs' Nothing s) = (Listx (lr (map f xs)) Nothing s)
     where (lr, xs) = outLR xs'
   fmap f (Natx n (Just x) s) = (Natx n (Just (f x)) s)
@@ -207,8 +207,8 @@ instance Functor Extension where
   fmap f (Unitx s) =  (Unitx s)
   fmap f (Itemx x s) =  (Itemx (f x) s)
   fmap f (Pairx xs s) =  (Pairx (map f xs) s)
-  fmap f (Recordx (Right xs) (Just x) s) = (Recordx (Right (map (cross f) xs)) (Just(f x)) s)
-  fmap f (Recordx (Left xs) (Just x) s) = (Recordx (Left (map (cross f) xs)) (Just(f x)) s)
+  fmap f (Recordx xs' (Just x) s) = (Recordx (lr (map (cross f) xs)) (Just(f x)) s)
+    where (lr, xs) = outLR xs'
   fmap f (Recordx xs' Nothing s) = (Recordx (lr (map (cross f) xs)) Nothing s)
     where (lr, xs) = outLR xs'
   fmap f (Tickx n x s) = (Tickx n (f x) s)
@@ -281,6 +281,7 @@ harmonizeExt x@(Recordx (Right xs) Nothing s) ys = case findM "" (matchExt x') y
 
 harmonizeExt x _ = return x
 
+rot3 f a b c = f c a b
 
 buildExt :: (Show c,Show b,Monad m) => String -> (b -> c,b -> c -> c,b -> c -> c -> c,b -> c -> c -> c -> c) ->
                       Extension c -> [SynExt b] -> m c
@@ -296,11 +297,9 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
         (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_,_,_)) -> return(foldr (flip $ lift2 cons) (lift0 nil) (reverse xs))
         (Recordx (Right xs) (Just x) _,Ix(tag,_,_,_,Just(Right(nil,cons)),_,_,_)) -> return(foldr (uncurry(lift3 cons)) x xs)
-        (Recordx (Left xs) (Just x) _,Ix(tag,_,_,_,Just(Left(nil,cons)),_,_,_)) -> return(foldr (uncurry(flip3 $ lift3 cons)) x (reverse xs))
-          where flip3 f a b c = f c a b
+        (Recordx (Left xs) (Just x) _,Ix(tag,_,_,_,Just(Left(nil,cons)),_,_,_)) -> return(foldr (uncurry(rot3 $ lift3 cons)) x (reverse xs))
         (Recordx (Right xs) Nothing  _,Ix(tag,_,_,_,Just(Right(nil,cons)),_,_,_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
-        (Recordx (Left xs) Nothing  _,Ix(tag,_,_,_,Just(Left(nil,cons)),_,_,_)) -> return(foldr (uncurry(flip3 $ lift3 cons)) (lift0 nil) (reverse xs))
-          where flip3 f a b c = f c a b
+        (Recordx (Left xs) Nothing  _,Ix(tag,_,_,_,Just(Left(nil,cons)),_,_,_)) -> return(foldr (uncurry(rot3 $ lift3 cons)) (lift0 nil) (reverse xs))
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick,_,_)) -> return(buildNat x (lift1 tick) n)
         (Natx n (Just x) _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat x (lift1 succ) n)
         (Natx n Nothing  _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat (lift0 zero) (lift1 succ) n)        
