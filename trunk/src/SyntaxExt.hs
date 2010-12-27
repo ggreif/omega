@@ -42,8 +42,8 @@ instance Show a => Show (SynExt a) where
   show (Parsex(k,_,_,zs)) = "Px "++k++show zs           
 
 instance Show x => Show(Extension x) where
-  show (Listx (Right ts) Nothing tag) = plist "[" ts "," ("]"++tag)
-  show (Listx (Left ts) Nothing tag) = plist "[" ts "," ("]"++tag)
+  show (Listx ts' Nothing tag) = plist "[" ts "," ("]"++tag)
+    where (_, ts) = outLR ts'
   show (Listx (Right ts) (Just t) tag) = plist "[" ts "," "; " ++ show t ++"]"++tag
   show (Listx (Left ts) (Just t) tag) = "[" ++ show t ++ "; " ++ plist "" ts "," ("]"++tag)
   show (Natx n Nothing tag) = show n++tag
@@ -54,10 +54,9 @@ instance Show x => Show(Extension x) where
     where help [] = ""
           help [x] = show x
           help (x:xs) = show x++","++help xs
-  show (Recordx (Right ts) Nothing tag) = plistf f "{" ts "," ("}"++tag)
+  show (Recordx ts' Nothing tag) = plistf f "{" ts "," ("}"++tag)
     where f (x,y) = show x++"="++show y
-  show (Recordx (Left ts) Nothing tag) = plistf f "{" ts "," ("}"++tag)
-    where f (x,y) = show x++"="++show y
+          (_, ts) = outLR ts'
   show (Recordx (Right ts) (Just ys) tag) =  plistf f "{" ts "," (";"++show ys++"}"++tag)
     where f (x,y) = show x++"="++show y
   show (Recordx (Left ts) (Just ys) tag) =  "{" ++ show ys ++ "; " ++ plistf f "" ts "," ("}"++tag)
@@ -142,16 +141,15 @@ instance Eq t => Eq (Extension t) where
  (Pairx xs s) == (Pairx ys t) = xs==ys && s==t
  (Recordx (Right ts1) (Just t1) s1) == (Recordx (Right xs1) (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
  (Recordx (Left ts1) (Just t1) s1) == (Recordx (Left xs1) (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
- (Recordx (Right ts1) Nothing s1) == (Recordx (Right xs1) Nothing s2) = s1==s2 && ts1==xs1
- (Recordx (Left ts1) Nothing s1) == (Recordx (Left xs1) Nothing s2) = s1==s2 && ts1==xs1
+ (Recordx ts1 Nothing s1) == (Recordx xs1 Nothing s2) = s1==s2 && ts1==xs1
  (Tickx n t1 s1) == (Tickx m x1 s2) = s1==s2 && t1==x1 && n==m
  _ == _ = False
 
 extM :: Monad a => (b -> a c) -> Extension b -> a (Extension c)
 extM f (Listx (Right xs) (Just x) s) = do { ys <- mapM f xs; y <- f x; return((Listx (Right ys) (Just y) s))}
 extM f (Listx (Left xs) (Just x) s) = do { y <- f x; ys <- mapM f xs; return((Listx (Left ys) (Just y) s))}
-extM f (Listx (Right xs) Nothing s) = do { ys <- mapM f xs; return((Listx (Right ys) Nothing s))}
-extM f (Listx (Left xs) Nothing s) = do { ys <- mapM f xs; return((Listx (Left ys) Nothing s))}
+extM f (Listx xs' Nothing s) = do { ys <- mapM f xs; return((Listx (lr ys) Nothing s))}
+  where (lr, xs) = outLR xs'
 extM f (Natx n (Just x) s) = do { y <- f x; return((Natx n (Just y) s))}
 extM f (Natx n Nothing s) = return((Natx n Nothing s))
 extM f (Unitx s) =  return(Unitx s)
@@ -161,10 +159,9 @@ extM f (Recordx (Right xs) (Just x) s) = do { ys <- mapM g xs; y <- f x; return(
   where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
 extM f (Recordx (Left xs) (Just x) s) = do { y <- f x; ys <- mapM g xs; return(Recordx (Left ys) (Just y) s)}
   where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
-extM f (Recordx (Right xs) Nothing s) = do { ys <- mapM g xs; return(Recordx (Right ys) Nothing s)}
+extM f (Recordx xs' Nothing s) = do { ys <- mapM g xs; return(Recordx (lr ys) Nothing s)}
  where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
-extM f (Recordx (Left xs) Nothing s) = do { ys <- mapM g xs; return(Recordx (Left ys) Nothing s)}
- where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
+       (lr, xs) = outLR xs'
 extM f (Tickx n x s) = do { y <- f x; return((Tickx n y s))} 
 
 
