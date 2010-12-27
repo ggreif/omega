@@ -30,3 +30,10 @@ t5 [[1,2,3]z; 4]z = 42
 ##test "these do not match up"
  t6 = t5 [[1]z; 2, 3]z
 
+
+data Roo = Ru | Rest Roo Int Char  deriving LeftRecord(lr)
+
+t7 = {}lr
+
+t8 = {t7; 42='j'}lr
+
