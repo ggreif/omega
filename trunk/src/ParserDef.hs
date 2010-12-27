@@ -1,4 +1,3 @@
-
 module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
                 pattern,expr,decl,
                 program,parse2,parse,parseString,parseFile
@@ -789,7 +788,8 @@ constrdec =
    }
 
 forallP =
- do { (reserved "forall") <|> (reserved "exists") <|> (symbol "ex" >> return ())
+ do { (reserved "forall") <|> (reserved "exists")
+                          <|> (symbol "ex" >> fail "Quantifier 'ex' is not supported any more, please use 'exists'.")
     ; ns <- targs
     ; symbol "."
     ; return ns
