@@ -250,8 +250,8 @@ matchExt (Natx _ _ s)    (Ix(t,_,Just _,_,_,_,_,_)) | s==t = return True
 matchExt (Unitx s)       (Ix(t,_,_,_,_,_,Just _,_)) | s==t = return True
 matchExt (Itemx _ s)     (Ix(t,_,_,_,_,_,_,Just _)) | s==t = return True
 matchExt (Pairx _ s)     (Ix(t,_,_,Just _,_,_,_,_)) | s==t = return True
-matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just(Right _),_,_,_)) | s==t = return True
-matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just(Left _),_,_,_)) | s==t = return True
+matchExt (Recordx (Right _) _ s) (Ix(t,_,_,_,Just(Right _),_,_,_)) | s==t = return True
+matchExt (Recordx (Left _) _ s) (Ix(t,_,_,_,Just(Left _),_,_,_)) | s==t = return True
 matchExt (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _,_,_)) | s==t = return True
 matchExt _ _                = return False
 
