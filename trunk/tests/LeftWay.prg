@@ -33,7 +33,11 @@ t5 [[1,2,3]z; 4]z = 42
 
 data Roo = Ru | Rest Roo Int Char  deriving LeftRecord(lr)
 
-t7 = {}lr
+--t7 = {}lr
 
-t8 = {t7; 42='j'}lr
+t8 = {undefined ; 42='j'}lr
+
+--t9 = {42='j'}lr
+
+--t10 = {42='j', 25='g'}lr
 
