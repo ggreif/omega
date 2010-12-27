@@ -92,7 +92,7 @@ data TyAst = I | B | P TyAst TyAst
 
 
 -- Judgments for Types
-data TJudgment = ex t . TJ (TypeR t)   
+data TJudgment = exists t . TJ (TypeR t)   
 
 checkT :: TyAst -> TJudgment
 checkT I = TJ IntR
@@ -141,7 +141,7 @@ data ExpAst
   | VarA Int TyAst
 
 -- Judgments for Expressions
-data EJudgment s = ex t . EJ (TypeR t) (Exp s t)  
+data EJudgment s = exists t . EJ (TypeR t) (Exp s t)  
 
 checkE :: ExpAst -> TypeR s -> Maybe (EJudgment s)
 checkE (IntCA n) sr = succeed(EJ IntR (IntC n))

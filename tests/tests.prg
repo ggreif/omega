@@ -462,7 +462,7 @@ data TRep t
   | Prod where t = (,)
   | Sum  where t = (+)
   | Arr  where t = (->) 
-  | ex (k1 :: *1) (f :: k1 ~> k) (x :: k1) .
+  | exists (k1 :: *1) (f :: k1 ~> k) (x :: k1) .
           Ap (TRep f) (TRep x) where t = f x  
 -}
 

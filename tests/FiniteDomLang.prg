@@ -1,7 +1,7 @@
 
 -- kind Nat = Z | S Nat
 
---data N t = Zero where t = Z | ex x.Succ (N x) where t = S x
+--data N t = Zero where t = Z | exists x.Succ (N x) where t = S x
 data N :: Nat ~> *0 where
    Zero :: N Z
    Succ :: (N x) -> N (S x)
