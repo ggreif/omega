@@ -14,14 +14,14 @@ data SyntaxStyle = OLD | NEW
 
 data SynExt t -- Syntax Extension
   = Ox        -- no extension
-  | Ix (String,Maybe (Either (t,t) (t,t)),Maybe(t,t),Maybe t,Maybe(t,t),Maybe t,Maybe t,Maybe t)
+  | Ix (String,Maybe (Either (t,t) (t,t)),Maybe(t,t),Maybe t,Maybe (Either (t,t) (t,t)),Maybe t,Maybe t,Maybe t)
   | Parsex (String,SyntaxStyle,[(t,Int)],[(t,[t])])
 
 data Extension t
   = Listx (Either [t] [t]) (Maybe t) String --  [x,y ; zs]i  [x ; y,z]i
   | Natx Int (Maybe t) String         --  4i   (2+x)i
   | Pairx [t] String                  --  (a,b,c)i
-  | Recordx [(t,t)] (Maybe t) String  --  {x=t,y=s ; zs}i
+  | Recordx (Either [(t,t)] [(t,t)]) (Maybe t) String  --  {x=t,y=s ; zs}i  {zs ; y=s,x=t}i
   | Tickx Int t String                --  (e`3)i
   | Unitx String                      --  ()i
   | Itemx t String                    --  (e)i
@@ -31,12 +31,12 @@ data Extension t
 
 instance Show a => Show (SynExt a) where
   show Ox = "Ox"
-  show (Ix(k,l,n,p,r,t,u,i)) = "Ix "++k++f' l++f "Nat" n++g "Pair" p++f "Record" r++g "Tick" t++g "Unit" u++g "Item" i
+  show (Ix(k,l,n,p,r,t,u,i)) = "Ix "++k++f' "List" l++f "Nat" n++g "Pair" p++f' "Record" r++g "Tick" t++g "Unit" u++g "Item" i
      where f nm Nothing = ""
            f nm (Just(x,y)) = " "++nm++"["++show x++","++show y++"]"
-           f' (Just (Right x)) = f "List" (Just x)
-           f' (Just (Left x)) = f "LeftList" (Just x)
-           f' Nothing = ""
+           f' nm (Just (Right x)) = f nm (Just x)
+           f' nm (Just (Left x)) = f ("Left"++nm) (Just x)
+           f' _ Nothing = ""
            g nm Nothing = ""
            g nm (Just x) = " "++nm++"["++show x++"]"
   show (Parsex(k,_,_,zs)) = "Px "++k++show zs           
@@ -45,7 +45,7 @@ instance Show x => Show(Extension x) where
   show (Listx (Right ts) Nothing tag) = plist "[" ts "," ("]"++tag)
   show (Listx (Left ts) Nothing tag) = plist "[" ts "," ("]"++tag)
   show (Listx (Right ts) (Just t) tag) = plist "[" ts "," "; " ++ show t ++"]"++tag
-  show (Listx (Left ts) (Just t) tag) = "[" ++ show t ++ "; " ++ plist "" ts "," "" ++"]"++tag
+  show (Listx (Left ts) (Just t) tag) = "[" ++ show t ++ "; " ++ plist "" ts "," ("]"++tag)
   show (Natx n Nothing tag) = show n++tag
   show (Natx n (Just t) tag) = "("++show n++"+"++show t++")"++tag
   show (Unitx tag) = "()"++tag
@@ -54,10 +54,14 @@ instance Show x => Show(Extension x) where
     where help [] = ""
           help [x] = show x
           help (x:xs) = show x++","++help xs
-  show (Recordx ts Nothing tag) = plistf f "{" ts "," ("}"++tag)
+  show (Recordx (Right ts) Nothing tag) = plistf f "{" ts "," ("}"++tag)
     where f (x,y) = show x++"="++show y
-  show (Recordx ts (Just ys) tag) =  plistf f "{" ts "," (";"++show ys++"}"++tag)
-    where f (x,y) = show x++"="++show y 
+  show (Recordx (Left ts) Nothing tag) = plistf f "{" ts "," ("}"++tag)
+    where f (x,y) = show x++"="++show y
+  show (Recordx (Right ts) (Just ys) tag) =  plistf f "{" ts "," (";"++show ys++"}"++tag)
+    where f (x,y) = show x++"="++show y
+  show (Recordx (Left ts) (Just ys) tag) =  "{" ++ show ys ++ "; " ++ plistf f "" ts "," ("}"++tag)
+    where f (x,y) = show x++"="++show y
   show (Tickx n t tag) = "("++show t++"`"++show n++")"++tag
 
 extKey :: Extension a -> String
@@ -73,7 +77,8 @@ extKey (Tickx n x s) = s
 extName :: Extension a -> String
 extName (Listx (Right xs) _ s) = "List"
 extName (Listx (Left xs) _ s) = "LeftList"
-extName (Recordx xs _ s) = "Record"
+extName (Recordx (Right xs) _ s) = "Record"
+extName (Recordx (Left xs) _ s) = "LeftRecord"
 extName (Natx n _ s) = "Nat"
 extName (Unitx s) = "Unit"
 extName (Itemx _ s) = "Item"
@@ -93,9 +98,13 @@ ppExt f((Natx n Nothing s)) = PP.hcat [PP.int n,text s]
 ppExt f((Unitx s)) = text ("()"++s)
 ppExt f((Itemx x s)) = text "(" <> f x <> text (")"++s)
 ppExt f((Pairx xs s)) = text "(" <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
-ppExt f((Recordx xs (Just x) s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> PP.semi <> f x <> text ("}"++s)
+ppExt f((Recordx (Right xs) (Just x) s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> PP.semi <> f x <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
-ppExt f((Recordx xs Nothing s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
+ppExt f((Recordx (Left xs) (Just x) s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> PP.semi <> f x <> text ("}"++s)
+  where g (x,y) = f x <> text "=" <> f y
+ppExt f((Recordx (Right xs) Nothing s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
+  where g (x,y) = f x <> text "=" <> f y
+ppExt f((Recordx (Left xs) Nothing s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
 ppExt f((Tickx n x s)) = PP.hcat [text "(",f x,text "`",PP.int n,text (")"++s)]
 
@@ -108,8 +117,10 @@ extList ((Listx (Right xs) (Just x) _)) = x:xs
 extList ((Listx (Left xs) (Just x) _)) = foldr (:) [x] xs
 extList ((Listx (Right xs) Nothing _)) = xs
 extList ((Listx (Left xs) Nothing _)) = xs
-extList ((Recordx xs (Just x) _)) = (x: flat2 xs)
-extList ((Recordx xs Nothing _)) = flat2 xs
+extList ((Recordx (Right xs) (Just x) _)) = (x: flat2 xs)
+extList ((Recordx (Left xs) (Just x) _)) = (x: flat2 xs)
+extList ((Recordx (Right xs) Nothing _)) = flat2 xs
+extList ((Recordx (Left xs) Nothing _)) = flat2 xs
 extList ((Natx n (Just x) _)) = [x]
 extList ((Natx n Nothing _)) = []
 extList ((Unitx _)) = []
@@ -126,8 +137,10 @@ instance Eq t => Eq (Extension t) where
  (Unitx s) == (Unitx t) = s==t
  (Itemx x s) == (Itemx y t) = x==y && s==t
  (Pairx xs s) == (Pairx ys t) = xs==ys && s==t
- (Recordx ts1 (Just t1) s1) == (Recordx xs1 (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
- (Recordx ts1 Nothing s1) == (Recordx xs1 Nothing s2) = s1==s2 && ts1==xs1
+ (Recordx (Right ts1) (Just t1) s1) == (Recordx (Right xs1) (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
+ (Recordx (Left ts1) (Just t1) s1) == (Recordx (Left xs1) (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
+ (Recordx (Right ts1) Nothing s1) == (Recordx (Right xs1) Nothing s2) = s1==s2 && ts1==xs1
+ (Recordx (Left ts1) Nothing s1) == (Recordx (Left xs1) Nothing s2) = s1==s2 && ts1==xs1
  (Tickx n t1 s1) == (Tickx m x1 s2) = s1==s2 && t1==x1 && n==m
  _ == _ = False
 
@@ -141,9 +154,13 @@ extM f (Natx n Nothing s) = return((Natx n Nothing s))
 extM f (Unitx s) =  return(Unitx s)
 extM f (Itemx x s) =  do { y <- f x; return((Itemx y s))}
 extM f (Pairx xs s) =  do { ys <- mapM f xs; return((Pairx ys s))}
-extM f (Recordx xs (Just x) s) = do { ys <- mapM g xs; y<- f x; return((Recordx ys (Just y) s))}
+extM f (Recordx (Right xs) (Just x) s) = do { ys <- mapM g xs; y<- f x; return(Recordx (Right ys) (Just y) s)}
   where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
-extM f (Recordx xs Nothing s) = do { ys <- mapM g xs; return((Recordx ys Nothing s))}
+extM f (Recordx (Left xs) (Just x) s) = do { ys <- mapM g xs; y<- f x; return(Recordx (Left ys) (Just y) s)}
+  where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
+extM f (Recordx (Right xs) Nothing s) = do { ys <- mapM g xs; return(Recordx (Right ys) Nothing s)}
+ where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
+extM f (Recordx (Left xs) Nothing s) = do { ys <- mapM g xs; return(Recordx (Left ys) Nothing s)}
  where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
 extM f (Tickx n x s) = do { y <- f x; return((Tickx n y s))} 
 
@@ -170,10 +187,14 @@ extThread f n (Natx m Nothing s) = return(Natx m Nothing s,n)
 extThread f n (Unitx s) =  return(Unitx s,n)
 extThread f n (Itemx x s) =  do { (y,n1) <- f x n; return(Itemx y s,n1)}
 extThread f n (Pairx xs s) =  do { (ys,n1) <- threadL f xs n; return(Pairx ys s,n1)}
-extThread f n (Recordx xs (Just x) s) =
-  do { (ys,n1) <- threadL (threadPair f) xs n; (y,n2) <- f x n1; return(Recordx ys (Just y) s,n2)}
-extThread f n (Recordx xs Nothing s) =
-  do { (ys,n1) <- threadL (threadPair f) xs n; return(Recordx ys Nothing s,n1)}
+extThread f n (Recordx (Right xs) (Just x) s) =
+  do { (ys,n1) <- threadL (threadPair f) xs n; (y,n2) <- f x n1; return(Recordx (Right ys) (Just y) s,n2)}
+extThread f n (Recordx (Left xs) (Just x) s) =
+  do { (ys,n1) <- threadL (threadPair f) xs n; (y,n2) <- f x n1; return(Recordx (Left ys) (Just y) s,n2)}
+extThread f n (Recordx (Right xs) Nothing s) =
+  do { (ys,n1) <- threadL (threadPair f) xs n; return(Recordx (Right ys) Nothing s,n1)}
+extThread f n (Recordx (Left xs) Nothing s) =
+  do { (ys,n1) <- threadL (threadPair f) xs n; return(Recordx (Left ys) Nothing s,n1)}
 extThread f n (Tickx m x s) = do { (y,n1) <- f x n; return(Tickx m y s,n1)}
 
 cross f (x,y) = (f x,f y)
@@ -188,8 +209,10 @@ instance Functor Extension where
   fmap f (Unitx s) =  (Unitx s)
   fmap f (Itemx x s) =  (Itemx (f x) s)
   fmap f (Pairx xs s) =  (Pairx (map f xs) s)
-  fmap f (Recordx xs (Just x) s) = (Recordx (map (cross f) xs) (Just(f x)) s)
-  fmap f (Recordx xs Nothing s) = (Recordx (map (cross f) xs) Nothing s)
+  fmap f (Recordx (Right xs) (Just x) s) = (Recordx (Right (map (cross f) xs)) (Just(f x)) s)
+  fmap f (Recordx (Left xs) (Just x) s) = (Recordx (Left (map (cross f) xs)) (Just(f x)) s)
+  fmap f (Recordx (Right xs) Nothing s) = (Recordx (Right (map (cross f) xs)) Nothing s)
+  fmap f (Recordx (Left xs) Nothing s) = (Recordx (Left (map (cross f) xs)) Nothing s)
   fmap f (Tickx n x s) = (Tickx n (f x) s)
 
 --------------------------------------------------------
@@ -211,7 +234,8 @@ synName (Ix (s,Just(Right _),_,_,_,_,_,_)) = "List"
 synName (Ix (s,Just(Left _),_,_,_,_,_,_)) = "LeftList"
 synName (Ix (s,_,Just _,_,_,_,_,_)) = "Nat"
 synName (Ix (s,_,_,Just _,_,_,_,_)) = "Pair"
-synName (Ix (s,_,_,_,Just _,_,_,_)) = "Record"
+synName (Ix (s,_,_,_,Just(Right _),_,_,_)) = "Record"
+synName (Ix (s,_,_,_,Just(Left _),_,_,_)) = "LeftRecord"
 synName (Ix (s,_,_,_,_,Just _,_,_)) = "Tick"
 synName (Ix (s,_,_,_,_,_,Just _,_)) = "Unit"
 synName (Ix (s,_,_,_,_,_,_,Just _)) = "Item"
@@ -228,7 +252,8 @@ matchExt (Natx _ _ s)    (Ix(t,_,Just _,_,_,_,_,_)) | s==t = return True
 matchExt (Unitx s)       (Ix(t,_,_,_,_,_,Just _,_)) | s==t = return True
 matchExt (Itemx _ s)     (Ix(t,_,_,_,_,_,_,Just _)) | s==t = return True
 matchExt (Pairx _ s)     (Ix(t,_,_,Just _,_,_,_,_)) | s==t = return True
-matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just _,_,_,_)) | s==t = return True
+matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just(Right _),_,_,_)) | s==t = return True
+matchExt (Recordx _ _ s) (Ix(t,_,_,_,Just(Left _),_,_,_)) | s==t = return True
 matchExt (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _,_,_)) | s==t = return True
 matchExt _ _                = return False
 
@@ -265,8 +290,8 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Listx (Left xs) (Just x) _,Ix(tag,Just(Left(nil,cons)),_,_,_,_,_,_)) -> return(foldr (flip $ lift2 cons) x (reverse xs))
         (Listx (Right xs) Nothing  _,Ix(tag,Just(Right(nil,cons)),_,_,_,_,_,_)) -> return(foldr (lift2 cons) (lift0 nil) xs)
         (Listx (Left xs) Nothing  _,Ix(tag,Just(Left(nil,cons)),_,_,_,_,_,_)) -> return(foldr (flip $ lift2 cons) (lift0 nil) (reverse xs))
-        (Recordx xs (Just x) _,Ix(tag,_,_,_,Just(nil,cons),_,_,_)) -> return(foldr (uncurry(lift3 cons)) x xs)
-        (Recordx xs Nothing  _,Ix(tag,_,_,_,Just(nil,cons),_,_,_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
+        (Recordx (Right xs) (Just x) _,Ix(tag,_,_,_,Just(Right(nil,cons)),_,_,_)) -> return(foldr (uncurry(lift3 cons)) x xs)
+        (Recordx (Right xs) Nothing  _,Ix(tag,_,_,_,Just(Right(nil,cons)),_,_,_)) -> return(foldr (uncurry(lift3 cons)) (lift0 nil) xs)
         (Tickx n x _,Ix(tag,_,_,_,_,Just tick,_,_)) -> return(buildNat x (lift1 tick) n)
         (Natx n (Just x) _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat x (lift1 succ) n)
         (Natx n Nothing  _,Ix(tag,_,Just(zero,succ),_,_,_,_,_)) -> return(buildNat (lift0 zero) (lift1 succ) n)        
@@ -297,7 +322,7 @@ flat2 ((a,b):xs) = a : b : flat2 xs
 listx = Ix("",Just$Right("[]",":"),Nothing,Nothing,Nothing,Nothing,Nothing,Nothing) -- Lx("","[]",":")
 natx = Ix("n",Nothing,Just("Z","S"),Nothing,Nothing,Nothing,Nothing,Nothing)  -- Nx("n","Z","S")
 pairx = Ix("",Nothing,Nothing,Just "(,)",Nothing,Nothing,Nothing,Nothing)     -- Px("","(,)")
-recordx = Ix("",Nothing,Nothing,Nothing,Just("Rnil","Rcons"),Nothing,Nothing,Nothing) -- Rx("","Rnil","Rcons")
+recordx = Ix("",Nothing,Nothing,Nothing,Just$Right("Rnil","Rcons"),Nothing,Nothing,Nothing) -- Rx("","Rnil","Rcons")
 tickx tag tick = Ix(tag,Nothing,Nothing,Nothing,Nothing,Just tick,Nothing,Nothing) 
 
 normalList (Ix("",Just(Right("[]",":")),_,_,_,_,_,_)) = True
@@ -333,11 +358,17 @@ itemItem c _ = False
 pairProd c (Ix(k,_,_,Just prod,_,_,_,_)) = c==prod
 pairProd c _ = False
 
-recordCons c (Ix(k,_,_,_,Just(nil,cons),_,_,_)) = c==cons
+recordCons c (Ix(k,_,_,_,Just(Right(nil,cons)),_,_,_)) = c==cons
 recordCons c _ = False
 
-recordNil c (Ix(k,_,_,_,Just(nil,cons),_,_,_)) = c==nil
+recordNil c (Ix(k,_,_,_,Just(Right(nil,cons)),_,_,_)) = c==nil
 recordNil c _ = False
+
+leftRecordCons c (Ix(k,_,_,_,Just(Left(nil,cons)),_,_,_)) = c==cons
+leftRecordCons c _ = False
+
+leftRecordNil c (Ix(k,_,_,_,Just(Left(nil,cons)),_,_,_)) = c==nil
+leftRecordNil c _ = False
 
 tickSucc c (Ix(k,_,_,_,_,Just succ,_,_)) = c==succ
 tickSucc c _ = False
@@ -348,6 +379,7 @@ listExt c x = listCons c x || listNil c x
 leftListExt c x = leftListCons c x || leftListNil c x
 natExt c x = natZero c x || natSucc c x
 recordExt c x = recordCons c x || recordNil c x
+leftRecordExt c x = leftRecordCons c x || leftRecordNil c x
 
 -----------------------------------------------------------
 -- Parsers for Syntactic Extensions
@@ -375,7 +407,7 @@ extP :: Parser a -> Parser (Extension a)
 extP p = try(lexeme(try(listP p) <|> leftListP p <|> parensP p <|> recP p))
   where listP p = semiTailSeq (char '[') (char ']') p p (\xs x t -> Listx (Right xs) x t)
         leftListP p = semiHeadSeq (char '[') (char ']') p p (\x xs t -> Listx (Left xs) x t)
-        recP p = semiTailSeq (char '{') (char '}') pair p Recordx
+        recP p = semiTailSeq (char '{') (char '}') pair p (\xs x t -> Recordx (Right xs) x t)
           where pair = do { x <- p; symbol "="; y <- p; return(x,y)}
 
 parensP p =
@@ -421,7 +453,8 @@ mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,Just(a,b),p,r,t,u,i)
 mergey ("Unit",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,t,Just a,i)
 mergey ("Item",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,t,u,Just a)
 mergey ("Pair",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,Just a,r,t,u,i)
-mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,Just(a,b),t,u,i)
+mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,Just$Right(a,b),t,u,i)
+mergey ("LeftRecord",[a,b]) (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,Just$Left(a,b),t,u,i)
 mergey ("Tick",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,Just a,u,i)
 mergey _                  i                 = i
 
@@ -441,7 +474,8 @@ expectedArities =
   ,("Unit"    ,Nothing    ,[("Unit   ",0)])
   ,("Item"    ,Nothing    ,[("Item   ",1)])
   ,("Pair"    ,Nothing    ,[("Pair   ",2)])
-  ,("Record"  ,Nothing    ,[("RecNil ",0),("RecCons",3)])
+  ,("Record",Just "LeftRecord",[("RecNil ",0),("RecCons",3)])
+  ,("LeftRecord",Just "Record",[("RecNil ",0),("RecCons",3)])
   ,("Tick"    ,Nothing    ,[("Tick   ",1)])
   ]
 
@@ -544,7 +578,7 @@ computeArity printname arityCs c =
                        ," constructors: ",plistf fst "" arityCs ", " ".\n"])
     Just n -> return (c,n)
       
-wExt = Ix("w",Just$Right("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just("RNil","RCons"),Just("Next"),Just("Unit"),Just("Item"))
+wExt = Ix("w",Just$Right("Nil","Cons"),Just("Zero","Succ"),Just("Pair"),Just$Right("RNil","RCons"),Just("Next"),Just("Unit"),Just("Item"))
 
                                               
 go x = case checkMany OLD "tag" x of
