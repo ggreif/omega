@@ -13,7 +13,7 @@ import SyntaxExt
 import Text.PrettyPrint.HughesPJ(Doc,text)
 
 -----------------------------------------------
-{- These are now defined in the Syntax file
+{- These are now defined in the Syntax.hs file
 
 data Ev = Ev [(Var,V)] (V,V,V)
 
@@ -225,6 +225,17 @@ showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext = "{" ++ show 
           syntag = postscript (synKey ext)
 showSynRecord v = showVconInParens v
 
+showSynLeftRecord (Vcon (Global c,ext) [])         | leftRecordNil c ext = "{}" ++ postscript (synKey ext)
+showSynLeftRecord (Vcon (Global c,ext) [xs,tag,x]) | leftRecordCons c ext = "{" ++ f xs ++ show tag ++ "=" ++ show x ++ "}" ++ syntag
+    where f (Vlazy cs _) = "... ; "
+          f (Vcon (Global c,ext) [xs,tag,x])   | leftRecordCons c ext = f xs ++ show tag ++ "=" ++ show x ++ ","
+          f (Vcon (Global c,ext) [])           | leftRecordNil c ext  = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f Vbottom = show Vbottom ++ " ; "
+          f v = showVcon v ++ " ; "
+          syntag = postscript (synKey ext)
+showSynLeftRecord v = showVconInParens v
+
 
 showSynNat (Vcon (Global c,ext) []) | natZero c ext = "0" ++ postscript (synKey ext)
 showSynNat (Vcon (Global c,ext) [x])| natSucc c ext = (f 1 x)++ postscript (synKey ext)
@@ -255,7 +266,7 @@ showVconInParens v = "(" ++ showVcon v ++ ")"
 
 instance Show V where
   show (Vlit x) = show x
-  show (v @ (Vsum inj x)) =
+  show (v@(Vsum inj x)) =
     case boolV v of
       Nothing -> "("++show inj++" "++show x++")"
       Just t -> if t then "True" else "False"
@@ -286,6 +297,7 @@ instance Show V where
   show (v@(Vcon (Global c,ext) _)) | listExt c ext = showSynList v
   show (v@(Vcon (Global c,ext) _)) | leftListExt c ext = showSynLeftList v
   show (v@(Vcon (Global c,ext) _)) | recordExt c ext = showSynRecord v
+  show (v@(Vcon (Global c,ext) _)) | leftRecordExt c ext = showSynLeftRecord v
   show (v@(Vcon (Global c,ext) _)) | tickSucc c ext = showSynTick v
   show (Vcode e (Ev xs _)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
       where free = plistf show "" (map fst xs) "," ""
