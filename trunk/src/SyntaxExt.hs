@@ -178,10 +178,9 @@ extThread f n (Listx (Right xs) (Just x) s) =
   do { (ys,n1) <- threadL f xs n; (y,n2) <- f x n1; return(Listx (Right ys) (Just y) s,n2)}
 extThread f n (Listx (Left xs) (Just x) s) =
   do { (y,n1) <- f x n; (ys,n2) <- threadL f xs n1; return(Listx (Left ys) (Just y) s,n2)}
-extThread f n (Listx (Right xs) Nothing s) =
-  do { (ys,n1) <- threadL f xs n; return(Listx (Right ys) Nothing s,n1)}
-extThread f n (Listx (Left xs) Nothing s) =
-  do { (ys,n1) <- threadL f xs n; return(Listx (Left ys) Nothing s,n1)}
+extThread f n (Listx xs' Nothing s) =
+  do { (ys,n1) <- threadL f xs n; return(Listx (lr ys) Nothing s,n1)}
+    where (lr, xs) = outLR xs'
 extThread f n (Natx m (Just x) s) = do { (y,n1) <- f x n; return(Natx m (Just y) s,n1)}
 extThread f n (Natx m Nothing s) = return(Natx m Nothing s,n)
 extThread f n (Unitx s) =  return(Unitx s,n)
@@ -191,10 +190,9 @@ extThread f n (Recordx (Right xs) (Just x) s) =
   do { (ys,n1) <- threadL (threadPair f) xs n; (y,n2) <- f x n1; return(Recordx (Right ys) (Just y) s,n2)}
 extThread f n (Recordx (Left xs) (Just x) s) =
   do { (y,n1) <- f x n; (ys,n2) <- threadL (threadPair f) xs n1; return(Recordx (Left ys) (Just y) s,n2)}
-extThread f n (Recordx (Right xs) Nothing s) =
-  do { (ys,n1) <- threadL (threadPair f) xs n; return(Recordx (Right ys) Nothing s,n1)}
-extThread f n (Recordx (Left xs) Nothing s) =
-  do { (ys,n1) <- threadL (threadPair f) xs n; return(Recordx (Left ys) Nothing s,n1)}
+extThread f n (Recordx xs' Nothing s) =
+  do { (ys,n1) <- threadL (threadPair f) xs n; return(Recordx (lr ys) Nothing s,n1)}
+    where (lr, xs) = outLR xs'
 extThread f n (Tickx m x s) = do { (y,n1) <- f x n; return(Tickx m y s,n1)}
 
 cross f (x,y) = (f x,f y)
@@ -202,8 +200,8 @@ cross f (x,y) = (f x,f y)
 instance Functor Extension where
   fmap f (Listx (Right xs) (Just x) s) = (Listx (Right (map f xs)) (Just(f x)) s)
   fmap f (Listx (Left xs) (Just x) s) = (Listx (Left (map f xs)) (Just(f x)) s)
-  fmap f (Listx (Right xs) Nothing s) = (Listx (Right (map f xs)) Nothing s)
-  fmap f (Listx (Left xs) Nothing s) = (Listx (Left (map f xs)) Nothing s)
+  fmap f (Listx xs' Nothing s) = (Listx (lr (map f xs)) Nothing s)
+    where (lr, xs) = outLR xs'
   fmap f (Natx n (Just x) s) = (Natx n (Just (f x)) s)
   fmap f (Natx n Nothing s) = (Natx n Nothing s)
   fmap f (Unitx s) =  (Unitx s)
@@ -211,8 +209,8 @@ instance Functor Extension where
   fmap f (Pairx xs s) =  (Pairx (map f xs) s)
   fmap f (Recordx (Right xs) (Just x) s) = (Recordx (Right (map (cross f) xs)) (Just(f x)) s)
   fmap f (Recordx (Left xs) (Just x) s) = (Recordx (Left (map (cross f) xs)) (Just(f x)) s)
-  fmap f (Recordx (Right xs) Nothing s) = (Recordx (Right (map (cross f) xs)) Nothing s)
-  fmap f (Recordx (Left xs) Nothing s) = (Recordx (Left (map (cross f) xs)) Nothing s)
+  fmap f (Recordx xs' Nothing s) = (Recordx (lr (map (cross f) xs)) Nothing s)
+    where (lr, xs) = outLR xs'
   fmap f (Tickx n x s) = (Tickx n (f x) s)
 
 --------------------------------------------------------
