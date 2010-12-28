@@ -198,10 +198,8 @@ showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f x
     where f (Vlazy cs _) _ = " ; ..."
           f (Vcon (Global c,ext) [x,xs]) ext' | ext == ext' && listCons c ext = "," ++ show x ++ f xs ext'
           f (Vcon (Global c,ext) []) ext' | ext == ext' && listNil c ext = ""
-          f (p@(Vcon (Global c,ext) _)) _ | listExt c ext || leftListExt c ext = " ; " ++ show p
           f (Vswap cs u) ext' = f (swaps cs u) ext'
-          f Vbottom _ = " ; " ++ show Vbottom
-          f v _ = " ; " ++ showVcon v
+          f v _ = " ; " ++ show v
           tag = postscript (synKey ext)
 showSynList v = showVconInParens v
 
@@ -210,10 +208,8 @@ showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs
     where f (Vlazy cs _) _ = "... ; "
           f (Vcon (Global c,ext) [xs,x]) ext' | ext == ext' && leftListCons c ext = f xs ext' ++ show x ++ ","
           f (Vcon (Global c,ext) []) ext' | ext == ext' && leftListNil c ext = ""
-          f (p@(Vcon (Global c,ext) _)) _ | listExt c ext || leftListExt c ext = show p ++ " ; "
           f (Vswap cs u) ext' = f (swaps cs u) ext'
-          f Vbottom _ = show Vbottom ++ " ; "
-          f v _ = showVcon v ++ " ; "
+          f v _ = show v ++ " ; "
           tag = postscript (synKey ext)
 showSynLeftList v = showVconInParens v
 
