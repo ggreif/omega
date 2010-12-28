@@ -51,3 +51,14 @@ t13 = ('l', 25, 42)lp
 
 t14 = (t13, 66)lp
 
+data LLPair = LPa a Int deriving LeftPair(llp)
+
+t15 = (t14, 7)llp
+
+t16 = case show t15 of {"('l',25,42,66,7)llp" -> "bad"; "(('l',25,42,66)lp,7)llp" -> "good"}
+
+verify "good" = True
+
+##test "issue 81"
+  v1 = verify t16
+
