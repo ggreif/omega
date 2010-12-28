@@ -1,7 +1,7 @@
 data Foo :: * where
   Nu :: Foo
   Co :: Foo -> Int -> Foo
- deriving syntax (f) LeftList(Nu, Co)
+ deriving syntax(f) LeftList(Nu, Co)
 
 data Bar = Bnu | Bar Bar Int deriving LeftList(b)
 
@@ -59,6 +59,14 @@ t16 = case show t15 of {"('l',25,42,66,7)llp" -> "bad"; "(('l',25,42,66)lp,7)llp
 
 verify "good" = True
 
-##test "issue 81"
+##test "issue 81 (pairs)"
   v1 = verify t16
+
+data Bar2 :: * where
+  Bnu2 :: Bar2
+  Bar2 :: a -> Int -> Bar2
+ deriving LeftList(bb)
+
+##test "issue 81 (lists)"
+  v2 = verify (case show [[]b;55]bb of {"[[]b ; 55]bb" -> "good"; "[55]bb" -> "bad"})
 
