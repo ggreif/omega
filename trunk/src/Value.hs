@@ -187,10 +187,10 @@ showSynItem (Vcon (Global c,ext) [x]) | itemItem c ext =
 showSynItem v = showVconInParens v
 
 showSynPair (p@(Vcon (Global c,ext) [x,y])) | pairProd c ext || leftPairProd c ext =
-   plistf show "(" (collect p) "," ")" ++ postscript (synKey ext)
-  where collect (Vcon (Global c,ext) [x,y]) | pairProd c ext = x: collect y
-        collect (Vcon (Global c,ext) [x,y]) | leftPairProd c ext = collect x ++ [y]
-        collect y = [y]
+   plistf show "(" (collect p ext) "," ")" ++ postscript (synKey ext)
+  where collect (Vcon (Global c,ext) [x,y]) ext' | ext == ext' && pairProd c ext = x: collect y ext'
+        collect (Vcon (Global c,ext) [x,y]) ext' | ext == ext' && leftPairProd c ext = collect x ext' ++ [y]
+        collect y _ = [y]
 showSynPair v = showVconInParens v
 
 showSynList (Vcon (Global c,ext) []) | listNil c ext = "[]" ++ postscript (synKey ext)
