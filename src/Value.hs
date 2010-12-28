@@ -186,17 +186,12 @@ showSynItem (Vcon (Global c,ext) [x]) | itemItem c ext =
    "(" ++ show x ++ ")" ++ postscript (synKey ext)
 showSynItem v = showVconInParens v
 
-showSynPair (p@(Vcon (Global c,ext) [x,y])) | pairProd c ext =
+showSynPair (p@(Vcon (Global c,ext) [x,y])) | pairProd c ext || leftPairProd c ext =
    plistf show "(" (collect p) "," ")" ++ postscript (synKey ext)
   where collect (Vcon (Global c,ext) [x,y]) | pairProd c ext = x: collect y
+        collect (Vcon (Global c,ext) [x,y]) | leftPairProd c ext = collect x ++ [y]
         collect y = [y]
 showSynPair v = showVconInParens v
-
-showSynLeftPair (p@(Vcon (Global c,ext) [x,y])) | leftPairProd c ext =
-   plistf show "(" (collect p) "," ")" ++ postscript (synKey ext)
-  where collect (Vcon (Global c,ext) [x,y]) | leftPairProd c ext = collect x ++ [y]
-        collect y = [y]
-showSynLeftPair v = showVconInParens v
 
 showSynList (Vcon (Global c,ext) []) | listNil c ext = "[]" ++ postscript (synKey ext)
 showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f xs ++ "]"++tag
@@ -298,8 +293,7 @@ instance Show V where
 
   show (v@(Vcon (Global c,ext) _)) | unitUnit c ext = showSynUnit v
   show (v@(Vcon (Global c,ext) _)) | itemItem c ext = showSynItem v
-  show (v@(Vcon (Global c,ext) _)) | pairProd c ext = showSynPair v
-  show (v@(Vcon (Global c,ext) _)) | leftPairProd c ext = showSynLeftPair v
+  show (v@(Vcon (Global c,ext) _)) | pairProd c ext || leftPairProd c ext = showSynPair v
   show (v@(Vcon (Global c,ext) _)) | natExt c ext = showSynNat v
   show (v@(Vcon (Global c,ext) _)) | listExt c ext = showSynList v
   show (v@(Vcon (Global c,ext) _)) | leftListExt c ext = showSynLeftList v
