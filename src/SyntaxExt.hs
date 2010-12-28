@@ -12,16 +12,18 @@ import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 
 data SyntaxStyle = OLD | NEW
 
+type SynAssoc a = Either a a
+
 data SynExt t -- Syntax Extension
   = Ox        -- no extension
-  | Ix (String,Maybe (Either (t,t) (t,t)),Maybe(t,t),Maybe t,Maybe (Either (t,t) (t,t)),Maybe t,Maybe t,Maybe t)
+  | Ix (String,Maybe (SynAssoc (t,t)),Maybe(t,t),Maybe t,Maybe (SynAssoc (t,t)),Maybe t,Maybe t,Maybe t)
   | Parsex (String,SyntaxStyle,[(t,Int)],[(t,[t])])
 
 data Extension t
-  = Listx (Either [t] [t]) (Maybe t) String --  [x,y ; zs]i  [x ; y,z]i
+  = Listx (SynAssoc [t]) (Maybe t) String --  [x,y ; zs]i  [x ; y,z]i
   | Natx Int (Maybe t) String         --  4i   (2+x)i
   | Pairx [t] String                  --  (a,b,c)i
-  | Recordx (Either [(t,t)] [(t,t)]) (Maybe t) String  --  {x=t,y=s ; zs}i  {zs ; y=s,x=t}i
+  | Recordx (SynAssoc [(t,t)]) (Maybe t) String  --  {x=t,y=s ; zs}i  {zs ; y=s,x=t}i
   | Tickx Int t String                --  (e`3)i
   | Unitx String                      --  ()i
   | Itemx t String                    --  (e)i
