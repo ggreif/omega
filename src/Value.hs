@@ -194,24 +194,24 @@ showSynPair (p@(Vcon (Global c,ext) [x,y])) | pairProd c ext || leftPairProd c e
 showSynPair v = showVconInParens v
 
 showSynList (Vcon (Global c,ext) []) | listNil c ext = "[]" ++ postscript (synKey ext)
-showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f xs ++ "]"++tag
-    where f (Vlazy cs _) = " ; ..."
-          f (Vcon (Global c,ext) [x,xs])| listCons c ext = "," ++ show x ++ f xs
-          f (Vcon (Global c,ext) []) | listNil c ext = ""
-          f (Vswap cs u) = f (swaps cs u)
-          f Vbottom = " ; " ++ show Vbottom
-          f v = " ; " ++ showVcon v
+showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f xs ext ++ "]"++tag
+    where f (Vlazy cs _) _ = " ; ..."
+          f (Vcon (Global c,ext) [x,xs]) ext' | ext == ext' && listCons c ext = "," ++ show x ++ f xs ext'
+          f (Vcon (Global c,ext) []) ext' | ext == ext' && listNil c ext = ""
+          f (Vswap cs u) ext' = f (swaps cs u) ext'
+          f Vbottom _ = " ; " ++ show Vbottom
+          f v _ = " ; " ++ showVcon v
           tag = postscript (synKey ext)
 showSynList v = showVconInParens v
 
 showSynLeftList (Vcon (Global c,ext) []) | leftListNil c ext = "[]" ++ postscript (synKey ext)
-showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs ++ show x ++ "]"++tag
-    where f (Vlazy cs _) = "... ; "
-          f (Vcon (Global c,ext) [xs,x])| leftListCons c ext = f xs ++ show x ++ ","
-          f (Vcon (Global c,ext) []) | leftListNil c ext = ""
-          f (Vswap cs u) = f (swaps cs u)
-          f Vbottom = show Vbottom ++ " ; "
-          f v = showVcon v ++ " ; "
+showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs ext ++ show x ++ "]"++tag
+    where f (Vlazy cs _) _ = "... ; "
+          f (Vcon (Global c,ext) [xs,x]) ext' | ext == ext' && leftListCons c ext = f xs ext' ++ show x ++ ","
+          f (Vcon (Global c,ext) []) ext' | ext == ext' && leftListNil c ext = ""
+          f (Vswap cs u) ext' = f (swaps cs u) ext'
+          f Vbottom _ = show Vbottom ++ " ; "
+          f v _ = showVcon v ++ " ; "
           tag = postscript (synKey ext)
 showSynLeftList v = showVconInParens v
 
