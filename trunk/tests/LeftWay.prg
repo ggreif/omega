@@ -62,9 +62,10 @@ verify "good" = True
 v1 = verify t16
 
 data Bar2 :: * where
+  Bunit :: Bar2
   Bnu2 :: Bar2
   Bar2 :: a -> Int -> Bar2
- deriving LeftList(bb)
+ deriving syntax(bb) LeftList(Bnu2, Bar2) Unit(Bunit)
 
 v2 = verify (case show [[]b;55]bb of {"[[]b ; 55]bb" -> "good"; "[55]bb" -> "bad"})
-
+v3 = verify (case show [()bb ; 42]bb of {"[()bb ; 42]bb" -> "good"; "[Bunit ; 42]bb" -> "bad"})
