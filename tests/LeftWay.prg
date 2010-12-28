@@ -43,3 +43,9 @@ t10 = {42='j', 25='g'}lr
 
 t11 = {t8; 42='j', 25='g'}lr
 
+data LPair = Pa a Int deriving LeftPair(lp)
+
+t12 = ('l', 42)lp
+
+t13 = ('l', 25, 42)lp
+
