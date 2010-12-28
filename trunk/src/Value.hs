@@ -213,25 +213,24 @@ showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs
           tag = postscript (synKey ext)
 showSynLeftList v = showVconInParens v
 
+
 showSynRecord (Vcon (Global c,ext) [])         | recordNil c ext = "{}" ++ postscript (synKey ext)
 showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext = "{" ++ show tag ++ "=" ++ show x ++ f xs ++ "}" ++ syntag
     where f (Vlazy cs _) = " ; ..."
           f (Vcon (Global c,ext) [tag,x,xs])   | recordCons c ext = "," ++ show tag ++ "=" ++ show x ++ f xs
           f (Vcon (Global c,ext) [])           | recordNil c ext  = ""
           f (Vswap cs u) = f (swaps cs u)
-          f Vbottom = " ; " ++ show Vbottom
-          f v = " ; " ++ showVcon v
+          f v = " ; " ++ show v
           syntag = postscript (synKey ext)
 showSynRecord v = showVconInParens v
 
 showSynLeftRecord (Vcon (Global c,ext) [])         | leftRecordNil c ext = "{}" ++ postscript (synKey ext)
 showSynLeftRecord (Vcon (Global c,ext) [xs,tag,x]) | leftRecordCons c ext = "{" ++ f xs ++ show tag ++ "=" ++ show x ++ "}" ++ syntag
     where f (Vlazy cs _) = "... ; "
-          f (Vcon (Global c,ext) [xs,tag,x])   | leftRecordCons c ext = f xs ++ show tag ++ "=" ++ show x ++ ","
-          f (Vcon (Global c,ext) [])           | leftRecordNil c ext  = ""
+          f (Vcon (Global c,ext) [xs,tag,x])       | leftRecordCons c ext = f xs ++ show tag ++ "=" ++ show x ++ ","
+          f (Vcon (Global c,ext) [])               | leftRecordNil c ext  = ""
           f (Vswap cs u) = f (swaps cs u)
-          f Vbottom = show Vbottom ++ " ; "
-          f v = showVcon v ++ " ; "
+          f v = show v ++ " ; "
           syntag = postscript (synKey ext)
 showSynLeftRecord v = showVconInParens v
 
