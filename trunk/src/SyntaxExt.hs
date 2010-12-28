@@ -293,6 +293,11 @@ harmonizeExt x@(Recordx (Right xs) Nothing s) ys = case findM "" (matchExt x') y
                                                     Just _ -> return x'
                                                    where x' = Recordx (Left xs) Nothing s
 
+harmonizeExt x@(Pairx (Right xs) s) ys = case findM "" (matchExt x') ys of
+                                          Nothing -> return x
+                                          Just _ -> return x'
+                                         where x' = Pairx (Left xs) s
+
 harmonizeExt x _ = return x
 
 rot3 f a b c = f c a b
