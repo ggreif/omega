@@ -2428,7 +2428,7 @@ parse_tag inject =
                   ; return (c:cs)
                   } <?> "identifier"
 
-extToPT (Pairx xs "") = tprods' xs
+extToPT (Pairx (Right xs) "") = tprods' xs
 extToPT (Listx (Right [x]) Nothing "") = list' x
 extToPT x = Ext x
 

@@ -182,14 +182,14 @@ name = terminal identifier Global
 -- If a syntactic extension has the empty string as a suffix
 -- turn it into the normal kind of syntactic sugar
 
-extToExp (Pairx xs "") = expTuple xs
+extToExp (Pairx (Right xs) "") = expTuple xs
 extToExp (Listx (Right xs) Nothing "") = listExp xs
 extToExp (Listx (Right xs) (Just tail) "") = listExp2 xs tail
 extToExp (Natx n Nothing "") = Lit(Int n)
 extToExp (Natx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
 
-extToPat (Pairx xs "") =  patTuple xs
+extToPat (Pairx (Right xs) "") =  patTuple xs
 extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
 extToPat (Listx (Right xs) (Just tail) "") =  pConsUp tail xs
 extToPat (Natx n Nothing "") = Plit(Int n)
