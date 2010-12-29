@@ -481,17 +481,17 @@ natP = try $ lexeme $
 
 ---------------------------------------------------------------------
 
-mergey ("List",[a,b])     (Ix(k,l,n,p,r,t,u,i)) = Ix(k,Just$Right(a,b),n,p,r,t,u,i)
-mergey ("LeftList",[a,b]) (Ix(k,l,n,p,r,t,u,i)) = Ix(k,Just$Left(a,b),n,p,r,t,u,i)
-mergey ("Nat",[a,b])      (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,Just(a,b),p,r,t,u,i)
-mergey ("Unit",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,t,Just a,i)
-mergey ("Item",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,t,u,Just a)
-mergey ("Pair",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,Just$Right a,r,t,u,i)
-mergey ("LeftPair",[a])   (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,Just$Left a,r,t,u,i)
-mergey ("Record",[a,b])   (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,Just$Right(a,b),t,u,i)
-mergey ("LeftRecord",[a,b]) (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,Just$Left(a,b),t,u,i)
-mergey ("Tick",[a])       (Ix(k,l,n,p,r,t,u,i)) = Ix(k,l,n,p,r,Just a,u,i)
-mergey _                  i                 = i
+mergey ("List",[a,b])     (Ix(k,Nothing,n,p,r,t,u,i)) = Ix(k,Just$Right(a,b),n,p,r,t,u,i)
+mergey ("LeftList",[a,b]) (Ix(k,Nothing,n,p,r,t,u,i)) = Ix(k,Just$Left(a,b),n,p,r,t,u,i)
+mergey ("Nat",[a,b])      (Ix(k,l,Nothing,p,r,t,u,i)) = Ix(k,l,Just(a,b),p,r,t,u,i)
+mergey ("Unit",[a])       (Ix(k,l,n,p,r,t,Nothing,i)) = Ix(k,l,n,p,r,t,Just a,i)
+mergey ("Item",[a])       (Ix(k,l,n,p,r,t,u,Nothing)) = Ix(k,l,n,p,r,t,u,Just a)
+mergey ("Pair",[a])       (Ix(k,l,n,Nothing,r,t,u,i)) = Ix(k,l,n,Just$Right a,r,t,u,i)
+mergey ("LeftPair",[a])   (Ix(k,l,n,Nothing,r,t,u,i)) = Ix(k,l,n,Just$Left a,r,t,u,i)
+mergey ("Record",[a,b])   (Ix(k,l,n,p,Nothing,t,u,i)) = Ix(k,l,n,p,Just$Right(a,b),t,u,i)
+mergey ("LeftRecord",[a,b]) (Ix(k,l,n,p,Nothing,t,u,i)) = Ix(k,l,n,p,Just$Left(a,b),t,u,i)
+mergey ("Tick",[a])       (Ix(k,l,n,p,r,Nothing,u,i)) = Ix(k,l,n,p,r,Just a,u,i)
+mergey _                  i                           = i
 
 -----------------------------------------------------------
 -- check that in a syntactic extension like:
