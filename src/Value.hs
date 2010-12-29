@@ -214,23 +214,23 @@ showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs
 showSynLeftList v = showVconInParens v
 
 
-showSynRecord (Vcon (Global c,ext) [])         | recordNil c ext = "{}" ++ postscript (synKey ext)
-showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext = "{" ++ show tag ++ "=" ++ show x ++ f xs ++ "}" ++ syntag
-    where f (Vlazy cs _) = " ; ..."
-          f (Vcon (Global c,ext) [tag,x,xs])   | recordCons c ext = "," ++ show tag ++ "=" ++ show x ++ f xs
-          f (Vcon (Global c,ext) [])           | recordNil c ext  = ""
-          f (Vswap cs u) = f (swaps cs u)
-          f v = " ; " ++ show v
+showSynRecord (Vcon (Global c,ext) [])            | recordNil c ext = "{}" ++ postscript (synKey ext)
+showSynRecord (Vcon (Global c,ext) [tag,x,xs])    | recordCons c ext = "{" ++ show tag ++ "=" ++ show x ++ f xs ext ++ "}" ++ syntag
+    where f (Vlazy cs _) _ = " ; ..."
+          f (Vcon (Global c,ext) [tag,x,xs]) ext' | ext == ext' && recordCons c ext = "," ++ show tag ++ "=" ++ show x ++ f xs ext'
+          f (Vcon (Global c,ext) [])         ext' | ext == ext' && recordNil c ext  = ""
+          f (Vswap cs u) ext' = f (swaps cs u) ext'
+          f v _ = " ; " ++ show v
           syntag = postscript (synKey ext)
 showSynRecord v = showVconInParens v
 
 showSynLeftRecord (Vcon (Global c,ext) [])         | leftRecordNil c ext = "{}" ++ postscript (synKey ext)
-showSynLeftRecord (Vcon (Global c,ext) [xs,tag,x]) | leftRecordCons c ext = "{" ++ f xs ++ show tag ++ "=" ++ show x ++ "}" ++ syntag
-    where f (Vlazy cs _) = "... ; "
-          f (Vcon (Global c,ext) [xs,tag,x])       | leftRecordCons c ext = f xs ++ show tag ++ "=" ++ show x ++ ","
-          f (Vcon (Global c,ext) [])               | leftRecordNil c ext  = ""
-          f (Vswap cs u) = f (swaps cs u)
-          f v = show v ++ " ; "
+showSynLeftRecord (Vcon (Global c,ext) [xs,tag,x]) | leftRecordCons c ext = "{" ++ f xs ext ++ show tag ++ "=" ++ show x ++ "}" ++ syntag
+    where f (Vlazy cs _) _ = "... ; "
+          f (Vcon (Global c,ext) [xs,tag,x])  ext' | ext == ext' && leftRecordCons c ext = f xs ext' ++ show tag ++ "=" ++ show x ++ ","
+          f (Vcon (Global c,ext) [])          ext' | ext == ext' && leftRecordNil c ext  = ""
+          f (Vswap cs u) ext' = f (swaps cs u) ext'
+          f v _ = show v ++ " ; "
           syntag = postscript (synKey ext)
 showSynLeftRecord v = showVconInParens v
 
