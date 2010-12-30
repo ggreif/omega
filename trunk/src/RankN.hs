@@ -3688,7 +3688,7 @@ dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS] )
                      in (d4,PP.parens(text name <> kind))
 
 exSynListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
-exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
+exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
      = (d2, text "[" <> PP.cat ans <> text ("]"++postscript (synKey ext)))
   where (d2,ans) = f d t
         f d (TyCon ext' _ c k) | ext' == ext && listNil c ext = (d,[])
@@ -3707,7 +3707,7 @@ exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
 exSynListD d t = (d,text ("Ill-formed List extension: "++sht t))
 
 exSynRecordD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
-exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)) | recordCons c1 ext
+exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
       = (d2, text "{" <> PP.cat ans <> text ("}"++postscript (synKey ext)))
   where (d2,ans) = f d t
         f d (TyCon ext' _ c k) | ext' == ext && recordNil c ext = (d,[])
