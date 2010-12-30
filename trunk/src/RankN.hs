@@ -2786,8 +2786,8 @@ showp x = show x
 -- show instances
 
 isRow :: Tau -> Bool
-isRow (TyApp (TyApp (TyCon sx _ c _) x) y) | recordCons c sx = True
-isRow (TyCon sx _ c _) | recordNil c sx = True
+isRow (TyApp (TyApp (TyCon sx _ c _) x) y) | recordCons c sx || leftRecordCons c sx = True
+isRow (TyCon sx _ c _) | recordNil c sx || leftRecordNil c sx = True
 isRow _ = False
 
 unsafeUnwind :: Swap a => L a -> ([(Name,Kind,Quant)],a)
@@ -3562,6 +3562,8 @@ dTau xs (t@(TyCon ext _ s _))                     | unitUnit s ext = (xs, text (
 dTau xs (t@(TyApp (TyCon ext _ s _) _))           | itemItem s ext = exSynItemD xs t
 dTau xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _))
                                                   | recordCons c ext = exSynRecordD xs t
+dTau xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _))
+                                                  | leftRecordCons c ext = exSynLeftRecordD xs t
 dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext || leftPairProd c ext = exSynPairD xs t
 
 {-
@@ -3735,10 +3737,29 @@ exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
               (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && recordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 y
                       ans = (tags <> text "=" <> elem <> text ","):tail
-              other -> (d2,[tags<> text "=" <> elem <> text ";",ans])
+              other -> (d2,[tags <> text "=" <> elem <> text ";",ans])
                 where (d2,ans) = dTau d1 other
         f d t = (d2,[text ";" <> ans]) where (d2,ans) = dTau d t
 exSynRecordD d t = (d,text("Ill-formed Record extension: "++sht t))
+
+exSynLeftRecordD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
+exSynLeftRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
+      = (d2, text "{" <> PP.cat ans <> text ("}"++postscript (synKey ext)))
+  where (d2,ans) = f d t
+        f d (TyCon ext' _ c k) | ext' == ext && leftRecordNil c ext = (d,[])
+        f d (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) x) tag) y) | ext' == ext && leftRecordCons c1 ext =
+          let (d0,tags) = dTau d tag
+              (d1,elem) = dTau d0 y
+          in case x of
+              (TyCon ext' _ c2 _) | ext' == ext && leftRecordNil c2 ext -> (d1,[tags <> text "=" <> elem])
+              (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && leftRecordCons c1 ext -> (d2,ans)
+                where (d2,tail) = f d1 x
+                      ans = tail ++ [text "," <> tags <> text "=" <> elem]
+              other -> (d2,[ans, text ";" <> tags <> text "=" <> elem])
+                where (d2,ans) = dTau d1 other
+        f d t = (d2,[ans <> text "+;"]) where (d2,ans) = dTau d t
+exSynLeftRecordD d t = (d,text("Ill-formed LeftRecord extension: "++sht t))
+
 
 exSynPairD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynPairD d (t@(TyApp (TyApp (TyCon ext' _ c1 _) x) y))
