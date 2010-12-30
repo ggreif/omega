@@ -3720,7 +3720,7 @@ exSynLeftListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
            other -> (d2, [ans <> text "; ", elem])
              where (d1,elem) = dTau d y
                    (d2,ans) = dTau d1 other
-        f d t = (d2,[text "; " <> ans]) where (d2,ans) = dTau d t
+        f d t = (d2,[ans <> text "; "]) where (d2,ans) = dTau d t
 exSynLeftListD d t = (d,text ("Ill-formed LeftList extension: "++sht t))
 
 
@@ -3757,7 +3757,7 @@ exSynLeftRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
                       ans = tail ++ [text "," <> tags <> text "=" <> elem]
               other -> (d2,[ans, text ";" <> tags <> text "=" <> elem])
                 where (d2,ans) = dTau d1 other
-        f d t = (d2,[ans <> text "+;"]) where (d2,ans) = dTau d t
+        f d t = (d2,[ans <> text ";"]) where (d2,ans) = dTau d t
 exSynLeftRecordD d t = (d,text("Ill-formed LeftRecord extension: "++sht t))
 
 
