@@ -3561,6 +3561,7 @@ dTau xs (t@(TyApp (TyCon ext _ c _) x)) | natSucc c ext = simple (exSynNat xs t)
 dTau xs (t@(TyApp (TyCon ext _ c _) x)) | tickSucc c ext = simple (exSynTick xs t)
 dTau xs (t@(TyCon ext _ s _))           | listNil s ext || leftListNil s ext = (xs, text("[]"++postscript (synKey ext)))
 dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | listCons c ext = exSynListD xs t
+dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | leftListCons c ext = exSynLeftListD xs t
 dTau xs (t@(TyCon ext _ s _))                     | recordNil s ext || leftRecordNil s ext = (xs, text ("{}"++postscript (synKey ext)))
 dTau xs (t@(TyCon ext _ s _))                     | unitUnit s ext = (xs, text ("()"++postscript (synKey ext)))
 dTau xs (t@(TyApp (TyCon ext _ s _) _))           | itemItem s ext = exSynItemD xs t
@@ -3705,6 +3706,26 @@ exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
                    (d2,ans) = dTau d1 other
         f d t = (d2,[text "; " <> ans]) where (d2,ans) = dTau d t
 exSynListD d t = (d,text ("Ill-formed List extension: "++sht t))
+
+exSynLeftListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
+exSynLeftListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
+     = (d2, text "[" <> PP.cat ans <> text ("]"++postscript (synKey ext)))
+  where (d2,ans) = f d t
+        f d (TyCon ext' _ c k) | ext' == ext && leftListNil c ext = (d,[])
+        f d (TyApp (TyApp (TyCon ext' _ c1 _) x) y) | ext' == ext && leftListCons c1 ext =
+          case x of
+           (TyCon ext' _ c2 _) | ext' == ext && leftListNil c2 ext -> (d2,[w])
+                   where (d2,w) = dTau d y
+           (TyApp (TyApp (TyCon ext' _ c1 _) _) _) | ext' == ext && leftListCons c1 ext -> (d2,ans)
+             where (d1,elem) = dTau d y
+                   (d2,tail) = f d1 x
+                   ans = tail ++ [text "," <> elem]
+           other -> (d2, [ans <> text "; ", elem])
+             where (d1,elem) = dTau d y
+                   (d2,ans) = dTau d1 other
+        f d t = (d2,[text "; " <> ans]) where (d2,ans) = dTau d t
+exSynLeftListD d t = (d,text ("Ill-formed LeftList extension: "++sht t))
+
 
 exSynRecordD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
