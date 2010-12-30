@@ -2790,11 +2790,6 @@ isRow (TyApp (TyApp (TyCon sx _ c _) x) y) | recordCons c sx = True
 isRow (TyCon sx _ c _) | recordNil c sx = True
 isRow _ = False
 
-rowElem :: Tau -> [Tau] -> Either [Tau] ([Tau],Tau)
-rowElem (TyCon sx _ "RNil" _) es = Left (reverse es)
-rowElem (TyApp (TyApp (TyCon sx _ "RCons" _) e) y) es = rowElem y (e:es)
-rowElem x es = Right(reverse es,x)
-
 unsafeUnwind :: Swap a => L a -> ([(Name,Kind,Quant)],a)
 unsafeUnwind (Nil t) = ([],t)
 unsafeUnwind (Cons (k,q) b) = ((x,k,q):xs,t)
@@ -3765,6 +3760,7 @@ dPar xs z@(TyApp (TyCon sx _ "[]" _) x) = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | listCons c lx  = dTau xs z
+dPar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | leftListCons c lx  = dTau xs z
 dPar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | recordCons c rx = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairProd c px = dTau xs z
 dPar xs z@(TyApp (TyCon nx _ c _) _) | natSucc c nx = dTau xs z
