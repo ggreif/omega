@@ -3499,54 +3499,6 @@ exSynTick d (TyApp (TyCon synext _ c k) x)| tickSucc c synext = f d 1 x
                   in (d2,"("++ ans ++"`"++ show n ++ ")" ++ postscript (synKey synext))
 exSynTick d v = (d,"Ill-formed Tick extension: "++shtt v)
 
-
-
-
-
-exSynRecord d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)) | recordCons c1 ext
-      = (d2,"{" ++ ans ++ "}"++postscript (synKey ext))
-  where (d2,ans) = f d t
-        f d (TyCon ext _ c k)| recordNil c ext = (d,"")
-        f d (TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)| recordCons c1 ext =
-          let (d0,tags) = exhibit d tag
-              (d1,elem) = exhibit d0 x
-          in case y of
-              (TyCon ext2 _ c2 _) | recordNil c2 ext2 -> (d1,tags++"="++elem)
-              (TyApp (TyApp (TyApp (TyCon ext3 _ c1 _) _) _) _)| recordCons c1 ext3 -> (d2,ans)
-                where (d2,tail) = f d1 y
-                      ans = tags++"="++elem ++ "," ++ tail
-              other -> (d2,tags++"="++elem++"; "++ans)
-                where (d2,ans) = exhibit d1 other
-        f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
-exSynRecord d t = (d,"2Ill-formed Record extension: "++sht t)
-
-exSynList :: forall t. (NameStore t) => t -> Tau -> (t, [Char])
-exSynList d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
-     = (d2,"[" ++ ans ++ "]"++postscript (synKey ext))
-  where (d2,ans) = f d t
-        f d (TyCon ext2 _ c k)| listNil c ext2 = (d,"")
-        f d (TyApp (TyApp (TyCon ext3 _ c1 _) x) y)| listCons c1 ext3 =
-          case y of
-           (TyCon ext3 _ c2 _) | listNil c2 ext3 -> exhibit d x
-           (TyApp (TyApp (TyCon ext4 _ c1 _) _) _)| listCons c1 ext4 -> (d2,ans)
-             where (d1,elem) = exhibit d x
-                   (d2,tail) = f d1 y
-                   ans = elem ++ "," ++ tail
-           other -> (d2,elem++"; "++ans)
-             where (d1,elem) = exhibit d x
-                   (d2,ans) = exhibit d1 other
-        f d t = (d2,"; "++ans) where (d2,ans) = exhibit d t
-exSynList d t = (d,"2Ill-formed List extension: "++sht t)
-
-exSynPair d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext 
-  = (d3,"(" ++ ws ++ ")"++postscript (synKey ext))
-  -- = (d2,"(" ++ x' ++","++ y' ++ ")"++postscript (synKey ext))
-  where collect (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext = x : collect y
-        collect y = [y]
-        (d1,x') = exhibit d x
-        (d2,y') = exhibit d1 y
-        (d3,ws) = exhibitL exhibit d (collect t) ","
-
 exhibitNmK xs (nm,k) = useStoreName nm k ("'"++) xs          -- One or the other
                       -- (zs,"("++ans++":: "++k2++")")
     where (ys,ans) = useStoreName nm k ("'"++) xs
