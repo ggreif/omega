@@ -3614,7 +3614,7 @@ dTau xs (t@(TyCon ext _ s _))                     | unitUnit s ext = (xs, text (
 dTau xs (t@(TyApp (TyCon ext _ s _) _))           | itemItem s ext = exSynItemD xs t
 dTau xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _))
                                                   | recordCons c ext = exSynRecordD xs t
-dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext = exSynPairD xs t                                                  
+dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext || leftPairProd c ext = exSynPairD xs t                                                  
 {-
 dTau xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug, use something like: ["L","Bush"] 
          = (ys,text nm <> text "(" <> text l' <> text "," <> PP.hcat vs' <> text "." <> k' <> text ")")
@@ -3772,9 +3772,10 @@ exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)) | recordCo
 exSynRecordD d t = (d,text("2Ill-formed Record extension: "++sht t))
 
 exSynPairD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
-exSynPairD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext 
+exSynPairD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext || leftPairProd c1 ext
      = (d3,text "(" <> PP.cat ws <> text (")"++postscript (synKey ext)))
-  where collect (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext = x : collect y
+  where collect (TyApp (TyApp (TyCon ext _ c1 _) x) y) | pairProd c1 ext = x : collect y
+        collect (TyApp (TyApp (TyCon ext _ c1 _) x) y) | leftPairProd c1 ext = collect x ++ [y]
         collect y = [y]
         (d1,x') = dTau d x
         (d2,y') = dTau d1 y
