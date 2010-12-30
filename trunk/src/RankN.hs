@@ -3607,10 +3607,11 @@ dTau:: (NameStore d) => d -> Tau -> (d,Doc)
 dTau xs (t@(TyCon ext _ c _))           | natZero c ext = (xs,text ("0" ++ postscript (synKey ext)))
 dTau xs (t@(TyApp (TyCon ext _ c _) x)) | natSucc c ext = simple (exSynNat xs t) 
 dTau xs (t@(TyApp (TyCon ext _ c _) x)) | tickSucc c ext = simple (exSynTick xs t)
-dTau xs (t@(TyCon ext _ s _))           | listNil s ext = (xs, text("[]"++postscript (synKey ext)))
+dTau xs (t@(TyCon ext _ s _))           | listNil s ext || leftListNil s ext = (xs, text("[]"++postscript (synKey ext)))
 dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | listCons c ext = exSynListD xs t
-dTau xs (t@(TyCon ext _ s _))                     | recordNil s ext = (xs, text ("{}"++postscript (synKey ext)))
-dTau xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _)) 
+dTau xs (t@(TyCon ext _ s _))                     | recordNil s ext || leftRecordNil s ext = (xs, text ("{}"++postscript (synKey ext)))
+dTau xs (t@(TyCon ext _ s _))                     | unitUnit s ext = (xs, text ("()"++postscript (synKey ext)))
+dTau xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _))
                                                   | recordCons c ext = exSynRecordD xs t
 dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext = exSynPairD xs t                                                  
 {-
