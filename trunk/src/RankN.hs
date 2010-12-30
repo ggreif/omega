@@ -3611,6 +3611,7 @@ dTau xs (t@(TyCon ext _ s _))           | listNil s ext || leftListNil s ext = (
 dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | listCons c ext = exSynListD xs t
 dTau xs (t@(TyCon ext _ s _))                     | recordNil s ext || leftRecordNil s ext = (xs, text ("{}"++postscript (synKey ext)))
 dTau xs (t@(TyCon ext _ s _))                     | unitUnit s ext = (xs, text ("()"++postscript (synKey ext)))
+dTau xs (t@(TyApp (TyCon ext _ s _) _))           | itemItem s ext = exSynItemD xs t
 dTau xs (t@(TyApp (TyApp (TyApp (TyCon ext _ c _) _) _) _))
                                                   | recordCons c ext = exSynRecordD xs t
 dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext = exSynPairD xs t                                                  
@@ -3779,8 +3780,11 @@ exSynPairD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | pairProd c1 ext
         (d2,y') = dTau d1 y
         (d3,ws) = thread dTau (text ",") d (collect t) 
 
+exSynItemD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
+exSynItemD d (t@(TyApp (TyCon ext _ c1 _) x)) | itemItem c1 ext
+     = (d1,text "(" <> x' <> text (")"++postscript (synKey ext)))
+  where (d1,x') = dTau d x
 
-   
 
 dPar xs z@(TyApp (TyCon sx _ "[]" _) x) = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = dTau xs z
