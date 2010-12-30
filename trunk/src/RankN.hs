@@ -3685,43 +3685,43 @@ dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS] )
                 (Star LvZero) -> (d3,text name)
                 _ -> let (d4,kind) = dKinding d3 k
                      in (d4,PP.parens(text name <> kind))                     
-                     
+
 exSynListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y)) | listCons c1 ext
      = (d2, text "[" <> PP.cat ans <> text ("]"++postscript (synKey ext)))
   where (d2,ans) = f d t
-        f d (TyCon ext2 _ c k) | listNil c ext2 = (d,[])
-        f d (TyApp (TyApp (TyCon ext3 _ c1 _) x) y) | listCons c1 ext3 =
+        f d (TyCon ext' _ c k) | ext' == ext && listNil c ext = (d,[])
+        f d (TyApp (TyApp (TyCon ext' _ c1 _) x) y) | ext' == ext && listCons c1 ext =
           case y of
-           (TyCon ext3 _ c2 _) | listNil c2 ext3 -> (d2,[w])
-                   where (d2,w) = dTau d x            
-           (TyApp (TyApp (TyCon ext4 _ c1 _) _) _)| listCons c1 ext4 -> (d2,ans)
+           (TyCon ext' _ c2 _) | ext' == ext && listNil c2 ext -> (d2,[w])
+                   where (d2,w) = dTau d x
+           (TyApp (TyApp (TyCon ext' _ c1 _) _) _) | ext' == ext && listCons c1 ext -> (d2,ans)
              where (d1,elem) = dTau d x
                    (d2,tail) = f d1 y
                    ans = (elem <> text ","): tail
            other -> (d2, [elem <> text "; ", ans])
              where (d1,elem) = dTau d x
-                   (d2,ans) = dTau d1 other                   
+                   (d2,ans) = dTau d1 other
         f d t = (d2,[text "; " <> ans]) where (d2,ans) = dTau d t
-exSynListD d t = (d,text ("2Ill-formed List extension: "++sht t))
+exSynListD d t = (d,text ("Ill-formed List extension: "++sht t))
 
 exSynRecordD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)) | recordCons c1 ext
       = (d2, text "{" <> PP.cat ans <> text ("}"++postscript (synKey ext)))
   where (d2,ans) = f d t
-        f d (TyCon ext _ c k)| recordNil c ext = (d,[])
-        f d (TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y)| recordCons c1 ext =
+        f d (TyCon ext' _ c k) | ext' == ext && recordNil c ext = (d,[])
+        f d (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) tag) x) y) | ext' == ext && recordCons c1 ext =
           let (d0,tags) = dTau d tag
               (d1,elem) = dTau d0 x
           in case y of
-              (TyCon ext2 _ c2 _) | recordNil c2 ext2 -> (d1,[tags<> text "=" <>elem])
-              (TyApp (TyApp (TyApp (TyCon ext3 _ c1 _) _) _) _)| recordCons c1 ext3 -> (d2,ans)
+              (TyCon ext' _ c2 _) | ext' == ext && recordNil c2 ext -> (d1,[tags <> text "=" <> elem])
+              (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && recordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 y
                       ans = (tags <> text "=" <> elem <> text ","):tail
               other -> (d2,[tags<> text "=" <> elem <> text ";",ans])
                 where (d2,ans) = dTau d1 other
         f d t = (d2,[text ";" <> ans]) where (d2,ans) = dTau d t
-exSynRecordD d t = (d,text("2Ill-formed Record extension: "++sht t))
+exSynRecordD d t = (d,text("Ill-formed Record extension: "++sht t))
 
 exSynPairD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynPairD d (t@(TyApp (TyApp (TyCon ext' _ c1 _) x) y))
