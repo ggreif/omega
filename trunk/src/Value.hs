@@ -193,50 +193,50 @@ showSynPair (p@(Vcon (Global c,ext') [x,y])) =
         collect y = [y]
 showSynPair v = showVconInParens v
 
-showSynList (Vcon (Global c,ext) []) | listNil c ext = "[]" ++ postscript (synKey ext)
-showSynList (Vcon (Global c,ext) [x,xs]) | listCons c ext = "[" ++ show x ++ f xs ext ++ "]"++tag
-    where f (Vlazy cs _) _ = " ; ..."
-          f (Vcon (Global c,ext) [x,xs]) ext' | ext == ext' && listCons c ext = "," ++ show x ++ f xs ext'
-          f (Vcon (Global c,ext) []) ext' | ext == ext' && listNil c ext = ""
-          f (Vswap cs u) ext' = f (swaps cs u) ext'
-          f v _ = " ; " ++ show v
+showSynList (Vcon (Global c,ext) [])      | listNil c ext = "[]" ++ postscript (synKey ext)
+showSynList (Vcon (Global c,ext) [x,xs])  | listCons c ext = "[" ++ show x ++ f xs ++ "]"++tag
+    where f (Vlazy cs _) = " ; ..."
+          f (Vcon (Global c,ext') [x,xs]) | ext == ext' && listCons c ext = "," ++ show x ++ f xs
+          f (Vcon (Global c,ext') [])     | ext == ext' && listNil c ext = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f v = " ; " ++ show v
           tag = postscript (synKey ext)
 showSynList v = showVconInParens v
 
-showSynLeftList (Vcon (Global c,ext) []) | leftListNil c ext = "[]" ++ postscript (synKey ext)
-showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs ext ++ show x ++ "]"++tag
-    where f (Vlazy cs _) _ = "... ; "
-          f (Vcon (Global c,ext) [xs,x]) ext' | ext == ext' && leftListCons c ext = f xs ext' ++ show x ++ ","
-          f (Vcon (Global c,ext) []) ext' | ext == ext' && leftListNil c ext = ""
-          f (Vswap cs u) ext' = f (swaps cs u) ext'
-          f v _ = show v ++ " ; "
+showSynLeftList (Vcon (Global c,ext) [])      | leftListNil c ext = "[]" ++ postscript (synKey ext)
+showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs ++ show x ++ "]"++tag
+    where f (Vlazy cs _) = "... ; "
+          f (Vcon (Global c,ext') [xs,x])     | ext == ext' && leftListCons c ext = f xs ++ show x ++ ","
+          f (Vcon (Global c,ext') [])         | ext == ext' && leftListNil c ext = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f v = show v ++ " ; "
           tag = postscript (synKey ext)
 showSynLeftList v = showVconInParens v
 
 
-showSynRecord (Vcon (Global c,ext) [])            | recordNil c ext = "{}" ++ postscript (synKey ext)
-showSynRecord (Vcon (Global c,ext) [tag,x,xs])    | recordCons c ext = "{" ++ show tag ++ "=" ++ show x ++ f xs ext ++ "}" ++ syntag
-    where f (Vlazy cs _) _ = " ; ..."
-          f (Vcon (Global c,ext) [tag,x,xs]) ext' | ext == ext' && recordCons c ext = "," ++ show tag ++ "=" ++ show x ++ f xs ext'
-          f (Vcon (Global c,ext) [])         ext' | ext == ext' && recordNil c ext  = ""
-          f (Vswap cs u) ext' = f (swaps cs u) ext'
-          f v _ = " ; " ++ show v
+showSynRecord (Vcon (Global c,ext) [])         | recordNil c ext = "{}" ++ postscript (synKey ext)
+showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext = "{" ++ show tag ++ "=" ++ show x ++ f xs ++ "}" ++ syntag
+    where f (Vlazy cs _) = " ; ..."
+          f (Vcon (Global c,ext') [tag,x,xs])  | ext == ext' && recordCons c ext = "," ++ show tag ++ "=" ++ show x ++ f xs
+          f (Vcon (Global c,ext') [])          | ext == ext' && recordNil c ext  = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f v = " ; " ++ show v
           syntag = postscript (synKey ext)
 showSynRecord v = showVconInParens v
 
 showSynLeftRecord (Vcon (Global c,ext) [])         | leftRecordNil c ext = "{}" ++ postscript (synKey ext)
-showSynLeftRecord (Vcon (Global c,ext) [xs,tag,x]) | leftRecordCons c ext = "{" ++ f xs ext ++ show tag ++ "=" ++ show x ++ "}" ++ syntag
-    where f (Vlazy cs _) _ = "... ; "
-          f (Vcon (Global c,ext) [xs,tag,x])  ext' | ext == ext' && leftRecordCons c ext = f xs ext' ++ show tag ++ "=" ++ show x ++ ","
-          f (Vcon (Global c,ext) [])          ext' | ext == ext' && leftRecordNil c ext  = ""
-          f (Vswap cs u) ext' = f (swaps cs u) ext'
-          f v _ = show v ++ " ; "
+showSynLeftRecord (Vcon (Global c,ext) [xs,tag,x]) | leftRecordCons c ext = "{" ++ f xs ++ show tag ++ "=" ++ show x ++ "}" ++ syntag
+    where f (Vlazy cs _) = "... ; "
+          f (Vcon (Global c,ext') [xs,tag,x])      | ext == ext' && leftRecordCons c ext = f xs ++ show tag ++ "=" ++ show x ++ ","
+          f (Vcon (Global c,ext') [])              | ext == ext' && leftRecordNil c ext  = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f v = show v ++ " ; "
           syntag = postscript (synKey ext)
 showSynLeftRecord v = showVconInParens v
 
 
-showSynNat (Vcon (Global c,ext) []) | natZero c ext = "0" ++ postscript (synKey ext)
-showSynNat (Vcon (Global c,ext) [x])| natSucc c ext = (f 1 x)++ postscript (synKey ext)
+showSynNat (Vcon (Global c,ext) [])  | natZero c ext = "0" ++ postscript (synKey ext)
+showSynNat (Vcon (Global c,ext) [x]) | natSucc c ext = (f 1 x)++ postscript (synKey ext)
       where f n (Vcon (Global c,ext) [])  | natZero c ext = show n
             f n (Vcon (Global c,ext) [x]) | natSucc c ext = f (n+1) x
             f n (Vswap cs u) = f n (swaps cs u)
