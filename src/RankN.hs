@@ -3783,6 +3783,7 @@ dPar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | listCons c lx  = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon lx _ c _) _) _) | leftListCons c lx  = dTau xs z
 dPar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | recordCons c rx = dTau xs z
+dPar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | leftRecordCons c rx = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairProd c px = dTau xs z
 dPar xs z@(TyApp (TyCon nx _ c _) _) | natSucc c nx = dTau xs z
 dPar xs  z | isRow z = dTau xs z
