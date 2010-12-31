@@ -1,10 +1,3 @@
--- Copyright (c) Tim Sheard
--- OGI School of Science & Engineering, Oregon Health & Science University
--- Maseeh College of Engineering, Portland State University
--- Subject to conditions of distribution and use; see LICENSE.txt for details.
--- Mon Mar 31 02:56:16 Pacific Daylight Time 2008
--- Omega Interpreter: version 1.4.2
-
 -- primitives
 
 apply f x = f x          -- f $ g 5 --> apply f (g 5)
@@ -18,13 +11,6 @@ data Monad :: (*0 ~> *0) ~> *0 where
                    ((forall a . String -> m a)) -> 
                    Monad m 
                    
-{-                   
-data Monad m = 
-   Monad (forall a . a -> m a) 
-         (forall a b . m a -> (a -> m b) -> m b)
-         (forall a . [Char] -> m a)
--}
-        
 maybeM =  (Monad Just bind fail)
   where return x = Just x
         fail s = Nothing
@@ -103,5 +89,3 @@ contM = (Monad return bind fail)
   where return x = C (\k -> k x)
         fail s = error s
         bind (C m) f = C (\k -> m (\i -> unContM (f i) k))
-                
-
