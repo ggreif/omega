@@ -1,4 +1,6 @@
-
+{-# LANGUAGE FlexibleContexts
+  , UndecidableInstances
+  #-}
 module Value where
 import Auxillary(plist,plistf)
 import Monads(FIO,fio,HasNext(..))
@@ -6,20 +8,17 @@ import Monad
 import Syntax
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Bind
-import RankN(Z,postscript)
-import SyntaxExt(SynExt(..),synKey)
+import RankN(Z,postscript,DocReady(..))
+import SyntaxExt
+import Text.PrettyPrint.HughesPJ(Doc,text)
+
 -----------------------------------------------
-{- These are now defined in the Syntax file
+{- These are now defined in the Syntax.hs file
 
 data Ev = Ev [(Var,V)] (V,V,V)
 
-showenv (Ev xs) =
-  "Ev with \n   "++show (map fst xs)
-
 type EnvFrag = [(Var,V)]
 type Perm = [(Name,Name)]
-
-compose = Vprimfun "(.)" (\
 
 data V
   = Vlit Lit
@@ -42,6 +41,8 @@ data V
 --------------------------------------
 -}
 
+instance DocReady V where
+  dDoc d x = (d,text (show x))
 
 class Push t where
   push :: Ev -> t -> t
@@ -119,7 +120,6 @@ instance Swap Exp where
   swaps cs (CheckT e) = CheckT (swaps cs e)
   swaps cs (Lazy e) = Lazy (swaps cs e)
   swaps cs (Exists e) = Exists (swaps cs e)
-  swaps cs (Under e f) = Under (swaps cs e) (swaps cs f)
   swaps cs (Bracket e) = Bracket (swaps cs e)
   swaps cs (Escape e) = Escape(swaps cs e)
   swaps cs (Run e) = Run (swaps cs e)
@@ -147,7 +147,7 @@ instance Swap Dec where
   swaps cs (Pat loc v vs p) = Pat loc (swaps cs v) (swaps cs vs) (swaps cs p)
   swaps cs (TypeSig loc v t) = TypeSig loc v t -- What do we do here?
   swaps cs (Prim loc nm t) = Prim loc nm t
-  swaps cs (Data loc b n v sig vs cons ds exts) = Data loc b n v sig vs cons ds exts
+  swaps cs (Data loc b n v sig vs cons ds ) = Data loc b n v sig vs cons ds
   swaps cs (GADT x1 x2 x3 x4 x5 x6 x7) = (GADT x1 x2 x3 x4 x5 x6 x7)
   swaps cs (TypeSyn loc nm args ty) = TypeSyn loc nm args ty
   swaps cs (Flag x y) = Flag (swaps cs x) (swaps cs y)
@@ -178,71 +178,125 @@ instance Show Ev where
 
 --------- instances for V ---------------------------------------------------
 
+showSynUnit (Vcon (Global c,ext) []) | unitUnit c ext =
+   "()" ++ postscript (synKey ext)
+showSynUnit v = showVconInParens v
 
-showSynPair (Vcon (Global c,Px(key,pair)) [x,y]) | c==pair =
-   "(" ++ show x ++","++show y++")"++postscript key
-showSynPair v = showVcon v
+showSynItem (Vcon (Global c,ext) [x]) | itemItem c ext =
+   "(" ++ show x ++ ")" ++ postscript (synKey ext)
+showSynItem v = showVconInParens v
 
-showSynList (Vcon (Global c,Lx(key,nil,cons)) []) | c==nil = "[]" ++ postscript key
-showSynList (Vcon (Global c,Lx(key,nil,cons)) [x,xs]) = "[" ++ show x ++ f xs
-    where f (Vlazy cs _) = " ...]"
-          f (Vcon (Global c,Lx(key,nil,cons)) [x,xs])| c==cons = "," ++ show x ++ f xs
-          f (Vcon (Global c,Lx(key,nil,cons)) []) | c==nil = "]" ++ postscript key
+showSynPair (p@(Vcon (Global c,ext') [x,y])) =
+   plistf show "(" (collect p) "," ")" ++ postscript (synKey ext')
+  where collect (Vcon (Global c,ext) [x,y]) | ext == ext' && pairProd c ext = x: collect y
+        collect (Vcon (Global c,ext) [x,y]) | ext == ext' && leftPairProd c ext = collect x ++ [y]
+        collect y = [y]
+showSynPair v = showVconInParens v
+
+showSynList (Vcon (Global c,ext) [])      | listNil c ext = "[]" ++ postscript (synKey ext)
+showSynList (Vcon (Global c,ext) [x,xs])  | listCons c ext = "[" ++ show x ++ f xs ++ "]"++tag
+    where f (Vlazy cs _) = " ; ..."
+          f (Vcon (Global c,ext') [x,xs]) | ext == ext' && listCons c ext = "," ++ show x ++ f xs
+          f (Vcon (Global c,ext') [])     | ext == ext' && listNil c ext = ""
           f (Vswap cs u) = f (swaps cs u)
-          f v = showVcon v
-showSynList v = showVcon v
+          f v = " ; " ++ show v
+          tag = postscript (synKey ext)
+showSynList v = showVconInParens v
 
-
-showSynRecord (Vcon (Global c,Rx(key,nil,cons)) []) | c==nil = "{}" ++ postscript key
-showSynRecord (Vcon (Global c,Rx(key,nil,cons)) [tag,x,xs]) = "{" ++ show tag++"="++show x ++ f xs
-    where f (Vlazy cs _) = " ...}"
-          f (Vcon (Global c,Rx(key,nil,cons)) [tag,x,xs])| c==cons = "," ++ show tag++"="++show x ++ f xs
-          f (Vcon (Global c,Rx(key,nil,cons)) []) | c==nil = "}" ++ postscript key
+showSynLeftList (Vcon (Global c,ext) [])      | leftListNil c ext = "[]" ++ postscript (synKey ext)
+showSynLeftList (Vcon (Global c,ext) [xs, x]) | leftListCons c ext = "[" ++ f xs ++ show x ++ "]"++tag
+    where f (Vlazy cs _) = "... ; "
+          f (Vcon (Global c,ext') [xs,x])     | ext == ext' && leftListCons c ext = f xs ++ show x ++ ","
+          f (Vcon (Global c,ext') [])         | ext == ext' && leftListNil c ext = ""
           f (Vswap cs u) = f (swaps cs u)
-          f v = showVcon v
-showSynRecord v = showVcon v
+          f v = show v ++ " ; "
+          tag = postscript (synKey ext)
+showSynLeftList v = showVconInParens v
 
 
-showSynNat (Vcon (Global c,Nx(key,zero,succ)) []) | c==zero = "0" ++ postscript key
-showSynNat (Vcon (Global c,Nx(key,zero,succ)) [x])| c==succ = (f 1 x)++ postscript key
-      where f n (Vcon (Global c,Nx(key,zero,succ)) []) | c==zero = show n
-            f n (Vcon (Global c,Nx(key,zero,succ)) [x]) | c==succ = f (n+1) x
+showSynRecord (Vcon (Global c,ext) [])         | recordNil c ext = "{}" ++ postscript (synKey ext)
+showSynRecord (Vcon (Global c,ext) [tag,x,xs]) | recordCons c ext = "{" ++ show tag ++ "=" ++ show x ++ f xs ++ "}" ++ syntag
+    where f (Vlazy cs _) = " ; ..."
+          f (Vcon (Global c,ext') [tag,x,xs])  | ext == ext' && recordCons c ext = "," ++ show tag ++ "=" ++ show x ++ f xs
+          f (Vcon (Global c,ext') [])          | ext == ext' && recordNil c ext  = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f v = " ; " ++ show v
+          syntag = postscript (synKey ext)
+showSynRecord v = showVconInParens v
+
+showSynLeftRecord (Vcon (Global c,ext) [])         | leftRecordNil c ext = "{}" ++ postscript (synKey ext)
+showSynLeftRecord (Vcon (Global c,ext) [xs,tag,x]) | leftRecordCons c ext = "{" ++ f xs ++ show tag ++ "=" ++ show x ++ "}" ++ syntag
+    where f (Vlazy cs _) = "... ; "
+          f (Vcon (Global c,ext') [xs,tag,x])      | ext == ext' && leftRecordCons c ext = f xs ++ show tag ++ "=" ++ show x ++ ","
+          f (Vcon (Global c,ext') [])              | ext == ext' && leftRecordNil c ext  = ""
+          f (Vswap cs u) = f (swaps cs u)
+          f v = show v ++ " ; "
+          syntag = postscript (synKey ext)
+showSynLeftRecord v = showVconInParens v
+
+
+showSynNat (Vcon (Global c,ext) [])  | natZero c ext = "0" ++ postscript (synKey ext)
+showSynNat (Vcon (Global c,ext) [x]) | natSucc c ext = (f 1 x)++ postscript (synKey ext)
+      where f n (Vcon (Global c,ext) [])  | natZero c ext = show n
+            f n (Vcon (Global c,ext) [x]) | natSucc c ext = f (n+1) x
             f n (Vswap cs u) = f n (swaps cs u)
             f n (Vlazy cs _) = "("++show n++"+ ...)"
-            f n v = showVcon v
-showSynNat v = showVcon v
+            f n v = "("++show n++"+"++show v++")"
+showSynNat v = showVconInParens v
+
+
+showSynTick (Vcon (Global c,ext) [x])     | tickSucc c ext = (f 1 x)++ postscript (synKey ext)
+      where f n (Vcon (Global c,ext) [x]) | tickSucc c ext = f (n+1) x
+            f n (Vswap cs u) = f n (swaps cs u)
+            f n (Vlazy cs _) = "("++show n++"+ ...)"
+            f n v = "("++show v++"`"++show n++")"
+showSynTick v = showVconInParens v
+
+tim = Vcon (Global "A",wExt) [] 
 
 showVcon (Vcon (c,_) vs) =
   case vs of
    [] -> show c  -- ++ g exts
-   vs -> "("++show c++plistf show " " vs " " ")"
+   vs -> show c ++ plistf show " " vs " " ""
+
+showVconInParens v@(Vcon (_,_) []) = showVcon v
+showVconInParens v = "(" ++ showVcon v ++ ")"
 
 instance Show V where
   show (Vlit x) = show x
-  show (v @ (Vsum inj x)) =
+  show (v@(Vsum inj x)) =
     case boolV v of
       Nothing -> "("++show inj++" "++show x++")"
       Just t -> if t then "True" else "False"
-  show (Vprod x y) = "("++show x++","++show y++")"
+  show (v@(Vprod x y)) =  plistf show "(" (collect v []) "," ")"
+    where collect (Vprod x y) ans = collect y (x:ans)
+          collect other ans = reverse (other:ans)
+    
+    --  "("++show x++","++show y++")"
   show (Vprimfun s f) = "<primfun "++s++">"
   show (Vfun p e (Ev xs _)) = "(fn" ++ show (map fst xs)++")"
   show (Vf f push swap) = "<fn>"
   show (Vlazy cs m) = " ..."
   show (Vpat nm f g) = (show nm)
-  show (Vcon (Global "[]",Lx("","[]",":")) []) = "[]"
+  show (Vcon (Global "[]",ext) []) | normalList ext = "[]"
   show (VChrSeq s) = "#"++show s
   -- special case for [Char]
-  show (Vcon (Global ":",Lx("","[]",":")) [Vlit (Char c),xs]) = "\""++[c]++ f xs
+  show (Vcon (Global ":",ext) [Vlit (Char c),xs]) | normalList ext = "\""++[c]++ f xs
       where f (Vlazy cs _) = "...\""
-            f (Vcon (Global ":",Lx("","[]",":")) [Vlit(Char c),xs]) = [c] ++ f xs
-            f (Vcon (Global ":",Lx("","[]",":")) [Vlazy cs _,xs]) = "..."++f xs
-            f (Vcon (Global "[]",Lx("","[]",":")) []) = "\""
+            f (Vcon (Global ":",ext) [Vlit(Char c),xs]) | normalList ext = [c] ++ f xs
+            f (Vcon (Global ":",ext) [Vlazy cs _,xs])   | normalList ext = "..."++f xs
+            f (Vcon (Global "[]",ext) [])               | normalList ext = "\""
             f (Vswap cs u) = f (swaps cs u)
-  show (v@(Vcon (_,Px _) _)) = showSynPair v
-  show (v@(Vcon (_,Nx _) _)) = showSynNat v
-  show (v@(Vcon (_,Lx _) _)) = showSynList v
-  show (v@(Vcon (_,Rx _) _)) = showSynRecord v
-  show (v@(Vcon (_,Ox  ) _)) = showVcon v
+
+  show (v@(Vcon (Global c,ext) _)) | unitUnit c ext = showSynUnit v
+  show (v@(Vcon (Global c,ext) _)) | itemItem c ext = showSynItem v
+  show (v@(Vcon (Global c,ext) _)) | pairProd c ext || leftPairProd c ext = showSynPair v
+  show (v@(Vcon (Global c,ext) _)) | natExt c ext = showSynNat v
+  show (v@(Vcon (Global c,ext) _)) | listExt c ext = showSynList v
+  show (v@(Vcon (Global c,ext) _)) | leftListExt c ext = showSynLeftList v
+  show (v@(Vcon (Global c,ext) _)) | recordExt c ext = showSynRecord v
+  show (v@(Vcon (Global c,ext) _)) | leftRecordExt c ext = showSynLeftRecord v
+  show (v@(Vcon (Global c,ext) _)) | tickSucc c ext = showSynTick v
   show (Vcode e (Ev xs _)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
       where free = plistf show "" (map fst xs) "," ""
   show (Vswap cs u) =  show (swaps cs u)
@@ -251,11 +305,12 @@ instance Show V where
   show (Vptr cs n ref) = "<ptr "++show n++">"
   show (Vparser p) = "<parser>"
   show Vbottom = "**undefined**"
+  show (v@(Vcon (_,_) _)) = showVconInParens v
+ 
 
 listV :: Monad m => V -> m [V]    -- Particularly useful when m is Maybe
-listV (Vcon (Global "[]",Lx("","[]",":")) []) = return []
-listV (Vcon (Global ":", Lx("","[]",":")) [x,y]) =
-  do {xs <- listV y; return(x:xs) }
+listV (Vcon (Global "[]",ext) [])    | normalList ext = return []
+listV (Vcon (Global ":", ext) [x,y]) | normalList ext = do {xs <- listV y; return(x:xs) }
 listV (v@(Vlazy cs m)) = return[v]
 listV _ = fail "Not a List"
 
@@ -285,12 +340,12 @@ pv v = help v
        help (Vprimfun s _) = "(Vprimfun "++s++")"
        help (Vfun p body env) = "(fn)"
        help (Vf f push swap) = "(Vf f g h)"
-       help (Vcon (n,ext) vs) = "(Vcon "++show n++plistf pv " " vs " " ")"++show ext
+       help (Vcon (n,ext) vs) = "(Vcon "++show n++" ("++show ext++") ["++plistf pv " " vs "," "])"
        help (Vpat n f g) = "(Vpat "++show n++")"
        help (Vcode e re) = "(Code "++show e++")"
        help (Vswap cs u) = "(Vswap "++show cs ++" "++ pv u++")"
        help (Vfio cs comp) = "(Vfio action)"
-       help (Vptr cs n ref) = "(Vptr "++show n++" ref>"
+       help (Vptr cs n ref) = "(Vptr "++show n++" ref)"
        help (VChrSeq s) = "(VChrSeq "++s++")"
        help (Vparser p) = "(Vparser)"
        help Vbottom = "(Vbottom)"
@@ -348,7 +403,7 @@ newPtr = Vfio [] action
             ; return(Right (Vcon (Global "Nil",Ox) [Vptr [] n r]))}
 
 myIo :: V -> FIO (Either String V)
-myIo v = (return(Right v))
+myIo v = return (Right v)
 
 initPtr :: V
 initPtr = Vprimfun "initPtr" (analyzeWith f) where
@@ -393,7 +448,7 @@ nullPtr = Vprimfun "nullPtr" (analyzeWith f) where
 samePtr :: V
 samePtr = Vprimfun "samePtr" (analyzeWith f) where
   f ptr1@(Vptr cs n ref) = return(Vprimfun name (analyzeWith g)) where
-     name = ("samePtr "++show ptr1)
+     name = "samePtr "++show ptr1
      g ptr2@(Vptr cs2 n2 ref2)  = return(Vfio [] comp) where
          comp = if ref == ref2
                    then myIo(Vcon (Global "Eq",Ox) [])
@@ -407,7 +462,7 @@ samePtr = Vprimfun "samePtr" (analyzeWith f) where
 newtype Label tag = Label String
 
 instance Show (Label tag)  where
-  show (Label x) = "`" ++ (show x)
+  show (Label x) = "`" ++ show x
 
 instance Eq (Label tag)  where
   (Label x) == (Label y) = x==y
@@ -415,8 +470,7 @@ instance Eq (Label tag)  where
 tagOfLabel :: Label t -> t
 tagOfLabel x = error "Someone pulled on tagOfLabel"
 
-data HiddenLabel = -- forall tag . 
-                      Hidden (Label String)
+data HiddenLabel = Hidden (Label String)
 
 instance Show HiddenLabel where
  show (Hidden l) = "(Hidden "++show l++")"

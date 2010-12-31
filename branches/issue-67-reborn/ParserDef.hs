@@ -1,4 +1,3 @@
-
 module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
                 pattern,expr,decl,
                 program,parse2,parse,parseString,parseFile
@@ -22,13 +21,13 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
 import List(partition)
 import Monads
 import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
-            ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName)
+            ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName,arityPT)
 import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
 import Auxillary(Loc(..),plistf,plist)
 import Char(isLower,isUpper)
 ---------------------------------------------------------
 
-loc p = SrcLoc (sourceLine p) (sourceColumn p)
+loc p = SrcLoc (sourceName p) (sourceLine p) (sourceColumn p)
 
 -------------------------------------------------------------
 -- Parsers exported, and those defined for easy testing
@@ -183,17 +182,17 @@ name = terminal identifier Global
 -- If a syntactic extension has the empty string as a suffix
 -- turn it into the normal kind of syntactic sugar
 
-extToExp (Pairx xs "") = expTuple xs
-extToExp (Listx xs Nothing "") = listExp xs
-extToExp (Listx xs (Just tail) "") = listExp2 xs tail
-extToExp (Numx n Nothing "") = Lit(Int n)
-extToExp (Numx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
+extToExp (Pairx (Right xs) "") = expTuple xs
+extToExp (Listx (Right xs) Nothing "") = listExp xs
+extToExp (Listx (Right xs) (Just tail) "") = listExp2 xs tail
+extToExp (Natx n Nothing "") = Lit(Int n)
+extToExp (Natx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
 
-extToPat (Pairx xs "") =  patTuple xs
-extToPat (Listx xs Nothing "") =  pConsUp patNil xs
-extToPat (Listx xs (Just tail) "") =  pConsUp tail xs
-extToPat (Numx n Nothing "") = Plit(Int n)
+extToPat (Pairx (Right xs) "") =  patTuple xs
+extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
+extToPat (Listx (Right xs) (Just tail) "") =  pConsUp tail xs
+extToPat (Natx n Nothing "") = Plit(Int n)
 extToPat x = ExtP x
 
 patNil = Pcon (Global "[]") []
@@ -294,7 +293,6 @@ expr =  lambdaExpression
     <|> checkExp
     <|> lazyExp
     <|> existExp
-    <|> underExp
     <|> try (do { p <- simpleExpression; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
@@ -325,13 +323,6 @@ existExp =
     do { reserved "Ex"
        ; e <- expr
        ; return(Exists e)
-       }
-
-underExp =
-    do { reserved "under"
-       ; e1 <- simpleExpression
-       ; e2 <- simpleExpression
-       ; return(Under e1 e2)
        }
 
 lambdaExpression =
@@ -648,7 +639,7 @@ importDec =
         oper = do { x <- parens operator; return(VarImport (Global x))}
         deriv = do { try(symbol "syntax")
                    ; Global n <- name
-                   ; Global tag <- parens (name)
+                   ; Global tag <- parens name
                    ; return (SyntaxImport n tag)}
 
 
@@ -707,22 +698,30 @@ datadecl =
     ; (strata,prop) <- (reserved "data" >> return(0,False)) <|>
                        (reserved "prop" >> return(0,True)) <|>
                        (reserved "kind" >> return(1,False))
+{-
     --; t <- name <|> (paren $ reservedOp "!=" >> return Global "!=");
     ; t <- (name <|> (parens operator >>= return . Global . ("("++) . (++")")))
-    ; (explicit prop pos t) <|> (implicit prop pos strata t)
+-}
+    ; t <- conName;
+    ; (explicit prop pos (Global t)) <|> 
+      (implicit prop pos strata (Global t))
     }
 
 implicit b pos strata t =
   do{ args <- targs
     ; reservedOp "="
-    ; let finish cs ds = Data (loc pos) b strata t Nothing args cs ds Ox
+    ; let finish cs ds = Data (loc pos) b strata t Nothing args cs ds 
           kindf [] = Star' strata Nothing
           kindf ((_,x):xs) = Karrow' x (kindf xs)
     ; (reserved "primitive" >> return(GADT (loc pos) b t (kindf args) [] [] Ox)) <|>
       (do { cs <- sepBy1 constrdec (symbol "|")
-          ; ds <- derive
+          ; ds <- derive (map getCArity1 cs)
           ; return(finish cs ds)})
     }
+
+
+getCArity1 (Constr loc args (Global c) domains _) = (c,length domains)
+getCArity2 (loc,(Global c),args,constraints,typ) = (c,arityPT typ)
 
 polyLevel [] t = t
 polyLevel xs t = PolyLevel xs t
@@ -731,7 +730,7 @@ explicit b pos tname =
   do { (levels,kind) <- typing
      ; reserved "where"
      ; cs <- layout explicitConstr (return ())
-     ; ds <- derive
+     ; ds <- derive (map getCArity2 cs)
      ; let gadt = (GADT (loc pos) b tname (polyLevel levels kind) cs ds Ox)
      ; return(gadt)
      }
@@ -746,7 +745,6 @@ explicitConstr =
      ; return(loc l,Global c,format prefix,preds,body)
      }
 
-
 targs = many arg
   where arg = simple <|> parens kinded
         simple = do { n <- name; return(n,AnyTyp) }
@@ -754,21 +752,36 @@ targs = many arg
                     ; t<- typN
                     ; return(n,t)}
 
-derive =
+-- Deriving clauses, both new and old style
+
+derive :: [(String,Int)] -> Parser [Derivation]
+derive arityCs =
   (do { reserved "deriving"
-      ; (do {c <- extension; return [c]}) <|>
-        (parens(sepBy1 extension (symbol ","))) })
+      ; (do {c <- extension arityCs ; return [c]}) 
+      })
   <|> (return [])
 
-extension =
-  do { name <- symbol "List" <|> symbol "Nat" <|> symbol "Pair" <|> symbol "Record"
-     ; arg <- parens(many (lower <|> char '\''))
-     ; case name of
-        "List" -> return(Syntax(Lx(arg,"","")))
-        "Nat" -> return(Syntax(Nx(arg,"","")))
-        "Pair" -> return(Syntax(Px(arg,"")))
-        "Record" -> return(Syntax(Rx(arg,"",""))) }
+extension arityCs = (try (newStylePx arityCs)) <|> (oldStylePx arityCs)
 
+oldStylePx arityCs =
+  do { name <- conName 
+     ; tag <- parens(many (lower <|> char '\''))
+     ; return(Syntax(Parsex(tag,OLD,arityCs,[(name,map fst arityCs)]))) }
+
+newStylePx arityCs =
+  do { symbol "syntax"
+     ; tag <- parens(many (lower <|> char '\''))
+     ; exts <- many casesPx
+     ; return(Syntax(Parsex(tag,NEW,arityCs,exts)))
+     }
+     
+casesPx =  
+  do { name <- conName 
+     ; args <- parens(sepBy1 conName (symbol ","))
+     ; return(name,args)}
+
+
+--------------------------------------                 
 constrdec =
  do{ pos <- getPosition
    ; exists <- forallP <|> (return [])
@@ -779,7 +792,8 @@ constrdec =
    }
 
 forallP =
- do { (reserved "forall") <|> (reserved "exists") <|> (symbol "ex" >> return ())
+ do { (reserved "forall") <|> (reserved "exists")
+                          <|> (symbol "ex" >> fail "Quantifier 'ex' is not supported any more, please use 'exists'.")
     ; ns <- targs
     ; symbol "."
     ; return ns
@@ -793,7 +807,12 @@ testP p s =
    Left err -> Left("\n'"++s++"'"++" causes error\n  "++err)
    Right (exp,[]) -> Right exp
    Right (exp,cs) -> Left("\n"++s++"\n   leaves postfix: "++cs)
-
+   
+testQ p s =
+  case parse2 (do { ans <- p; whiteSpace; return ans}) s of
+   Left err -> putStrLn ("\n'"++s++"'"++" causes error\n  "++err)
+   Right (exp,s) -> putStrLn (s++" is OK."++" trailing \n"++s)
+   
 testE = testP expr
 testD = testP decl
 testL = testP (many (literal lit2Exp extToExp))

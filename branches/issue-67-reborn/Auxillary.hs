@@ -1,4 +1,6 @@
-
+{-# LANGUAGE MultiParamTypeClasses
+  , ExistentialQuantification
+  #-}
 module Auxillary where
 
 import Char(isAlpha)
@@ -85,14 +87,14 @@ backspace (x:xs) ans | x == '\BS' = backspace xs (tail ans)
 ---------------------------------------------------------------
 -- Locations
 
-data Loc = SrcLoc Int Int | Z
+data Loc = SrcLoc String Int Int | Z
 loc0 = Z
 
 instance Show Loc where
-  show (SrcLoc x y) = "line: "++(show x)++" column: "++(show y)
+  show (SrcLoc name x y) = "File: "++name++"\nline: "++(show x)++" column: "++(show y)
   show Z = "unknown location"
 
-showLocLine (SrcLoc x y) = show x
+showLocLine (SrcLoc name x y) = show x
 showLocLine Z = "unknown line"
 
 report :: Monad m => Loc -> String -> m a

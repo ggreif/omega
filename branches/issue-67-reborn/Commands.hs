@@ -1,23 +1,25 @@
 module Commands (commands,dispatchColon,execExp,drawPatExp
-                ,letDec,commandF,notDup,foldF) where
+                ,letDec,commandF,notDup,foldF,nums,basename) where
 
-import Infer(TcEnv(sourceFiles),varTyped,getVar,initTcEnv,getkind,parseAndKind,setCommand
+import Infer(TcEnv(sourceFiles,imports),varTyped,getVar,initTcEnv,getkind,parseAndKind,setCommand
             ,getRules,predefined,narrowString,normString,tcInFIO,wellTyped
             ,runtime_env,ioTyped,showAllVals,showSomeVals,type_env,boundRef,TC,getM)
-import RankN(pprint,warnM,showKinds)
+import RankN(pprint,warnM,showKinds,docs,Docs(..),ppPoly)
 import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
-             ,write,writeln,readln,unTc,tryAndReport,fio,writeRef)
+             ,write,writeln,readln,unTc,report,readRef,tryAndReport,fio,writeRef)
 import Version(version,buildtime)
 import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Char(isAlpha,isDigit)
 import ParserDef(getInt,getBounds,expr,parseString)
-import Auxillary(plist,plistf,DispElem(..),prefix,maybeM)
-import Monads(report,readRef,tryAndReport)
+import Auxillary(plist,plistf,DispElem(..),prefix,maybeM,anyM,ifM,foldrM,initDI)
 import Monad(when)
+import Value(pv)
+import SCC(topSortR)
+import System.Directory(getModificationTime)
+import System.FilePath(splitFileName)
 
--- tryAndReport :: FIO a -> (Loc -> String -> FIO a) -> FIO a
 --------------------------------------------------------
 -- Build a table of    :com str    commands
 
@@ -36,7 +38,7 @@ tCom tenv x =
                            ; case ans of
                                Left message -> fail message
                                Right(e,more) ->
-                                 do { (typ,_,subpairs) <- wellTyped tenv e
+                                 do { (typ,_,_,subpairs) <- wellTyped tenv e
                                     ; writeln (x++" :: "++(pprint typ)++"\n")
                                     ; verbose <- getM "kind" False
                                     ; when verbose (mapM_ writeln subpairs)
@@ -46,11 +48,53 @@ tCom tenv x =
 -- :env map
 envCom tenv s = envArg tenv s
 
+filterOutDatedDeps tenv = foldrM acc [] zs
+  where f (name,date,deps,env) = ([(name,date)],deps)
+        (topSortedList,_) = topSortR f (imports tenv)
+        zs = transClosure complete (concat topSortedList)
+        acc x ans = ifM (outDated x) (return ans) (return(x:ans))
+        
+
+transClosure f [] = []
+transClosure f (x:xs) = work [x] xs
+  where work done [] = reverse done
+        work done (m:more) = work (f m done: done) more
+
+complete (name,date,deps,env) done = (name,date,foldr acc deps deps,env)
+  where acc (nm,time) ans = 
+            case find (\(s,d,ds,e)->nm==s) done of
+              Nothing -> ans
+              Just (s,d,ds,e) -> plus ds ans
+        plus [] ans = ans
+        plus ((nm,d):more) ans = case find (\(s,d)->nm==s) ans of
+                                       Nothing -> plus more ((nm,d):ans)
+                                       Just _ ->  plus more ans
+                                       
+outDated (nm,time,deps,env) = anyM bad ((nm,time):deps)
+  where bad (nm,time) = do { date <- getModificationTime nm
+                           ; return(date > time) }
+
+nums time = take 12 (drop 11 (show time))   
+showImports xs = plistf f "\n   " xs "\n   " ""          
+  where f (nm,time,deps,env) = basename nm ++" "++nums time++ plistf h " =\n      " deps "\n      " ""
+        h (nm,time) = basename nm++" "++nums time
+        
+        
+basename nm = base where (dir,base) = splitFileName nm
+
 -- :r
 rCom elab tenv s =
   do { let sources = sourceFiles tenv
-     ; new <- elabManyFiles elab sources (initTcEnv{sourceFiles = sources})
+     ; zs <- fio (filterOutDatedDeps tenv)
+     ; (new,ws) <- elabManyFiles elab sources 
+                  (initTcEnv{sourceFiles = sources,imports = zs})
      ; return new }
+     
+elabManyFiles elabFile [] env = return (env,[])
+elabManyFiles elabFile (x:xs) env =
+  do { (env2,ws) <- elabManyFiles elabFile xs env
+     ; (env3,w) <- elabFile x env2
+     ; return(env3,w:ws)}     
 
 -- :v
 vCom tenv s =
@@ -74,13 +118,13 @@ kCom tenv x =
 -- :l file.prg
 lCom elabFile tenv file =
    do { writeln ("Loading file "++file)
-      ; env2 <- elabFile file initTcEnv
+      ; (env2,time) <- elabFile file initTcEnv
       ; return (env2{sourceFiles = [file]}) }
 
 -- :also file.prg
 alsoCom elabFile tenv file =
    do { writeln ("Loading file "++file)
-      ; env2 <- elabFile file (tenv)
+      ; (env2,time) <- elabFile file (tenv)
       ; return (env2{sourceFiles = file:(sourceFiles env2)}) }
 
 
@@ -168,6 +212,7 @@ commandF f =
   ,("?",questionCom,    ":?           display list of legal commands (this message)\n")
   ]
 
+
 commands = concat ([
   "let v = e    bind 'v' to 'e' in interactive loop\n",
   "v <- e       evaluate IO expression 'e' and bind to 'v'\n",
@@ -178,12 +223,13 @@ commands = concat ([
 -- (ExecCom e)
 -- 5 + 2
 execExp tenv e =
-   do { (t,e',subpairs) <- wellTyped tenv e
+   do { (t,polyk,e',subpairs) <- wellTyped tenv e
       ; v <- (eval (runtime_env tenv) e')
       ; u <- runAction v
-      ; writeln ((show u)++ " : "++(pprint t))
       ; verbose <- getM "kind" False
+      ; warnM [Ds "\n", docs[Dds (show u ++ " : "),Dx polyk]]
       ; when verbose (mapM_ writeln subpairs)
+      ; when verbose (writeln("\n\n"++ pv u))
       ; return (tenv) }
 
 -- (DrawCom p e)
@@ -245,11 +291,6 @@ runAction v =
              Left s -> fail ("Uncaught IO Error: "++s) }
     v -> return v
 
-elabManyFiles elabFile [] env = return env
-elabManyFiles elabFile (x:xs) env =
-  do { env2 <- elabManyFiles elabFile xs env
-     ; elabFile x env2}
-
 foldF acc base [] = return base
 foldF acc base (x:xs) = do { b <- acc x base
                            ; tryAndReport (foldF acc b xs)(report (return base)) }
@@ -265,8 +306,8 @@ notDup tenv file nm =
     Nothing -> return ()
     Just s -> if (s `elem` ["Monad","Equal","Eq"])
               then return ()
-              else (fail ("The name: "++ show s++" which is found in the"++
-                    " environment is redefined in file "++file))
+              else (fail ("\nThe name: "++ show s++" which is found in the"++
+                    " environment is redefined in file\n   "++file))
 
 -- There are 2 name spaces. Value and Type.
 -- We need to look up each name in the right environments

@@ -1,4 +1,5 @@
-
+{-# LANGUAGE FlexibleInstances
+  #-}
 module Cooper where
 
 {-

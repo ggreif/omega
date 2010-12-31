@@ -1,14 +1,17 @@
 MAIN             = Main
-EXEC             = omega.exe
+EXT              = .exe
+EXEC             = omega$(EXT)
 GHC              = ghc
 GHCI             = ghci
-GHC_FLAGS        = -auto-all  $(GHC_FLAGS_COMMON)
+GHC_FLAGS        = -auto-all $(GHC_OPT_FLAGS) $(GHC_FLAGS_COMMON)
 GHCI_FLAGS       = $(GHC_FLAGS_COMMON)
 GHC_FLAGS_COMMON = -fglasgow-exts -XUndecidableInstances
+GHC_OPT_FLAGS    = 
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
+SVN              = svn
 
-.PHONY: all tests clean manual
+.PHONY: all tests clean manual update
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
@@ -28,13 +31,19 @@ tests: all
 clean:
 	rm -f *.hi *.o *.prof
 
+cleaner: clean
+	rm -f $(EXEC)
+
 manual: all
 	./$(EXEC) -manual ../doc
 	$(MAKE) -C ../doc -f `pwd`/Makefile OmegaManual.ps
 
 OmegaManual.ps: version.tex OmegaManual.tex
-	latex OmegaManual.tex
-	bibtex.exe OmegaManual
-	latex OmegaManual.tex && latex OmegaManual.tex
-	dvips.exe OmegaManual
+	latex$(EXT) OmegaManual.tex
+	bibtex$(EXT) OmegaManual
+	latex$(EXT) OmegaManual.tex && latex$(EXT) OmegaManual.tex
+	dvips$(EXT) OmegaManual
+
+update:
+	$(SVN) update ..
 

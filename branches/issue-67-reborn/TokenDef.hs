@@ -1,4 +1,3 @@
-
 module TokenDef(tokenDef) where
 
 import StdTokenDef
@@ -10,13 +9,11 @@ stratusStyle = haskellStyle
    , commentStart = cStart
    , commentLine = cLine
    , nestedComments = nestedC
-   , reservedNames = ["let","case","in","of","data","kind","prop", "where","splice"
-                     ,"type","then","else","deriving","reify"
+   , reservedNames = ["let","case","in","of","data","kind","prop","where"
+                     ,"type","then","else","deriving"
                      ,"circuit", "theorem"
-                     ,"forall","exists","Ex","check","lazy","under","flag"
+                     ,"forall","exists","Ex","check","lazy","flag"
                      , "monad", "primitive", "unreachable"
-                     , "mono"
-                     --,"exp","dec","pat","match","clause","import"
                      ]
    , reservedOpNames= ["=","\\"
                       ,"[|","|]"
