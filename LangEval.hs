@@ -18,7 +18,8 @@ import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import PrimParser (parserPairs)
-import SyntaxExt(Extension(..),SynExt(..))
+import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
+
 
 
 type Level = Int
@@ -124,7 +125,6 @@ evalZ env (Prod x y) =
 evalZ env (CheckT x) = eval env x
 evalZ env (Lazy x) = vlazy (eval env x)
 evalZ env (Exists x) = eval env x
-evalZ env (Under p x) = eval env x
 evalZ env exp@(App f x) =
   do { g <- eval env f
      ; y <- eval env x
@@ -452,9 +452,10 @@ elab prefix magic init (Fun loc nm _ cs) =
            u = makeLam patterns caseExp [] [] magic
            free = getFreeTermVars newNames caseExp
      ; return (extendV [(nm,u)] init) }
-elab prefix magic init (Data loc b strata nm sig args constrs derivs exts) =
+elab prefix magic init (Data loc b strata nm sig args constrs derivs) =
     return(extendV xs init)
- where xs = map f constrs
+ where exts = error "Get exts from derivs? line 457 LangEval.hs"
+       xs = map f constrs
        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))
 elab prefix magic init (GADT l p t k cs ds exts) =
    -- warnM [Ds "\nelab ",Ds (show t),Ds " ",Ds (show exts)] >>
@@ -485,7 +486,7 @@ elab prefix magic init d = fail ("Unknown type of declaration:\n"++(show d))
 
 elaborate prefix ds env0 =
     do { env1 <- fixFIO h
-       ; fixup ((foldr count 0 ds)) env1 }
+       ; fixup (foldr count 0 ds) env1 }
   where h magic = foldM (elab prefix magic) env0 ds
 
 
@@ -569,7 +570,7 @@ vals =
  ,("True",make True)
  ,("False",make False)
 
- ,(":",makeCon2 (Global ":",Lx("","[]",":")) ((:):: A -> [A] -> [A]))
+ ,(":",makeCon2 (Global ":",listx) ((:):: A -> [A] -> [A]))
  ,("null",make1 (null:: [A] -> Bool))
  ,("[]",make([]::[A]))
  ,("++",make2((++):: [A] -> [A] -> [A]))
@@ -590,6 +591,7 @@ vals =
 
 
  ,("trace",(traceV,gen(typeOf(undefined :: String -> A -> A))))
+ ,("compare",(compareV,gen(typeOf(undefined :: A -> A -> Ordering))))
  ,("error",(to errorC,gen(typeOf(undefined :: String -> A))))
  ,("fresh",(freshV,gen(typeOf(undefined :: Char -> Symbol))))
  ,("swap",(swapV,gen(typeOf(undefined :: Symbol -> Symbol -> A -> A))))
@@ -597,7 +599,7 @@ vals =
  ,("sameLabel",(sameLabelV,gen(typeOf(undefined :: Label T1 -> Label T2 -> Either (Equal T1 T2)(DiffLabel T1 T2)))))
  ,("freshLabel",(freshLabelV,gen(typeOf(undefined:: IO HiddenLabel))))
  ,("newLabel",(newLabelV,gen(typeOf(undefined:: String -> HiddenLabel))))
- ,("LabelNotEq",(labelNotEqV,sigmaLabelNotEq))
+ ,("LabelNotEq",(labelNotEq,sigmaLabelNotEq))
  
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
  ,("run",(to run,runType))
@@ -638,6 +640,40 @@ listVals =
   ,("++",(appendV,gen(typeOf(undefined::[A] -> [A] -> [A]))))
   ]
 
+-- A pseudo compare, help make a Ord like instance inside Omega
+
+compV (Vlit m) (Vlit n) = compLit m n
+compV (Vsum i m) (Vsum j n) = 
+  case compare i j of
+    EQ -> compV m n
+    x -> Just x
+compV (Vprod x y) (Vprod m n) =
+  case compV x m of
+    Just EQ -> compV y n
+    Just x -> Just x
+    Nothing -> Nothing
+compV (Vcon (Global "[]",_) []) (Vcon (Global ":",_) [_,_]) = Just LT
+compV (Vcon (Global ":",_) [_,_]) (Vcon (Global "[]",_) []) = Just GT
+compV (Vcon (c,x) y) (Vcon (d,m) n) = 
+  case compare c d of
+    EQ -> compVL y n
+    x -> Just x
+ where compVL [] [] = Just EQ
+       compVL [] (x:xs) = Just LT
+       compVL (x:xs) [] = Just GT
+       compVL (x:xs) (y:ys) = 
+          case compV x y of
+            Just EQ -> compVL xs ys
+            t -> t
+compV x y = Nothing 
+
+compareV = lift2 "compare" g
+  where g x y = case compV x y of
+                  Just t -> return(to t)
+                  Nothing -> fail ("compare applied to bad arguments\n  "++
+                                   show x++ "\n  "++
+                                   show y++ "\n")
+
 nullV = lift1 "null" g
   where g (VChrSeq "") = return trueExp
         g (VChrSeq _) = return falseExp
@@ -651,14 +687,14 @@ nullV = lift1 "null" g
 consV = Vprimfun ":" g
   where g (Vlit (Char c)) = return(Vprimfun ("(:) "++show c) (charCons c))
         g v               = return(Vprimfun ("(:) "++show v) (f v))
-        f v vs = return(Vcon (Global ":",Lx("","[]",":")) [v,vs])
+        f v vs = return(Vcon (Global ":",listx) [v,vs])
 
 charCons :: Char -> V -> FIO V
 charCons c (VChrSeq cs) = return(VChrSeq (c:cs))
 charCons c (Vcon (Global "[]",_) []) = return(VChrSeq [c])
 charCons c (v@(Vcon (Global ":",_) [_,_])) =
      do { cs <- list2seq v; return(VChrSeq (c:cs))}
-charCons c vs = return(Vcon (Global ":",Lx("","[]",":")) [Vlit (Char c),vs])
+charCons c vs = return(Vcon (Global ":",listx) [Vlit (Char c),vs])
 
 list2seq :: V -> FIO String
 list2seq v = analyzeWith f v
@@ -680,7 +716,7 @@ appendV = lift2 "++" g
                          x -> cons x (g zs ys)
         g (Vcon (Global "[]",_) []) ys = return ys
         g x y = fail ("Bad args to (++) "++show x++" and "++show y)
-        cons x xs = do { ys <- xs; return(Vcon (Global ":",Lx("","[]",":")) [x,ys])}
+        cons x xs = do { ys <- xs; return(Vcon (Global ":",listx) [x,ys])}
 
 ----------------------------------------------------------------------
 
@@ -696,9 +732,13 @@ reify :: Monad m => V -> m Exp
 reify (Vlit x) = return(Lit x)
 reify (Vsum j v) = do { x <- reify v; return(Sum j x)}
 reify (Vprod x y) = do { a <- reify x; b <- reify y; return(Prod a b)}
-reify (Vcon (c,_) vs) = do { us <- mapM reify vs; return(f (Var c) us)}
-  where f g [] = g
+reify (Vcon (c,exts) vs) = do { us <- mapM reify vs; return(f constr us)}
+  where constr = Reify (show c) (mkFun (show c) (Vcon (c,exts)) (length vs) [])
+        f g [] = g
         f g (x:xs) = f (App g x) xs
+        
+        
+--        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))        
 reify v = return(Lit(CrossStage v))
 -- reify v = fail ("\nRun-time error ******\nCannot reify: "++show v)
 
@@ -795,8 +835,8 @@ failIO = Vprimfun "failIO" f
                    ; return(Vfio [] (return (Left string))) }
           where stringV :: V -> FIO String
                 stringV v = analyzeWith help v where
-                   help (Vcon (Global "[]",Lx("","[]",":")) []) = return []
-                   help (Vcon (Global ":",Lx("","[]",":")) [Vlit (Char x),y]) =
+                   help (Vcon (Global "[]",lx) [])| listNil "[]" lx = return []
+                   help (Vcon (Global ":",lx) [Vlit (Char x),y])| listCons ":" lx =
                     do {xs <- stringV y; return(x:xs) }
                    help _ = fail ("Non String as arg to failIO: "++show arg)
 
@@ -893,11 +933,11 @@ primitives = map f xs where
 --
 -- where
 -- prop DiffLabel:: Tag ~> Tag ~> *0 where
---   LabelNotEq:: Int -> DiffLabel x y
+--   LabelNotEq:: Ordering -> DiffLabel x y
 --
 -- But, the type DiffLabel is abstract, and if LabelNotEq is ever
 -- applied, it diverges. Fortunately we can create instances with sameLabel.
--- It is safe to pattern match against (LabelNotEq n).
+-- It is safe to pattern match against (LabelNotEq o).
 
 -- Values for Labels
 
@@ -908,7 +948,7 @@ sameLabelV = Vprimfun "sameLabel" (analyzeWith f) where
      g ptr2@(Vlit (Tag t))  = return comp where
          comp = if s == t
                    then (Vsum L (Vcon (Global "Eq",Ox) []))
-                   else (Vsum R (Vcon (Global "LabelNotEq",Ox) [Vlit (Int 0)]))
+                   else (Vsum R (Vcon (Global "LabelNotEq",Ox) [to $ compare s t]))
      g v = fail ("Non Tag as 2nd argument to sameLabel: "++show v)
   f v = fail ("Non Tag as 1st argument to sameLabel: "++show v)
 
@@ -918,14 +958,14 @@ freshLabelV = Vfio [] f where
 newLabelV =  Vprimfun "newLabel" (analyzeWith f) where
   f str = return(Vcon (Global "HideLabel",Ox) [Vlit (Tag (from str))])
 
-labelNotEqV = Vprimfun "LabelNotEqV" (analyzeWith f) where
-  f str = fail "\n*** Error ***\nLabelNotEqV is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel"
+labelNotEq = Vprimfun "LabelNotEq" (analyzeWith f) where
+  f str = fail "\n*** Error ***\nLabelNotEq is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel."
 
 -- Type descriptions for Labels 
 
 
 sigmaLabelNotEq = sigma
- where tau = typeOf(undefined :: Int -> (DiffLabel T1 T2))
+ where tau = typeOf(undefined :: Ordering -> (DiffLabel T1 T2))
        sigma = gen tau
 
 tyconLabelNotEq = TyCon Ox LvZero "LabelNotEq" (K [] sigmaLabelNotEq)

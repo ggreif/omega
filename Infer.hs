@@ -1,8 +1,19 @@
+{-# LANGUAGE MultiParamTypeClasses
+  , ScopedTypeVariables
+  , FlexibleInstances
+  #-}
 module Infer where
 
-import PureReadline
+import Char(isAlpha,isUpper)
+import qualified Data.Map as Map
+   -- (Map,empty,member,insertWith,union,fromList,toList,lookup)
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
+import System.Time(getClockTime)
+import System.IO.Unsafe(unsafePerformIO)
+import System.Time(ClockTime)
+
+import PureReadline
 
 import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
@@ -19,7 +30,7 @@ import Bind
 import Syntax
 import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,Quant(..),TcTv(..),Tau(..),Rho(..),Sigma(..),Kind(..),PolyKind(..)
-            ,ForAllArgs,ToEnv,PPred,PT(..),MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
+            ,ForAllArgs,ToEnv,PPred,PT(..),arityPT, MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
             ,newLevel,unifyLevel,pruneLv,freshLevels,incLev,zonkLv,unifyLev,substLevel,instanLevel
             ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..),Zonk(..)
@@ -47,24 +58,21 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
             ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
-            ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift)
-import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
+            ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift
+            ,Docs(..),docs,dPoly)
+import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey
+                ,buildExt,listx,pairx,natx,wExt,duplicates,checkClause,checkMany,liftEither)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
 import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
-                ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
-import LangEval(vals,env0,Prefix(..),elaborate)
+                ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns
+                ,initDI)
+import LangEval(vals,env0,Prefix(..),elaborate,eval)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
-import Char(isAlpha,isUpper)
-import System.IO.Unsafe(unsafePerformIO)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
-
-import qualified Data.Map as Map
-   -- (Map,empty,member,insertWith,union,fromList,toList,lookup)
-
 import NarrowData(DefTree(..),NName(..),Rule(..),Prob(..),NResult(..),Rel(..)
                  ,andR,andP,andf,freshX,dProb)
 import Narrow(narr,defTree,Check(..),matches)
@@ -224,7 +232,7 @@ data TcEnv
           , rules :: FiniteMap String [RWrule] -- Proposition simplifying rules
           , refutations :: FiniteMap String Refutation
           , runtime_env :: Ev            -- current value bindings
-          , imports :: [(String,TcEnv)]  -- already imported Modules
+          , imports :: [(String,ClockTime,[(String,ClockTime)],TcEnv)]  -- already imported Modules
           , tyfuns :: [(String,DefTree TcTv Tau)]
           , sourceFiles :: [String]
           , syntaxExt :: [SynExt String]
@@ -317,7 +325,7 @@ modes_and_doc =
   ,("theorem",False,"Reports when a lemma is added by a 'theorem' declaration, and when such a lemma is applicable.")
   ,("kind",False,"Displays kinds of subterms when using the :k or :t commands.")
   ,("unreachable",False,"Displays information when checking for unreachable clauses.")
-  ,("verbose",False,"For Debugging the compiler")
+  ,("verbose",False,"For debugging the compiler.")
   ]
 
 mode0 = map (\ (name,value,doc) -> (name,value)) modes_and_doc
@@ -511,6 +519,8 @@ getLevel = Tc (\ env -> return (level env,[]))
 getSyntax :: TC [SynExt String]
 getSyntax = Tc (\ env -> return (syntaxExt env,[]))
 
+addSyntax d (Tc m) = Tc(\env -> m (env {syntaxExt = d: syntaxExt env}))
+ 
 getLoc :: TC Loc
 getLoc = Tc (\ env -> return (location env,[]))
 
@@ -748,9 +758,8 @@ typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
 typeExp mod (p@(Exists e)) expect =
     failD 2 [Ds "Existential expressions cannot have their type inferred:\n   ", Dd p
             ,Ds "\n   The type expected is:\n   ", Dd expect
-            ,Ds "\n   which does not have form (exist s . type_exp)."
+            ,Ds "\n   which does not have form (exists s . type_exp)."
             ,Ds "\n   Probable fix: Remove the 'Ex' packing operator, or add 'exists' to the prototype."]
-typeExp mod (Under e1 e2) expect = error "Under"
 typeExp mod (Bracket exp) expect =
      do { a <- unifyCode expect
         ; e <- levelInc (typeExp mod exp (Check a))
@@ -776,20 +785,23 @@ typeExp mod (Run exp) (Infer ref) =
          ; return(Run e) }
 typeExp mod (Reify s v) expect = error ("Unexpected reified value: "++s)
 typeExp mod (ExtE x) expect =
+  do { new <- elabExtensionExp x
+     ; typeExp mod new expect
+     }
+
+elabExtensionExp x =
   do { exts <- getSyntax
      ; loc <- getLoc
      ; let lift0 nm = Var (Global nm)
            lift1 nm x = App (lift0 nm) x
            lift2 nm x y = App (lift1 nm x) y
            lift3 nm x y z = App (lift2 nm x y) z
-     ; new <- buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
-     ; typeExp mod new expect
+     ; buildExt (show loc) (lift0,lift1,lift2,lift3) x exts
      }
 
 
-
 --------------------------------------------------------------------
--- Functions to report reasonably readable  errors
+-- Functions to report reasonably readable errors
 
 notfun e fun_ty s =
    failK "notfun" 2 [Ds "\nIn the expression: "
@@ -1554,7 +1566,10 @@ okRange c (Rtau t) = help t
              ; case (un,ps) of
                 ([],[]) -> do { warnM [Ds "\nTYFUN\n ",Dd new ]; help new}
                 _ -> fail "TyFun in okRange" }
-        help t = failD 2 [Ds "\nNon type constructor: ",Dd t,Ds " as range of constructor: ",Dd c]
+        help t = failD 2 [Ds "While infering the type of a pattern involving the constructor ",Dd c,
+                          Ds ",\nThe context supplied a non-type-constructor: ",
+                          Dd t,Ds ", as it's range. This could be caused by a prototype with",
+                          Ds " an incorrect or too general type."]
 okRange c rho = failD 2 [Ds "\nNon tau type: ",Dd rho
                         ,Ds " as range of constructor: ",Dd c]
 
@@ -1875,12 +1890,12 @@ introLorR (loc,var,args,preds,typ) = False
 
 
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) | any introLorR cs =
-  failM 1 [Ds "\nThe data decl: ",Ds name,Ds " has a constructor named 'L' or 'R'."
+  failM 1 [Ds "\n\nThe data decl: ",Ds name,Ds " has a constructor named 'L' or 'R'."
           ,Ds "\nThese names are reserved for the sum type. L:: a -> (a+b), R:: b -> (a+b)"]
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) = newLoc loc $
   do { (vs,level,sigma) <- univLevelFromPTkind name k
      ; return(decl,(isP,name,sigma,level,loc,vs))}
-kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs _)) =
+kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs )) =
   failM 1 [Ds "\nData decs should have been translated away.\n",Ds (show decl)]
 
 -- Given T :: a ~> b ~> * ; data T x y = ... OR data T (x:a) (y:b) = ...
@@ -1925,7 +1940,7 @@ useSigToKindArgs strata args sig = walk args sig where
 
 transDataToGadt ds = mapM getGADT ds
   where getGADT (d@(GADT _ _ _ _ _ _ _)) = return d
-        getGADT (x@(Data _ _ _ nm _ _ cs derivs _)) =
+        getGADT (x@(Data _ _ _ nm _ _ cs derivs)) =
            do { new <- data2gadt x
               ; if any eqConstrained cs
                    then badData nm x new
@@ -2220,8 +2235,12 @@ checkValuesDontUseKarr cname (rho@(Rtau t)) LvZero | hasKarr t =
 checkValuesDontUseKarr cname x y = return()
 
 
--------------------------------------------------------
+----------------------------------------------------------------------
 -- Check that the deriving clause is consistent with the constructors
+-- most of this is done in the function checkParseSynExt in SyntaxExt.hs
+-- The SynExt stored after parsing is the "Parsex" form, which records
+-- just the names of the constructors, checkParseSynExt checks these
+-- for consistency with the roles they play, and returns an "Ix" form
 
 checkDerivs constrs [] = return Ox
 checkDerivs constrs xs =
@@ -2232,62 +2251,23 @@ checkDerivs constrs xs =
 
 checkSyn _ [] = return Ox
 checkSyn _ (x:y:_) = failM 2 [Ds "\nA data declaration can have at most one syntax extension."]
-checkSyn constrs [ext] =
-  do { exts <- getSyntax
-     ; failWhen ((elem ext exts)&& ((synName ext) /= "Nat") && ((show(synKey ext)) /= "")) 2
-                [Ds "\nSyntax name for ",Ds (synName ext),Ds " already in use: ",Ds (show(synKey ext))]
-     ; case (constrs,ext) of
-        ([nilC,consC],Lx(key,_,_)) -> checkList key nilC consC
-        (_,Nx(('o':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0o123 is reserved for octal integers."]
-        (_,Nx(('x':_),_,_)) -> failM 2 [Ds "\nIllegal Nat-style syntax extension: 0xABC is reserved for hexadecimal integers."]
-        ([zeroC,succC],Nx(key,_,_)) -> checkNat key zeroC succC
-        ([pairC],Px(key,_)) -> checkPair key pairC
-        ([rnilC,rconsC],Rx(key,_,_)) -> checkRecord key rnilC rconsC
-        (cs,z) -> failM 2 [Ds "\nWrong number of constructors for syntax extension: ",Ds (synKey z)
-                          ,Ds ". ",Ds name,Ds " extensions expect ",Dd size,Ds "."]
-           where (name,size) = nameSize z
+checkSyn constrs [ext] = checkParseSynExt ext
+
+checkParseSynExt (Parsex(tag,style,arityCs,clauses)) = 
+  do { let roles = concat(map snd clauses)
+     -- ; warnM [Ds ("\nThe roles are "++show roles) ]
+     ; case duplicates roles of
+         [] -> return ()
+         cs -> failM 1 [ Ds 
+                    (concat["\nThe constructor(s) ",plistf id "" cs "," ""
+                           ," appear(s) more than once in syntax extension."
+                           ,"\nEach constructor can play only one syntax role."])]
+     ; zs <- mapM (checkClause arityCs) clauses
+     ; liftEither(checkMany style tag zs)
      }
 
-nameSize :: SynExt a -> (String,Int)
-nameSize (Lx _) = ("List",2)
-nameSize (Nx _) = ("Nat",2)
-nameSize (Px _) = ("Pair",1)
-nameSize (Rx _) = ("Record",2)
-nameSize Ox = ("",0)
-
-count:: PT -> Int
-count (Rarrow' x y) = 1 + count y
-count (Karrow' x y) = 1 + count y
-count x = 0
-
-checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b)
-    | count a==0 && count b==2 = return (Lx(key,nil,cons))
-checkList key (_,Global nil,_,_,a) (_,Global cons,_,_,b) =
-  tell "List" ("Nil",nil,a) 0 ("Cons",cons,b) 2
-
-
-checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b)
-   | count a==0 && count b==3 = return (Rx(key,rnil,rcons))
-checkRecord key (_,Global rnil,_,_,a) (_,Global rcons,_,_,b) =
-  tell "Record" ("Rnil",rnil,a) 0 ("Rcons",rcons,b) 3
-
-checkNat key (_,Global zero,_,_,a) (_,Global succ,_,_,b)
-   | count a==0 && count b==1 = return (Nx(key,zero,succ))
-checkNat key (_,Global zero,_,_,a) (_,Global succ,_,_,b) = tell "Nat" ("Zero",zero,a) 0 ("Succ",succ,b) 1
-
-checkPair key (_,Global pair,_,_,a) | count a==2 = return (Px(key,pair))
-checkPair key (_,Global pair,_,_,a) =
-   failM 2 [Ds"\nFor a Pair extension\n the (,) constructor (",Ds pair,Ds ":: ",Dd a
-           ,Ds ") should have 2 arguments, not ",Dd (count a)]
-
-tell:: String -> (String,String,PT) -> Int -> (String,String,PT) -> Int -> TC a
-tell key (x1,nm1,a) n1 (x2,nm2,b) n2 =
-  failM 2 [Ds"\nFor a ",Ds key,Ds " extension\n the ",Ds x1,Ds " constructor (",Ds nm1,Ds ":: ",Dd a,Ds ") should have "
-          ,Dd n1,Ds " arguments and\n the ",Ds x2,Ds " constructor (",Ds nm2,Ds ":: ",Dd b,Ds ") should have ",Dd n2
-          ,Ds " arguments."]
-
 isSyntax (Syntax _) = True
-isSyntax _ = False
+-- isSyntax _ = False
 
 failWhen test n xs = if test then failM n xs else return ()
 
@@ -2300,7 +2280,7 @@ toPred env (Just xs) = toEqs env xs
 
 badKind name tau message =
   failM 3 [Ds "\nWhile checking the data declaration for: ",Ds name
-          ,Ds "\nwe checked the well formedness of its kind: ",Dd tau
+          ,Ds "\nwe checked the well-formedness of its kind: ",Dd tau
           ,Ds "\nAn error was found.\n",Ds message]
 
 -- checkRng makes sure the range is the type being defined.
@@ -2348,7 +2328,7 @@ illFormed name rho kind message =
 --   C:: forall (a:*0) (b:*0) . a -> T a b -> T a b
 --   D:: forall (a:*0) (b:*0) . T a b
 
-data2gadt (Data loc isP strat tname@(Global nm) hint args cs derivs exts) =
+data2gadt (Data loc isP strat tname@(Global nm) hint args cs derivs) =
  do { (argBinds,rng) <- newLoc loc (useSigToKindArgs strat args hint)  -- ([(a:*0),(b:*0)],*0)
     ; let name (nm,kind,quant) = nm
           range = applyT' (map TyVar' (nm : map name argBinds))     -- T a b
@@ -2365,7 +2345,7 @@ data2gadt (Data loc isP strat tname@(Global nm) hint args cs derivs exts) =
           h (variable,k) = (var variable,k)
           some (Just xs) = xs
           some Nothing = []
-    ; return(GADT loc isP tname kind (map each cs) derivs exts)
+    ; return(GADT loc isP tname kind (map each cs) derivs Ox)
     }
 
 arrowUp strata [] t = t
@@ -2803,7 +2783,7 @@ splitObligations need patVars = do { xs <- mapM f need; return(split xs ([],[]))
 
 pushHints [] d = d
 pushHints protos (Fun loc nm _ ms) = Fun loc nm (applyName protos nm) ms
-pushHints protos (Data loc b n nm sig vs cs ders exts) = Data loc b n nm (applyName protos nm) vs cs ders exts
+pushHints protos (Data loc b n nm sig vs cs ders) = Data loc b n nm (applyName protos nm) vs cs ders 
 pushHints protos (Val loc p body ds) = Val loc (applyPat protos p) body ds
 pushHints protos (Reject s d) = Reject s d
 pushHints protos (TypeFun loc nm sig ms) = TypeFun loc nm (applyName protos (Global nm)) ms
@@ -3171,6 +3151,7 @@ liftNf f tau =
 
 nfTau = liftNf norm2Tau
 nfPredL = liftNf norm2PredL
+nfRho = liftNf norm2Rho
 
 
 -- Does a term normalize to a non-TyFun term, and not extend the refinement?
@@ -3645,7 +3626,7 @@ instance TypeLike (Mtc TcEnv Pred) RWrule where
                ; return((nm,k2,q):ys,envN)}
 
 -- ======================================================================
--- refinement lemma has one of the two the forms
+-- refinement lemma has one of the two forms
 -- 1)   cond1 -> ... -> condN -> Equal term1 term2 -> Equal var1 term3
 -- 2)   cond1 -> ... -> condN -> Equal term1 term2 -> (Equal var3 term3, ... , Equal varN termN)
 -- As a RWRule  (RW name key Refinement vars [cond1 ... condN]
@@ -4049,7 +4030,7 @@ unique x none onef many =
   case x of
    [] -> none
    [ans] -> onef ans
-   (y:ys) -> many
+   (_:_) -> many
 
 -- Given an ambiguous list of solutions to some questions, some may be
 -- refutable, so we should filter them out. If all are refutable, then
@@ -4210,8 +4191,7 @@ instance Exhibit (DispInfo Z) RWrule where
   exhibit d (RW nm key rclass vars pre lhs rhs) =
     displays d [Ds (show rclass++" "++nm++"("++key++"): ")
                ,Dlg f "(exists " (foldr exf [] vars) "," ") "
-               ,Ds "[", Dl pre ", ", Ds "] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"
-              ]
+               ,Ds "[", Dl pre ", ", Ds "] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"]
    where f d (nm,k) = useStoreName nm k id d
          exf (nm,k,Ex) xs = (nm,k):xs
          exf (_,_,All) xs = xs
@@ -4278,6 +4258,10 @@ predefined =
  "data Bool:: *0 where\n"++
  "  True:: Bool\n"++
  "  False:: Bool\n"++
+ "data Ordering:: *0 where\n"++
+ "  EQ:: Ordering\n"++
+ "  LT:: Ordering\n"++ 
+ "  GT:: Ordering\n"++  
  "data Maybe:: *0 ~> *0 where\n"++
  "  Just :: a -> Maybe a\n"++
  "  Nothing :: Maybe a\n"++
@@ -4451,13 +4435,15 @@ checkReadEvalPrint (hint,env) =
                       ; when verbose (showKinds varsOfPoly s1)
                       ; return (True)}
                 Nothing -> do { putS ("Unknown name: "++x); return (True)}
-          (ColonCom "o" e) ->
-             do { exp <- getExp e
-                ; (t,exp2) <- inferExp exp
-                ; t1 <- zonk t
-                ; updateDisp
-                ; warnM [Ds (show exp ++ " :: "),Dd t1]
-                ; return (True)
+          (ColonCom "norm" e) ->
+	     do { exp <- getExp e
+	        ; (t,exp2) <- inferExp exp
+	        ; t1 <- zonk t
+	        ; (t2,_,_) <- nfRho t1
+	        ; updateDisp
+	        ; warnM [docs [Dds(show exp),Dds " :: ",Dx t1]]
+	        ; warnM[Ds"\n\n",docs[Dds "Normalizes to:",Dsp,Dx t2]]
+	        ; return (True)
                 }
           (ColonCom "try" e) ->
              do {  exp <- getExp e
@@ -4470,18 +4456,31 @@ checkReadEvalPrint (hint,env) =
                              Infer _ -> failD 1 [Ds "Can't try and match an expression against expected type if expected type is infer."]
                 ; (vs,_) <- get_tvs expect
                 ; eitherX <- morepolyRR vs typ expect
+                
                 ; case eitherX of
                    Left(unifier,preds) ->  
                       do { (u2@(_,unifier2),preds2) <- solveByUnify unifier preds
-                         ; warnM [Ds(show exp ++ " :: "),Dd (sub2Rho u2 typ)]
-                         ; warnM [Ds "\nUnder the refinement:\n  ",Dl unifier2 "\n  "]
-                         ; warnM [Ds "\nOnly when we can solve\n  ",Dl (subPred unifier (obs++preds2)) "\n  "]
+                         ; let t1 = sub2Rho u2 typ
+                         ; (t2,_,_) <- nfRho t1
+                         ; warnM [docs [Dds(show exp),Dds " :: ",Dx t1]]
+                         ; warnM [Ds "\n*** Under the refinement:\n  ",Dl unifier2 "\n  "]
+                         ; warnM [Ds "\n*** Only when we can solve:\n\n",Dl (subPred unifier (obs++preds2)) "\n  "]
+                         ; whenM (not(similar t1 t2))
+                                 [Ds "\n*** The type:\n\n",Dd t1,Ds "\n\n*** normalizes to\n\n",Dd t2]
                          }
                    Right(message,t1,t2) ->
-                      warnM [Ds "\nThe typing ",Dd exp, Ds " :: ",Dd ty
-                            ,Ds "\ndoes not match the expected type:\n  ",Dd expect
-                            ,Ds "\nBecause: ",Ds message,Ds "\n  "
-                            ,Dd t1, Ds " =/= ",Dd t2]
+                      do { warnM [Ds "\n*** The typing ",Dd exp, Ds " :: ",Dd ty
+                                 ,Ds "\ndoes not match the expected type:\n  ",Dd expect
+                                 ,Ds "\nBecause: ",Ds message,Ds "\n  "
+                                 ,Dd t1, Ds " =/= ",Dd t2]
+                         ; (t2,_,_) <- nfRho ty
+                         ; (e2,_,_) <- nfRho expect
+                         ; whenM (not(similar ty t2))
+                         	 [Ds"\n\n",docs[Dds "*** Normalizes to:",Dsp,Dx t2]]
+                         ; whenM (not(similar expect e2))
+                                 [Ds "\n*** The expected type:\n",
+                                  docs[Dx expect,Dsp,Dds "*** normalizes to",Dsp,Dx e2]]                             
+                         }
                 ; return True
                 }
           (ExecCom exp) ->
@@ -4491,7 +4490,7 @@ checkReadEvalPrint (hint,env) =
                 ; (u2@(_,unifier2),preds2) <- solveByUnify [] oblig
                 ; let t3 = sub2Rho u2 t2
                 ; updateDisp
-                ; warnM [Ds(show exp ++ " :: "),Dd t3]
+                ; warnM [docs[Dds(show exp ++ " :: "),Dx t3]]
                 ; verbose <- getMode "kind"
                 ; when verbose (showKinds varsOfRho t3)
                 ; whenM (not (null preds2)) [Ds "Only when we can solve\n   ",Dd preds2]
@@ -4500,6 +4499,10 @@ checkReadEvalPrint (hint,env) =
           EmptyCom -> return True
           other -> putS "unknown command" >> return (True)
      }
+
+similar:: Rho -> Rho -> Bool  -- An approximation of Equality
+similar (Rtau x) (Rtau y) = x==y
+similar _ _ = False
 
 checkLoop :: Expected Rho -> TcEnv -> TC ()
 checkLoop typ env = interactiveLoop checkReadEvalPrint (typ,env)
@@ -4735,7 +4738,7 @@ baseIsEquality x vs =
 
 -- When adding axioms, we need to assume the type being defined
 -- is a proposition, since it hasn't been added to the list of
--- propositions yet, so we must tell isProp this. let the theorem
+-- propositions yet, so we must tell isProp this. Let the theorem
 -- be a type like: dom1 -> dom2 -> rng,   where rng = (T x y z)
 
 root thClass rng =
@@ -4915,7 +4918,7 @@ partByFree oblig = do { ps <- mapM free oblig; return(foldr acc ([],[],[]) ps)}
         acc ([],p) (free,hasVars,ground) = (free,hasVars,p:ground)
         acc (vs,p) (free,hasVars,ground) = (vs++free,p:hasVars,ground)
 
-wellTyped :: TcEnv -> Exp -> FIO (String,Exp,[String])
+wellTyped :: TcEnv -> Exp -> FIO (String,PolyKind,Exp,[String])
 wellTyped env e = tcInFIO env
   (do { ((t::Rho,term),oblig) <- collectPred(inferExp e)
       ; truths <- getAssume
@@ -4940,7 +4943,7 @@ wellTyped env e = tcInFIO env
       ; let subterms = (subtermsSigma sigma2 [])
       ; pairs <-  handleM 2  (mapM kind subterms) (\ _ -> return[])
       ; (_,typeString) <- showThruDisplay [Dd polyk,Ds "\n"]
-      ; return(typeString,term,pairs)})
+      ; return(typeString,polyk,term,pairs)})
 
 
             
@@ -5087,4 +5090,9 @@ renderProb f t =
      ; writeRef dispRef d2
      ; return string }
 
+-----------------------------------------------------
 
+evaluate x = runTC initTcEnv (do { a <- addSyntax wExt (elabExtensionExp x)
+                                 ; return a })  -- fio2Mtc(eval env0 a)})
+
+tickTry = (Tickx 1 (ExtE (Natx 1 (Just (Var (Global "A"))) "w")) "w")

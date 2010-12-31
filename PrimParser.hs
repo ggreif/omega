@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module PrimParser (parserPairs) where
 
 import ParserAll

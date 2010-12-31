@@ -1,11 +1,16 @@
-
+{-# LANGUAGE MultiParamTypeClasses
+  , FunctionalDependencies
+  , FlexibleInstances
+  #-}
 module Monads where
 
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
+import Control.Exception(IOException,try)
 import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
 import Auxillary(Loc(..),displays)
 import IO(hFlush,stdout)
+import ParserAll
 
 -------------------------------------------------------------
 
@@ -242,11 +247,16 @@ fixFIO f = FIO(fixIO (unFIO . f . unRight))
 fixFIO :: (a -> FIO a) -> FIO a
 fixFIO f = FIO(fixIO (unFIO . unRight f))
   where unRight f ~(Ok x) = f x
-        unRight f other = FIO(return other)
+       -- unRight f other = FIO(return other) -- Lazy match makes this useless
 
 
 fio :: IO x -> FIO x
-fio x = FIO(fmap Ok x)
+fio x = FIO(do { info <- Control.Exception.try x
+               ; case info of
+                  Left (err:: IOException) -> return(Fail Z 10 "" (show err))
+                  Right y -> return(Ok y) })
+                  
+
 
 write = fio . putStr
 writeln = fio . putStrLn
