@@ -1,4 +1,4 @@
-module Infer2 where
+module Infer where
 
 import PureReadline
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
@@ -51,7 +51,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey,buildExt,listx,pairx,natx)
 import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
-import Encoding2
+import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns)
@@ -2026,27 +2026,17 @@ unifyLevels xs = walk [] xs
         walk env ((x,y):more) = Nothing        
         
 ----------------------------------------------------------
-dupDiffLabel :: [Dec] -> [Dec] -> ([Dec],[a] -> [a],[b] -> [b])
-dupDiffLabel all [] = (all, id, id)
-dupDiffLabel all (d@(GADT loc True (Global "DiffLabel") tkind [] [] Ox):ds) =
-   (GADT loc True (Global "DiffLabel") tkind [con] [] Ox:all, tail, tail)
-     where con = (Z, Global "", [], [prec], TyApp'(TyApp' (TyCon' "DiffLabel" Nothing) (TyVar' "t")) (TyVar' "u"))
-           prec = TagNotEqual' (TyVar' "t") (TyVar' "u")
-dupDiffLabel all (d:ds) = dupDiffLabel all ds
 
 checkDataDecs :: [Dec] -> TC (Sigma,Frag,[Dec])
 checkDataDecs decls =
-  do { ds0 <- transDataToGadt decls
-     ; let (ds, shorten, shorten') = dupDiffLabel ds0 ds0
+  do { ds <- transDataToGadt decls
      ; (ds2,env2,tyConMap) <- kindsEnvForDataBindingGroup ds   -- Step 1
-     ; css' <- mapM (constrType env2) ds2                      -- Step 2
-     ; let css = shorten css'
+     ; css <- mapM (constrType env2) ds2                       -- Step 2
      -- After checking ConFuns, zonk and generalize Type Constructors
      ; (tyConMap2) <- mapM genTyCon tyConMap
      -- Then generalize the Constructor functions as well
-     ; conFunMap2' <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
-     ; let conFunMap2 = shorten' conFunMap2'
-     ; let ds3 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
+     ; conFunMap2 <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
+     ; let ds2 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
            exts = filter (/= Ox) (map (\ (newd,synext,strata,isprop,zs) -> synext) css)
 
            lift [] types values = return (types,values)
@@ -2063,10 +2053,8 @@ checkDataDecs decls =
      ; (types,values) <- lift conFunMap2 (map proj tyConMap2) []
      ; let makeRule (level,False,_,(Global c,(polyk,mod,_,_))) = return []
            makeRule (level,True,_,(Global c,(K lvs sigma,mod,_,_))) = sigmaToRule (Just Axiom) (c,sigma)
-     ; rules <- mapM makeRule conFunMap2'
-     -- ; let diffLabelRule = [(key,RW name key Axiom args2 preCond lhs rhs)]
-     --; let diffLabelRule = [("DiffLabel",RW "" "DiffLabel" Axiom [] [] (TagNotEqual undefined undefined) [])]
-     ; return(simpleSigma unitT,Frag values [] types [] [] (concat (rules)) exts,ds3)
+     ; rules <- mapM makeRule conFunMap2
+     ; return(simpleSigma unitT,Frag values [] types [] [] (concat rules) exts,ds2)
      }
 
 -- given:  data T:: *n where ...
@@ -3146,8 +3134,6 @@ norm2Rho info (Rsum s r) =
 norm2Pred :: Info -> Pred -> TC(Pred,Unifier2)
 norm2Pred info (Equality x y) =
   do { ([a,b],u) <- norm2TauL info [x,y]; return(Equality a b,u)}
-norm2Pred info (TagNotEqual x y) =
-  do { ([a,b],u) <- norm2TauL info [x,y]; error "norm2Pred: TODO: return(TagNotEqual a b,u)"}
 norm2Pred info (Rel t) =
   do { (a,u) <- norm2Tau info t; return(Rel a,u) }
 
@@ -3929,18 +3915,10 @@ ruleStep (truths,q:questions,open,u0) =
 
 
 goodMatch good (truths,precond,result,open,unifier) =
-  do { warnM [Ds "\ngoodMatch precond\n  ",Dl precond "\n  "]
-     ; warnM [Ds "\ngoodMatch truths\n  ",Dl truths "\n  "]
-     ; warnM [Ds "\ngoodMatch open\n  ",Dl open "\n  "]
-     ; warnM [Ds "\ngoodMatch unifier\n  ",Dd unifier]
-     ; let precond' = filter nonInequality precond
-     ; ans <- solv 4 [(truths,map (unRel 5) precond',open,unifier)]
+  do { ans <- solv 4 [(truths,map (unRel 5) precond,open,unifier)]
      ; case ans of
          [(truths2,[],nms,u)] -> return((truths2,map (sub2Tau u) (map (unRel 6) result),open,u):good)
          _ -> return good}
-
-nonInequality (TagNotEqual _ _) = False
-nonInequality _ = True
 
 unRel n (Rel x) = x
 unRel n x = error ("\nunRel applied to non Rel: "++show x++" "++show n)
@@ -4071,7 +4049,7 @@ unique x none onef many =
   case x of
    [] -> none
    [ans] -> onef ans
-   (_:_) -> many
+   (y:ys) -> many
 
 -- Given an ambiguous list of solutions to some questions, some may be
 -- refutable, so we should filter them out. If all are refutable, then
@@ -4165,7 +4143,7 @@ a1 = [("a",12),("b",34),("c",23)]
 a2 = [("z",1),("a",22),("c",11),("e",99)]
 
 -- =====================================================
--- Display, Exhibit, and Show of datatypes in Infer2
+-- Display, Exhibit, and Show of datatypes in Infer
 -- To Display a name, prints it in a more concise manner by
 -- maintaining a list of concise names for each Var encountered.
 
@@ -4229,11 +4207,6 @@ instance Exhibit (DispInfo Z) RWrule where
     displays d [Ds "Rewrite ", {- Dl vars ",", -}  Ds (nm++"("++key++"): ")
                ,Ds "[", Dl pre ", ", Ds "] => "
                ,Dd lhs,if b then Ds " -C-> " else Ds " --> ",Dd rhs]
-  --exhibit d (RW "" key rclass vars pre lhs rhs) =
-  --  displays d [Ds (show rclass++" ("++key++"): ")
-  --             --,Dlg f "(exists " (foldr exf [] vars) "," ") "
-  --             ,Ds "[!=] => ",Dd lhs,Ds " --> [",Dl rhs ", ",Ds "]"
-  --            ]
   exhibit d (RW nm key rclass vars pre lhs rhs) =
     displays d [Ds (show rclass++" "++nm++"("++key++"): ")
                ,Dlg f "(exists " (foldr exf [] vars) "," ") "

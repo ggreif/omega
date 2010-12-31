@@ -1,5 +1,4 @@
-
-module Encoding2 where
+module Encoding where
 
 import Maybe
 import Monads

@@ -1,8 +1,7 @@
-
 module PrimParser (parserPairs) where
 
 import ParserAll
-import Encoding2
+import Encoding
 import Syntax(V(..),Var(..),Lit(..),Inj(..))
 import Monads(FIO(..),Exception(..))
 import System.IO.Unsafe(unsafePerformIO)
