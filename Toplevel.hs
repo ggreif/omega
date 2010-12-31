@@ -1,5 +1,3 @@
-
-
 module Toplevel (omega) where
 
 import Time
@@ -16,9 +14,9 @@ import List(partition,(\\),nub,find)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
 import Monad(when)
-import Infer2(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
-             ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
-             ,var_env,type_env,rules,runtime_env,syntaxExt)
+import Infer(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
+            ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
+            ,var_env,type_env,rules,runtime_env,syntaxExt)
 import RankN(pprint,Z,failD,disp0,dispRef)
 import System(getArgs)
 import Data.Map(Map,toList)

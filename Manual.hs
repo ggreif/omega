@@ -9,7 +9,7 @@ import Char(isAlpha,isDigit)
 
 import LangEval(vals)
 import Syntax(metaHaskellOps)
-import Infer2(typeConstrEnv0,modes_and_doc,predefined)
+import Infer(typeConstrEnv0,modes_and_doc,predefined)
 import Commands(commands)
 import RankN(Sigma,disp0,Exhibit(..),PolyKind(..))
 import Version(version,buildtime)
