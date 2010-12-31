@@ -469,7 +469,7 @@ karr (MK x) (MK y) = MK(Karr x y)
 kapp (MK x) (MK y) = MK(TyApp x y)
 
 star_star = star `karr` star
-star1 = MK(Star (LvSucc LvZero))
+star1 = MK s1
 poly :: Kind -> PolyKind
 poly (MK t) = K [] (simpleSigma t)
 
