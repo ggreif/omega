@@ -635,7 +635,6 @@ sigma4Eq = Forall (Cons (star1,All) (bind kname
    where kname = name1
          uname = name2
          vname = name3
-         star1 = MK (Star (LvSucc LvZero))
          k = MK(TyVar kname star1)
          u = TyVar uname k
          v = TyVar vname k
