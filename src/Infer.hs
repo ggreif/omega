@@ -40,7 +40,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,failD,failK,failM,warnM,handleM,whenM
             ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
             ,extendref, failIfInConsistent
-            ,mguStar,star1,star,star_star,starR,shtt,shtP  -- splitU,split3,
+            ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv  -- splitU,split3,
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newflexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
             ,instanTy,instanPatConstr,checkArgs,nameOf
@@ -5013,7 +5013,7 @@ narrowString env count s =
 
 genericEnv free = foldrM acc ([],[],[]) free
   where acc s (ts,vs,us) =
-          do { k <- newTau star1
+          do { k <- newUniv
              ; tau@(TcTv u) <- newTau (MK k)
              ; return((s,tau,poly (MK k)):ts,(ZTv u,s):vs,u:us)}
 
