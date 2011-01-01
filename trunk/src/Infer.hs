@@ -1875,7 +1875,7 @@ inferPolyPT argEnv pt =
 -- compute a kind for the Type Constructor. This depends on the syntax used
 -- 1) infer types        data T x y = C (x y)
 -- 2) user annotations   data T (x :: *0 ~> *0 ) (y :: *0 ) = C (x y)
--- 3) use signtaure      T :: (*0 ~> *0 ) ~> *0 ~> *0
+-- 3) use signature      T :: (*0 ~> *0 ) ~> *0 ~> *0
 --                       data T x y = C (x y)
 -- 4) explicit GADT      data T:: ( *0 ~> *0 ) ~> *0 ~> *0 where C:: (x y) -> T x y
 -- Once the parameters are processed, we use this information to
