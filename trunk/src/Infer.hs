@@ -2115,16 +2115,13 @@ kindsEnvForDataBindingGroup ds =
                 ; return([],Forall(windup vars (ps,rho)))}
            addTyCon (d,(isP,name,kind,level,loc,freeLevVars)) (ds,delta,env) =
             do { (levs,sigma) <- parsekind freeLevVars name kind
-               ; warnM [Ds "\nCheck kinding ",Dd sigma,Ds ":: ",Dd (Star (LvSucc level)),Dl freeLevVars ","]
+               -- ; warnM [Ds "\nCheck kinding ",Dd sigma,Ds ":: ",Dd (Star (LvSucc level)),Dl freeLevVars ","]
                ; sigma' <- newLoc loc $
                            handleM 3 (check sigma (Star (LvSucc level)))
                                      (badKind name kind)
-               ; warnM [Ds "\nSigma: ",Ds (shtt sigma')]
                ; s1 <- zonk sigma'
-               ; warnM [Ds "\n zonked Sigma: ",Ds (shtt s1)]
                ; let kind = K (map snd levs) sigma'
                      poly = TyCon Ox (LvSucc level) name kind
-               ; warnM [Ds "\nCheck poly ",Dd poly,Ds "  kind: ",Dd kind]
                ; return ((d,freeLevVars,level):ds
                         ,(name,poly,kind):delta
                         ,(isP,name,poly,kind):env)}
@@ -2140,9 +2137,7 @@ kindsEnvForDataBindingGroup ds =
 
 inferConSigma levelMap currentMap loc ([],pt@(Forallx All _ _ _)) =
  do { exts <- getSyntax
-    ; warnM [Ds "\n inferConSigma All branch"]
     ; (sigma@(Forall l),nmMap) <- toSigma (currentMap,loc,exts,levelMap) pt
-    ; warnM [Ds "\ninferConSigma: ",Ds (shtt sigma)]
     ; let (vars,(ps,rho)) = unsafeUnwind l
     -- Some of the variables in the forall may leave their kinds implicit
     -- Some of these may be polymorphic, we need to add these to vars
@@ -2167,18 +2162,13 @@ inferConSigma levelMap currentMap loc (preds,typ) =
     ; exts <- getSyntax
     ; (nmMap,windupList,envMap) <- argsToEnv args (currentMap,loc,exts,levelMap)
     ; rho <- toRho envMap typ
-    ; warnM [Ds "\ninferConSigma(rho): ",Ds (shtt rho)]
     ; ps <- toPred envMap (Just preds)
     ; rho2 <- zonk rho
-    ; warnM [Ds "\ninferConSigma(rho2): ",Ds (shtt rho2)]
     -- Zonk the kinds of the bound variables
     -- This may cause some kinds to appear in the range types
     -- because of types like, C:: T x (y::x) -> T Int y
-    ; warnM [Ds "\ninferConSigma(windupList): ",Ds (show windupList)]
     ; list2 <- mapM zonkK windupList
-    ; warnM [Ds "\ninferConSigma(list2): ",Ds (show list2)]
     ; (_,rangeFree,_) <- range varsOfTau rho2 rho2 -- Vars of the zonked range
-    ; warnM [Ds "\ninferConSigma(rangeFree): ",Ds (show rangeFree)]
     ; return(nmMap,map (fix rangeFree) list2,ps,rho2)}
 
 range f b (Rarrow dom rng) = range f b rng
