@@ -916,7 +916,7 @@ typeMatchPs mod (nm,loc,ps,body,ds) (Check t) = newLoc loc $
                        ,Dl ps " ",Ds " = ",Ds (show body), Ds ":\n    ",Dd t
                        ,Ds "\n*** with\n   ",Dlf dispBind zs ", "
                        ,Ds "\n*** where ", Dl (subPred truths ts) ", "
-                       ,Ds s]} )
+                       ,Ds s]})
         ; let context = mContxt loc nm ps body
         ; let comp theta = do { rng2 <- appTheta mod theta rng
                               ; ans <- chBody1 mod patFrag body rng2
@@ -1874,10 +1874,10 @@ inferPolyPT argEnv pt =
 -- Dec is parameterized we need to compute kinds for the parameters to
 -- compute a kind for the Type Constructor. This depends on the syntax used
 -- 1) infer types        data T x y = C (x y)
--- 2) user annotations   data T (x :: *0 ~> *0 ) (y :: *0 ) = C (x y)
--- 3) use signature      T :: (*0 ~> *0 ) ~> *0 ~> *0
+-- 2) user annotations   data T (x :: *0 ~> *0) (y :: *0) = C (x y)
+-- 3) use signature      T :: (*0 ~> *0) ~> *0 ~> *0
 --                       data T x y = C (x y)
--- 4) explicit GADT      data T:: ( *0 ~> *0 ) ~> *0 ~> *0 where C:: (x y) -> T x y
+-- 4) explicit GADT      data T:: ( *0 ~> *0) ~> *0 ~> *0 where C:: (x y) -> T x y
 -- Once the parameters are processed, we use this information to
 -- compute a kind for the type constructor (i.e. T above). Below
 -- we assume that user annotations (as in 2) above have been pushed into
@@ -1894,7 +1894,7 @@ kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) | any introLorR
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) = newLoc loc $
   do { (vs,level,sigma) <- univLevelFromPTkind name k
      ; return(decl,(isP,name,sigma,level,loc,vs))}
-kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs )) =
+kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs)) =
   failM 1 [Ds "\nData decs should have been translated away.\n",Ds (show decl)]
 
 -- Given T :: a ~> b ~> * ; data T x y = ... OR data T (x:a) (y:b) = ...
@@ -1920,7 +1920,7 @@ useSigToKindArgs strata args sig = walk args sig where
     do { (xs,rng) <- walk vs Nothing
        ; return((v,d,All):xs,rng) }
 
-  walk ((Global v,AnyTyp ):vs) (Just(Karrow' d r)) =  -- Signature is implicit Forall
+  walk ((Global v,AnyTyp):vs) (Just(Karrow' d r)) =  -- Signature is implicit Forall
     do { (xs,rng) <- walk vs (Just r)
        ; return((v,d,All):xs,rng) }
   walk ((Global v,d1):vs) (Just (Karrow' d2 r)) =
@@ -2047,7 +2047,7 @@ checkDataDecs decls =
      ; (ds2,env2,tyConMap) <- kindsEnvForDataBindingGroup ds   -- Step 1
      ; css <- mapM (constrType env2) ds2                       -- Step 2
      -- After checking ConFuns, zonk and generalize Type Constructors
-     ; (tyConMap2) <- mapM genTyCon tyConMap
+     ; tyConMap2 <- mapM genTyCon tyConMap
      -- Then generalize the Constructor functions as well
      ; conFunMap2 <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
      ; let ds2 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
@@ -2115,13 +2115,16 @@ kindsEnvForDataBindingGroup ds =
                 ; return([],Forall(windup vars (ps,rho)))}
            addTyCon (d,(isP,name,kind,level,loc,freeLevVars)) (ds,delta,env) =
             do { (levs,sigma) <- parsekind freeLevVars name kind
-               -- ; warnM [Ds "\nCheck kinding ",Dd sigma,Ds ":: ",Dd (Star (LvSucc level)),Dl freeLevVars ","]
+               ; warnM [Ds "\nCheck kinding ",Dd sigma,Ds ":: ",Dd (Star (LvSucc level)),Dl freeLevVars ","]
                ; sigma' <- newLoc loc $
                            handleM 3 (check sigma (Star (LvSucc level)))
                                      (badKind name kind)
+               ; warnM [Ds "\nSigma: ",Ds (shtt sigma')]
                ; s1 <- zonk sigma'
+               ; warnM [Ds "\n zonked Sigma: ",Ds (shtt s1)]
                ; let kind = K (map snd levs) sigma'
                      poly = TyCon Ox (LvSucc level) name kind
+               ; warnM [Ds "\nCheck poly ",Dd poly,Ds "  kind: ",Dd kind]
                ; return ((d,freeLevVars,level):ds
                         ,(name,poly,kind):delta
                         ,(isP,name,poly,kind):env)}
@@ -2137,7 +2140,9 @@ kindsEnvForDataBindingGroup ds =
 
 inferConSigma levelMap currentMap loc ([],pt@(Forallx All _ _ _)) =
  do { exts <- getSyntax
+    ; warnM [Ds "\n inferConSigma All branch"]
     ; (sigma@(Forall l),nmMap) <- toSigma (currentMap,loc,exts,levelMap) pt
+    ; warnM [Ds "\ninferConSigma: ",Ds (shtt sigma)]
     ; let (vars,(ps,rho)) = unsafeUnwind l
     -- Some of the variables in the forall may leave their kinds implicit
     -- Some of these may be polymorphic, we need to add these to vars
@@ -2162,13 +2167,18 @@ inferConSigma levelMap currentMap loc (preds,typ) =
     ; exts <- getSyntax
     ; (nmMap,windupList,envMap) <- argsToEnv args (currentMap,loc,exts,levelMap)
     ; rho <- toRho envMap typ
+    ; warnM [Ds "\ninferConSigma(rho): ",Ds (shtt rho)]
     ; ps <- toPred envMap (Just preds)
     ; rho2 <- zonk rho
+    ; warnM [Ds "\ninferConSigma(rho2): ",Ds (shtt rho2)]
     -- Zonk the kinds of the bound variables
     -- This may cause some kinds to appear in the range types
     -- because of types like, C:: T x (y::x) -> T Int y
+    ; warnM [Ds "\ninferConSigma(windupList): ",Ds (show windupList)]
     ; list2 <- mapM zonkK windupList
+    ; warnM [Ds "\ninferConSigma(list2): ",Ds (show list2)]
     ; (_,rangeFree,_) <- range varsOfTau rho2 rho2 -- Vars of the zonked range
+    ; warnM [Ds "\ninferConSigma(rangeFree): ",Ds (show rangeFree)]
     ; return(nmMap,map (fix rangeFree) list2,ps,rho2)}
 
 range f b (Rarrow dom rng) = range f b rng
@@ -2292,7 +2302,7 @@ checkRng c tname (TcLv lev) (Karrow' d x) =
 checkRng c (Global tname) _ (t@(TyCon' nm _)) | tname == nm = return ([],t)
 checkRng c (Global tname) _ (t@(TyVar' nm)) | tname == nm = return ([],t)
 checkRng c (Global tname) _ (t@(TyApp' _ _)) = down t
-  where down (TyApp' (TyCon' s _ ) x) | s==tname = return ([],t)
+  where down (TyApp' (TyCon' s _) x) | s==tname = return ([],t)
         down (TyApp' (TyVar' s) x) | s==tname = return ([],t)
         down (TyApp' x y) = down x
         down t = failD 2 [Ds "\nThe range of the constructor: ",Dd c
@@ -2652,7 +2662,7 @@ arisesPat pat rho = do { r <- zonkRho rho; d <- readRef dispRef
                        ; (c,args,d2) <- f pat r d []
                        ; let (d3,kindstrs) = displays d2 kindelems
                        ; writeRef dispRef d3
-                       ; return("the pattern: "++c++"\nwhere pattern vars are typed as:"++concat (map h args)++kindstrs )}
+                       ; return("the pattern: "++c++"\nwhere pattern vars are typed as:"++concat (map h args)++kindstrs)}
   where h s = "\n   "++s
         f (Pcon v (p:ps)) (Rarrow dom rng) d args = f (Pcon v ps) rng d2 (arg:args)
             where(d2,arg) = displays d [Dd p,Ds "::",Dd dom]
@@ -2857,7 +2867,7 @@ makeRule s k xs =
      ; zs <- mapM f xs
      ; return(NarR(NTyCon s Ox (lv 1) k,zs)) }
 
--- check the lhs (i.e. {plus (S x) y} = ... ) of each match
+-- check the lhs (i.e. {plus (S x) y} = ...) of each match
 
 checkLhsMatch :: ToEnv -> Sigma -> ([PT],PT) -> TC ([Tau],[Tpat],Tau)
 checkLhsMatch current sigma (ps,rhs) =
@@ -4198,7 +4208,7 @@ instance Exhibit (DispInfo Z) Mod where
 instance NameStore d => Exhibit d (DefTree TcTv Tau) where
   exhibit d1 tree = indent 0 d1 tree
 
-indent n d1 (Leaf term free lhs rhs )
+indent n d1 (Leaf term free lhs rhs)
    = (d3,blanks n ++"Leaf " ++ lhsX++ " --> "++ rhsX)
      where (d2,lhsX) = exhibit d1 lhs
            (d3,rhsX) = exhibit d2 rhs
