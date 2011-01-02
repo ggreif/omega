@@ -1899,13 +1899,13 @@ kindOfTyConFromDec (decl@(Data loc isP _ (Global name) (Just k) vs cs derivs)) =
 
 -- Given T :: a ~> b ~> * ; data T x y = ... OR data T (x:a) (y:b) = ...
 -- Bind the args to their kinds [(x,a),(y,b)]. If there is No kind
--- information, use default rules, which depend on the strata information
+-- information, use default rules, which depend on the stratum information
 -- which must be either type or kind, since the explicit GADT form must
 -- be used for other levels.
 
 useSigToKindArgs:: Strata -> [(Var,PT)]-> Maybe PT -> TC([(String,PT,Quant)],PT)
-useSigToKindArgs strata args sig = walk args sig where
-  walk [] Nothing = return ([],Star' strata Nothing) -- implicit (T a b):: *
+useSigToKindArgs stratum args sig = walk args sig where
+  walk [] Nothing = return ([],Star' stratum Nothing) -- implicit (T a b):: *
   walk [] (Just (Star' k n))= return ([],Star' k n)  -- explicit (T a b):: *
   walk [] (Just t) = failD 2 [Ds "Explict kinding for new type must result in kind *n, not ",Dd t]
 
@@ -2050,8 +2050,8 @@ checkDataDecs decls =
      ; tyConMap2 <- mapM genTyCon tyConMap
      -- Then generalize the Constructor functions as well
      ; conFunMap2 <- mapM (genConstrFunFrag tyConMap2) css >>= return . concat
-     ; let ds2 =  map (\ (newd,synext,strata,isprop,zs) -> newd) css
-           exts = filter (/= Ox) (map (\ (newd,synext,strata,isprop,zs) -> synext) css)
+     ; let ds2 =  map (\ (newd,synext,stratum,isprop,zs) -> newd) css
+           exts = filter (/= Ox) (map (\ (newd,synext,stratum,isprop,zs) -> synext) css)
 
            lift [] types values = return (types,values)
            lift ((level,isProp,tag,(Global s,(polyk,mod,n,exp))):xs) types values =
@@ -2082,7 +2082,7 @@ definesTypes LvZero = False
 definesTypes (TcLv _) = True
 definesTypes (LvSucc _) = True
 
-genConstrFunFrag tyConInfo (d2,tag,strata,isProp,conFunInfo) = mapM f conFunInfo
+genConstrFunFrag tyConInfo (d2,tag,stratum,isProp,conFunInfo) = mapM f conFunInfo
   where f (nm::Var,(sig::Sigma,mod::Mod,lev::CodeLevel,exp::Exp)) =
           do { -- Replace TyCon's which have stale PolyKind fields
                -- (i.e. they are monomorphic and non-level polymorphic)
@@ -2091,7 +2091,7 @@ genConstrFunFrag tyConInfo (d2,tag,strata,isProp,conFunInfo) = mapM f conFunInfo
              ; tyConSub <- mapM fixKindLevel tyConInfo
              ; sig1 <- sub ([],[],tyConSub,levelsub) sig
              ; (_,w) <- generalize sig1  -- Now generalize
-             ; return(strata,isProp,tag,(nm,(w,mod,lev,exp)))}
+             ; return(stratum,isProp,tag,(nm,(w,mod,lev,exp)))}
         levelsub = concat(map (\ (nm,tau,polykind,levs) -> levs) tyConInfo)
 
 
@@ -2187,27 +2187,27 @@ ds xs = Ds (concat xs)
 constrType :: [(String,Tau,PolyKind)] -> (Dec,[(String,Name)],Level) ->
               TC (Dec,SynExt String,Level,Bool,[(Var,(Sigma,Mod,CodeLevel,Exp))])
 
-constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strata) = newLoc loc $
+constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,stratum) = newLoc loc $
     do { synTag <- checkDerivs constrs derivs
        ; let newd = (GADT loc isProp tname tkind constrs derivs synTag)
-       ; zs <- mapM (processOneCon levels strata) constrs
-       ; return(newd,synTag,strata,isProp,zs)}  where
- processOneCon levels strata (loc,cname, vars, preds, typ) =
-    do { sigma <- parseSigma levels cname strata vars preds typ
+       ; zs <- mapM (processOneCon levels stratum) constrs
+       ; return(newd,synTag,stratum,isProp,zs)}  where
+ processOneCon levels stratum (loc,cname, vars, preds, typ) =
+    do { sigma <- parseSigma levels cname stratum vars preds typ
        ; newLoc loc $
-         handleM 3 (check sigma (Star strata))
-                   (illFormed cname sigma (Star strata))
+         handleM 3 (check sigma (Star stratum))
+                   (illFormed cname sigma (Star stratum))
        ; sigma2 <- zonk sigma
        ; return(cname,(sigma2,Rig,0,Var cname))}
- parseSigma levels cname strata vars preds typ  =
+ parseSigma levels cname stratum vars preds typ  =
     case vars of
      -- The constr leaves the kinding of vars implicit.  C:: T a -> T a
-     [] -> do { checkRng cname tname strata typ
+     [] -> do { checkRng cname tname stratum typ
               ; (nmMap,vars,ps,rho2) <- inferConSigma levels currentMap loc (preds,typ)
               ; zvars <- zonk vars
-              ; checkValuesDontUseKarr cname rho2 strata
+              ; checkValuesDontUseKarr cname rho2 stratum
               ; return(Forall(windup vars (ps,rho2)))}
-     _  -> do { (_,rng) <- checkRng cname tname strata typ
+     _  -> do { (_,rng) <- checkRng cname tname stratum typ
               ; let bound = map (\ (nm,tau,kind) -> nm) currentMap
                     (typvars,_) = getFree [] rng
                     rngFree = typvars \\ bound
@@ -2347,7 +2347,7 @@ data2gadt (Data loc isP strat tname@(Global nm) hint args cs derivs) =
     ; return(GADT loc isP tname kind (map each cs) derivs Ox)
     }
 
-arrowUp strata [] t = t
+arrowUp stratum [] t = t
 arrowUp 0 (x:xs) t = Rarrow' x (arrowUp 0 xs t)
 arrowUp n (x:xs) t = Karrow' x (arrowUp n xs t)
 
