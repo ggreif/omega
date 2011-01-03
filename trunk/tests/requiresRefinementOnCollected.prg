@@ -1,12 +1,12 @@
-data List :: forall a . a ~> *1 where
+data List :: a ~> *1 where
   Nil  :: List a
   Cons :: a ~> List a ~> List a
 
-data LIST :: forall a n . n ~> List a ~> *0 where
+data LIST :: n ~> List a ~> *0 where
   NIL  :: LIST Z Nil
   CONS :: a -> LIST n l -> LIST (S n) (Cons a l)
 
-repl :: forall a (n::Nat) . Nat ~> a ~>  List a
+repl :: Nat ~> a ~>  List a
 {repl Z x} = Nil
 {repl (S n) x} = Cons x {repl n x}
 
