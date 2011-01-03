@@ -933,9 +933,10 @@ instance TyCh m => TypeLike m Tau where
           f (Karr x y) =  binaryLift Karr (sub env x) (sub env y)
           f (TyFun nm k x) = do { y <- sub env x; k' <- sub env k; return(TyFun nm k' y) }
           f (TcTv (x@(Tv uniq flav k))) =
-            do { case lookup x vs of
-                  Just tau -> sub env tau
-                  Nothing -> do { k2 <- sub env k; return(TcTv(Tv uniq flav k2))}
+            do { case (lookup x vs, filter ((/=x).fst) vs) of
+                  (Just tau, []) -> return tau
+                  (Just tau, vs') -> sub (ns,vs',cs,ls) tau
+                  (Nothing, _) -> do { k2 <- sub env k; return(TcTv(Tv uniq flav k2))}
                }
           f (TySyn nm n fs as t) =
              do { as2 <- sub env as; t2 <- sub env t;
