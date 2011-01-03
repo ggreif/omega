@@ -4271,7 +4271,6 @@ predefined =
  " deriving Nat(v)\n"++
  "data Equal:: a ~> a ~> *0 where\n"++
  "  Eq:: Equal x x\n"++
-
  "data HiddenLabel :: *0 where\n"++
  "  HideLabel:: Label t -> HiddenLabel\n"++
  "data Row :: a ~> b ~> *1 where\n"++
