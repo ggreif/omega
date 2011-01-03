@@ -1167,7 +1167,7 @@ unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
      ; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
      --; verbose <- getIoMode "verbose"
      --; when verbose (warnM[Ds "Checking kinds of ",Dd x,Ds " i.e. ",Dd t,Ds ":: ",Dd k])
-     ; (new_t) <- handleM 1 (check t k) (kinderr t k u1)
+     ; new_t <- handleM 1 (check t k) (kinderr t k u1)
      ; writeRef r1 (Just t2)
      ; return ()
      }
@@ -2286,9 +2286,9 @@ toTau env x = readTau 0 env x
 readTau :: TyCh m => Int -> TransEnv -> PT -> m Tau
 readTau n env (TyVar' s) = readName "\nWhile parsing a type var," env s
 readTau n env (Rarrow' x y) =
-  do { s <- readTau 0 env x; r <- readTau 0 env y; return(tarr s r)}
+  do { s <- toTau env x; r <- toTau env y; return(tarr s r)}
 readTau n env (Karrow' x y) =
-  do { s <- readTau 0 env x; r <- readTau 0 env y; return(Karr s r)}
+  do { s <- toTau env x; r <- toTau env y; return(Karr s r)}
 readTau n env (TyCon' (tag@('`':cs)) _) = return (ttag tag)
 readTau n (env@(_,loc,_,levels)) (TyCon' s explicit) =
   do { x <- readName "\nWhile parsing a type constructor," env s
@@ -2311,7 +2311,7 @@ readTau n (env@(_,loc,_,levels)) (Star' k (Just m)) =
 readTau n env (TyApp' x y) =
   let (funtyp,argtyps) = root x [y]
   in do { f <- readTau (length argtyps) env funtyp
-        ; xs <- mapM (readTau 0 env) argtyps
+        ; xs <- mapM (toTau env) argtyps
         ; case f of
            (TySyn nm m fs as b) ->
                do { let subst = zipWith (\ (nm,k) t -> (nm,t)) fs xs
@@ -2319,14 +2319,14 @@ readTau n env (TyApp' x y) =
                   ; return(TySyn nm n fs xs body)}
            _ -> return(applyT (f:xs)) }
 readTau n env (Kinded t k) =
-  do { kind <- readTau 0 env k
-     ; tau <- readTau 0 env t
+  do { kind <- toTau env k
+     ; tau <- toTau env t
      ; check tau kind
      ; zonk tau}
 readTau n env (ty@(TyFun' (x:xs))) =
-  do { s <- readTau 0 env x
+  do { s <- toTau env x
      -- ; d1 <- warnM [Ds "\n Entering ",Dd ty,Ds "\n",Dl env ","]
-     ; ys <- mapM (readTau 0 env) xs
+     ; ys <- mapM (toTau env) xs
      ; case s of
         TyCon sx level_ nm k | nonCon nm -> return(TyFun nm k ys)
         TyCon sx level_ nm k -> failM 0 [Ds ("The name of a type function must begin with a lower case letter: "++nm)]
@@ -2336,7 +2336,7 @@ readTau n env (ty@(TyFun' (x:xs))) =
 readTau n env (AnyTyp) = newUniv
 readTau n env (t@(Forallx Ex xs eqs body)) =
    do { (_,fargs,env2) <- argsToEnv xs env
-      ; r <- readTau 0 env2 body
+      ; r <- toTau env2 body
       ; eqs2 <- toEqs env2 eqs
       ; return(TyEx(windup fargs (eqs2,r))) }
 readTau n env (Forallx All [] [] body) = readTau n env body
