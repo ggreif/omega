@@ -934,7 +934,7 @@ instance TyCh m => TypeLike m Tau where
           f (TyFun nm k x) = do { y <- sub env x; k' <- sub env k; return(TyFun nm k' y) }
           f (TcTv (x@(Tv uniq flav k))) =
             do { case lookup x vs of
-                  Just tau -> return tau
+                  Just tau -> sub env tau
                   Nothing -> do { k2 <- sub env k; return(TcTv(Tv uniq flav k2))}
                }
           f (TySyn nm n fs as t) =
