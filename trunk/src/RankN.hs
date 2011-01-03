@@ -1122,7 +1122,6 @@ unify x y =
         f (TyEx x) (TyEx y) = unifyEx x y
         f s t = matchErr "\nDifferent types" s t
 
-
 emit x y =
   do { a <- zonk x; b <- zonk y
      ; normM <- normTyFun a
@@ -1133,9 +1132,8 @@ emit x y =
          Nothing ->
            do { verbose <- show_emit
               ; whenM verbose [Ds "\nGenerating predicate\n  ",Dd a, Ds " =?= ",dn b]
-              ; injectA " emitting " [equalRel a b]}}
+              ; injectA " emitting " [Equality a b]}}
 
-equalRel x y = Equality x y
 
 unifyEx x y =
  do { (tripsX,(eqn1,x1)) <- unwind x
