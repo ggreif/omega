@@ -4232,9 +4232,6 @@ toEnvX =
   ,( "DiffLabel", tyconDiffLabel, polyDiffLabel)
   ,( "String",    stringT, poly star)
   ,( infixEqName, TyCon Ox (lv 1) infixEqName equalKind, equalKind)
-  --  ,( "Hidden",    hiddenT, kind4Hidden)
-  --, declare tagT   -- ( "Tag"    , tagT, poly star1)
-  --, declare labelT -- ( "Label"  , labelT, poly (karr (MK tagT) star))
   ]
 
 predefined =
@@ -4272,9 +4269,6 @@ predefined =
  "  Z:: Nat' Z\n"++
  "  S:: forall (a:: Nat) . Nat' a -> Nat' (S a)\n"++
  " deriving Nat(v)\n"++
--- "data Equal :: forall (a:: *1) . a ~> a ~> *0 where\n"++
--- "  Eq:: forall (b:: *1) (x:: b) . Equal x x\n"++
-
  "data Equal:: a ~> a ~> *0 where\n"++
  "  Eq:: Equal x x\n"++
 
