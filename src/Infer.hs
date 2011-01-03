@@ -56,7 +56,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,stringT,equalKind,infixEqName,tvsTau,subPairs,teq,equalityP,pred2Tau
             ,argsToEnv,binaryLift,expecting,bindtype,failtype,returntype,zap,rootT,rootTau
             ,exhibitL,exhibitTT,apply_mutVarSolve_ToSomeEqPreds
-            ,parsePT,mutVarSolve,compose,o,composeTwo,equalRel,parseIntThenType,parseType,showPred
+            ,parsePT,mutVarSolve,compose,o,composeTwo,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift
             ,Docs(..),docs,dPoly)
