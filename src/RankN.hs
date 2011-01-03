@@ -1115,10 +1115,10 @@ unify x y =
         f (Karr x y) (Karr a b) = do { unify x a; unify y b }
         f (TySyn nm1 n1 f1 a1 t1) t2 = unify t1 t2
         f t1 (TySyn nm2 n2 f2 a2 t2) = unify t1 t2
-        f (TcTv x) t = unifyVar x t
-        f t (TcTv x) = unifyVar x t
         f (x@(TyFun nm k _)) y = emit x y
         f y (x@(TyFun nm k _)) = emit x y
+        f (TcTv x) t = unifyVar x t
+        f t (TcTv x) = unifyVar x t
         f (TyEx x) (TyEx y) = unifyEx x y
         f s t = matchErr "\nDifferent types" s t
 
