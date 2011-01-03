@@ -507,7 +507,6 @@ ioT =     TyCon Ox (lv 1) "IO" (poly star_star)
 ptrT =    TyCon Ox (lv 1) "Ptr" (poly star_star)
 arrowT =  TyCon Ox (lv 1) "(->)" (poly (karr star (star_star)))
 eqT =     TyCon Ox (lv 1) "Equal" kind4Eq
--- hiddenT = TyCon Ox (lv 1) "Hidden" kind4Hidden
 chrSeqT = TyCon Ox (lv 1) "ChrSeq" (poly star)
 floatT =  TyCon Ox (lv 1) "Float" (poly star)
 stringT = TyApp        listT charT
@@ -533,11 +532,6 @@ rConsT   = TyCon Ox (lv 2) "RCons" (poly1 star1 f)
 -- RNil :: (forall (k:*1) . Row k)
 rNilT    = TyCon Ox (lv 2) "RNil" (poly1 star1 (\ k -> trow k))
 
-
-kind4Hidden :: PolyKind -- Hidden :: (forall (k:*1) . (k -> *0) -> *0)
-kind4Hidden = K [] (Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
-   where k = TyVar name1 star1
-         ty = Rtau((k `Karr` (Star LvZero)) `Karr` (Star LvZero))
 
 kind4Eq :: PolyKind -- Eq :: (forall (k:*1) . k -> k -> *0)
 kind4Eq = K [] (Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
@@ -572,7 +566,6 @@ tstring = tlist charT
 tio x = TyApp ioT x
 tptr x = TyApp ptrT x
 teq x y = TyApp (TyApp eqT x) y
--- thidden x = TyApp hiddenT x
 tlabel x = TyApp labelT x
 ttag s = (TyCon Ox (lv 1) (s) tagKind)
 trow (MK x) = MK(TyApp rowT x)
@@ -641,20 +634,6 @@ sigma4Eq = Forall (Cons (star1,All) (bind kname
          eqns = [Equality u v]
          eqty = TyApp (TyApp eqT u) v
 
-{-
--- Hide :: (forall (k:*1) (f:k -> *0) (u':k) . (f u) -> Hidden f)
-sigma4Hide =
-    Forall (Cons (star1,All) (bind kname
-           (Cons (MK k `karr` star,All) (bind fname
-           (Cons (MK k,Ex) (bind uname
-           (Nil ([],Rtau((TyApp f u) `tarr` (thidden f))))))))))
- where kname = name1
-       fname = name2
-       uname = name3
-       k = TyVar kname star1
-       f = TyVar fname (MK k `karr` star)
-       u = TyVar uname (MK k)
--}
 
 s1,s2,s3 :: Tau
 s1 = Star (LvSucc LvZero)
