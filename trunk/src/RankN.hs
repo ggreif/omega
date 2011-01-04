@@ -3101,7 +3101,18 @@ mguB ((tau,TcTv (x@(Tv n (Rigid _ _ _) _))):xs) = return(Right("Rigid",TcTv x,ta
 
 mguB ((x,y):xs) = return(Right("No Match", x, y))
 
+-- mguBVar is only called from mguB
+--
 mguBVar :: TyCh m => TcTv -> Tau -> [(Tau,Tau)] -> m(Either Unifier2 ([Char],Tau,Tau))
+mguBVar (x@(Tv n _ _)) (tau@(TyFun _ _ _)) xs | elem x (tvsTau tau) =
+  do { norm <- normTyFun tau
+     ; case norm of
+       Just (TcTv (Tv m _ _)) | n==m -> mguB xs
+       Just tau' -> if elem x (tvsTau tau')
+                    then return(Right("occurs check (after normalization)", TcTv x, tau'))
+                    else mguBVar x tau' xs
+       _ -> return(Right("occurs check (not normalizable)", TcTv x, tau))
+     }
 mguBVar (x@(Tv _ _ (MK k))) tau xs | elem x (tvsTau tau) = return(Right("occurs check", TcTv x, tau))
 mguBVar (x@(Tv _ _ (MK k))) tau xs =
   do { let new1 = ([],[(x,tau)])
@@ -4157,14 +4168,25 @@ compStar (Right y) _ = Right y
 emitStar (x,y) (Left(sub,eqs)) = Left(sub,Equality x y :eqs)
 emitStar pair (Right x) = Right x
 
+-- mguStarVar is only called from mguStar
+--
+mguStarVar str beta (x@(Tv n _ _)) (tau@(TyFun _ _ _)) xs | elem x (tvsTau tau)  =
+  do { norm <- normTyFun tau
+     ; case norm of
+       Just (TcTv (Tv m _ _)) | n==m -> mguStar str beta xs
+       Just tau' -> if elem x (tvsTau tau')
+                    then return(Right("occurs check (after normalization)", TcTv x, tau'))
+                    else mguStarVar str beta x tau' xs
+       _ -> return(Right("occurs check (not normalizable)", TcTv x, tau))
+     }
 mguStarVar str beta (x@(Tv _ _ (MK k))) tau xs =
   do { let vs = tvsTau tau
            new1 = [(x,tau)]
      ; k2 <- kindOfM tau
      ; new2 <- mguStar str beta (subPairs new1 ((k,k2):xs))
-     ; return(if (elem x vs)
-                 then Right("occurs check", TcTv x, tau)
-                 else composeStar new2 new1)}
+     ; return(if elem x vs
+              then Right("occurs check", TcTv x, tau)
+              else composeStar new2 new1)}
 
 whichPat (Tv u (Rigid q loc (str,ref)) k) = str
 whichPat _ = "?"
