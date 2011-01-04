@@ -1585,7 +1585,7 @@ checkPats rename k ((p,sig,mod):xs) =
 
 ---------------------------------------------------------------
 -- A [Dec] is a TypableBinder
--- We assume the [Dec] has already been patitioned into
+-- We assume the [Dec] has already been partitioned into
 -- small mutually recursive lists. This is done by "inferBndrForDecs"
 
 
