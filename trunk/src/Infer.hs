@@ -41,7 +41,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
             ,extendref, failIfInConsistent
             ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv  -- splitU,split3,
-            ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newflexi,newStar
+            ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newFlexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
             ,instanTy,instanPatConstr,checkArgs,nameOf
             ,mguB,mostGenUnify,unify,morepolySS,morepolyRR,match2,alpha,morepolySigmaRho
@@ -1734,7 +1734,7 @@ newf name Ex k =
   do { loc <- getLoc
      ; newRigid loc "skolem var in rewrite rule" name Ex k
      }
-newf name q k = newflexi name q k
+newf name q k = newFlexi name q k
 
 freshRule :: (Name -> Quant -> Kind -> TC Tau) -> RWrule ->  TC (Bool,[(TcTv,Quant)],[Pred],Pred,[Pred])
 freshRule new (RW nm key rclass args precond lhs rhs) =
@@ -1748,12 +1748,12 @@ freshRule new (RW nm key rclass args precond lhs rhs) =
 
 freshLhs :: RWrule -> TC Pred
 freshLhs (RW nm key rclass args precond lhs rhs) =
-    do { (env,pairs) <- buildEnv newflexi args [] []
+    do { (env,pairs) <- buildEnv newFlexi args [] []
        ; subst env lhs
        }
 
 instanceOf args lhs rhs =
- do { (env,pairs) <- buildEnv newflexi args [] []
+ do { (env,pairs) <- buildEnv newFlexi args [] []
     ; lhs' <- subst env lhs
     ; rhs' <- subst env rhs
     ; eitherM (mguB [(lhs',rhs')])
@@ -2862,7 +2862,7 @@ makeRule s k xs =
 checkLhsMatch :: ToEnv -> Sigma -> ([PT],PT) -> TC ([Tau],[Tpat],Tau)
 checkLhsMatch current sigma (ps,rhs) =
   do { -- Fresh Instance of the type for every clause
-       (vars,_,Rtau tau) <- unBindWith (\ x -> return "FlexVarsShouldNeverBackPatch6") newflexi sigma
+       (vars,_,Rtau tau) <- unBindWith (\ x -> return "FlexVarsShouldNeverBackPatch6") newFlexi sigma
      ; let down (Karr x y) xs = down y (xs++[x])
            down rng xs = (rng,xs)
            (range,ks) = down tau []
@@ -3281,7 +3281,7 @@ matchPred truth question =
 
 freshLemma :: RWrule -> TC (Bool,[(TcTv,Quant)],[Pred],Tau,Tau)
 freshLemma r =
- do { info <- freshRule newflexi r
+ do { info <- freshRule newFlexi r
     ; case info of
        (commutes,vars,precond,Rel lhs,[Rel rhs]) -> return(commutes,vars,precond,lhs,rhs)
        -- BOGUS(commutes,vars,precond,Equality a b,[Equality x y]) -> return(commutes,vars,precond,teq a b,teq x y)
@@ -3667,7 +3667,7 @@ sigmaToRefinementRule name (Forall l) =
 
 freshRefinement :: RWrule -> TC ([(TcTv,Quant)],[Pred],(Tau,Tau),[Pred])
 freshRefinement r =
- do { info <- freshRule newflexi r
+ do { info <- freshRule newFlexi r
     ; case info of
        (commutes,vars,precond,Equality a b,rhs) -> return(vars,precond,(a,b),rhs)
        _ -> failD 2 [Ds "In freshRefinement ",Dd r,Ds " is not a refinement lemma."]
@@ -3910,7 +3910,7 @@ matchR truths open ((r@(RW nm key BackChain _ _ _ _)):rs) term
 matchR truths open ((r@(RW nm key _ _ _ _ _)):rs) term
   | exploreD (filter (nm==) open) = matchR truths open rs term
 matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
-  do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newflexi r
+  do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newFlexi r
      ; ys <- matchR truths open rs term
      ; maybeM (mostGenUnify [(lhs,term)])
         (\ sub ->    do { let pre2 = sub2Pred sub precond
@@ -4062,7 +4062,7 @@ checkTau ((r@(RW nm key (Rewrite b) _ _ _ _)):rs) truth = checkTau rs truth
 checkTau ((r@(RW nm key BackChain _ _ _ _)):rs) truth = checkTau rs truth
 checkTau ((r@(RW nm key Refinement _ _ _ _)):rs) truth = checkTau rs truth
 checkTau ((r@(RW nm key Axiom _ _ _ _)):rs) truth =
-  do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newflexi r
+  do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newFlexi r
      ; ys <- checkTau rs truth
      ; case match2 ([],[]) [(lhs,truth)] of
         Just unifier -> do { let rhsts = map (unRel 33) rhs
