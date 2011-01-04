@@ -8,7 +8,7 @@ Imagine following type function:
 tuple :: Nat ~> *
 {tuple 0t} = ()
 {tuple 1t} = a
-{tuple (2+m)t} = (a, {nest (1+m)t})
+{tuple (2+m)t} = (a, {tuple (1+m)t})
 }}}
 
 Now, let's see how this function can be used to parametrize a GADT:
