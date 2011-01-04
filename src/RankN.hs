@@ -1218,7 +1218,7 @@ unifyCode expected =
 
 sigmaTwo :: TyCh m => (Tau -> Tau -> Tau) -> Sigma -> m(Sigma,Sigma)
 sigmaTwo mkTwo (Forall xs) =
-   do { (tvs,eqs,b) <- unBindWithL [] newflexi (\ x -> return "FlexVarsShouldNeverBackPatch") xs
+   do { (tvs,eqs,b) <- unBindWithL [] newFlexi (\ x -> return "FlexVarsShouldNeverBackPatch") xs
       ; (p1,p2) <- case b of
           Rpair x y -> return(x,y)
           Rtau x -> do { a <- newTau star; b <- newTau star
@@ -1276,7 +1276,7 @@ skolTy :: TyCh m => Sigma -> m ([TcTv],[Pred],Rho)
 skolTy sigma = unBindWith (\ x -> return "SkolemVarsShouldNeverBackPatch") newSkolem sigma
 
 -- "new" from "unBindWithL" will be one of these three functions
-newflexi       nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
+newFlexi       nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
 newSkolem      nam quant k = do { v <- newSkolTyVar (show nam) k; return(TcTv v)}
 newRigid loc s nam quant k = do { v <- newRigidTyVar quant loc (return s) k; return(TcTv v) }
 
@@ -1310,7 +1310,7 @@ instanTy lvs (Forall s) = do { (vs,ps,r) <- instanL lvs s; return(ps,r) }
 -- instanL :: (Show b,TypeLike m b, Swap b) =>  [Name] -> L ([Pred],b) -> m ([TcTv],[Pred],b)
 instanL lvs s =
   do { levelMap <- newLevels lvs
-     ; (vs,eqns,r) <- unBindWithL levelMap newflexi (\ x -> return "FlexVarsNeverBackPatch3") s
+     ; (vs,eqns,r) <- unBindWithL levelMap newFlexi (\ x -> return "FlexVarsNeverBackPatch3") s
      ; (unifyPred,preds2,r2) <- normalizeEqn eqns r
      ; (u,p,r) <- zonk (unifyPred,preds2,r2)
      ; return(vs,preds2,r2) }
@@ -1331,7 +1331,7 @@ existsInstance inject s (K lvs (Forall zs)) =
            ; levelMap <- newLevels lvs
            ; unBindWithL levelMap (new loc) inject zs}
   where new loc name Ex k = newRigid loc s name Ex k
-        new loc name All k = newflexi name All k
+        new loc name All k = newFlexi name All k
 
 --------------------------------------------------------------------
 
@@ -1342,7 +1342,7 @@ instanPatConstr inject q loc s (K lvs (Forall ty)) =
       ; (vs,eqs,r) <- unBindWithL levelMap new inject ty
       ; return(filter p vs,eqs,r) }
    where new nam Ex k = newRigid loc s nam Ex k
-         new nam All k = newflexi nam All k
+         new nam All k = newFlexi nam All k
          p (Tv  uniq (Flexi _) k) = False
          p _ = True
 
@@ -1794,7 +1794,7 @@ instance TyCh m => Typable m Sigma Tau where
 
 instance TyCh m => Typable m (L([Pred],Rho)) Tau where
   tc xs expect =
-    do { (tvs,eqs,b) <- unBindWithL [] newflexi (\ x -> return "FlexVarsShouldNeverBackPatch5") xs
+    do { (tvs,eqs,b) <- unBindWithL [] newFlexi (\ x -> return "FlexVarsShouldNeverBackPatch4") xs
        ; let err s =  do { ty <- zonk b
                          ; failM 2 [Ds "\nWhile checking well-kindedness of the type\n  "
                          ,Dd ty,Ds s]}
@@ -1806,7 +1806,7 @@ instance TyCh m => Typable m (L([Pred],Rho)) Tau where
 
 instance TyCh m => Typable m (L([Pred],Tau)) Tau where
   tc xs expect =
-    do { (tvs,eqs,b) <- unBindWithL [] newflexi (\ x -> return "FlexVarsShouldNeverBackPatch5") xs
+    do { (tvs,eqs,b) <- unBindWithL [] newFlexi (\ x -> return "FlexVarsShouldNeverBackPatch5") xs
        ; b2 <- tc b expect
        ; eqs2 <- mapM kindPred eqs
        ; (mapping,newbinders,body) <- subFreshNames [] tvs [] (eqs2,b2)
