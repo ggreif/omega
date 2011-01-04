@@ -27,6 +27,6 @@ pl (1+m)r n = pl m (1+n)r
 
 -- TESTS --
 
---t1 :: 25q
+t1 :: Pat'' 25q
 t1 = pl 13r 12r
 
