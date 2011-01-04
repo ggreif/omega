@@ -3651,7 +3651,7 @@ dKinding d1 x = (d1,text (":"++show x))
 
 dLdata:: (Swap t,DocReady t,NameStore d) =>
          Quant -> d -> L([Pred],t) -> (d,Doc)
-dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS] )
+dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS])
     where (trips,(eqs,rho)) = unsafeUnwind args
           (d2,prefix,indent) = tripf d1 trips
           (d3,eqsS) = feqs d2 eqs
@@ -3659,12 +3659,12 @@ dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS] )
           sh All = text "forall "
           sh Ex  = text "exists "
           tripf d [] = (d,PP.empty,PP.nest 0)
-    tripf d1 trips = (d2,sh quant <> (PP.cat argsStr) <> text ".",PP.nest 7)
-       where (d2,argsStr) = thread pp (text " ") d1 trips
+          tripf d1 trips = (d2,sh quant <> (PP.cat argsStr) <> text ".",PP.nest 7)
+            where (d2,argsStr) = thread pp (text " ") d1 trips
           feqs d [] = (d,PP.empty)
           feqs d [x::Pred] = (d1,s <> text " => ") where (d1,s) = dPred d x
-    feqs d xs = (d1,PP.parens(PP.cat s) <> text " => ")
-       where (d1,s) = thread dPred (text ",") d xs
+          feqs d xs = (d1,PP.parens(PP.cat s) <> text " => ")
+            where (d1,s) = thread dPred (text ",") d xs
           pp d2 (nm,MK k,q) =
             let (d3,name) = useStoreName nm (MK k) (prefix k) d2
                 prefix (TcTv (Tv _ (Skol _) _)) s = (case q of {Ex -> "!"; All -> ""})++s
