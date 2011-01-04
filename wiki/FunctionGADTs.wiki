@@ -22,10 +22,18 @@ data Tuple :: n ~> {tuple n} where
 
 = Details =
 
-The type constructor's range must be {*n}.
+The type constructor's range must be `*n`.
+Currently Ωmega enforces this directly, without performing a normalization step:
+
+{{{
+In the data declaration for 'Tuple' the range:
+   {tuple n}
+is not of the form *n, for some Level n.
+}}}
 
 = Open Questions =
 
-  * dies this construction work at all?
+  * does this construction work at all?
   * can this construction be used to implement parametrized modules?
   * ... type classes? _gasp!_ How can dictionary passing be emulated? Open type classes too?
+  * how costly would it be to modify Ωmega to accept this construct? And GHC ? ;-)
