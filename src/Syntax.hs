@@ -788,9 +788,8 @@ emptyF = FX [] [] [] [] []
 appF (FX x y z m n) (FX a b c d e) =
    FX (union x a) (union y b) (union z c) (union m d) (union n e)
 
-addFree bound v x = if mem v bound || mem v fs then x else x{free = v : fs}
+addFree bound v x = if elem v bound || elem v fs then x else x{free = v : fs}
   where fs = free x
-        mem x xs = any (==x) xs
 addBind v x = x {binds = v : binds x}
 addDepend v x = x {depends = v : depends x}
 addBindT ts x = x {tbinds = union ts (tbinds x)}

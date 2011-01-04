@@ -1124,7 +1124,7 @@ emit x y =
   do {  a <- zonk x
      ; let f (TcTv(tv@(Tv _ (Flexi _) _))) =
                do { (vs,level_) <- get_tvs x
-                  ; if any (==tv) vs then g else unifyVar tv x}
+                  ; if elem tv vs then g else unifyVar tv x}
            f _ = g
            g = do { b <- zonk y
                   ; normM <- normTyFun a
@@ -1166,7 +1166,7 @@ unifyVar (x@(Tv u1 (Flexi _) _)) (TcTv(y@(Tv u2 (Flexi _) _)))
 unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
   do { (vs,level_) <- get_tvs t
      ; t2 <- zonk t
-     ; when (any (==x) vs) (matchErr "Occurs check" (TcTv x) t2)
+     ; when (elem x vs) (matchErr "Occurs check" (TcTv x) t2)
      --; verbose <- getIoMode "verbose"
      --; when verbose (warnM[Ds "Checking kinds of ",Dd x,Ds " i.e. ",Dd t,Ds ":: ",Dd k])
      ; new_t <- handleM 1 (check t k) (kinderr t k u1)
