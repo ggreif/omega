@@ -1,0 +1,31 @@
+#summary What happens when the range of the GADT type constructor is a type function invocation?
+#labels crazy
+
+= Introduction =
+
+Imagine following type function:
+{{{
+tuple :: Nat ~> *
+{tuple 0t} = ()
+{tuple 1t} = a
+{tuple (2+m)t} = (a, {nest (1+m)t})
+}}}
+
+Now, let's see how this function can be used to parametrize a GADT:
+
+{{{
+data Tuple :: n ~> {tuple n} where
+  Unit :: Tuple 0t
+  Item :: Int -> Tuple 1t
+  Pair :: Int -> Int -> Tuple 2t
+}}}
+
+= Details =
+
+The type constructor's range must be {*n}.
+
+= Open Questions =
+
+  * dies this construction work at all?
+  * can this construction be used to implement parametrized modules?
+  * ... type classes? _gasp!_ How can dictionary passing be emulated? Open type classes too?
