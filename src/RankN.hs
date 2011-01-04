@@ -1103,11 +1103,7 @@ unify x y =
         --; when verbose (warnM [Ds "\nUnifying ",Dd x1,Ds " =?= ",Dd y1])
         ; f x1 y1
         }
-  where --f (t1@(TyVar n k1)) t2 =
-        --  matchErr "TyVar in unify, this should never happen" t1 t2
-        --f t1 (t2@(TyVar n k1)) =
-        --  matchErr "TyVar in unify, this should never happen" t2 t1
-        f (t1@(TyVar n k)) (t2@(TyVar n1 k1)) | n==n1 = return ()
+  where f (t1@(TyVar n k)) (t2@(TyVar n1 k1)) | n==n1 = return ()
         f (TyApp x y) (TyApp a b) = do { unify x a; unify y b }
         f (x@(TyCon sx l s _)) (y@(TyCon tx k t _)) =
            do { unifyLevel ("unify TyCon case: "++s++" =?= "++t++show(l,k)) l k
@@ -1116,7 +1112,7 @@ unify x y =
         f (Karr x y) (Karr a b) = do { unify x a; unify y b }
         f (TySyn nm1 n1 f1 a1 t1) t2 = unify t1 t2
         f t1 (TySyn nm2 n2 f2 a2 t2) = unify t1 t2
-        f (x@(TyFun _ _ _)) (y@(TyFun _ _ _)) | x == y = warnM [Ds "eliminated ", Dd x, Ds " == ", Dd y]
+        f (x@(TyFun _ _ _)) (y@(TyFun _ _ _)) | x == y = return () -- warnM [Ds "eliminated ", Dd x, Ds " == ", Dd y]
         f (x@(TyFun nm k _)) y = emit x y
         f y (x@(TyFun nm k _)) = emit x y
         f (TcTv x) t = unifyVar x t
@@ -1125,23 +1121,21 @@ unify x y =
         f s t = matchErr "\nDifferent types" s t
 
 emit x y =
-  do { warnM [Ds "\nemit called (x: ",Dd x, Ds " y: ", Dd y]
-     ; a <- zonk x
+  do {  a <- zonk x
      ; let f (TcTv(tv@(Tv _ (Flexi _) _))) =
-                 do { (vs,level_) <- get_tvs x
-                    ; if any (==tv) vs then g a else unifyVar tv x}
-           f _ = g a
-           g a = do { b <- zonk y
-                    ; warnM [Ds "\nemit non-simple (a: ",Dd a, Ds " b: ", Dd b]
-                    ; normM <- normTyFun a
-                    ; case normM of
-                      Just nonTyfun -> warnM [Ds "\nEmit Norm (",Dd a,Ds "=?=",Dd b
-                                             ,Ds ")\n     ---> (",Dd nonTyfun,Ds "=?=",Dd b,Ds ")"] >>
-                                             unify nonTyfun b
-                      Nothing ->
-                        do { verbose <- show_emit
-                           ; whenM True [Ds "\nGenerating predicate\n  ",Dd a, Ds " =?= ",dn b]
-                           ; injectA " emitting " [Equality a b]}}
+               do { (vs,level_) <- get_tvs x
+                  ; if any (==tv) vs then g else unifyVar tv x}
+           f _ = g
+           g = do { b <- zonk y
+                  ; normM <- normTyFun a
+                  ; case normM of
+                    Just nonTyfun -> --warnM [ Ds "\nunify instead of emitting (",Dd a,Ds "=?=",Dd b
+                                     --      , Ds ")\n     ---> (",Dd nonTyfun,Ds "=?=",Dd b,Ds ")"] >>
+                                     unify nonTyfun b
+                    Nothing ->
+                      do { verbose <- show_emit
+                         ; whenM verbose [Ds "\nGenerating predicate\n  ",Dd a, Ds " =?= ",dn b]
+                         ; injectA " emitting " [Equality a b]}}
      ; f y}
 
 
