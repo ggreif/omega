@@ -79,7 +79,7 @@ failK :: TyCh m => String -> Int -> [DispElem Z] -> m b
 failK k n elems =  failDd k n elems
 
 failDd k n elems =
-   do { d <- readRef dispRef;
+   do { d <- readRef dispRef
       ; let (d2,s) = displays d elems
       ; writeRef dispRef d2
       ; failP k n s }
@@ -165,7 +165,7 @@ instance TyCh m => TypeLike m Level where
   sub env@(ns,vs,cs,ls) x = subLevel ls x
   zonk x = zonkLv x
   get_tvs x =
-     do { zs <- levelVars x;
+     do { zs <- levelVars x
         ; return([],zs)}
   --nf x = zonkLv x
 
@@ -603,22 +603,20 @@ bindtype m =
 -- given m, produce : (String -> m a)
 failtype :: TyCh m => Tau -> m Sigma
 failtype m =
-    do { av <- fresh;
-      ; let a = TyVar av star
-      ; return(Forall
-        (Cons (star,All)
-              (bind av (Nil ([],Rtau (tstring `tarr` (TyApp m a)))))))
-      }
+    do { av <- fresh
+       ; let a = TyVar av star
+       ; return(Forall
+         (Cons (star,All)
+               (bind av (Nil ([],Rtau (tstring `tarr` (TyApp m a)))))))}
 
 -- given m, produce : (a -> m a)
 returntype :: TyCh m => Tau -> m Sigma
 returntype m =
-    do { av <- fresh;
-      ; let a = TyVar av star
-      ; return(Forall
-        (Cons (star,All)
-              (bind av (Nil ([],Rtau (a `tarr` (TyApp m a)))))))
-      }
+    do { av <- fresh
+       ; let a = TyVar av star
+       ; return(Forall
+         (Cons (star,All)
+               (bind av (Nil ([],Rtau (a `tarr` (TyApp m a)))))))}
 
 
 -- Eq :: (forall (k:*1) (u:k) (v:k) . (u = v) => Eq u v)
@@ -939,7 +937,7 @@ instance TyCh m => TypeLike m Tau where
                   (Nothing, _) -> do { k2 <- sub env k; return(TcTv(Tv uniq flav k2))}
                }
           f (TySyn nm n fs as t) =
-             do { as2 <- sub env as; t2 <- sub env t;
+             do { as2 <- sub env as; t2 <- sub env t
                 ; fs2 <- mapM g fs; return(TySyn nm n fs2 as2 t2)}
            where g (nm,k) = do { k2 <- sub env k; return(nm,k2)}
           f (TyEx x) = do { w <- sub env x; return(TyEx w)}
@@ -1176,9 +1174,9 @@ unifyVar (x@(Tv u1 (Flexi r1) (MK k))) t =
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (TcTv v@(Tv _ (Flexi _) _)) = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Skol s) _))      (TcTv v@(Tv u2 (Flexi _) k2))      = unifyVar v (TcTv x)
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TcTv v@(Tv _ (Rigid _ _ _) _))) =
-   do { verbose <- getIoMode "verbose";
-        bs <- getBindings;
-        whenM verbose [Ds "Emitting ",Dd x,Ds " =?= ", Dd y,Ds "\n",Dl bs ", "];
+   do { verbose <- getIoMode "verbose"
+      ; bs <- getBindings
+      ; whenM verbose [Ds "Emitting ",Dd x,Ds " =?= ", Dd y,Ds "\n",Dl bs ", "]
       ; emit (TcTv x) y }
 unifyVar (x@(Tv _ (Rigid _ _ _) _)) (y@(TyCon tx k t _)) = emit (TcTv x) y
 
@@ -1222,7 +1220,7 @@ sigmaTwo mkTwo (Forall xs) =
       ; (p1,p2) <- case b of
           Rpair x y -> return(x,y)
           Rtau x -> do { a <- newTau star; b <- newTau star
-                       ; unify x (mkTwo a b);
+                       ; unify x (mkTwo a b)
                        ; z1 <- zonk a; z2 <- zonk b
                        ; return(simpleSigma z1,simpleSigma z2) }
       ; (mapping,newbinders1,body1) <- subFreshNames [] tvs [] (eqs,p1)
@@ -1258,8 +1256,8 @@ expecting shape f expect =
 
 newFlexiTyVar :: TyCh m => Kind -> m TcTv
 newFlexiTyVar k =
-  do { n <- nextInteger ;
-     ; r <- newRef Nothing ;
+  do { n <- nextInteger
+     ; r <- newRef Nothing
      ; return (Tv n (Flexi r) k) }
 
 newRigidTyVar :: TyCh m => Quant -> Loc -> IO String -> Kind -> m TcTv
@@ -1327,7 +1325,7 @@ rigidInstanceL inject s lvs zs =
  do { loc <- currentLoc; unBindWithL lvs (newRigid loc s) inject zs }
 
 existsInstance inject s (K lvs (Forall zs)) =
-        do { loc <- currentLoc;
+        do { loc <- currentLoc
            ; levelMap <- newLevels lvs
            ; unBindWithL levelMap (new loc) inject zs}
   where new loc name Ex k = newRigid loc s name Ex k
@@ -1398,7 +1396,7 @@ subFreshNames :: (TyCh m,TypeLike m t)
   => [(TcLv,Level)] -> [TcTv] -> [(TcTv,Tau)] -> t -> m( [(TcTv,Tau)],[(Name,Kind,Quant)],t)
 subFreshNames lvs [] env ty =
    do { w <- sub ([],env,[],lvs) ty
-     ; return(env,[],w) }
+      ; return(env,[],w) }
 subFreshNames lvs (v@(Tv unq (Flexi ref) k):xs) env ty =
    do { name <- fresh
       ; k2 <- sub ([],env,[],lvs) k
@@ -1797,7 +1795,7 @@ instance TyCh m => Typable m (L([Pred],Rho)) Tau where
     do { (tvs,eqs,b) <- unBindWithL [] newFlexi (\ x -> return "FlexVarsShouldNeverBackPatch4") xs
        ; let err s =  do { ty <- zonk b
                          ; failM 2 [Ds "\nWhile checking well-kindedness of the type\n  "
-                         ,Dd ty,Ds s]}
+                                   ,Dd ty,Ds s]}
        ; b2 <- handleM 2 (tc b expect) err
        ; eqs2 <- mapM kindPred eqs
        ; (mapping,newbinders,body) <- subFreshNames [] tvs [] (eqs2,b2)
@@ -1886,7 +1884,7 @@ instance TyCh m => Subsumption m Sigma (Expected Rho) where
                               morepoly s s1 e2
    morepoly s s1 (Infer ref) =
       do { -- warnM [Ds "Insubsumption Sigma ExpectedRho ",Dd s1,Ds "=?= Infer"];
-           (preds,rho1) <- instanTy [] s1;
+           (preds,rho1) <- instanTy [] s1
          ; injectA " morepoly Sigma (Expected Rho) " preds -- ## DO THIS WITH THE PREDS?
          ; writeRef ref rho1
          }
@@ -3661,12 +3659,12 @@ dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS] )
           sh All = text "forall "
           sh Ex  = text "exists "
           tripf d [] = (d,PP.empty,PP.nest 0)
-	  tripf d1 trips = (d2,sh quant <> (PP.cat argsStr) <> text ".",PP.nest 7)
-	     where (d2,argsStr) = thread pp (text " ") d1 trips
+    tripf d1 trips = (d2,sh quant <> (PP.cat argsStr) <> text ".",PP.nest 7)
+       where (d2,argsStr) = thread pp (text " ") d1 trips
           feqs d [] = (d,PP.empty)
           feqs d [x::Pred] = (d1,s <> text " => ") where (d1,s) = dPred d x
-	  feqs d xs = (d1,PP.parens(PP.cat s)<> text " => ")
-	     where (d1,s) = thread dPred (text ",") d xs
+    feqs d xs = (d1,PP.parens(PP.cat s) <> text " => ")
+       where (d1,s) = thread dPred (text ",") d xs
           pp d2 (nm,MK k,q) =
             let (d3,name) = useStoreName nm (MK k) (prefix k) d2
                 prefix (TcTv (Tv _ (Skol _) _)) s = (case q of {Ex -> "!"; All -> ""})++s

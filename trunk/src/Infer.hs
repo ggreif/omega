@@ -87,7 +87,7 @@ instance Check (Mtc TcEnv Pred) where
   getMode s = getM s False
   wait = waitN  -- warnM [Ds "<return> to continue ..."] >> fio2Mtc(fio (getLine))
   rewNestedEqual (t1,t2) =
-    do { rs <- getLemmaRules "Equal";
+    do { rs <- getLemmaRules "Equal"
        ; env <- tcEnv
        ; truths <- getTruths
        ; normWithLemmas (rules env,tyfuns env,truths) rs (teq t1 t2)
@@ -101,7 +101,7 @@ instance Check (Mtc TcEnv Pred) where
   getDefTree other = failM 1 [Ds "Bad type function: ",Dd ( other)]
   tryRewriting t =
     do { (t2,u, newtruths) <- liftNf norm2Tau t
-       ; if t==t2 then return Nothing else return (Just (t2,u))};
+       ; if t==t2 then return Nothing else return (Just (t2,u))}
   rewEq (t1 @(TyFun nm k xs),t2) =
             do {rs <- getLemmaRules nm; try True (t1,t2) rs}
     where try True (t1,t2@(TyFun nm k xs)) [] =
@@ -387,7 +387,7 @@ instance Zonk (Mtc TcEnv Pred) Frag where
   
 instance TypeLike (Mtc TcEnv Pred) Frag where
   sub env (Frag xs ys zs eqs theta rs exts) =
-     do { xs' <- mapM f xs;
+     do { xs' <- mapM f xs
         ; eqs2 <- sub env eqs
         ; zs' <- mapM g zs
         ; rs2 <- mapM (sub env) rs
@@ -550,7 +550,7 @@ mknoisy env = setMode "solving" True >> return env
 mksilent env = setMode "solving" False >> return env
 
 setAssumptions :: [Pred] -> Mtc TcEnv a b -> Mtc TcEnv a b
-setAssumptions d (Tc m) = Tc(\env -> m (env {assumptions = d}));
+setAssumptions d (Tc m) = Tc(\env -> m (env {assumptions = d}))
 
 valueNames env = foldr add [] (Map.toList (var_env env))
   where add (Global nm,(sigma,mod,level,exp)) xs = nm:xs
@@ -1351,7 +1351,7 @@ instance TypableBinder Var where
         ; ans <- addTermVar (var,(K [] t,Rig,level,Var v),LamBnd) k
         ; return(ans,v) }
   inferBndr rename k var =
-     do { sigma <- newSigma star;
+     do { sigma <- newSigma star
         ; level <- getLevel
         ; v <- alphaN rename var
         ; ans <- addTermVar (var,(K [] sigma,Wob,level,Var v),LamBnd) k
@@ -3300,7 +3300,7 @@ defTreeInfo s =
 -- Narrowing
 
 help v term =
-  do { (free,_) <- get_tvs term;
+  do { (free,_) <- get_tvs term
      ; return(if elem v free then [] else [(v,term)])}
 
 pred2refine (Equality (TcTv (t@(Tv un (Rigid q loc nm) k))) y) = help t y
@@ -3335,7 +3335,7 @@ solveByNarrowing (nsol,nsteps) context@(s,_) normTruths tests =
               [ Ds ("\n***********************\nIn solve: "++s)
               ,Ds "\nObligations = ",Dlf exhibitTT tests "; "
               ,Ds "\nTruths      = ",Dl normTruths "; "
-              ,Ds "\nRefinement  = ",Dl refinement "; "];
+              ,Ds "\nRefinement  = ",Dl refinement "; "]
        ; let ordered = sortBy lessTau tests
              conj = andP(map EqP ordered)
              hyp = andR(map EqR (foldr pred2Pair [] normTruths))
@@ -4787,7 +4787,7 @@ isProp propMaybe t =
   case rootT t [] of
    Just(sx,lev,s,k,xs) -> case propMaybe of
                     (Just new) | s==new -> return True
-                    other -> do { env <- tcEnv;
+                    other -> do { env <- tcEnv
                                 ; return(Map.member s (rules env)) }
    Nothing -> return False
 
