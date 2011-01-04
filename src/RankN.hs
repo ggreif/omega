@@ -2982,7 +2982,7 @@ varsOfPair f g (x,y) = (xs++ys, as++bs, ms++ns)
   where (xs,as,ms) = f x
         (ys,bs,ns) = g y
 
-tvsTau x = fst3(varsOfTau x)
+tvsTau x = fst3 (varsOfTau x)
 
 
 ---------------------------------------------------------------
@@ -2995,7 +2995,7 @@ a = TcTv(Tv 5 (Skol "a") star)
 b = TcTv(Tv 6 (Skol "b") star)
 c = TcTv(Tv 7 (Skol "c") star)
 
-ps = [ Equality b a, Equality c a]
+ps = [Equality b a, Equality c a]
 
 failIfInConsistent pat current extension xs =
   do { ans <- mguB xs
@@ -4051,8 +4051,8 @@ fst3 (x,y,z) = x
 
 splitClass (TcTv (Tv un (Skol _) k)) any = Hard
 splitClass any (TcTv (Tv un (Skol _) k)) = Hard
-splitClass (TcTv x) (y@(TyFun _ _ _)) | all (/=x) (fst3 (varsOfTau y)) = MutSolve
-splitClass (y@(TyFun _ _ _)) (TcTv x) | all (/=x) (fst3 (varsOfTau y)) = MutSolve
+splitClass (TcTv x) (y@(TyFun _ _ _)) | all (/=x) (tvsTau y) = MutSolve
+splitClass (y@(TyFun _ _ _)) (TcTv x) | all (/=x) (tvsTau y) = MutSolve
 splitClass (TcTv x) any = MutSolve
 splitClass any (TcTv x) = MutSolve
 splitClass _ _ = Hard
