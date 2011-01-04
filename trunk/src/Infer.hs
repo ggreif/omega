@@ -569,7 +569,7 @@ showSomeVals p env = mapM f (filter p (Map.toList(var_env env)))
 
 showVals vs = do { env <- getTCEnv
                     ; warnM [Dlf f (filter p (Map.toList env)) "\n  "]}
-  where p (Global s,_) = any (==s) vs
+  where p (Global s,_) = elem s vs
         f d (nm,(sigma,mod,level,exp)) = displays d [Ds (show nm++" :: "),Dd sigma]
 
 showBindings :: TyCh m => m ()
