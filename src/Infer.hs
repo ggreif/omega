@@ -2213,7 +2213,6 @@ constrType currentMap (GADT loc isProp tname tkind constrs derivs _,levels,strat
                     rngFree = typvars \\ bound
                     -- vars are Ex if they aren't in the range type
                     -- E.g. 'a' in   App:: Exp (a -> b) -> Exp a -> Exp b
-                    -- except for *n: Eq:: forall (a:: *1) (b:: a) . Equal b b
                     quant (Star' _ _) n = All
                     quant _ n = if elem n rngFree then All else Ex
                     addQuant (name,kind) = (name,kind,quant kind name)
