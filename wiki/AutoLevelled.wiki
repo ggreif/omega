@@ -1,5 +1,5 @@
 #summary Proposed feature of generating isomorphic datatypes at many levels in one definition.
-#labels speculative,crazy,Phase-Requirements
+#labels speculative,Phase-Requirements
 
 ----
 = Introduction =
@@ -116,6 +116,7 @@ prompt> Q (Q Y)
 }}}
 
 _Note: Issue 70 is hindering us rooting this under `*3`._
+_Update: When spelling out all the `forall`s explicitly, Ωmega accepts roots even more levels up: see [http://code.google.com/p/omega/source/browse/trunk/tests/AutoLevelled.prg?spec=svn514&r=514 AutoLevelled.prg], but of course it gets messy._
 
 == Ωmega example for `‹‹plus››` ==
 
@@ -135,6 +136,7 @@ plus'' (Q m) n = Q (plus'' m n)
 Again, this is nice and regular.
 
 _Note: unfortunately this does not compile with Ωmega 1.4.3 due to issue 23 :-(_
+_Update: should work with Ωmega 1.4.7pre :-)_
 
 == Ωmega example for `«Foo»` ==
 
