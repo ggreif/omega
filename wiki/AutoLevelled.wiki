@@ -181,9 +181,9 @@ _Update: should work with Ωmega 1.4.7pre :-)_
 `«Foo»` has an isomorphic copy at every level up to infinity, we can tentatively sketch a definition here, not sure if the circularity is accepted:
 {{{
 data Foo :: level n . Foo p ~> *n where
-  Bar :: Foo
-  Quux :: Foo ~> Foo
- deriving Nat(p)
+  Bar :: Foo p
+  Quux :: Foo p ~> Foo p
+ deriving Nat(f)
 }}}
 Level 0 is standard.
 
