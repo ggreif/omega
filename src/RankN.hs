@@ -747,8 +747,8 @@ zonkPoly (K lvs r) = do { r' <- zonkSigma r; return(K lvs r')}
 
 tvs_Tau   :: (HasIORef m,Fresh m) => Tau -> m([TcTv],[TcLv])
 tvs_Tau x = do { y <- prune x; f y}
-    where f (TcTv (x@(Tv unq _ (MK k)))) =
-             do { ans <- (tvs_Tau k); return(unionP ans ([x],[]))}
+    where f (TcTv (x@(Tv unq _ k))) =
+             do { ans <- tvs_Kind k; return(unionP ans ([x],[]))}
           f (TyApp x y) = binaryLift unionP (tvs_Tau x) (tvs_Tau y)
           f (Karr x y) = binaryLift unionP (tvs_Tau x) (tvs_Tau y)
           f (TyFun nm k x) = binaryLift unionP (tvs_Poly k) (tvsList tvs_Tau x)
@@ -764,10 +764,10 @@ tvsList :: (HasIORef m,Fresh m) =>  (x -> m([TcTv],[TcLv])) -> [x] ->  m([TcTv],
 tvsList f [] = return ([],[])
 tvsList f (x:xs) = binaryLift unionP (f x) (tvsList f xs)
 
--- tvsL :: (HasIORef m,Fresh m,Swap x) =>  (x -> m([TcTv],[TcLv])) -> L x ->  m([TcTv],[TcLv])
+tvsL :: (HasIORef m,Fresh m,Swap x) => (Kind -> m([TcTv],[TcLv])) -> (x -> m([TcTv],[TcLv])) -> L x ->  m([TcTv],[TcLv])
 tvsL fk fr (Nil x) = fr x
 tvsL fk fr (Cons (k,q) b) = binaryLift unionP (fk k) (tvsL fk fr rest)
-  where (nm,rest) = unsafeUnBind b
+  where (_,rest) = unsafeUnBind b
 
 tvs_Rho :: (HasIORef m,Fresh m) => Rho -> m([TcTv],[TcLv])
 tvs_Rho (Rarrow x y) = binaryLift unionP (tvs_Sigma x) (tvs_Rho y)
@@ -775,25 +775,25 @@ tvs_Rho (Rsum x y) = binaryLift unionP (tvs_Sigma x) (tvs_Sigma y)
 tvs_Rho (Rpair x y) = binaryLift unionP (tvs_Sigma x) (tvs_Sigma y)
 tvs_Rho (Rtau x) = tvs_Tau x
 
--- tvs_Sigma :: (HasIORef m,Fresh m) => Sigma -> m([TcTv],[TcLv])
+tvs_Sigma :: (HasIORef m,Fresh m) => Sigma -> m([TcTv],[TcLv])
 tvs_Sigma (Forall r) = tvsL tvs_Kind (tvsList tvs_Pred `x` tvs_Rho) r
    where x f g (x,y) = binaryLift unionP (f x) (g y)
 
-tvs_Kind  :: (HasIORef m,Fresh m) => Kind -> m([TcTv],[TcLv])
+tvs_Kind :: (HasIORef m,Fresh m) => Kind -> m([TcTv],[TcLv])
 tvs_Kind (MK s) = tvs_Tau s
 
-tvs_Poly  :: (HasIORef m,Fresh m) => PolyKind -> m([TcTv],[TcLv])
+tvs_Poly :: (HasIORef m,Fresh m) => PolyKind -> m([TcTv],[TcLv])
 tvs_Poly (K names sig) = do { (vs,ls) <- tvs_Sigma sig; return(vs,remove ls) }
   where remove [] = []
         remove ((y@(LvVar n)):ys) | n `elem` names = remove ys
         remove (y:ys) = y : (remove ys)
 
-tvs_Level  :: (HasIORef m,Fresh m) => Level -> m([TcTv],[TcLv])
+tvs_Level :: (HasIORef m,Fresh m) => Level -> m([TcTv],[TcLv])
 tvs_Level (TcLv v) = return([],[v])
 tvs_Level (LvSucc x) = tvs_Level x
 tvs_Level x = return([],[])
 
-tvs_Pred  ::(HasIORef m,Fresh m) => Pred -> m([TcTv],[TcLv])
+tvs_Pred :: (HasIORef m,Fresh m) => Pred -> m([TcTv],[TcLv])
 tvs_Pred (Equality x y) = binaryLift unionP (tvs_Tau x) (tvs_Tau y)
 tvs_Pred (Rel ts) = (tvs_Tau ts)
 
