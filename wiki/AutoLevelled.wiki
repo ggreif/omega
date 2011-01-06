@@ -72,11 +72,44 @@ data «Foo» where
 This syntax uses the _ guillemets_-style double quotes. The types arising at any level are _infinite_, but it is certainly possible to create values `«Bar»` or `«Quux» «Bar»`.
 
 ----
+= Implementation Sketch =
+
+Here I hope to summarize all the places in the current code base that would be affected by a possible addition of this feature. First, of course all the minor nuisances which I have discovered (see the comments in the [#Examples below] need to be overcome. I am slowly working on that and issues exist.
+
+== Parsing ==
+
+The Parsec-based parser should be easy to extend (save the Unicode part) to accommodate the `<>` bracketing. This could be an intermediate step to get a surface syntax. Unicode can follow later.
+
+== Elaboration ==
+
+For the finite case the elaborator must verify some things such as that there are no level annotations on the GADT, compute the upmost level, modify the `Dec` for the lower copies and feed them in.
+
+For the fixpoint case the level-isomorphic kinding declaration must be fabricated.
+
+== Type Checking ==
+
+Nothing to do for the finite case. For the `*∞` case, however, the level-isomorphic kinds must be introduced to the type checker. They are in a sense generalizing the `Star` hierarchy, which begin at kind level and have an isomorphic copy at each level above.
+
+In our case the isomorphism would hold between `Foo p ~> *n` and `Foo q ~> *(n+1)` where the latter (after saturation) parametrizes the former, etc., at each level. The unification algorithm must be taught to deal whit this construct and do not climb levels indefinitely.
+
+Similarly for the function side of the medal.
+
+== Exhibiting ==
+
+This is just simple matter of programming.
+
+----
 = Open Issues =
 
   * Do we need unicode to spell out these new syntactic entities?
   * How can we fit this syntax into the pun that is used to call things from value and type levels the same? Can we automatically add the angle quotes?
   * Support the Haskell-like notation `data ‹Nat› = Z | S Nat`. Suggested by Edward Kmett. Makes sense, because at highest level the GADT-ness is seldom needed.
+  * Should we employ a Tick-like syntax for raising levels? I.e.
+{{{
+data Foo^ = ...
+
+foo :: Foo^3
+}}}
 
 ----
 = References =
@@ -116,6 +149,7 @@ prompt> Q (Q Y)
 }}}
 
 _Note: Issue 70 is hindering us rooting this under `*3`._
+
 _Update: When spelling out all the `forall`s explicitly, Ωmega accepts roots even more levels up: see [http://code.google.com/p/omega/source/browse/trunk/tests/AutoLevelled.prg?spec=svn514&r=514 AutoLevelled.prg], but of course it gets messy._
 
 == Ωmega example for `‹‹plus››` ==
@@ -136,6 +170,7 @@ plus'' (Q m) n = Q (plus'' m n)
 Again, this is nice and regular.
 
 _Note: unfortunately this does not compile with Ωmega 1.4.3 due to issue 23 :-(_
+
 _Update: should work with Ωmega 1.4.7pre :-)_
 
 == Ωmega example for `«Foo»` ==
