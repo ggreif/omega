@@ -74,7 +74,7 @@ This syntax uses the _ guillemets_-style double quotes. The types arising at any
 ----
 = Implementation Sketch =
 
-Here I hope to summarize all the places in the current code base that would be affected by a possible addition of this feature. First, of course all the minor nuisances which I have discovered (see the comments in the [#Examples below] need to be overcome. I am slowly working on that and issues exist.
+Here I hope to summarize all the places in the current code base that would be affected by a possible addition of this feature. First, of course all the minor nuisances which I have discovered (see the comments in the [#Examples below] examples) need to be overcome. I am slowly working on that, and issues exist.
 
 == Parsing ==
 
