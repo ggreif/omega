@@ -90,7 +90,7 @@ For the fixpoint case the level-isomorphic kinding declaration must be fabricate
 
 Nothing to do for the finite case. For the `*∞` case, however, the level-isomorphic kinds must be introduced to the type checker. They are in a sense generalizing the `Star` hierarchy, which begin at kind level and have an isomorphic copy at each level above.
 
-In our case the isomorphism would hold between `Foo p ~> *n` and `Foo q ~> *(n+1)` where the latter (after saturation) parametrizes the former, etc., at each level. The unification algorithm must be taught to deal with this construct and do not climb levels indefinitely. For being able to tie the kind knot, the translation environment for the GADT kinding must be extended to include the name pointing to the level-isomorphic kind.
+In our case the isomorphism would hold between `Foo p ~> *n` and `Foo q ~> *(n+1)` where the latter (after saturation) parametrizes the former, etc., at each level. The unification algorithm must be taught to deal with this construct and to not climb levels indefinitely. For being able to tie the kind knot, the translation environment for the GADT kinding must be extended to include the name pointing to the level-isomorphic kind.
 
 Similarly for the function side of the medal.
 
