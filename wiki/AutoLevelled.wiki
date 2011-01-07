@@ -74,11 +74,8 @@ This syntax uses the _ guillemets_-style double quotes. They remind us that ther
 The types arising at any level are _finite_, and it is certainly possible to create values `Bar` or `(Quux Bar)` at any level. Here is how things line up:
 || *Level* || *Name* || *Signature* ||
 || `*n` || `Foo` || `Foo p ~> *n` ||
-|| `*n` || `Bar` || `Foo` ||
+|| `*n` || `Bar` || `Foo Bar` ||
 || `*n` || `Quux` || `Foo n ~> Foo (Quux n)` ||
-|| `*0` || `Foo` || `Foo p ~> *0` ||
-|| `*0` || `Bar` || `Foo` ||
-|| `*0` || `Quux` || `Foo n ~> Foo (Quux n)` ||
 || _types_ || `Bar` || `Foo` ||
 || _types_ || `Quux` || `Foo n -> Foo (Quux n)` ||
 
