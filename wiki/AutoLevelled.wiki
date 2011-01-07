@@ -28,7 +28,7 @@ Actually there is some dogmatism here, because we want to keep the _phase distin
 ----
 = Proposal =
 
-We define a syntax for _descending-levelled_ datatype definitions first. Then, in the spirit of Monnier's suggestion, add the syntax for descending-level _functions_, that is define the rule system at the highest applicable level (where no indices appear yet) and then the lower level equations are derived automatically. Finally we perform the fixpoint trick and introduce these once more but rooting at infinite level (`*∞`). `McBride` also makes an attempt to economize on typing mostly similar definitions by lifting types to the kind level. To this end he uses braces `{Type}` and accepts this as type indexes. But his setting (_she_) is pretty different as he preprocesses code annotated in such a way and emits Haskell for GHC's consumption. All lifted kinds then get replaces with `*0`.
+We define a syntax for _descending-levelled_ datatype definitions first. Then, in the spirit of Monnier's suggestion, add the syntax for descending-level _functions_, that is define the rule system at the highest applicable level (where no indices appear yet) and then the lower level equations are derived automatically. Finally we perform the fixpoint trick and introduce these once more but rooting at infinite level (`*∞`). `McBride` also makes an attempt to economize on typing mostly similar definitions by lifting types to the kind level. To this end he uses braces `{Type}` and accepts this as type indexes. But his setting (_she_) is pretty different as he preprocesses code annotated in such a way and emits Haskell for GHC's consumption. All lifted kinds then get replaced with `*0`.
 
 == Defining data types rooting at `*n` ==
 
