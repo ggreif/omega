@@ -76,7 +76,7 @@ The types arising at any level are _finite_, and it is certainly possible to cre
 || `*n` || `Foo` || `Foo p ~> *n` ||
 || `*n` || `Bar` || `Foo Bar` ||
 || `*n` || `Quux` || `Foo n ~> Foo (Quux n)` ||
-|| _types_ || `Bar` || `Foo` ||
+|| _types_ || `Bar` || `Foo Bar` ||
 || _types_ || `Quux` || `Foo n -> Foo (Quux n)` ||
 
 ----
