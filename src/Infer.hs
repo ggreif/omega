@@ -47,7 +47,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,mguB,mostGenUnify,unify,morepolySS,morepolyRR,match2,alpha,morepolySigmaRho
             ,sigmaPair,sigmaSum,unifyCode,unifyFun
             ,poly,simpleSigma,toSigma,toTau,toEqs,toRho,toPT,rho2PT,toL
-            ,windup,unsafeUnwind,unBindWith,unwind
+            ,windup,unsafeUnwind,unBindWith,unwind,tvsL
             ,varsOfTau,varsOfRho,varsOfSigma,varsOfPred,varsOfPair,varsOfPoly,varsOfExpectRho
             ,getFree,getFreePredL,unionTwo,subPred,subpairs,disp0,lv,subst
             ,boolT,unitT,tlist,tpair,tunit',tsum,tcode,ioT,arrow,applyT,applyT',listT
@@ -2108,14 +2108,39 @@ kindsEnvForDataBindingGroup ds =
      ; info <- mapM kindOfTyConFromDec ds
      ; let parsekind levs name (kind@(Forallx _ _ _ _)) =
              do { exts <- getSyntax
-                ; (sigma,_) <- toSigma (env,loc,exts,levs) kind
-                ; return (levs,sigma)}
+                ; (sigma,names) <- toSigma (env,loc,exts,levs) kind
+                ; warnM [Ds "names in sigma: ", Dl names "|", Ds "     kind is ", Dd kind]
+                ; case (sigma,names) of
+                  (_,[]) -> return (levs,sigma)
+                  -- Some of the variables in the forall may leave their kinds implicit
+                  -- Some of these may be polymorphic, we need to add these to vars
+                  (Forall l,_) -> do { warnM [Ds "SIGMA1: ", Dd sigma, Ds "  aka.   ", Ds (shtt sigma)]
+                                     ; (k::Tau,sigma2@(Forall l2)) <- infer sigma      -- infers implicit kinds
+                                     ; let (bound,(ps,rho)) = unsafeUnwind l2
+                                     ; (free,levelvars) <- get_tvs sigma2   -- collect them from sigma
+                                     ; (freek,_) <- tvsL tvs (const (return ([],[]))) l2
+                                     ; warnM [Ds "inferred tycon implicit kinds:", Dd k, Ds "   sigma2: ", Dd sigma2, Ds " free: ", Dl free ", "]
+                                     ; warnM [Ds "SIGMA2: ", Dd sigma2, Ds "  aka.   ", Ds (shtt sigma2)]
+                                     ; (rhofree,_) <- get_tvs rho
+                                     ; let bnd = (map (\(a,_,_)->a) bound)
+                                     ; warnM [Ds "   vars in kinds: ", Dl freek "&",Ds ("   vars bound: "++show bnd++" aka. "), Dl bnd "&",
+                                              Ds "   vars in heart: ", Dl rhofree "&", Ds ("  rho: "++shtt rho), Ds ("  vars in heart: "++show rhofree)]
+                                     ; let f (v@(Tv uniq _ k)) = do { nm <- fresh; return(v,TyVar nm k)}
+                                     ; pairs <- mapM f freek                      -- abstract each variable with a new name
+                                     ; Forall l2' <- sub ([],pairs,[],[]) sigma2
+                                     ; let l3 = foldr (\(v, TyVar nm k) r->Cons(k,All) (bind nm r)) l2' pairs
+                                     --; sigma3 <- sub ([],pairs,[],[]) (Forall l3)
+                                     ; let sigma3 = Forall l3
+                                     ; warnM [Ds "SIGMA3: ", Dd sigma3, Ds "  aka.   ", Ds (shtt sigma3)]
+                                     ; verbose <- getIoMode "verbose"
+                                     ; return (if verbose then (levs,sigma3) else (levs,sigma3))}}
            parsekind levs name kind =
              do { (nmMap,vars,ps,rho) <- inferConSigma levs env loc ([],kind)
+                ; warnM [Ds "inferred tycon rho: ", Dd rho]
                 ; return([],Forall(windup vars (ps,rho)))}
            addTyCon (d,(isP,name,kind,level,loc,freeLevVars)) (ds,delta,env) =
             do { (levs,sigma) <- parsekind freeLevVars name kind
-               -- ; warnM [Ds "\nCheck kinding ",Dd sigma,Ds ":: ",Dd (Star (LvSucc level)),Dl freeLevVars ","]
+               ; warnM [Ds "\nCheck kinding ",Dd sigma,Ds ":: ",Dd (Star (LvSucc level)),Dl freeLevVars ","]
                ; sigma' <- newLoc loc $
                            handleM 3 (check sigma (Star (LvSucc level)))
                                      (badKind name kind)
@@ -2137,7 +2162,9 @@ kindsEnvForDataBindingGroup ds =
 
 inferConSigma levelMap currentMap loc ([],pt@(Forallx All _ _ _)) =
  do { exts <- getSyntax
+    ; warnM [Ds "\n inferConSigma All branch"]
     ; (sigma@(Forall l),nmMap) <- toSigma (currentMap,loc,exts,levelMap) pt
+    ; warnM [Ds "\ninferConSigma: ",Ds (shtt sigma)]
     ; let (vars,(ps,rho)) = unsafeUnwind l
     -- Some of the variables in the forall may leave their kinds implicit
     -- Some of these may be polymorphic, we need to add these to vars
@@ -2162,14 +2189,21 @@ inferConSigma levelMap currentMap loc (preds,typ) =
     ; exts <- getSyntax
     ; (nmMap,windupList,envMap) <- argsToEnv args (currentMap,loc,exts,levelMap)
     ; rho <- toRho envMap typ
+    ; warnM [Ds "\ninferConSigma(rho): ",Dd rho, Ds "    (a.k.a.)  ", Ds (shtt rho)]
     ; ps <- toPred envMap (Just preds)
     ; rho2 <- zonk rho
+    ; warnM [Ds "\ninferConSigma(rho2): ",Dd rho2, Ds "    (a.k.a.)  ",Ds (shtt rho2)]
     -- Zonk the kinds of the bound variables
     -- This may cause some kinds to appear in the range types
     -- because of types like, C:: T x (y::x) -> T Int y
+    ; warnM [Ds "\ninferConSigma(windupList): ",Ds (show windupList)]
     ; list2 <- mapM zonkK windupList
+    ; warnM [Ds "\ninferConSigma(list2): ",Ds (show list2)]
     ; (_,rangeFree,_) <- range varsOfTau rho2 rho2 -- Vars of the zonked range
-    ; return(nmMap,map (fix rangeFree) list2,ps,rho2)}
+    ; warnM [Ds "\ninferConSigma(rangeFree): ",Ds (show rangeFree)]
+    ; let fixedwindupList = map (fix rangeFree) list2
+    ; warnM [Ds "\ninferConSigma(fixedwindupList): ",Ds (show fixedwindupList)]
+    ; return(nmMap,fixedwindupList,ps,rho2)}
 
 range f b (Rarrow dom rng) = range f b rng
 range f b (Rtau (Karr dom rng)) = range f b (Rtau rng)
