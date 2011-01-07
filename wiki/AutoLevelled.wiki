@@ -14,7 +14,7 @@ data Nat' :: Nat ~> *0 where
 
 where `Nat` is defined thus:
 {{{
-data Nat ::  *1 where
+data Nat :: *1 where
   Z :: Nat
   S :: Nat ~> Nat
 }}}
