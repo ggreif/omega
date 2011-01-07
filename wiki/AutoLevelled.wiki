@@ -117,6 +117,7 @@ data Bar^6 = ... -- rooted at *6
 foo :: Bar^3 -- pick the one under *3
 -- the syntactic/semantic identity Baz^0 ≡ Baz holds
 }}}
+  * What is more intuitive, using the type arrows (->) or kind arrows (~>) in the auto-levelled definitions?
 
 ----
 = References =
@@ -185,8 +186,8 @@ _Update: should work with Ωmega 1.4.7pre :-)_
 `«Foo»` has an isomorphic copy at every level up to infinity, we can tentatively sketch a definition here, not sure if the circularity is accepted:
 {{{
 data Foo :: level n . Foo p ~> *n where
-  Bar :: Foo p
-  Quux :: Foo p ~> Foo p
+  Bar :: Foo Bar
+  Quux :: Foo p ~> Foo (Quux p)
  deriving Nat(f)
 }}}
 Level 0 is standard.
