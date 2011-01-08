@@ -133,7 +133,7 @@ foo :: Bar^3 -- pick the one under *3
   # [http://www.cs.uoregon.edu/research/summerschool/summer08/video/July26Lect1.wmv Tim Sheard's 2008 Lecture Video]
   # http://code.google.com/p/omega/source/browse/trunk/tests/Progress.prg
   # http://personal.cis.strath.ac.uk/~conor/pub/she/fun/talk.pdf
-  # [http://web.cecs.pdx.edu/~sheard/papers/GADT+ExtKinds.ps GADTs + Extensible Kinds = Dependent Programming _by Sheard, Hook, Linger_]
+  # [http://web.cecs.pdx.edu/~sheard/papers/GADT+ExtKinds.ps GADTs + Extensible Kinds = Dependent Programming by Sheard, Hook, Linger]
 
 ----
 = Examples =
