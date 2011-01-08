@@ -23,12 +23,12 @@ This is a very common pattern of defining _singleton types_ in Ωmega. Its essen
 
 But sometimes _n_ becomes more than 1 and the definition at the different levels gets very tedious, which is aggravated by the fact that new names must be invented for levels _n > 1_. `[`Witness the 2008 Summer School video and progress proof.`]` Our idea is to extend Ωmega's syntax with two multi-level definition constructs that hopefully take out the tedium of these patterns and make them enjoyable.
 
-Actually there is some dogmatism here, because we want to keep the _phase distinction_, that is an intuitive virtue, which has brought us so far.
+Actually there is some dogmatism here, because we want to keep the _phase distinction_, that is an intuitive virtue, which has brought us so far. It also appears as a _future work_ item at the end of `[`Sheard,Hook,Linger`]` as _Deriving Singleton types_.
 
 ----
 = Proposal =
 
-We define a syntax for _descending-levelled_ datatype definitions first. Then, in the spirit of Monnier's suggestion, add the syntax for descending-level _functions_, that is define the rule system at the highest applicable level (where no indices appear yet) and then the lower level equations are derived automatically. Finally we perform the fixpoint trick and introduce these once more but rooting at infinite level (`*∞`). `McBride` also makes an attempt to economize on typing mostly similar definitions by lifting types to the kind level. To this end he uses braces `{Type}` and accepts this as type indexes. But his setting (_she_) is pretty different as he preprocesses code annotated in such a way and emits Haskell for GHC's consumption. All lifted kinds then get replaced with `*0`.
+We define a syntax for _descending-levelled_ datatype definitions first. Then, in the spirit of Monnier's suggestion, add the syntax for descending-level _functions_, that is define the rule system at the highest applicable level (where no indices appear yet) and then the lower level equations are derived automatically. Finally we perform the fixpoint trick and introduce these once more but rooting at infinite level (`*∞`). `[`McBride`]` also makes an attempt to economize on typing mostly similar definitions by lifting types to the kind level. To this end he uses braces `{Type}` and accepts this as type indexes. But his setting (_she_) is pretty different as he preprocesses code annotated in such a way and emits Haskell for GHC's consumption. All lifted kinds then get replaced with `*0`.
 
 == Defining data types rooting at `*n` ==
 
@@ -133,6 +133,7 @@ foo :: Bar^3 -- pick the one under *3
   # [http://www.cs.uoregon.edu/research/summerschool/summer08/video/July26Lect1.wmv Tim Sheard's 2008 Lecture Video]
   # http://code.google.com/p/omega/source/browse/trunk/tests/Progress.prg
   # http://personal.cis.strath.ac.uk/~conor/pub/she/fun/talk.pdf
+  # [http://web.cecs.pdx.edu/~sheard/papers/GADT+ExtKinds.ps GADTs + Extensible Kinds = Dependent Programming _by Sheard, Hook, Linger_]
 
 ----
 = Examples =
