@@ -3526,18 +3526,18 @@ thread f sep d (x:xs) = (d2,y<>sep:ys)
         (d2,ys) = thread f sep d1 xs
 
 arrowTau d (TyApp (TyApp (TyCon sx _ "(->)" _) x) y) = (d3, (doc <> text " -> "):docs)
-  where (d',doc') = dTau d x
+  where p@(d',doc') = dTau d x
         (d2,doc) = contra x
         (d3,docs) = arrowTau d2 y
-        contra (TyApp (TyApp (TyCon _ _ "(->)" _) _) _) = (d', text "(" <> doc' <> text ")")
-        contra x = (d',doc')
+        contra (TyApp (TyApp (TyCon _ _ "(->)" _) _) _) = (d', PP.parens doc')
+        contra _ = p
 arrowTau d x = (d2,[doc])
   where (d2,doc) = dTau d x
 
 arrowRho d (Rarrow s r) = (d3,lhs : docs)
   where (d2,doc) = dSigma d s
         (d3,docs) = arrowRho d2 r
-        lhs = (PP.parens doc) <> text " -> "
+        lhs = PP.parens doc <> text " -> "
 arrowRho d (Rtau x) = arrowTau d x
 arrowRho d x = (d2,[doc])
   where (d2,doc) = dRho d x
