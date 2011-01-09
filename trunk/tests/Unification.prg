@@ -1,4 +1,5 @@
 -- This extended example is an Omega port of Conor McBride's First Order Unification by Structural Recursion
+-- adapted to the recent Omega dialect.
 -- From the paper "GADTs + Extensible Kinds = Dependent Programming"
 
 -------- MAYBE MONAD --------------------------------
@@ -13,10 +14,11 @@ liftM2 f ma mb = do { a <- ma; b <- mb; return (f a b) }
 
 ------- FINITE (VARIABLE) SETS & TERMS --------------
 data Fin:: Nat ~> *0 where
-   Fz:: Fin (S m)
-   Fs:: Fin m -> Fin (S m)
+  Fz:: Fin (S m)
+  Fs:: Fin m -> Fin (S m)
+ deriving Nat(f)
 
-data Term n = Var(Fin n) | Leaf | Fork(Term n)(Term n)
+data Term n = Var (Fin n) | Leaf | Fork (Term n) (Term n)
 
 ------- SUBSTITUTIONS -------------------------------
 rename2sub :: (Fin m -> Fin n) -> Fin m -> Term n
@@ -47,8 +49,9 @@ for n t' x y = case thick n x y of
 -----------------------------------------------------
 -- substitution lists
 data AList:: Nat ~> Nat ~> *0 where
-   Anil:: AList n n
-   Asnoc:: AList m' n -> Term m' -> Fin (S m') -> AList (S m') n
+  Anil:: AList n n
+  Asnoc:: AList m' n -> Term m' -> Fin (S m') -> AList (S m') n
+ deriving LeftRecord(a)
 
 sub :: Nat' m -> AList m n -> (Fin m -> Term n)
 sub _ (Anil) = Var
@@ -88,3 +91,4 @@ flexRigid :: Nat' m -> Fin m -> Term m -> Maybe (SomeSub m)
 flexRigid (S m) x t = do
                       t' <- chk m x t
                       return (SomeSub m (Asnoc Anil t' x))
+
