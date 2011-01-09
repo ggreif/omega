@@ -1206,7 +1206,7 @@ unifyFun (Rtau x) =
       ; a1 <- zonk a
       ; b1 <- zonk b
       ; return (simpleSigma a1,Rtau b1) }
-unifyFun x = failM 0 [Ds "Expected an function type: ",Dd x]
+unifyFun x = failM 0 [Ds "Expected a function type: ",Dd x]
 
 
 unifyCode :: TyCh a => Expected Rho -> a Rho
