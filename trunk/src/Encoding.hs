@@ -174,7 +174,7 @@ instance Encoding a => Encoding (FIO a) where
 instance (Encoding a,Encoding b) => Encoding (a -> FIO b) where
     to f = Vprimfun "->" (return . to . f . from)
     from (Vprimfun s f) = (fmap from) . f . to
-    from v = error ("Value not an function: "++(show v))
+    from v = error ("Value not a function: "++(show v))
 -}
 
 -- for functions without monadic ranges (FIO a) we can always turn them into V
