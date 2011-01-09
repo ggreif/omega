@@ -2980,6 +2980,7 @@ varsOfPair f g (x,y) = (xs++ys, as++bs, ms++ns)
   where (xs,as,ms) = f x
         (ys,bs,ns) = g y
 
+fst3 (x,y,z) = x
 tvsTau x = fst3 (varsOfTau x)
 
 
@@ -4058,12 +4059,12 @@ groundTerm (TySyn s n xy ys t) = groundTerm t
 groundTerm x@(TyEx _) = False
 groundTerm (TyCon sx level_ n k) = True
 
-fst3 (x,y,z) = x
-
 splitClass (TcTv (Tv un (Skol _) k)) any = Hard
 splitClass any (TcTv (Tv un (Skol _) k)) = Hard
 splitClass (TcTv x) (y@(TyFun _ _ _)) | all (/=x) (tvsTau y) = MutSolve
+splitClass (TcTv _) (TyFun _ _ _) = Hard
 splitClass (y@(TyFun _ _ _)) (TcTv x) | all (/=x) (tvsTau y) = MutSolve
+splitClass (TyFun _ _ _) (TcTv _) = Hard
 splitClass (TcTv x) any = MutSolve
 splitClass any (TcTv x) = MutSolve
 splitClass _ _ = Hard
