@@ -5,7 +5,7 @@
 -- Research and development on Omega is supported by a grant
 -- from the National Science Foundation.
 
--- Existenial hiding and operators on anonymous sums
+-- Existential hiding and operators on anonymous sums
 
 data Covert :: (Nat ~> *0) ~> *0 where
   Hide :: t x -> Covert t
