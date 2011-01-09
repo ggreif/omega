@@ -7,7 +7,7 @@
 
 -- Existential hiding and operators on anonymous sums
 
-data Covert :: (Nat ~> *0) ~> *0 where
+data Covert :: (a ~> *0) ~> *0 where
   Hide :: t x -> Covert t
 
 toNat :: Int -> Covert Nat'
