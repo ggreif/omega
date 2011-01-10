@@ -116,7 +116,7 @@ instance Swap Exp where
   swaps cs (Let ds e) = Let (swaps cs ds) (swaps cs e)
   swaps cs (Circ vs e ds) = Circ (swaps cs vs) (swaps cs e)(swaps cs ds)
   swaps cs (Case e ms) = Case (swaps cs e) (map (swapsMatch cs) ms)
-  swaps cs (Do ss) = Do (map (swaps cs) ss)
+  swaps cs (Do bf ss) = Do (swaps cs bf) (map (swaps cs) ss)
   swaps cs (CheckT e) = CheckT (swaps cs e)
   swaps cs (Lazy e) = Lazy (swaps cs e)
   swaps cs (Exists e) = Exists (swaps cs e)

@@ -47,7 +47,7 @@ genSym = gensym Tick
 -- Operations on runtime environments Ev
 
 empty = Ev [] (unit,bind,fail)
-  where (Vcon (Global "Monad",oX) [unit,bind,fail]) = maybeMonad
+  where (Vcon (Global "Monad",oX) [unit,bind,fail]) = maybeMonad -- FIXME: is this correct?
 
 app (Ev xs m) (Ev as _) = Ev (xs ++ as) m
 
@@ -72,13 +72,14 @@ extract term free (env@(Ev xs m)) = Ev statBound m
 ---------------------------------------------------------------
 --- Extract parts of the current monad from the environment
 
-monadUnit (Ev _ (unit,bind,fail)) = unit
-monadBind (Ev _ (unit,bind,fail)) = bind
-monadFail (Ev _ (unit,bind,fail)) = fail
+--monadUnit (Ev _ (unit,bind,fail)) = unit
+--monadBind (Ev _ (unit,bind,fail)) = bind
+--monadFail (Ev _ (unit,bind,fail)) = fail
 
 
 -- The do syntax uses a monad stored in the run-time environment. The default
 -- monad is Maybe. This code precomputes a value which is the default maybeMonad
+-- FIXME: is this correct?
 maybeMonad = unsafePerformIO (runFIO action (\ loc n s -> error s)) where
   Right(bind,_)= pe "\\ x g -> case x of {Nothing -> Nothing; Just x -> g x}"
   Right(unit,_) = pe "Just"
@@ -145,9 +146,9 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
              fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
                   plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
-evalZ env (Do stmts) =
-  do { bind <- evalVar env (Global "bind") -- (monadBind env)
-     ; fail <- evalVar env (Global "fail") -- (monadFail env)
+evalZ env (Do (bE,fE) stmts) =
+  do { bind <- evalZ env bE -- evalVar env bE -- (Global "bind") -- (monadBind env)
+     ; fail <- evalZ env fE -- evalVar env fE -- (Global "fail") -- (monadFail env)
      ; evalDo bind fail stmts env }
 evalZ env (Bracket e) =
   do { e2 <- freshE e

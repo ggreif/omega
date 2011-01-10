@@ -126,7 +126,7 @@ data Exp
   | Let [Dec] Exp             -- { let x=e1;   y=e2 in e3 }
   | Circ [Var] Exp [Dec]      -- { circuit e where x = e1; y = 32 }
   | Case Exp [Match Pat Exp Dec]  -- { case e of m1; m2 }
-  | Do [Stmt Pat Exp Dec]     -- { do { p <- e1; e2 }  }
+  | Do (Exp,Exp) [Stmt Pat Exp Dec] -- { do { p <- e1; e2 } }
   | CheckT Exp
   | Lazy Exp
   | Exists Exp
@@ -573,7 +573,7 @@ parPat (Paspat v p) f =
 -- When rebuilding the pattern (Monad return bind fail) we do not
 -- want to rename "return" "bind" or "fail" because the do syntax
 -- depends upon these things having exactly those names.
-
+-- FIXME: this is obsolete
 parPat (pat@(Pcon (Global "Monad") [Pvar un,Pvar bnd,Pvar fl])) (Par vext vapp inc esc) =
   let f x | x==un = return(Var un)
       f x | x==bnd = return(Var bnd)
@@ -624,7 +624,7 @@ parE (Circ vs e ds) f =
       ; e3 <- parE e f2
       ; return(Circ (map unVar vs2) e3 ds3)
       }
-parE (Do ss) f = do { (ss2,_) <- parThread parStmt f ss; return(Do ss2) }
+parE (Do (bE,fE) ss) f = do { be <- parE bE f; fe <- parE fE f; f(ss2,_) <- parThread parStmt f ss; return(Do (be,fe) ss2) }
 parE (Ann x t) f = do { a <- parE x f; return(Ann a t)}
 parE (ExtE y) f = do { z <- extM (\ x -> parE x f) y; return(ExtE y)}
 
@@ -1015,7 +1015,7 @@ instance Vars Exp where
   vars bnd (Let ds e) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Circ vs e ds) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Case e ms)  = (vars bnd e) . (varsL bnd ms)
-  vars bnd (Do ss) = vars bnd ss . doBinders
+  vars bnd (Do (bE,fE) ss) = vars bnd ss . doBinders
   vars bnd (CheckT x) = vars bnd x
   vars bnd (Lazy x) = vars bnd x
   vars bnd (Exists x) = vars bnd x
@@ -1094,7 +1094,7 @@ instance Eq Exp where
   (Circ vs1 e1 ds1) == (Circ vs2 e2 ds2) =
     vs1==vs2 && e1==e2 && ds1==ds2
   (Case e1 ms1) == (Case e2 ms2) = e1==e2 && listEq matchEQ ms1 ms2
-  (Do ss1) == (Do ss2) = ss1 == ss2
+  (Do (bE1,fE1) ss1) == (Do (bE2,fE2) ss2) = bE1==bE2 && fE1==fE2 && ss1 == ss2
   (CheckT e1) == (CheckT e2) = e1==e2
   (Lazy e1) == (Lazy e2) = e1==e2
   (Exists e1) == (Exists e2) = e1==e2
@@ -1368,7 +1368,7 @@ ppExp e =
                     --PP.vcat ((text "where"):(zipWith ((<+>).((flip $ (<+>))) (text "=")) (map ppVar vs) (map ppDec ds))))
     Case e ms -> (text "case" <+> ppParExp e <+> text "of") $$
                  (PP.nest 2 (PP.vcat (map ppMatch ms)))
-    Do ss -> text "do" <+> PP.braces (PP.space <> myPP PP.vcat Front (PP.nest (-2) $ text "; ") (map ppStmt ss) <> PP.space)
+    Do _ ss -> text "do" <+> PP.braces (PP.space <> myPP PP.vcat Front (PP.nest (-2) $ text "; ") (map ppStmt ss) <> PP.space)
     CheckT e -> PP.parens $ text "Check" <+> ppExp e
     Lazy e -> PP.parens $ text "lazy" <+> ppExp e
     Exists e -> PP.parens $ text "Ex" <+> ppExp e

@@ -723,7 +723,7 @@ typeExp mod (Case exp ms) (Infer ref) =
         ; ms2 <- checkL oblig mod ms dom rng
         ; writeRef ref rng
         ; return(Case e2 ms2) }
-typeExp mod s@(Do ss) expect =
+typeExp mod s@(Do es ss) expect = -- FIXME
       do { (m,b) <- unifyMonad expect
          ; (K _ bindSig,bmod,bn,bexp) <- lookupVar (Global "bind")
          ; (K _ failSig,fmod,fn,fexp) <- lookupVar (Global "fail")
@@ -732,7 +732,7 @@ typeExp mod s@(Do ss) expect =
          ; morepoly "bind" bindSig bindt
          ; morepoly "fail" failSig failt
          ; ss2 <- tcStmts mod m b ss
-         ; return(Do ss2)}
+         ; return(Do es ss2)}
 typeExp mod (CheckT e) expect =
      do { ts <- getBindings
         ; refinement <- zonk ts
@@ -4632,7 +4632,7 @@ circuitSig1 expect (InterF m vs e info2) =
     ; info3 <- mapM gen info2
     ; let all = map varf info3 ++ map bindf info3 ++
                 [NoBindSt Z (App (var "unSig") e)]
-          term = Let [monadDec Z (var "monadM")] (App (var "Sig") (Do all))
+          term = Let [monadDec Z (var "monadM")] (App (var "Sig") (Do (Var (Global "bind"),Var (Global "fail")) all))
     ; outputString ((show term)++"\n\n")
     ; e3 <- tc term expect
     ; return(e3)}
