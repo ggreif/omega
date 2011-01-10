@@ -798,8 +798,8 @@ addDepend v x = x {depends = v : depends x}
 addBindT ts x = x {tbinds = union ts (tbinds x)}
 addFreeT ts x = x {tfree = union ts (tfree x)}
 
-doBinders env = foldr f env ["return","bind","fail"]
-  where f x env = addFree [] (Global x) env
+--doBinders env = foldr f env ["return","bind","fail"]
+--  where f x env = addFree [] (Global x) env
 
 underBinder :: Vars a => a -> ([Var] -> FX -> FX) -> [Var] -> FX -> FX
 underBinder binders bindee bnd x = bindee (bnd2++bnd) (appF y2 x)
@@ -1018,7 +1018,7 @@ instance Vars Exp where
   vars bnd (Let ds e) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Circ vs e ds) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Case e ms)  = (vars bnd e) . (varsL bnd ms)
-  vars bnd (Do (bE,fE) ss) = vars bnd ss . doBinders
+  vars bnd (Do (bE,fE) ss) = vars bnd ss . vars bnd bF . vars bnd bE -- . doBinders
   vars bnd (CheckT x) = vars bnd x
   vars bnd (Lazy x) = vars bnd x
   vars bnd (Exists x) = vars bnd x
