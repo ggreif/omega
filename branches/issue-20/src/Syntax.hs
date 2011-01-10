@@ -643,7 +643,6 @@ parD (Val l p b ds) f =
       ; ds2 <- parDs ds1 f2
       ; b2 <- parBody b f2
       ; return(Val l p b2 ds2)}
---parD (Monad loc e) f = do { e2 <- parE e f; return(Monad loc e2) }
 parD d f = return d
 
 parClause::Monad m => Par m -> Match [Pat] Exp Dec -> m (Match [Pat] Exp Dec)
