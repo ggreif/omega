@@ -9,6 +9,10 @@
 
 data Covert :: (a ~> *0) ~> *0 where
   Hide :: t x -> Covert t
+ deriving Item(cv)
+
+-- conventional (ADT) syntax would be
+-- data Covert f = exists x . Hide (f x) deriving Item(cv)
 
 toNat :: Int -> Covert Nat'
 toNat 0 = Hide Z
