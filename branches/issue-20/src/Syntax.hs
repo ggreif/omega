@@ -318,7 +318,6 @@ decname (Prim loc nm t) = [nm]
 decname (Flag s nm) =[flagNm nm]
 decname (Reject s ds) = concat (map decname ds)
 decname (Import s xs) = []
--- decname (Monad loc e) = [Global "monad"]
 
 dnames (AddTheorem dec xs) = map fst xs
 dnames d = decname d
@@ -339,7 +338,6 @@ decloc (Prim loc nm t) = [(nm,loc)]
 decloc (Flag s nm) =[]
 decloc (Reject s d) = decloc (head d)
 decloc (Import s vs) = []
--- decloc (Monad loc e) = [(Global "monad",loc)]
 
 patf :: (Var -> Var) -> Pat -> Pat
 patf f p =
