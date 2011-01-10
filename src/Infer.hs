@@ -2894,10 +2894,10 @@ checkLhsMatch current sigma (ps,rhs) =
 -- need to build a ToEnv, so that we can correctly parse the RHS
 
 checkPTBndr :: ToEnv -> (Tpat,Tau) ->  TC ToEnv
-checkPTBndr current (Tvar s nm,k) =
+checkPTBndr _ (Tvar s nm,k) =
   return[(s,TyVar nm (MK k),poly (MK k))]
 checkPTBndr current (Tfun c xs,k) = checkPTBndr current (Tcon c xs,k)
-checkPTBndr current (y@(Tcon (tag@('`':cs)) xs),_) = return [] --TyCon sx _ "Tag" _) = return[]
+checkPTBndr current (Tcon ('`':cs) xs,_) = return []
 checkPTBndr current (y@(Tcon c xs),k) =
   do {(tau,kind@(K lvs sigma)) <- getInfo y current c
      ; let check1 [] rng = return(rng,[])
