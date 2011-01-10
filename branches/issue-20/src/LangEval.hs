@@ -70,14 +70,7 @@ extract term free (env@(Ev xs m)) = Ev statBound m
 
 
 ---------------------------------------------------------------
---- Extract parts of the current monad from the environment
-
---monadUnit (Ev _ (unit,bind,fail)) = unit
---monadBind (Ev _ (unit,bind,fail)) = bind
---monadFail (Ev _ (unit,bind,fail)) = fail
-
-
--- The do syntax uses a monad stored in the run-time environment. The default
+-- The 'do' syntax uses a monad stored in the run-time environment. The default
 -- monad is Maybe. This code precomputes a value which is the default maybeMonad
 -- FIXME: is this correct?
 maybeMonad = unsafePerformIO (runFIO action (\ loc n s -> error s)) where
