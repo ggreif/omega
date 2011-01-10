@@ -569,18 +569,6 @@ parPat (Paspat v p) f =
   do { (v',f1) <- varExt f v
      ; (p',f2) <- parPat p f1
      ; return(Paspat v' p',f2)}
-
--- When rebuilding the pattern (Monad return bind fail) we do not
--- want to rename "return" "bind" or "fail" because the do syntax
--- depends upon these things having exactly those names.
--- FIXME: this is obsolete
-parPat (pat@(Pcon (Global "Monad") [Pvar un,Pvar bnd,Pvar fl])) (Par vext vapp inc esc) =
-  let f x | x==un = return(Var un)
-      f x | x==bnd = return(Var bnd)
-      f x | x==fl  = return(Var fl)
-      f x = vapp x
-  in return(pat,Par vext f inc esc)
-
 parPat (Pcon c ps) f =
   do { (ps',f2) <- parThread parPat f ps; return(Pcon c ps',f2)}
 parPat (Pann p t) f = do {(p',f1) <- parPat p f; return (Pann p' t,f1)}
