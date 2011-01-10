@@ -147,8 +147,8 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
                   plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
 evalZ env (Do (bE,fE) stmts) =
-  do { bind <- evalZ env bE -- evalVar env bE -- (Global "bind") -- (monadBind env)
-     ; fail <- evalZ env fE -- evalVar env fE -- (Global "fail") -- (monadFail env)
+  do { bind <- evalZ env bE
+     ; fail <- evalZ env fE
      ; evalDo bind fail stmts env }
 evalZ env (Bracket e) =
   do { e2 <- freshE e
@@ -229,7 +229,7 @@ evalBind env bind fail p x cont =
                          Just es -> cont (extendV es env)}
 
 evalDo :: V -> V -> [Stmt Pat Exp Dec] -> Ev -> FIO V
-evalDo bind fail [ NoBindSt loc e ] env = eval env e
+evalDo bind fail [NoBindSt loc e] env = eval env e
 evalDo bind _ [ e ] env =
    fail ("The last Stmt in a do-exp must be simple: "++(show e))
 evalDo bind fail ((BindSt loc p e):ss) env =
