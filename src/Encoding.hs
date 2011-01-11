@@ -166,8 +166,8 @@ instance Encoding a => Encoding (IO a) where
 
 {-
 instance Encoding a => Encoding (FIO a) where
-   to x = Vlazy(fmap to x)
-   from (Vlazy x) = (fmap from x)
+   to x = Vlazy perm (fmap to x)
+   from (Vlazy perm x) = (fmap from x)
    from v = error ("Value not an action: "++(show v))
 
 
