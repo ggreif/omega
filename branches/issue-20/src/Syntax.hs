@@ -783,9 +783,6 @@ addDepend v x = x {depends = v : depends x}
 addBindT ts x = x {tbinds = union ts (tbinds x)}
 addFreeT ts x = x {tfree = union ts (tfree x)}
 
---doBinders env = foldr f env ["return","bind","fail"]
---  where f x env = addFree [] (Global x) env
-
 underBinder :: Vars a => a -> ([Var] -> FX -> FX) -> [Var] -> FX -> FX
 underBinder binders bindee bnd x = bindee (bnd2++bnd) (appF y2 x)
   where y = vars bnd binders emptyF  -- get the data structure
