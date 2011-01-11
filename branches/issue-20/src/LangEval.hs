@@ -46,7 +46,7 @@ genSym = gensym Tick
 -----------------------------------------------------------------------
 -- Operations on runtime environments Ev
 
-empty = Ev [] (unit,bind,fail)
+empty = Ev [] 42 -- (unit,bind,fail)
   where (Vcon (Global "Monad",oX) [unit,bind,fail]) = maybeMonad -- FIXME: is this correct?
 
 app (Ev xs m) (Ev as _) = Ev (xs ++ as) m
