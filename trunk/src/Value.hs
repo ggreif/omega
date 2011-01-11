@@ -59,6 +59,7 @@ instance Show V => Push V where
   push e (Vf f g h) = g e
   push e (Vcon c vs) = Vcon c (map (push e) vs)
   push e (Vpat nm f v) = Vpat nm f (push e v)
+  push e x@(Vcode exp ev) = x
   push e (Vswap p v) = Vswap p (push e v)
   push e Vbottom = Vbottom
   push e (VChrSeq s) = VChrSeq s
