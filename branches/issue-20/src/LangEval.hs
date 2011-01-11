@@ -46,7 +46,7 @@ genSym = gensym Tick
 -----------------------------------------------------------------------
 -- Operations on runtime environments Ev
 
-empty = Ev [] 42
+empty = Ev []
 
 app (Ev xs) (Ev as) = Ev (xs ++ as)
 
