@@ -46,47 +46,26 @@ genSym = gensym Tick
 -----------------------------------------------------------------------
 -- Operations on runtime environments Ev
 
-empty = Ev [] (unit,bind,fail)
-  where (Vcon (Global "Monad",oX) [unit,bind,fail]) = maybeMonad
+empty = Ev []
 
-app (Ev xs m) (Ev as _) = Ev (xs ++ as) m
+app (Ev xs) (Ev as) = Ev (xs ++ as)
 
 static :: Var -> Ev -> Maybe V
-static s (Ev xs m) = lookup s xs
+static s (Ev xs) = lookup s xs
 
-enames (Ev xs m) = map fst xs
+enames (Ev xs) = map fst xs
 
 extendV :: EnvFrag -> Env -> Env
-extendV fs (Ev xs m) = Ev (fs ++ xs) m
+extendV fs (Ev xs) = Ev (fs ++ xs)
 
 extract :: String -> [ Var ] -> Env -> Env
-extract term free (env@(Ev xs m)) = Ev statBound m
+extract term free (env@(Ev xs)) = Ev statBound
   where statBound = map find free
         find nm = case lookup nm xs of
                     Nothing ->
                       error ("Name not found in extract: "++ show nm++
                              "\n "++term++"\n "++show (map fst xs))
                     Just v -> (nm,v)
-
-
----------------------------------------------------------------
---- Extract parts of the current monad from the environment
-
-monadUnit (Ev _ (unit,bind,fail)) = unit
-monadBind (Ev _ (unit,bind,fail)) = bind
-monadFail (Ev _ (unit,bind,fail)) = fail
-
-
--- The do syntax uses a monad stored in the run-time environment. The default
--- monad is Maybe. This code precomputes a value which is the default maybeMonad
-maybeMonad = unsafePerformIO (runFIO action (\ loc n s -> error s)) where
-  Right(bind,_)= pe "\\ x g -> case x of {Nothing -> Nothing; Just x -> g x}"
-  Right(unit,_) = pe "Just"
-  Right(fail,_) = pe "\\ x -> Nothing"
-  action = do { b <- eval env0 bind
-              ; u <- eval env0 unit
-              ; f <- eval env0 fail
-              ; return(Vcon (Global "Monad",Ox) [u,b,f])}
 
 
 ------------------------------------------------------------------------
@@ -108,7 +87,7 @@ evalVar env s =
     Nothing -> fail ("Unknown Var at level 0: "++ show s)
     Just v -> return v
 
-eval env@(Ev xs m) x =
+eval env@(Ev xs) x =
    do { -- writeln(">> "++show x ++ " with " ++ show (map fst (take 6 xs)));
         ans <- evalZ env x
       -- ; writeln("<< "++show ans)
@@ -141,13 +120,13 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
                   do { let env1 = (extendV es env)
                      ; env2 <- elaborate Tick ds env1
                      ; evalBody env2 body (caseV ms env v ps) } }
-        caseErr (env@(Ev xs ys)) v ps = 
+        caseErr (env@(Ev xs)) v ps = 
              fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
                   plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
-evalZ env (Do stmts) =
-  do { bind <- evalVar env (Global "bind") -- (monadBind env)
-     ; fail <- evalVar env (Global "fail") -- (monadFail env)
+evalZ env (Do (bindE,failE) stmts) =
+  do { bind <- evalZ env bindE
+     ; fail <- evalZ env failE
      ; evalDo bind fail stmts env }
 evalZ env (Bracket e) =
   do { e2 <- freshE e
@@ -228,7 +207,7 @@ evalBind env bind fail p x cont =
                          Just es -> cont (extendV es env)}
 
 evalDo :: V -> V -> [Stmt Pat Exp Dec] -> Ev -> FIO V
-evalDo bind fail [ NoBindSt loc e ] env = eval env e
+evalDo bind fail [NoBindSt loc e] env = eval env e
 evalDo bind _ [ e ] env =
    fail ("The last Stmt in a do-exp must be simple: "++(show e))
 evalDo bind fail ((BindSt loc p e):ss) env =
@@ -497,11 +476,11 @@ count d n = let x = boundBy d in length (binds x) + n
 -- the resulting value in the new environment.
 
 fixup 0 env = return env
-fixup n (Ev ((nm,v):vs) m) =
+fixup n (Ev ((nm,v):vs)) =
    do { --outputString ("Fixing: "++show nm);
         u <- analyzeWith return v
-      ; (Ev us _) <- fixup (n-1) (Ev vs m)
-      ; return(Ev ((nm,u):us) m) }
+      ; (Ev us) <- fixup (n-1) (Ev vs)
+      ; return(Ev ((nm,u):us)) }
 
 
 -- The initial runtime environment

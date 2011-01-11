@@ -13,12 +13,15 @@ import SyntaxExt
 import Text.PrettyPrint.HughesPJ(Doc,text)
 
 -----------------------------------------------
-{- These are now defined in the Syntax.hs file
+{- These are now defined in the Bind.hs file
 
-data Ev = Ev [(Var,V)] (V,V,V)
+type Perm = [(Name,Name)]
+
+-- These are now defined in the Syntax.hs file
+
+data Ev = Ev [(Var,V)]
 
 type EnvFrag = [(Var,V)]
-type Perm = [(Name,Name)]
 
 data V
   = Vlit Lit
@@ -29,10 +32,10 @@ data V
   | Vf (V -> FIO V) (Ev -> V) (Perm -> V)
   | Vcon (Var,SynExt String) [V]
   | Vpat Var ([Pat]->Pat) V
-  | Vlazy (IORef (Either (FIO V) V))
+  | Vlazy Perm (IORef (Either (FIO V) V))
   | Vcode Exp Ev
   | Vswap Perm V
-  | Vfio Perm (FIO V)
+  | Vfio Perm (FIO (Either String V))
   | Vptr Perm Integer (IORef (Maybe V))
   | VChrSeq String
   | Vparser (Parser V)
@@ -87,7 +90,7 @@ instance Swap V where
 
 instance Swap Ev where
   swaps [] ev = ev
-  swaps cs (Ev xs m) = Ev (swaps cs xs) (swaps cs m)
+  swaps cs (Ev xs) = Ev (swaps cs xs)
 
 instance Swap Lit where
   swaps [] x = x
@@ -116,7 +119,7 @@ instance Swap Exp where
   swaps cs (Let ds e) = Let (swaps cs ds) (swaps cs e)
   swaps cs (Circ vs e ds) = Circ (swaps cs vs) (swaps cs e)(swaps cs ds)
   swaps cs (Case e ms) = Case (swaps cs e) (map (swapsMatch cs) ms)
-  swaps cs (Do ss) = Do (map (swaps cs) ss)
+  swaps cs (Do bf ss) = Do (swaps cs bf) (map (swaps cs) ss)
   swaps cs (CheckT e) = CheckT (swaps cs e)
   swaps cs (Lazy e) = Lazy (swaps cs e)
   swaps cs (Exists e) = Exists (swaps cs e)
@@ -168,7 +171,7 @@ falseExp = Vcon (Global "False",Ox) []
 
 --------- instances for Ev --------------------------------------------
 
-showEnv (Ev xs m) =
+showEnv (Ev xs) =
   "Ev "++ plistf fx "[" xs "," "]"
   where fx (x,y) = show x ++ "=" ++ show y
 
@@ -274,7 +277,7 @@ instance Show V where
     
     --  "("++show x++","++show y++")"
   show (Vprimfun s f) = "<primfun "++s++">"
-  show (Vfun p e (Ev xs _)) = "(fn" ++ show (map fst xs)++")"
+  show (Vfun p e (Ev xs)) = "(fn" ++ show (map fst xs)++")"
   show (Vf f push swap) = "<fn>"
   show (Vlazy cs m) = " ..."
   show (Vpat nm f g) = (show nm)
@@ -297,7 +300,7 @@ instance Show V where
   show (v@(Vcon (Global c,ext) _)) | recordExt c ext = showSynRecord v
   show (v@(Vcon (Global c,ext) _)) | leftRecordExt c ext = showSynLeftRecord v
   show (v@(Vcon (Global c,ext) _)) | tickSucc c ext = showSynTick v
-  show (Vcode e (Ev xs _)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
+  show (Vcode e (Ev xs)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
       where free = plistf show "" (map fst xs) "," ""
   show (Vswap cs u) =  show (swaps cs u)
                        --"(Vswap "++show cs ++" "++ show u++")"
