@@ -136,11 +136,9 @@ evalZ env (Escape e) = fail ("Escape not allowed at level 0" ++ (show (Escape e)
 evalZ env (Run e) =
   do { x <- eval env e
      ; let f (Vcode c env2) = eval env2 c
-           f Vbottom = return Vbottom
-           f (Vlazy [] ref) = do { x <- down ref; f x }
            f v = fail ("Run expression:\n  "++show (Run e)++
                        "\nDoes not evaluate to code:\n   "++show v)
-     ; f x }
+     ; analyzeWith f x }
 
 evalZ env (Reify s v) = return(push env v)
 evalZ env (Ann x t) = eval env x
