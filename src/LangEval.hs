@@ -137,6 +137,7 @@ evalZ env (Run e) =
   do { x <- eval env e
      ; case x of
         Vcode c env2 -> eval env2 c
+        Vbottom -> return Vbottom
         v -> fail ("Run expression:\n  "++show (Run e)++
                    "\nDoes not evaluate to code:\n   "++show v)
      }
