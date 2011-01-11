@@ -610,10 +610,10 @@ parE (Circ vs e ds) f =
       ; e3 <- parE e f2
       ; return(Circ (map unVar vs2) e3 ds3)
       }
-parE (Do (bE,fE) ss) f = do { be' <- parE bE f
-                            ; fe' <- parE fE f
+parE (Do (bi,fa) ss) f = do { bind <- parE bi f
+                            ; fail <- parE fa f
                             ; (ss',_) <- parThread parStmt f ss
-                            ; return(Do (be',fe') ss') }
+                            ; return(Do (bind,fail) ss') }
 parE (Ann x t) f = do { a <- parE x f; return(Ann a t)}
 parE (ExtE y) f = do { z <- extM (\ x -> parE x f) y; return(ExtE y)}
 
