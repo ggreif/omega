@@ -1553,7 +1553,7 @@ constrRange c (p:ps) t pairs =
    do { (dom,rng) <- unifyFun t
       ; constrRange c ps rng ((p,dom):pairs)}
 
--- A range is Ok if its 1) a Tau type, 2) A TyCon type, 3) At Level 1
+-- A range is Ok if it's 1) a Tau type, 2) A TyCon type, 3) At Level 1
 okRange c (Rtau t) = help t
   where help (TySyn _ _ _ _ x) = help x
         help (TyCon synext level nm polykind) =
