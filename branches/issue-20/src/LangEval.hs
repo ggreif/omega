@@ -59,7 +59,7 @@ extendV :: EnvFrag -> Env -> Env
 extendV fs (Ev xs) = Ev (fs ++ xs)
 
 extract :: String -> [ Var ] -> Env -> Env
-extract term free (env@(Ev xs)) = Ev statBound m
+extract term free (env@(Ev xs)) = Ev statBound
   where statBound = map find free
         find nm = case lookup nm xs of
                     Nothing ->
