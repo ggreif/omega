@@ -124,9 +124,9 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
              fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
                   plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
-evalZ env (Do (bE,fE) stmts) =
-  do { bind <- evalZ env bE
-     ; fail <- evalZ env fE
+evalZ env (Do (bindE,failE) stmts) =
+  do { bind <- evalZ env bindE
+     ; fail <- evalZ env failE
      ; evalDo bind fail stmts env }
 evalZ env (Bracket e) =
   do { e2 <- freshE e

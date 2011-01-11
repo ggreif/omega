@@ -610,10 +610,10 @@ parE (Circ vs e ds) f =
       ; e3 <- parE e f2
       ; return(Circ (map unVar vs2) e3 ds3)
       }
-parE (Do (bE,fE) ss) f = do { be <- parE bE f
-                            ; fe <- parE fE f
-                            ; (ss2,_) <- parThread parStmt f ss
-                            ; return(Do (be,fe) ss2) }
+parE (Do (bE,fE) ss) f = do { be' <- parE bE f
+                            ; fe' <- parE fE f
+                            ; (ss',_) <- parThread parStmt f ss
+                            ; return(Do (be',fe') ss') }
 parE (Ann x t) f = do { a <- parE x f; return(Ann a t)}
 parE (ExtE y) f = do { z <- extM (\ x -> parE x f) y; return(ExtE y)}
 
@@ -1003,7 +1003,7 @@ instance Vars Exp where
   vars bnd (Let ds e) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Circ vs e ds) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Case e ms)  = (vars bnd e) . (varsL bnd ms)
-  vars bnd (Do (bE,fE) ss) = vars bnd ss . vars bnd fE . vars bnd bE -- . doBinders
+  vars bnd (Do (bindE,failE) ss) = vars bnd ss . vars bnd failE . vars bnd bindE
   vars bnd (CheckT x) = vars bnd x
   vars bnd (Lazy x) = vars bnd x
   vars bnd (Exists x) = vars bnd x
