@@ -28,9 +28,9 @@ import ParserAll(Parser)
 -- By rights these should be defined in Value.hs but then
 -- we'd have recursive import lists
 
-data Ev = Ev [(Var,V)] Int -- Runtime environment mapping Vars to Values
+data Ev = Ev [(Var,V)] -- Runtime environment mapping Vars to Values
 
-showenv (Ev xs m) =
+showenv (Ev xs) =
   "Ev with \n   "++show (map fst xs)
 
 type EnvFrag = [(Var,V)]

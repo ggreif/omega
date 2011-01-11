@@ -48,18 +48,18 @@ genSym = gensym Tick
 
 empty = Ev [] 42
 
-app (Ev xs m) (Ev as _) = Ev (xs ++ as) m
+app (Ev xs) (Ev as) = Ev (xs ++ as)
 
 static :: Var -> Ev -> Maybe V
-static s (Ev xs m) = lookup s xs
+static s (Ev xs) = lookup s xs
 
-enames (Ev xs m) = map fst xs
+enames (Ev xs) = map fst xs
 
 extendV :: EnvFrag -> Env -> Env
-extendV fs (Ev xs m) = Ev (fs ++ xs) m
+extendV fs (Ev xs) = Ev (fs ++ xs)
 
 extract :: String -> [ Var ] -> Env -> Env
-extract term free (env@(Ev xs m)) = Ev statBound m
+extract term free (env@(Ev xs)) = Ev statBound m
   where statBound = map find free
         find nm = case lookup nm xs of
                     Nothing ->
@@ -87,7 +87,7 @@ evalVar env s =
     Nothing -> fail ("Unknown Var at level 0: "++ show s)
     Just v -> return v
 
-eval env@(Ev xs m) x =
+eval env@(Ev xs) x =
    do { -- writeln(">> "++show x ++ " with " ++ show (map fst (take 6 xs)));
         ans <- evalZ env x
       -- ; writeln("<< "++show ans)
@@ -120,7 +120,7 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
                   do { let env1 = (extendV es env)
                      ; env2 <- elaborate Tick ds env1
                      ; evalBody env2 body (caseV ms env v ps) } }
-        caseErr (env@(Ev xs ys)) v ps = 
+        caseErr (env@(Ev xs)) v ps = 
              fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
                   plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
@@ -476,11 +476,11 @@ count d n = let x = boundBy d in length (binds x) + n
 -- the resulting value in the new environment.
 
 fixup 0 env = return env
-fixup n (Ev ((nm,v):vs) m) =
+fixup n (Ev ((nm,v):vs)) =
    do { --outputString ("Fixing: "++show nm);
         u <- analyzeWith return v
-      ; (Ev us _) <- fixup (n-1) (Ev vs m)
-      ; return(Ev ((nm,u):us) m) }
+      ; (Ev us) <- fixup (n-1) (Ev vs)
+      ; return(Ev ((nm,u):us)) }
 
 
 -- The initial runtime environment

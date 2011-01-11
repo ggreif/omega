@@ -90,7 +90,7 @@ instance Swap V where
 
 instance Swap Ev where
   swaps [] ev = ev
-  swaps cs (Ev xs m) = Ev (swaps cs xs) (swaps cs m)
+  swaps cs (Ev xs) = Ev (swaps cs xs)
 
 instance Swap Lit where
   swaps [] x = x
@@ -171,7 +171,7 @@ falseExp = Vcon (Global "False",Ox) []
 
 --------- instances for Ev --------------------------------------------
 
-showEnv (Ev xs m) =
+showEnv (Ev xs) =
   "Ev "++ plistf fx "[" xs "," "]"
   where fx (x,y) = show x ++ "=" ++ show y
 
@@ -277,7 +277,7 @@ instance Show V where
     
     --  "("++show x++","++show y++")"
   show (Vprimfun s f) = "<primfun "++s++">"
-  show (Vfun p e (Ev xs _)) = "(fn" ++ show (map fst xs)++")"
+  show (Vfun p e (Ev xs)) = "(fn" ++ show (map fst xs)++")"
   show (Vf f push swap) = "<fn>"
   show (Vlazy cs m) = " ..."
   show (Vpat nm f g) = (show nm)
@@ -300,7 +300,7 @@ instance Show V where
   show (v@(Vcon (Global c,ext) _)) | recordExt c ext = showSynRecord v
   show (v@(Vcon (Global c,ext) _)) | leftRecordExt c ext = showSynLeftRecord v
   show (v@(Vcon (Global c,ext) _)) | tickSucc c ext = showSynTick v
-  show (Vcode e (Ev xs _)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
+  show (Vcode e (Ev xs)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
       where free = plistf show "" (map fst xs) "," ""
   show (Vswap cs u) =  show (swaps cs u)
                        --"(Vswap "++show cs ++" "++ show u++")"
