@@ -433,7 +433,7 @@ draw = letD <|> bind <|> exp where
 doexpr =
   do { reserved "do"
      ; zs <- layout draw (return ())
-     ; return(Do zs)
+     ; return(Do (Var (Global "bind"), Var (Global "fail")) zs)
      }
 
 ----------------------------------------------------

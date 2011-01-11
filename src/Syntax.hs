@@ -28,9 +28,9 @@ import ParserAll(Parser)
 -- By rights these should be defined in Value.hs but then
 -- we'd have recursive import lists
 
-data Ev = Ev [(Var,V)] (V,V,V)  -- Runtime environment mapping Vars to Values
+data Ev = Ev [(Var,V)] -- Runtime environment mapping Vars to Values
 
-showenv (Ev xs m) =
+showenv (Ev xs) =
   "Ev with \n   "++show (map fst xs)
 
 type EnvFrag = [(Var,V)]
@@ -126,7 +126,7 @@ data Exp
   | Let [Dec] Exp             -- { let x=e1;   y=e2 in e3 }
   | Circ [Var] Exp [Dec]      -- { circuit e where x = e1; y = 32 }
   | Case Exp [Match Pat Exp Dec]  -- { case e of m1; m2 }
-  | Do [Stmt Pat Exp Dec]     -- { do { p <- e1; e2 }  }
+  | Do (Exp,Exp) [Stmt Pat Exp Dec] -- { do { p <- e1; e2 } }
   | CheckT Exp
   | Lazy Exp
   | Exists Exp
@@ -318,7 +318,6 @@ decname (Prim loc nm t) = [nm]
 decname (Flag s nm) =[flagNm nm]
 decname (Reject s ds) = concat (map decname ds)
 decname (Import s xs) = []
--- decname (Monad loc e) = [Global "monad"]
 
 dnames (AddTheorem dec xs) = map fst xs
 dnames d = decname d
@@ -339,7 +338,6 @@ decloc (Prim loc nm t) = [(nm,loc)]
 decloc (Flag s nm) =[]
 decloc (Reject s d) = decloc (head d)
 decloc (Import s vs) = []
--- decloc (Monad loc e) = [(Global "monad",loc)]
 
 patf :: (Var -> Var) -> Pat -> Pat
 patf f p =
@@ -569,18 +567,6 @@ parPat (Paspat v p) f =
   do { (v',f1) <- varExt f v
      ; (p',f2) <- parPat p f1
      ; return(Paspat v' p',f2)}
-
--- When rebuilding the pattern (Monad return bind fail) we do not
--- want to rename "return" "bind" or "fail" because the do syntax
--- depends upon these things having exactly those names.
-
-parPat (pat@(Pcon (Global "Monad") [Pvar un,Pvar bnd,Pvar fl])) (Par vext vapp inc esc) =
-  let f x | x==un = return(Var un)
-      f x | x==bnd = return(Var bnd)
-      f x | x==fl  = return(Var fl)
-      f x = vapp x
-  in return(pat,Par vext f inc esc)
-
 parPat (Pcon c ps) f =
   do { (ps',f2) <- parThread parPat f ps; return(Pcon c ps',f2)}
 parPat (Pann p t) f = do {(p',f1) <- parPat p f; return (Pann p' t,f1)}
@@ -624,7 +610,10 @@ parE (Circ vs e ds) f =
       ; e3 <- parE e f2
       ; return(Circ (map unVar vs2) e3 ds3)
       }
-parE (Do ss) f = do { (ss2,_) <- parThread parStmt f ss; return(Do ss2) }
+parE (Do (bi,fa) ss) f = do { bind <- parE bi f
+                            ; fail <- parE fa f
+                            ; (ss',_) <- parThread parStmt f ss
+                            ; return(Do (bind,fail) ss') }
 parE (Ann x t) f = do { a <- parE x f; return(Ann a t)}
 parE (ExtE y) f = do { z <- extM (\ x -> parE x f) y; return(ExtE y)}
 
@@ -654,7 +643,6 @@ parD (Val l p b ds) f =
       ; ds2 <- parDs ds1 f2
       ; b2 <- parBody b f2
       ; return(Val l p b2 ds2)}
---parD (Monad loc e) f = do { e2 <- parE e f; return(Monad loc e2) }
 parD d f = return d
 
 parClause::Monad m => Par m -> Match [Pat] Exp Dec -> m (Match [Pat] Exp Dec)
@@ -795,8 +783,8 @@ addDepend v x = x {depends = v : depends x}
 addBindT ts x = x {tbinds = union ts (tbinds x)}
 addFreeT ts x = x {tfree = union ts (tfree x)}
 
-doBinders env = foldr f env ["return","bind","fail"]
-  where f x env = addFree [] (Global x) env
+--doBinders env = foldr f env ["return","bind","fail"]
+--  where f x env = addFree [] (Global x) env
 
 underBinder :: Vars a => a -> ([Var] -> FX -> FX) -> [Var] -> FX -> FX
 underBinder binders bindee bnd x = bindee (bnd2++bnd) (appF y2 x)
@@ -1015,7 +1003,7 @@ instance Vars Exp where
   vars bnd (Let ds e) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Circ vs e ds) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Case e ms)  = (vars bnd e) . (varsL bnd ms)
-  vars bnd (Do ss) = vars bnd ss . doBinders
+  vars bnd (Do (bindE,failE) ss) = vars bnd ss . vars bnd failE . vars bnd bindE
   vars bnd (CheckT x) = vars bnd x
   vars bnd (Lazy x) = vars bnd x
   vars bnd (Exists x) = vars bnd x
@@ -1094,7 +1082,7 @@ instance Eq Exp where
   (Circ vs1 e1 ds1) == (Circ vs2 e2 ds2) =
     vs1==vs2 && e1==e2 && ds1==ds2
   (Case e1 ms1) == (Case e2 ms2) = e1==e2 && listEq matchEQ ms1 ms2
-  (Do ss1) == (Do ss2) = ss1 == ss2
+  (Do (bE1,fE1) ss1) == (Do (bE2,fE2) ss2) = bE1==bE2 && fE1==fE2 && ss1 == ss2
   (CheckT e1) == (CheckT e2) = e1==e2
   (Lazy e1) == (Lazy e2) = e1==e2
   (Exists e1) == (Exists e2) = e1==e2
@@ -1368,7 +1356,7 @@ ppExp e =
                     --PP.vcat ((text "where"):(zipWith ((<+>).((flip $ (<+>))) (text "=")) (map ppVar vs) (map ppDec ds))))
     Case e ms -> (text "case" <+> ppParExp e <+> text "of") $$
                  (PP.nest 2 (PP.vcat (map ppMatch ms)))
-    Do ss -> text "do" <+> PP.braces (PP.space <> myPP PP.vcat Front (PP.nest (-2) $ text "; ") (map ppStmt ss) <> PP.space)
+    Do _ ss -> text "do" <+> PP.braces (PP.space <> myPP PP.vcat Front (PP.nest (-2) $ text "; ") (map ppStmt ss) <> PP.space)
     CheckT e -> PP.parens $ text "Check" <+> ppExp e
     Lazy e -> PP.parens $ text "lazy" <+> ppExp e
     Exists e -> PP.parens $ text "Ex" <+> ppExp e

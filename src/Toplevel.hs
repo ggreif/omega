@@ -284,7 +284,7 @@ importNames name -- time deps
        okToAddTyFun (x,y) = elemOf (Global x) vs
        p2 (s,y) = elemOf (Global s) vs
        q (str,tau,polyk) = elemOf (Global str) vs
-       add (Ev xs _) (Ev ys t) = Ev (filter okToAddVar xs ++ ys) t
+       add (Ev xs) (Ev ys) = Ev (filter okToAddVar xs ++ ys)
        accV (VarImport v) vs = v:vs  -- used to fold over the runtime environment
        accV _ vs = vs
        accSyn (SyntaxImport nm tag) vs = (nm,tag):vs -- fold over syntax imports
