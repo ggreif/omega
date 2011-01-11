@@ -15,7 +15,7 @@ import Text.PrettyPrint.HughesPJ(Doc,text)
 -----------------------------------------------
 {- These are now defined in the Syntax.hs file
 
-data Ev = Ev [(Var,V)] (V,V,V)
+data Ev = Ev [(Var,V)]
 
 type EnvFrag = [(Var,V)]
 type Perm = [(Name,Name)]
@@ -29,10 +29,10 @@ data V
   | Vf (V -> FIO V) (Ev -> V) (Perm -> V)
   | Vcon (Var,SynExt String) [V]
   | Vpat Var ([Pat]->Pat) V
-  | Vlazy (IORef (Either (FIO V) V))
+  | Vlazy Perm (IORef (Either (FIO V) V))
   | Vcode Exp Ev
   | Vswap Perm V
-  | Vfio Perm (FIO V)
+  | Vfio Perm (FIO (Either String V))
   | Vptr Perm Integer (IORef (Maybe V))
   | VChrSeq String
   | Vparser (Parser V)

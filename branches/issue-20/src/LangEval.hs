@@ -46,8 +46,7 @@ genSym = gensym Tick
 -----------------------------------------------------------------------
 -- Operations on runtime environments Ev
 
-empty = Ev [] 42 -- (unit,bind,fail)
-  where (Vcon (Global "Monad",oX) [unit,bind,fail]) = maybeMonad -- FIXME: is this correct?
+empty = Ev [] 42
 
 app (Ev xs m) (Ev as _) = Ev (xs ++ as) m
 
@@ -67,20 +66,6 @@ extract term free (env@(Ev xs m)) = Ev statBound m
                       error ("Name not found in extract: "++ show nm++
                              "\n "++term++"\n "++show (map fst xs))
                     Just v -> (nm,v)
-
-
----------------------------------------------------------------
--- The 'do' syntax uses a monad stored in the run-time environment. The default
--- monad is Maybe. This code precomputes a value which is the default maybeMonad
--- FIXME: is this correct?
-maybeMonad = unsafePerformIO (runFIO action (\ loc n s -> error s)) where
-  Right(bind,_)= pe "\\ x g -> case x of {Nothing -> Nothing; Just x -> g x}"
-  Right(unit,_) = pe "Just"
-  Right(fail,_) = pe "\\ x -> Nothing"
-  action = do { b <- eval env0 bind
-              ; u <- eval env0 unit
-              ; f <- eval env0 fail
-              ; return(Vcon (Global "Monad",Ox) [u,b,f])}
 
 
 ------------------------------------------------------------------------
