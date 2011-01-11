@@ -17,7 +17,7 @@ import Text.PrettyPrint.HughesPJ(Doc,text)
 
 type Perm = [(Name,Name)]
 
-{- These are now defined in the Syntax.hs file
+-- These are now defined in the Syntax.hs file
 
 data Ev = Ev [(Var,V)]
 
