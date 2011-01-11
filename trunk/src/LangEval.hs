@@ -138,6 +138,8 @@ evalZ env (Run e) =
      ; case x of
         Vcode c env2 -> eval env2 c
         Vbottom -> return Vbottom
+        Vlazy [] ref -> do { Vcode c env2 <- down ref
+                           ; eval env2 c }
         v -> fail ("Run expression:\n  "++show (Run e)++
                    "\nDoes not evaluate to code:\n   "++show v)
      }
