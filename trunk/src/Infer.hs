@@ -10,7 +10,6 @@ import qualified Data.Map as Map
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 import System.Time(getClockTime)
-import System.IO.Unsafe(unsafePerformIO)
 import System.Time(ClockTime)
 
 import PureReadline
