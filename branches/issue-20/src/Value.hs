@@ -13,12 +13,15 @@ import SyntaxExt
 import Text.PrettyPrint.HughesPJ(Doc,text)
 
 -----------------------------------------------
+{- These are now defined in the Bind.hs file
+
+type Perm = [(Name,Name)]
+
 {- These are now defined in the Syntax.hs file
 
 data Ev = Ev [(Var,V)]
 
 type EnvFrag = [(Var,V)]
-type Perm = [(Name,Name)]
 
 data V
   = Vlit Lit
