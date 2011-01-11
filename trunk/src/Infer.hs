@@ -723,10 +723,10 @@ typeExp mod (Case exp ms) (Infer ref) =
         ; ms2 <- checkL oblig mod ms dom rng
         ; writeRef ref rng
         ; return(Case e2 ms2) }
-typeExp mod s@(Do es ss) expect = -- FIXME
+typeExp mod (Do es ss) expect =
       do { (m,b) <- unifyMonad expect
-         ; (K _ bindSig,bmod,bn,bexp) <- lookupVar (Global "bind")
-         ; (K _ failSig,fmod,fn,fexp) <- lookupVar (Global "fail")
+         ; (K _ bindSig,_,_,_) <- lookupVar (Global "bind")
+         ; (K _ failSig,_,_,_) <- lookupVar (Global "fail")
          ; bindt <- bindtype m
          ; failt <- failtype m
          ; morepoly "bind" bindSig bindt
