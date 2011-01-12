@@ -3631,7 +3631,7 @@ ppPoly x = render (snd(dPoly (initDI :: DispInfo Z) x))
 
 dPred:: (NameStore d) => d -> Pred -> (d,Doc)
 dPred xs (Rel ts) = dTau xs ts
-dPred xs (Equality x y) = (zs,text "Equal " <> PP.cat[a,b])
+dPred xs (Equality x y) = (zs,text "Equal " <> PP.sep[a,b])
     where (ys,a) = dPar xs x
           (zs,b) = dPar ys y
 
