@@ -14,7 +14,7 @@ import Monads
 
 -------------------------------------------------------------------
 -- When narrowing we need to partition terms into 4 classes
--- 1) variables, 2) constructors, 3) function calls, 4) Predicates
+-- 1) variables, 2) constructors, 3) function calls, 4) predicates
 -- To do this we provide the type NS. Terms are composed of
 -- Names (of constructors or constants), Variables, and Subterms.
 -- We provide projection (Tau -> NS) functions and injection (NS -> Tau)
@@ -163,7 +163,7 @@ intersperse x (y:ys) = y:x: intersperse x ys
 
 dST (step,sol,disp,exceed) = Dr [Dd "(steps = ",Dd step
                                 ,Ds ",solutions = ",Dd sol
-                                ,Ds ",excceeded = ",Dd exceed,Dd ")"]
+                                ,Ds ",exceeded = ",Dd exceed,Dd ")"]
 
 
 dRel :: Rel Tau -> DispElem Z
@@ -176,6 +176,13 @@ dSol = Dlf f
                                ,Ds "\nTruths = ",dRel rel
                                ,Ds "\nUnifier = ",Dlf exhibitVT un ", "]
 
+
+instance (Exhibit (DispInfo Z) name, Exhibit (DispInfo Z) var, Exhibit (DispInfo Z) term)
+       => Exhibit (DispInfo Z) (NS name var term) where
+  exhibit d (VarN x) = exhibit d x
+  exhibit d (ConN name terms) = displays d [Ds "(",Dd name,Ds " ",Dl terms " ",Ds ")"]
+  exhibit d (FunN name terms) = displays d [Ds "{",Dd name,Ds " ",Dl terms " ",Ds "}"]
+  exhibit d (RelN x) = exhibit d x
 
 
 instance Exhibit (DispInfo Z) a => Exhibit (DispInfo Z) (Prob a) where
