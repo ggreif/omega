@@ -441,7 +441,7 @@ locInfo _ = return ("?","unknown")
 -- True means put the problem on left, False means on right
 buildQ True  y (TermP x,ts,u) = (EqP(x,sub2Tau u y),ts,u)
 buildQ False y (TermP x,ts,u) = (EqP(sub2Tau u y,x),ts,u)
-buildQ _ _ prob = error ("Non term problem returned from stepProb  in equality")
+buildQ _ _ prob = error ("Non term problem returned from stepProb in equality")
 
 
 
@@ -564,11 +564,11 @@ generalizeLM ::  Check m => Int -> [Tau] -> m[(Path,[Tau])]
 generalizeLM _ [] = return [([],[])]
 generalizeLM n (arg_n : args) = liftN h arg_n
   where h (VarN vv) =
-          do { newTerm <- return(varWild vv) -- varWildM vv  
+          do { newTerm <- return(varWild vv)
              ; pairs <- generalizeLM (n+1) args
              ; return(do { (newPos, newRest) <- pairs
-                         ; return (newPos, newTerm {- TcTv newTerm -} : newRest)})}
-        h (ConN name ts) = 
+                         ; return (newPos, newTerm : newRest)})}
+        h (ConN name ts) =
           do { pairs <- (generalizeLM 0 ts)
              ; pairs2 <- (generalizeLM (n+1) args)
              ; pairs3 <- mapM matchM pairs
@@ -577,6 +577,7 @@ generalizeLM n (arg_n : args) = liftN h arg_n
                 matchM (a:b, newArgs) = return(n:a:b, con name newArgs : args)
                 add (a:b, newRest) ans = (a:b, con name ts : newRest):ans
                 add ([], newRest) ans = ans
+        h f@(FunN name ts) = failM 3 [Ds "Type function call in pattern? ", Dd f]
 
 
 makeTreePath free lhs rhs (Root term) = Leaf term free lhs rhs
