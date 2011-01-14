@@ -30,10 +30,6 @@ subProb u (EqP(x,y)) = EqP(sub2Tau u x,sub2Tau u y)
 subProb u (AndP rs) = AndP (map (subProb u) rs)
 subProb u (TermP x) = TermP(sub2Tau u x)
 
---composeUn :: Unifier -> Unifier -> Unifier
---composeUn s1 s2 = ([(u,sub2Tau s1 t) | (u,t) <- s2] ++ s1)
-
---o new old = composeUn new old
 
 pushUnifier u1 [] = []
 pushUnifier u1 ((exp,u2):xs) = (exp,composeTwo u2 u1):pushUnifier u1 xs
