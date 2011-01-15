@@ -64,26 +64,12 @@ tooMany (nsteps,nsolution,disp,_) =  (nsteps,nsolution,disp,True)
 ------------------------------------------------------------
 -- Tracing a narrowing computation
 
-{-
-traceSteps (steps,count,d,exceeded) truths ys =
-  do { verbose <- getMode "narrowing"
-     ; d1 <- whenP verbose d
-         [Ds (show steps), Ds "\nNarrowing the list (looking for "
-         ,Ds (show count), Ds " solutions)\n",Ds "   "
-         ,Dl (map fst ys) "\n   ",Ds "\nwith truths:\n   "
-         ,Dl (map (\(x,y) -> teq x y) truths) "\n   ", Ds "\n"]
-     ; when verbose (wait "narrowing")
-     ; return (steps,count,d1,exceeded)
-     }
--}
-
-
 fxx d (prob,truth,unifier@(ls,vs)) =
               displays d [dProb prob,if null vs
                                 then Ds "\n"
                                 else Dr[Ds " where ",dUn (ls,take 3 vs)]]
 
-traceSteps2 (steps,count,d,exceeded) (problems@((ps,truths,us):_)) found =
+traceSteps (steps,count,d,exceeded) (problems@((ps,truths,us):_)) found =
   do { verbose <- getMode "narrowing"
      ; let f d (prob,truth,unifier@(ls,vs)) =
               displays d [dProb prob,if null vs
@@ -119,7 +105,7 @@ narr cntxt s ((t,ts,un):more) foundsols | valueP t =
   do { s1 <- traceResult s cntxt un
      ; narr cntxt (decSol s1) more (addSol (t,ts,un) foundsols)}
 narr cntxt s (problems@((p,truths,u):more)) foundsols =
-  do { s1 <- traceSteps2 s problems foundsols
+  do { s1 <- traceSteps s problems foundsols
      ; (newprobs,s2) <- stepProb s1 p truths
      ; narr cntxt (decStep s2) (more ++ map (push u) newprobs) foundsols }
 
