@@ -353,7 +353,7 @@ io2Mtc x = Tc h
   where h env = do { x <- fio x; return(x,[]) }
   
   
--- Error reporting funcions in FIO
+-- Error reporting functions in FIO
 
 -- Report an error then die.
 errF :: Loc -> Int -> String -> a
