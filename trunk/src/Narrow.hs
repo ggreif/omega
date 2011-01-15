@@ -168,8 +168,8 @@ stepEq s0 (a,b) truths =
     handleM 4
     (do { (ansA,s1) <- stepTerm s0 a truths
         ; (ansB,s2) <- stepTerm s1 b truths
-       -- we are only going to pursue one path, so choose one
-       ; case fewestVar ansA a ansB b of
+        -- we are only going to pursue one path, so choose one
+        ; case fewestVar ansA a ansB b of
            (bool,ans,term) -> return(map (buildQ bool term) ans,s2)})
     (\ s -> if nm /= nm2
                then failM 3 [Ds s]
