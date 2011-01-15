@@ -162,16 +162,6 @@ stepEq s0 (a,b) truths =
        ; (u,s1) <- mguV s0 truths [(b,con nm vs)]
        ; truths2 <- subRels u truths
        ; return([(EqP (sub2Tau u a,sub2Tau u b),truths2,u)],s1)}
-  (VarN s,FunN _ _) | False ->  -- not (occursN s b) ->
-    do { (t1,_) <- normalizeTau b
-       ; (u,s1) <- mguV s0 truths [(TcTv s,t1)]
-       ; truths2 <- subRels u truths
-       ; return([(TermP success,truths2,u)],s1)}
-  (FunN _ _,VarN s) | False -> -- not (occursN s a) ->
-    do { (t1,_) <- normalizeTau a
-       ; (u,s1) <- mguV s0 truths [(TcTv s,t1)]
-       ; truths2 <- subRels u truths
-       ; return([(TermP success,truths2,u)],s1)}
   (FunN _ _,FunN _ _) | a==b -> return([(TermP success,truths,([],[]))],s0)
 
   (FunN nm args,FunN nm2 args2) ->
