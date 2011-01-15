@@ -305,7 +305,7 @@ noProgress name term =
 
 -- In applyLfRule, We first match the term against lhs,
 -- recall match [(lhs,term)] only binds variables in lhs, so if
--- this succeeds, the unifier is only usefull to apply to "rhs2".
+-- this succeeds, the unifier is only useful to apply to "rhs2".
 -- It mentions no no variables in "t" or "truths" since the vars
 -- in "lhs2" are fresh. It is good to match, rather than unify,
 -- since it avoids introducing new variables some times. If
