@@ -64,11 +64,6 @@ tooMany (nsteps,nsolution,disp,_) =  (nsteps,nsolution,disp,True)
 ------------------------------------------------------------
 -- Tracing a narrowing computation
 
-fxx d (prob,truth,unifier@(ls,vs)) =
-              displays d [dProb prob,if null vs
-                                then Ds "\n"
-                                else Dr[Ds " where ",dUn (ls,take 3 vs)]]
-
 traceSteps (steps,count,d,exceeded) (problems@((ps,truths,us):_)) found =
   do { verbose <- getMode "narrowing"
      ; let f d (prob,truth,unifier@(ls,vs)) =
