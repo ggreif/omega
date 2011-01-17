@@ -213,7 +213,7 @@ stepTerm s0 term truths =
                    (tryRewriting term)
                    (\ (t,u) -> do { truths2 <- subRels u truths
                                   ; return([(TermP t,truths2,u)],s0)})
-                   (do { tree <- (getDefTree nm)
+                   (do { tree <- getDefTree nm
                        ; stepTree nm term truths tree s0})
    (ConN _ _) -> case pathTo1stFunN term of
                   Just path ->
@@ -540,8 +540,8 @@ generalizeLM n (arg_n : args) = liftN h arg_n
              ; return(do { (newPos, newRest) <- pairs
                          ; return (newPos, newTerm : newRest)})}
         h (ConN name ts) =
-          do { pairs <- (generalizeLM 0 ts)
-             ; pairs2 <- (generalizeLM (n+1) args)
+          do { pairs <- generalizeLM 0 ts
+             ; pairs2 <- generalizeLM (n+1) args
              ; pairs3 <- mapM matchM pairs
              ; return(pairs3 ++ foldr add [] pairs2)}
           where matchM ([], _) = do { ans <- termWildM arg_n; return([n], ans : args)}
