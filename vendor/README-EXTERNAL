@@ -1,0 +1,16 @@
+This directory contains imported code
+of relevant algorithms which are *not*
+part of the Omega project.
+
+Currently two algorithms are present:
+
+o "Practical type inference for arbitrary-rank types" by Peyton Jones et al.
+  http://research.microsoft.com/en-us/um/people/simonpj/papers/higher-rank/
+ 
+o "Algorithm P" from Chuan-kai Lin's PhD thesis
+  http://sites.google.com/site/chklin/research
+
+
+Both are archived here with permission of the respective authors
+under the BSD (3-clause) license.
+
