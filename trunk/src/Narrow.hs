@@ -123,8 +123,8 @@ stepProb s (prob@(EqP(x,y))) truths =
                              ; truths2 <- subRels u1 truths
                              ; return([(TermP success,truths2,u1)],s)})
                  (stepEq s (x,y) truths))
-                     
-                
+
+
 stepProb s (TermP t) truths = stepTerm s t truths
 stepProb s (AndP []) truths = return([(TermP success,truths,([],[]))],s)
 stepProb s (AndP [p]) truths = stepProb s p truths
@@ -173,7 +173,7 @@ stepEq s0 (a,b) truths =
            (bool,ans,term) -> return(map (buildQ bool term) ans,s2)})
     (\ s -> if nm /= nm2
                then failM 3 [Ds s]
-               else 
+               else
                  do { ans <- mguB (zip args args2)
                     ; case ans of
                        Right (m,x,y) -> failM 3 [Ds s]
@@ -245,9 +245,9 @@ stepTree name term truths (Branchx termX path ts) s0 =
 -- to by path. Get multiple answers, by rebuilding the term, once for
 -- for each answer for the subterm pointed to by path.
 
-applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau -> 
-   ([Int],[DefTree TcTv Tau]) -> 
-   (Tau,([(TcLv,Level)],[(TcTv,Tau)])) -> 
+applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
+   ([Int],[DefTree TcTv Tau]) ->
+   (Tau,([(TcLv,Level)],[(TcTv,Tau)])) ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList,s1) <- mapThread s0 (stepTree name term truths) subtrees
@@ -288,9 +288,9 @@ applyLfRule s0 term truths rule uselessUnifier =
          Just unifier ->
            return ([(TermP(sub2Tau unifier rhs2),truths,([],[]))],s0)
          Nothing ->
-           do { ans <- mguB [(lhs2,term)] 
+           do { ans <- mguB [(lhs2,term)]
               ; case ans of
-                 Left(ls,u2) -> 
+                 Left(ls,u2) ->
                     let important = freeTerm term
                         u3 = orientBindings important u2
                         good (var,term) = elem var important
@@ -329,7 +329,7 @@ impliesM (AndR (r:rs)) (x,y) =
   maybeM (impliesM r (x,y))
          (\ u -> return(Just u))
          (impliesM (AndR rs) (x,y))
-    
+
 
 
 subRels u (EqR(x,y)) =
@@ -405,8 +405,8 @@ mguV s0 truths pairs =
      }
 
 
-locInfo (TcTv (Tv un (Rigid q loc (nm,ref)) k)) = 
-  do { t <- readRef ref; x <- fromIO t; return(x,show loc)} 
+locInfo (TcTv (Tv un (Rigid q loc (nm,ref)) k)) =
+  do { t <- readRef ref; x <- fromIO t; return(x,show loc)}
 locInfo _ = return ("?","unknown")
 
 -- True means put the problem on left, False means on right
@@ -422,8 +422,8 @@ matches term pat =
      ; maybeM (mostGenUnify [(p,term)])
               (\ u -> return(Just(sub2Tau u term,u)))
               (return Nothing)}
-         
-         
+
+
 orientBindings free [] = []
 orientBindings free ((p@(var,term)):more) =
   let rest = orientBindings free more
@@ -509,14 +509,14 @@ duplicateTerm u path term subTs = pushUnifier u (subInPlace app path term subTs)
 -- ]
 
 
-             
+
 makeChainLM ::  Check m => Tau -> m[Chain TcTv Tau]
 makeChainLM x = liftN h x
   where h (FunN name args) =
           do { pairs <- generalizeLM 0 args
              ; ans <- mapM (matchLXM name args) pairs
              ; return(concat ans)}
-            
+
 
 -- If we're computing a DefTree for {f a0 a1 a2 a3} then we call
 -- generalizeL 0 [a0,a1,a2,a3]
@@ -604,15 +604,15 @@ renameVarN x = liftN h x
 
 fff xs = plistf ff "[1" xs "\n" "1]"
   where ff y = plistf tree2string "[2" y "\n" "2]"
-  
+
 mainYM ::   Check m => NName -> [([TcTv],[Tau],Tau)] -> m[DefTree TcTv Tau]
 mainYM name patternList = do { pairs <- mapM (f13 name) patternList
                              ; let allPossibleOneFromEach = cross2 pairs
                              --; return(makeTreeL (concat pairs))}
                              ; return(concat(map makeTreeL allPossibleOneFromEach))}
-                            
-  where f13:: Check m => NName -> ([TcTv],[Tau],Tau) -> m [DefTree TcTv Tau]   
-        f13 name (free2,lhs,rhs) = do { pairs <- makeChainLM (renameVarN lhs2); 
+
+  where f13:: Check m => NName -> ([TcTv],[Tau],Tau) -> m [DefTree TcTv Tau]
+        f13 name (free2,lhs,rhs) = do { pairs <- makeChainLM (renameVarN lhs2);
                                       ; return(map (makeTreePath free2 lhs2 rhs) pairs)}
                 where lhs2 = (fun name lhs)
 
@@ -654,5 +654,5 @@ tree2string tree = indent 0 tree
           concat (map (\x -> indent (n+1) x) tree)
         blanks n = "\n" ++ (take n (repeat ' '))
 
- 
+
 ----------------------------------------------------------------
