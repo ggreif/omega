@@ -107,7 +107,7 @@ narr cntxt s (problems@((p,truths,u):more)) foundsols =
 --------------------------------------------------------
 -- Taking 1 step in a narrowing computation
 
-stepProb::  Check m => ST Z -> Prob Tau -> Rel Tau -> m(Sol,ST Z)
+stepProb :: Check m => ST Z -> Prob Tau -> Rel Tau -> m(Sol,ST Z)
 stepProb s (prob@(EqP(x,y))) truths =
   maybeM (rewNestedEqual (x,y))
          (\ (new,u1) -> do { truths2 <- subRels u1 truths
@@ -317,7 +317,7 @@ addSol n@(t,ts,(new1,new2)) us =
 
 push u (prob,truths,u2) = (prob,truths,composeTwo u2 u)
 
-impliesM ::  Check m => Rel Tau -> (Tau,Tau) -> m(Maybe Unifier2)
+impliesM :: Check m => Rel Tau -> (Tau,Tau) -> m(Maybe Unifier2)
 impliesM (EqR(a,b)) (x,y) =
    maybeM (mostGenUnify [(x,a),(y,b)])
           (\ u -> return(Just u))
@@ -510,7 +510,7 @@ duplicateTerm u path term subTs = pushUnifier u (subInPlace app path term subTs)
 
 
 
-makeChainLM ::  Check m => Tau -> m[Chain TcTv Tau]
+makeChainLM :: Check m => Tau -> m[Chain TcTv Tau]
 makeChainLM x = liftN h x
   where h (FunN name args) =
           do { pairs <- generalizeLM 0 args
@@ -522,7 +522,7 @@ makeChainLM x = liftN h x
 -- generalizeL 0 [a0,a1,a2,a3]
 
 
-matchLXM ::   Check m => NName -> [Tau] -> (Path,[Tau]) -> m [Chain TcTv Tau]
+matchLXM :: Check m => NName -> [Tau] -> (Path,[Tau]) -> m [Chain TcTv Tau]
 matchLXM name args ([], newArgs) = return [(Root (fun name newArgs))]
 matchLXM name args (h:t, newArgs) =
   do { tails <- makeChainLM (fun name newArgs)
@@ -531,7 +531,7 @@ matchLXM name args (h:t, newArgs) =
 
 
 
-generalizeLM ::  Check m => Int -> [Tau] -> m[(Path,[Tau])]
+generalizeLM :: Check m => Int -> [Tau] -> m[(Path,[Tau])]
 generalizeLM _ [] = return [([],[])]
 generalizeLM n (arg_n : args) = liftN h arg_n
   where h (VarN vv) =
@@ -605,7 +605,7 @@ renameVarN x = liftN h x
 fff xs = plistf ff "[1" xs "\n" "1]"
   where ff y = plistf tree2string "[2" y "\n" "2]"
 
-mainYM ::   Check m => NName -> [([TcTv],[Tau],Tau)] -> m[DefTree TcTv Tau]
+mainYM :: Check m => NName -> [([TcTv],[Tau],Tau)] -> m[DefTree TcTv Tau]
 mainYM name patternList = do { pairs <- mapM (f13 name) patternList
                              ; let allPossibleOneFromEach = cross2 pairs
                              --; return(makeTreeL (concat pairs))}
@@ -617,7 +617,7 @@ mainYM name patternList = do { pairs <- mapM (f13 name) patternList
                 where lhs2 = (fun name lhs)
 
 
-defTree ::  Check m => Rule NName TcTv Tau -> m[DefTree TcTv Tau]
+defTree :: Check m => Rule NName TcTv Tau -> m[DefTree TcTv Tau]
 defTree (NarR(name,zs)) = mainYM name zs
 
 
