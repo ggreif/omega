@@ -548,7 +548,8 @@ generalizeLM n (arg_n : args) = liftN h arg_n
                 matchM (a:b, newArgs) = return(n:a:b, con name newArgs : args)
                 add (a:b, newRest) ans = (a:b, con name ts : newRest):ans
                 add ([], newRest) ans = ans
-        h f@(FunN name ts) = failM 3 [Ds "Type function call in pattern? ", Dd f]
+        h f@(FunN _ _) = failM 3 [Ds "Type function call in pattern? ", Dd f]
+        h r@(RelN _) = failM 3 [Ds "Relation in pattern? ", Dd r]
 
 
 makeTreePath free lhs rhs (Root term) = Leaf term free lhs rhs
