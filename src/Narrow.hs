@@ -412,7 +412,7 @@ locInfo _ = return ("?","unknown")
 -- True means put the problem on left, False means on right
 buildQ True  y (TermP x,ts,u) = (EqP(x,sub2Tau u y),ts,u)
 buildQ False y (TermP x,ts,u) = (EqP(sub2Tau u y,x),ts,u)
-buildQ _ _ prob = error ("Non term problem returned from stepProb in equality")
+buildQ _ _ prob = error ("Non term problem returned from stepTerm in equality")
 
 
 
