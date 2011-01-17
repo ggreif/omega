@@ -301,7 +301,7 @@ applyLfRule s0 term truths rule uselessUnifier =
 ----------------------------------------------------------------
 -- Helper functions
 
--- A unifer, u1, is more general than another unifier, u2, iff
+-- A unifier, u1, is more general than another unifier, u2, iff
 -- every binding in u1 appears in u2. For example [p=a] is more
 -- general than [b=#0, p=a] and also more general than [b=#(1+c), p=a]
 -- moreGen :: NTerm z n v t => Un v t -> Un v t -> Bool

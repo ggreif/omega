@@ -2986,7 +2986,7 @@ tvsTau x = fst3 (varsOfTau x)
 
 ---------------------------------------------------------------
 -- Computing most general unifiers. Done in a side-effect free way.
--- Note that Flexi vars might be bound in the unifer returned.
+-- Note that Flexi vars might be bound in the unifier returned.
 -- A computational pass can force these to be unified later if
 -- necessary. See the function "mutVarSolve" and "mguM"
 
@@ -3982,9 +3982,9 @@ solveHP context@(s,r) truths oblig =
 
 
 -- When we map "matchRel p" over a list we get a list of (count,unifier).
--- Interpret this as (1,unifer) if "p"  matches and (0,[]) if it doesn't.
+-- Interpret this as (1,unifier) if "p"  matches and (0,[]) if it doesn't.
 -- "sumM"ing up such a list we get (number_of_matches,first_unifier)
--- if it is (1,unifer) then there was exactly 1 match and unifer
+-- if it is (1,unifier) then there was exactly 1 match and unifier
 -- comes from that match. For those with exactly 1 match, we can force
 -- the unification to take place, by using solveMutVars.
 
