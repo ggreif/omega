@@ -150,7 +150,7 @@ dparen x = case project x of
             FunN _ _ -> Dd x
             ConN _ _ -> Dr[Ds "(",Dd x,Ds ")"]
 
-dProb :: Prob a -> DispElem Z
+dProb :: Prob Tau -> DispElem Z
 dProb (TermP t) = Dd t
 dProb (EqP(x,y)) = Dr [Ds "Equal ",dparen x,Ds " ",dparen y]
 dProb (AndP xs) = Dr [Ds "and(",sepBy dProb xs ",",Ds ")"]
@@ -185,7 +185,7 @@ instance (Exhibit (DispInfo Z) name, Exhibit (DispInfo Z) var, Exhibit (DispInfo
   exhibit d (RelN x) = exhibit d x
 
 
-instance Exhibit (DispInfo Z) a => Exhibit (DispInfo Z) (Prob a) where
+instance Exhibit (DispInfo Z) (Prob Tau) where
   exhibit d (TermP x) = exhibit d x
   exhibit d eq@(EqP _) = displays d [dProb eq]
   exhibit d and@(AndP _) = displays d [dProb and]
