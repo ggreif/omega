@@ -73,7 +73,7 @@ import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
 import NarrowData(DefTree(..),NName(..),Rule(..),Prob(..),NResult(..),Rel(..)
-                 ,andR,andP,andf,freshX,dProb)
+                 ,andR,andP,andf,freshX)
 import Narrow(narr,defTree,Check(..),matches)
 import Value(Label(..),Equal(..))
 
@@ -3340,7 +3340,7 @@ solveByNarrowing (nsol,nsteps) context@(s,_) normTruths tests =
              originalVar (v,term) = elem v free
 
        ; reportEnter context tests conj normTruths
-       ; (d2,cntxt) <- showThruDisplay [dProb conj]
+       ; (d2,cntxt) <- showThruDisplay [Dd conj]
        ; (ans2,(_,_,d3,exceed)) <- narr cntxt (nsteps,nsol,d2,False) [(conj,hyp,([],[]))] []
        ; let termOf (TermP x,ts,(ls,un)) = (x,(ls,un))
              termOf (EqP(x,y),ts,(ls,un)) = (teq x y,(ls,un))
