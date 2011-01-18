@@ -260,11 +260,14 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                         ; return(map (reBuild term path) ans,s2)}
                  other -> let newest = insertNewTermAtPath matched path new
                           in if newest==term
-                                 then maybeM (tryRewriting term)
-                                             (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
-                                             (noProgress name term)
+                                 then return ([(RootP name term,truths,mU)],s1)
                                  else do { truths2 <- subRels mU truths
                                          ; return ([(TermP newest,truths2,mU)],s1)}}
+
+--                                 then maybeM (tryRewriting term)
+--                                             (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
+--                                             (noProgress name term)
+
 
 noProgress:: Check m => NName -> Tau -> m a
 noProgress name term =
