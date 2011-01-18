@@ -296,7 +296,7 @@ applyLfRule s0 term truths rule uselessUnifier =
                         good (var,term) = elem var important
                     in do { truths2 <- subRels (ls,u3) truths
                           ; return ([(TermP(sub2Tau (ls,u3) rhs2),truths2,(ls,filter good u3))],s0)}
-                 Right _ ->  (return ([],s0)) }}
+                 Right _ -> return ([],s0) }}
 
 ----------------------------------------------------------------
 -- Helper functions
