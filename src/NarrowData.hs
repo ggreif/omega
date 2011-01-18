@@ -49,7 +49,7 @@ type ST z = (Int,Int,DispInfo z,Bool)
 type Un var term = [(var,term)]
 
 -------------------
--- For constucting DefTrees
+-- For constructing DefTrees
 
 type Path = [Int]
 
