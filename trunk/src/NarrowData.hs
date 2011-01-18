@@ -185,10 +185,10 @@ instance (Exhibit (DispInfo Z) name, Exhibit (DispInfo Z) var, Exhibit (DispInfo
   exhibit d (RelN x) = exhibit d x
 
 
-instance Exhibit (DispInfo Z) a => Exhibit (DispInfo Z) (Prob a) where
+instance Exhibit (DispInfo Z) (Prob Tau) where
   exhibit d (TermP x) = exhibit d x
-  exhibit d (EqP(x,y)) = displays d [Ds "Equal (",Dd x,Ds ") (",Dd y,Ds ")"]
-  exhibit d (AndP xs) = displays d [Ds "and(",Dl xs ",",Ds ")"]
+  exhibit d eq@(EqP _) = displays d [dProb eq]
+  exhibit d and@(AndP _) = displays d [dProb and]
 
 
 instance Exhibit (DispInfo Z) a => Exhibit (DispInfo Z) (Rel a) where
