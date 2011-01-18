@@ -150,7 +150,7 @@ dparen x = case project x of
             FunN _ _ -> Dd x
             ConN _ _ -> Dr[Ds "(",Dd x,Ds ")"]
 
-dProb :: Prob Tau -> DispElem Z
+dProb :: Prob a -> DispElem Z
 dProb (TermP t) = Dd t
 dProb (EqP(x,y)) = Dr [Ds "Equal ",dparen x,Ds " ",dparen y]
 dProb (AndP xs) = Dr [Ds "and(",sepBy dProb xs ",",Ds ")"]
