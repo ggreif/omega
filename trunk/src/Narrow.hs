@@ -251,9 +251,9 @@ applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList,s1) <- mapThread s0 (stepTree name term truths) subtrees
-     ; let new = (getTermAtPath path term)
+     ; let new = getTermAtPath path term
      ; case all null ansListList of
-        False -> return(concat ansListList,s1) -- At least 1 answer use them
+        False -> return(concat ansListList,s1) -- At least 1 answer: use them
         True -> case project new of -- No subtree applies so use root
                  (FunN nm _) ->
                      do { (ans,s2) <- stepTerm s1 new truths
@@ -614,7 +614,7 @@ mainYM name patternList = do { pairs <- mapM (f13 name) patternList
   where f13:: Check m => NName -> ([TcTv],[Tau],Tau) -> m [DefTree TcTv Tau]
         f13 name (free2,lhs,rhs) = do { pairs <- makeChainLM (renameVarN lhs2);
                                       ; return(map (makeTreePath free2 lhs2 rhs) pairs)}
-                where lhs2 = (fun name lhs)
+                where lhs2 = fun name lhs
 
 
 defTree :: Check m => Rule NName TcTv Tau -> m[DefTree TcTv Tau]
