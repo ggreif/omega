@@ -44,7 +44,9 @@ data Prob t
   | EqP (t,t)
   | AndP [Prob t]
 
-type Sol = [(Prob Tau,Rel Tau,Unifier2)]
+type ElementarySolution = (Prob Tau,Rel Tau,Unifier2)
+type WeightedSolution = Either ElementarySolution ElementarySolution
+type Sol = [ElementarySolution]
 type ST z = (Int,Int,DispInfo z,Bool)
 type Un var term = [(var,term)]
 
