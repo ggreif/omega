@@ -228,7 +228,7 @@ reBuild term path (TermP x,ts,u) = (problem,ts,u)
     where problem = TermP(sub2Tau u (insertNewTermAtPath term path x))
 
 
-stepTree:: Check m => NName ->  Tau -> Rel Tau -> DefTree TcTv Tau -> ST Z -> m(WeightedSol m,ST Z)
+stepTree:: Check m => NName ->  Tau -> Rel Tau -> DefTree TcTv Tau -> ST Z -> m(Sol,ST Z)
 stepTree name t truths (Leaf pat free lhs rhs) s0 =
    maybeM (matches t pat)                             -- test
           (applyLfRule s0 t truths (free,lhs,rhs))    -- if successful
@@ -248,7 +248,7 @@ stepTree name term truths (Branchx termX path ts) s0 =
 applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    ([Int],[DefTree TcTv Tau]) ->
    (Tau,([(TcLv,Level)],[(TcTv,Tau)])) ->
-   m (WeightedSol m,ST Z)
+   m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList,s1) <- mapThread s0 (stepTree name term truths) subtrees
      ; let new = getTermAtPath path term
@@ -260,11 +260,11 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                         ; return(map (reBuild term path) ans,s2)}
                  other -> let newest = insertNewTermAtPath matched path new
                           in if newest==term
-                                 then Right (\s -> maybeM (tryRewriting term)
-                                                          (\(t2,u2) -> return((TermP t2,truths,composeTwo u2  mU),s))
-                                                          (noProgress name term))
+                                 then maybeM (tryRewriting term)
+                                             (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
+                                             (noProgress name term)
                                  else do { truths2 <- subRels mU truths
-                                         ; return ([Left (TermP newest,truths2,mU)],s1)}}
+                                         ; return ([(TermP newest,truths2,mU)],s1)}}
 
 noProgress:: Check m => NName -> Tau -> m a
 noProgress name term =
@@ -286,7 +286,7 @@ applyLfRule s0 term truths rule uselessUnifier =
   do { (lhs2,rhs2) <- freshX rule
      ; case match2 ([],[]) [(lhs2,term)] of
          Just unifier ->
-           return ([Left (TermP(sub2Tau unifier rhs2),truths,([],[]))],s0)
+           return ([(TermP(sub2Tau unifier rhs2),truths,([],[]))],s0)
          Nothing ->
            do { ans <- mguB [(lhs2,term)]
               ; case ans of
@@ -295,7 +295,7 @@ applyLfRule s0 term truths rule uselessUnifier =
                         u3 = orientBindings important u2
                         good (var,term) = elem var important
                     in do { truths2 <- subRels (ls,u3) truths
-                          ; return ([Left (TermP(sub2Tau (ls,u3) rhs2),truths2,(ls,filter good u3))],s0)}
+                          ; return ([(TermP(sub2Tau (ls,u3) rhs2),truths2,(ls,filter good u3))],s0)}
                  Right _ -> return ([],s0) }}
 
 ----------------------------------------------------------------
