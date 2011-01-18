@@ -187,8 +187,8 @@ instance (Exhibit (DispInfo Z) name, Exhibit (DispInfo Z) var, Exhibit (DispInfo
 
 instance Exhibit (DispInfo Z) a => Exhibit (DispInfo Z) (Prob a) where
   exhibit d (TermP x) = exhibit d x
-  exhibit d (EqP(x,y)) = displays d [Ds "Equal (",Dd x,Ds ") (",Dd y,Ds ")"]
-  exhibit d (AndP xs) = displays d [Ds "and(",Dl xs ",",Ds ")"]
+  exhibit d e@(EqP _) = displays d [dProb e]
+  exhibit d a(AndP _) = displays d [dProb a]
 
 
 instance Exhibit (DispInfo Z) a => Exhibit (DispInfo Z) (Rel a) where
