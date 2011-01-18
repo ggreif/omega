@@ -67,9 +67,9 @@ tooMany (nsteps,nsolution,disp,_) =  (nsteps,nsolution,disp,True)
 traceSteps (steps,count,d,exceeded) (problems@((ps,truths,us):_)) found =
   do { verbose <- getMode "narrowing"
      ; let f d (prob,truth,unifier@(ls,vs)) =
-              displays d [dProb prob,if null vs
-                                then Ds "\n"
-                                else Dr[Ds " where ",dUn (ls,take 3 vs)]]
+              displays d [Dd prob,if null vs
+                                  then Ds "\n"
+                                  else Dr[Ds " where ",dUn (ls,take 3 vs)]]
      ; d1 <- whenP verbose d
          [Ds "\n-------------------------------------\n"
          ,Ds (show steps), Ds " Narrowing the list (looking for "
@@ -119,7 +119,7 @@ stepProb s (prob@(EqP(x,y))) truths =
                  (\ u1 -> do { verbose <- getMode "narrowing"
                              ; whenM verbose
                                  [Ds "\nWhile narrowing, the term:\n   "
-                                 ,dProb prob, Ds "\nis implied by the truths, deriving ",dUn u1]
+                                 ,Dd prob, Ds "\nis implied by the truths, deriving ",dUn u1]
                              ; truths2 <- subRels u1 truths
                              ; return([(TermP success,truths2,u1)],s)})
                  (stepEq s (x,y) truths))
@@ -129,7 +129,7 @@ stepProb s (TermP t) truths = stepTerm s t truths
 stepProb s (AndP []) truths = return([(TermP success,truths,([],[]))],s)
 stepProb s (AndP [p]) truths = stepProb s p truths
 stepProb (s@(nstep,nsol,d0,ex)) (AndP (p:ps)) truths =
-  do { let (d1,cntxt) = displays d0 [dProb p]
+  do { let (d1,cntxt) = displays d0 [Dd p]
            newS = (nstep,2,d1,False)
      ; (ans,s1@(nstep',_,d2,exceed)) <- narr ("And sub-problem\n  "++cntxt) newS [(p,truths,([],[]))] []
      ; if exceed
