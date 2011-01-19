@@ -235,7 +235,10 @@ stepTree name t truths (Leaf pat free lhs rhs) s0 =
           (return ([],s0))                            -- if failure
 stepTree name term truths (Branchx termX path ts) s0 =
    maybeM (matches term termX)
-          (applyBranchRule s0 name term truths (path,ts))
+          (do { (sols,s1) <- applyBranchRule s0 name term truths (path,ts)
+              ; let proper (OnlyP _,_,_) = False
+                    proper _ = True
+              ; return (filter proper sols, s1))
           (return ([],s0))
 
 -- When applying a Branchx rule, find the deepest rules that match, and
@@ -251,6 +254,7 @@ applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList,s1) <- mapThread s0 (stepTree name term truths) subtrees
+     ; 
      ; let new = getTermAtPath path term
      ; case all null ansListList of
         False -> return(concat ansListList,s1) -- At least 1 answer: use them
@@ -265,7 +269,7 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                                              (noProgress name term)
                                  else do { truths2 <- subRels mU truths
                                          ; (b,s') <- mapThread s1 (matchSubAtPath path new) subtrees
-                                         ; warnM [Ds "HERE ", Ds (show b)]; return (if and b then [] else [(TermP newest,truths2,mU)],s1)}}
+                                         ; warnM [Ds "HERE ", Ds (show b)]; return (if and b then [(OnlyP path new,undefined,undefined)] else [(TermP newest,truths2,mU)],s1)}}
 
 
 incommensurable :: Tau -> Tau -> Bool
