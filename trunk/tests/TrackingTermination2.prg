@@ -1,5 +1,5 @@
 -----------------------------------------------------
--- Prelude like functions
+-- Prelude-like functions
 
 data Arr a m b = Arr (a -> b)
 
@@ -45,7 +45,7 @@ union:: Set ~> Set ~> Set
 {union (Empty a) x} = x
 
 ------------------------------------------------------------
--- Judements for well-typed patterns and terms
+-- Judgements for well-typed patterns and terms
 
 data Prim:: *0 ~> *0 where
   Add :: Prim (Arr Int Total (Arr Int Total Int))
@@ -94,8 +94,6 @@ data Clause:: Set ~> *0 ~> Row Tag *0 ~> *0 where
 -- evaluation for well-typed terms
 
 liftOp f = Arr (\ x -> Arr (\ y -> f x y))
-
-dummy = 1
 
 evalOp :: Prim t -> t
 evalOp Add = liftOp (+)
@@ -154,8 +152,8 @@ c2 = (Pcons (Pvar `x) Pwild,Var `x)
 c3 = (Pwild, Undefined)
 c4 = (Pcons (Pvar `x) (Pcons (Pvar `y) (Pvar `ys)),Shift(Shift(Var `x)))
 
-d1 = (Next c1 (Last c2))
-d2 = (Next c2 (Last c3))
+d1 = Next c1 (Last c2)
+d2 = Next c2 (Last c3)
 d3 = Last c2
 d4 = Last c3
 d5 = Next c1 (Last c4)
