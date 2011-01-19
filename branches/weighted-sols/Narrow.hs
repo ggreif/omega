@@ -215,9 +215,9 @@ stepTerm s0 term truths =
                                   ; return([(TermP t,truths2,u)],s0)})
                    (do { tree <- getDefTree nm
                        ; (sols,s1) <- stepTree nm term truths tree s0
-                       ; let proper (BlockedP _ _ _,_,_) = False
-                             proper _ = True
-                       ; return (filter proper sols, s1)})
+                       ; let unblock (BlockedP _ _ orig,truths,uns) = (orig,truths,uns)
+                             unblock u = u
+                       ; return (map unblock sols, s1)})
    (ConN _ _) -> case pathTo1stFunN term of
                   Just path ->
                     do { let exp = getTermAtPath path term
@@ -261,7 +261,12 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
              do { (ans,_) <- mapThread s1 (matchSubAtPath path term) blockedTrees
                 ; return (if and ans then imp else (orig,truths,uns))}
            reverify otherp = return otherp
-     ; ansListList <- mapM reverify (concat ansListList0)
+           unblocked (BlockedP _ _ _,_,_) = False
+           unblocked _ = True
+           stripNonSingleton answers | blocked answers = answers
+           stripNonSingleton answers = filter unblocked answers
+     ; let ansListList1 = map stripNonSingleton ansListList0
+     ; ansListList <- mapM reverify (concat ansListList1)
      ; let new = getTermAtPath path term
      ; case null ansListList of
         False -> return(ansListList,s1) -- At least 1 answer: use them
