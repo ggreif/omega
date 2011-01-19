@@ -6,17 +6,17 @@ data Arr a m b = Arr (a -> b)
 apply :: Arr a c d -> a -> d
 apply (Arr f) x = f x
 
-maybeM =  (Monad Just bind fail)
-  where return x = Just x
-        fail s = Nothing
+maybeM = Monad Just bind fail
+  where fail s = Nothing
         bind Nothing g = Nothing
         bind (Just x) g = g x   
-        
+
 monad maybeM
 
 data Rec :: Row Tag *0 ~> *0 where
   RNil :: Rec RNil
   RCons :: Label a -> b -> Rec r -> Rec (RCons a b r)
+ deriving Record()
 
 ----------------------------------------------------------
 -- New kinds and operations on them 
