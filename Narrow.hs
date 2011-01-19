@@ -269,7 +269,9 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
 
 matchSubAtPath :: Check m => Path -> (Prob Tau, Rel Tau, Unifier2) -> DefTree TcTv Tau -> ST Z -> m (Bool,ST Z)
 matchSubAtPath path (subTerm,truths,un) (Leaf pat free lhs rhs) s = do {warnM [Ds "matchSubAtPath ", Dd subTerm, Ds "  contra  ", Dd (getTermAtPath path lhs)];return (True, s)}
-matchSubAtPath path sub _ s = return (True, s)
+matchSubAtPath path sub (Branchx bterm bpath ts) s = do { warnM [Ds "matchSubAtPath recursing"]
+                                                        ; (ans, s') <- mapThread s (matchSubAtPath path sub) ts
+                                                        ; return (or ans, s')}
 
 noProgress:: Check m => NName -> Tau -> m a
 noProgress name term =
