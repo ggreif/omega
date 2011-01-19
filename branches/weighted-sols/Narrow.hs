@@ -278,7 +278,7 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                                          ; (b,_) <- mapThread s1 (matchSubAtPath path new) subtrees
                                          ; let prob = if and b then BlockedP path new proper else proper
                                                proper = TermP newest
-                                         ; warnM [Ds "HERE ", Ds (show b)]; return ([(prob,truths2,mU)],s1)}}
+                                         ; return ([(prob,truths2,mU)],s1)}}
 
 
 incommensurable :: Tau -> Tau -> Bool
@@ -286,10 +286,9 @@ incommensurable (TyCon _ _ n1 _) (TyCon _ _ n2 _) = n1 /= n2
 incommensurable _ _ = False
 
 matchSubAtPath :: Check m => Path -> Tau -> DefTree TcTv Tau -> ST Z -> m (Bool,ST Z)
-matchSubAtPath path sub (Leaf pat free lhs rhs) s = do { warnM [Ds "matchSubAtPath ", Dd sub, Ds "  contra  ", Dd (getTermAtPath path lhs)]
+matchSubAtPath path sub (Leaf pat free lhs rhs) s = do { {- warnM [Ds "matchSubAtPath ", Dd sub, Ds "  contra  ", Dd (getTermAtPath path lhs)] -}
                                                        ; return (incommensurable sub (getTermAtPath path lhs), s)}
-matchSubAtPath path sub (Branchx bterm bpath ts) s = do { warnM [Ds "matchSubAtPath recursing"]
-                                                        ; (ans, s') <- mapThread s (matchSubAtPath path sub) ts
+matchSubAtPath path sub (Branchx bterm bpath ts) s = do { (ans, s') <- mapThread s (matchSubAtPath path sub) ts
                                                         ; return (and ans, s')}
 
 noProgress:: Check m => NName -> Tau -> m a
