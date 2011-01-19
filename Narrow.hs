@@ -188,6 +188,7 @@ stepEq s0 (a,b) truths =
                   ; return(map (buildQ False a) ans,s1)})
               (failEq s0 truths b lhs)
   (ConN n xs,ConN m ys) | n /= m -> return([],s0)
+  (ConN _ xs,ConN _ ys) | xs == ys -> return([(TermP success,truths,([],[]))],s0)
   (t1@(ConN n xs),t2@(ConN m ys)) | n==m ->
     case (xs,ys) of
      ([],[]) -> return([(TermP success,truths,([],[]))],s0)
