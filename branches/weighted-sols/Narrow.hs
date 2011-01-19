@@ -228,7 +228,7 @@ reBuild term path (TermP x,ts,u) = (problem,ts,u)
     where problem = TermP(sub2Tau u (insertNewTermAtPath term path x))
 
 
-stepTree:: Check m => NName ->  Tau -> Rel Tau -> DefTree TcTv Tau -> ST Z -> m(Sol,ST Z)
+stepTree:: Check m => NName -> Tau -> Rel Tau -> DefTree TcTv Tau -> ST Z -> m(Sol,ST Z)
 stepTree name t truths (Leaf pat free lhs rhs) s0 =
    maybeM (matches t pat)                             -- test
           (applyLfRule s0 t truths (free,lhs,rhs))    -- if successful
@@ -257,6 +257,8 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
         True -> case project new of -- No subtree applies so use root
                  (FunN nm _) ->
                      do { (ans,s2) <- stepTerm s1 new truths
+                        ; ans' <- mapM (\sub -> mapThread s2 (matchSubAtPath path sub) subtrees) ans
+                        ; warnM [Ds "ans': ", Ds (show (map fst ans'))]
                         ; return(map (reBuild term path) ans,s2)}
                  other -> let newest = insertNewTermAtPath matched path new
                           in if newest==term
@@ -264,7 +266,12 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                                              (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
                                              (noProgress name term)
                                  else do { truths2 <- subRels mU truths
-                                         ; return ([(TermP newest,truths2,mU)],s1)}}
+                                         ; (b,s') <- mapThread s1 (matchSubAtPath path (TermP new, truths2, mU)) subtrees
+                                         ; warnM [Ds "HERE ", Ds (show b)]; return ([(TermP newest,truths2,mU)],s1)}}
+
+matchSubAtPath :: Check m => Path -> (Prob Tau, Rel Tau, Unifier2) -> DefTree TcTv Tau -> ST Z -> m (Bool,ST Z)
+matchSubAtPath path (subTerm,truths,un) (Leaf pat free lhs rhs) s = do {warnM [Ds "matchSubAtPath ", Dd subTerm, Ds "  contra  ", Dd (getTermAtPath path lhs)];return (True, s)}
+matchSubAtPath path sub _ s = return (True, s)
 
 noProgress:: Check m => NName -> Tau -> m a
 noProgress name term =
