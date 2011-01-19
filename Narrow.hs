@@ -254,8 +254,12 @@ applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList0,s1) <- mapThread s0 (stepTree name term truths) subtrees
-     ; let reverify (imp@(BlockedP path term orig,truths,uns)) =
-             do { (ans,_) <- mapThread s1 (matchSubAtPath path term) subtrees
+     ; let zipped = zip ansListList0 subtrees
+           blocked [(BlockedP _ _ _,_,_)] = True
+           blocked _ = False
+           blockedTrees = map snd (filter (blocked . fst) zipped)
+           reverify (imp@(BlockedP path term orig,truths,uns)) =
+             do { (ans,_) <- mapThread s1 (matchSubAtPath path term) blockedTrees
                 ; return (if and ans then imp else (orig,truths,uns))}
            reverify otherp = return otherp
      ; ansListList <- mapM reverify (concat ansListList0)
