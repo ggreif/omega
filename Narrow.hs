@@ -256,10 +256,10 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList0,s1) <- mapThread s0 (stepTree name term truths) subtrees
      ; let reverify ((OnlyP path t),truths,uns) = return ((OnlyP path t),truths,uns)
            reverify otherp = return otherp
-     ; ansListList <- mapM reverify ansListList0
+     ; ansListList <- mapM reverify (concat ansListList0)
      ; let new = getTermAtPath path term
-     ; case all null ansListList of
-        False -> return(concat ansListList,s1) -- At least 1 answer: use them
+     ; case null ansListList of
+        False -> return(ansListList,s1) -- At least 1 answer: use them
         True -> case project new of -- No subtree applies so use root
                  (FunN nm _) ->
                      do { (ans,s2) <- stepTerm s1 new truths
