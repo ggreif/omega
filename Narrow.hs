@@ -253,8 +253,10 @@ applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    (Tau,([(TcLv,Level)],[(TcTv,Tau)])) ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
-  do { (ansListList,s1) <- mapThread s0 (stepTree name term truths) subtrees
-     ; -- FIXME: recheck improper problems
+  do { (ansListList0,s1) <- mapThread s0 (stepTree name term truths) subtrees
+     ; let reverify ((OnlyP Path t),truths,uns) = return ((OnlyP Path t),truths,uns)
+           reverify otherp = return otherp
+     ; ansListList <- mapM reverify ansListList0
      ; let new = getTermAtPath path term
      ; case all null ansListList of
         False -> return(concat ansListList,s1) -- At least 1 answer: use them
