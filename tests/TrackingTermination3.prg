@@ -10,12 +10,14 @@ lub:: Termination ~> Termination ~> Termination
 data Stage :: *1 where
   Succ :: Stage ~> Stage
   Inf :: Stage
-  
+ deriving syntax(s) Tick(Succ)
+
 data Typ :: *1 where
   Arr:: Typ ~> Termination ~> Typ ~> Typ
   Li :: Stage ~> Typ ~> Typ
   I:: Typ
   P:: Typ ~> Typ ~> Typ
+ deriving syntax(ty) Pair(P)
 
 mean:: Typ ~> *0
 {mean I} = Int
@@ -33,7 +35,7 @@ data DBindex:: Tag ~> Typ ~> Row Tag Typ ~> *0 where
   DBz :: DBindex a t (RCons a t r)
   DBs :: DBindex a t g -> DBindex a t (RCons c b g)
  deriving Nat(d)
- 
+
 data Exp:: Typ ~> Row Tag Typ ~> Termination ~> *0 where
   Var:: Label a -> DBindex a t g -> Exp t g Total
   Shift:: Exp t g m -> Exp t (RCons a b g) m
