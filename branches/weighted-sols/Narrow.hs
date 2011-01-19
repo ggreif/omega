@@ -249,6 +249,12 @@ stepTree name term truths (Branchx termX path ts) s0 =
 -- subtree matches, then use the root, and narrow the subterm pointed
 -- to by path. Get multiple answers, by rebuilding the term, once for
 -- for each answer for the subterm pointed to by path.
+-- In the latter case we have to be careful not to construct problems
+-- that are unnarrowable from root, e.g. because of incomplete trees.
+-- This can happen when 'Tag's are involved. Anyway we 'block' the problem
+-- until we either infer that some (other) subtree can narrow the problem
+-- or we end up with a single blocked problem. When unblocked problems
+-- and blocked problems occur in the answer, we strip out the latter ones.
 
 applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    ([Int],[DefTree TcTv Tau]) ->
@@ -287,7 +293,8 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                                                proper = TermP newest
                                          ; return ([(prob,truths2,mU)],s1)}}
 
-
+-- find out whether it is impossible to match/unify
+-- FIXME: very coarse, eventually this should be in class TypeLike?
 incommensurable :: Tau -> Tau -> Bool
 incommensurable (TyCon _ _ n1 _) (TyCon _ _ n2 _) = n1 /= n2
 incommensurable _ _ = False
