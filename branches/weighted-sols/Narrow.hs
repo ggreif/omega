@@ -238,10 +238,7 @@ stepTree name t truths (Leaf pat free lhs rhs) s0 =
           (return ([],s0))                            -- if failure
 stepTree name term truths (Branchx termX path ts) s0 =
    maybeM (matches term termX)
-          (\un -> do { (sols,s1) <- applyBranchRule s0 name term truths (path,ts) un
-                     ; let proper (OnlyP _ _,_,_) = False
-                           proper _ = True
-                     ; return (filter proper sols, s1)})
+          (applyBranchRule s0 name term truths (path,ts))
           (return ([],s0))
 
 -- When applying a Branchx rule, find the deepest rules that match, and
