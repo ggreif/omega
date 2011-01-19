@@ -238,7 +238,7 @@ stepTree name term truths (Branchx termX path ts) s0 =
           (do { (sols,s1) <- applyBranchRule s0 name term truths (path,ts)
               ; let proper (OnlyP _,_,_) = False
                     proper _ = True
-              ; return (filter proper sols, s1))
+              ; return (filter proper sols, s1)})
           (return ([],s0))
 
 -- When applying a Branchx rule, find the deepest rules that match, and
