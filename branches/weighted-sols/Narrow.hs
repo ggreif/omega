@@ -257,8 +257,6 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
         True -> case project new of -- No subtree applies so use root
                  (FunN nm _) ->
                      do { (ans,s2) <- stepTerm s1 new truths
-                        ; ans' <- mapM (\sub -> mapThread s2 (matchSubAtPath path sub) subtrees) ans
-                        ; warnM [Ds "ans': ", Ds (show (map fst ans'))]
                         ; return(map (reBuild term path) ans,s2)}
                  other -> let newest = insertNewTermAtPath matched path new
                           in if newest==term
