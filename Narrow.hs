@@ -258,7 +258,7 @@ stepTree name term truths (Branchx termX path ts) s0 =
 -- and blocked problems occur in the answer, we strip out the latter ones.
 
 applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
-   ([Int],[DefTree TcTv Tau]) ->
+   (Path,[DefTree TcTv Tau]) ->
    (Tau,([(TcLv,Level)],[(TcTv,Tau)])) ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
@@ -494,7 +494,7 @@ mapThread d0 f (x:xs) =
 ------------------------------------------------------
 -- operations on Paths
 
-getTermAtPath :: [Int] -> Tau -> Tau
+getTermAtPath :: Path -> Tau -> Tau
 getTermAtPath [] x = x
 getTermAtPath (n:ns) x = liftN h x
   where h (FunN nm ts) = getTermAtPath ns (ts !! n)
