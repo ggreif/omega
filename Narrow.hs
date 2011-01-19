@@ -215,7 +215,7 @@ stepTerm s0 term truths =
                                   ; return([(TermP t,truths2,u)],s0)})
                    (do { tree <- getDefTree nm
                        ; (sols,s1) <- stepTree nm term truths tree s0
-                       ; let proper (OnlyP _ _,_,_) = False
+                       ; let proper (BlockedP _ _ _,_,_) = False
                              proper _ = True
                        ; return (filter proper sols, s1)})
    (ConN _ _) -> case pathTo1stFunN term of
@@ -254,7 +254,9 @@ applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList0,s1) <- mapThread s0 (stepTree name term truths) subtrees
-     ; let reverify ((OnlyP path t),truths,uns) = return ((OnlyP path t),truths,uns)
+     ; let reverify (imp@(BlockedP path term orig),truths,uns) =
+             do { (ans,_) <- mapThread s1 (matchSubAtPath path term) subtrees
+                ; return (if and ans then imp else (orig,truths,uns))}
            reverify otherp = return otherp
      ; ansListList <- mapM reverify (concat ansListList0)
      ; let new = getTermAtPath path term
@@ -270,8 +272,10 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                                              (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
                                              (noProgress name term)
                                  else do { truths2 <- subRels mU truths
-                                         ; (b,s') <- mapThread s1 (matchSubAtPath path new) subtrees
-                                         ; warnM [Ds "HERE ", Ds (show b)]; return (if and b then [(OnlyP path new,undefined,undefined)] else [(TermP newest,truths2,mU)],s1)}}
+                                         ; (b,_) <- mapThread s1 (matchSubAtPath path new) subtrees
+                                         ; let prob = if and b then BlockedP path new proper else proper
+                                               proper = TermP newest
+                                         ; warnM [Ds "HERE ", Ds (show b)]; return ([(prob,truths2,mU)],s1)}}
 
 
 incommensurable :: Tau -> Tau -> Bool

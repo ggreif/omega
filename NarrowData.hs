@@ -43,7 +43,7 @@ data Prob t
   = TermP t
   | EqP (t,t)
   | AndP [Prob t]
-  | OnlyP Path t
+  | BlockedP Path t (Prob t)
 
 type Sol = [(Prob Tau,Rel Tau,Unifier2)]
 type ST z = (Int,Int,DispInfo z,Bool)
