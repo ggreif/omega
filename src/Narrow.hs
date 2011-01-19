@@ -188,6 +188,7 @@ stepEq s0 (a,b) truths =
                   ; return(map (buildQ False a) ans,s1)})
               (failEq s0 truths b lhs)
   (ConN n xs,ConN m ys) | n /= m -> return([],s0)
+  (ConN _ xs,ConN _ ys) | xs == ys -> return([(TermP success,truths,([],[]))],s0)
   (t1@(ConN n xs),t2@(ConN m ys)) | n==m ->
     case (xs,ys) of
      ([],[]) -> return([(TermP success,truths,([],[]))],s0)
@@ -246,7 +247,7 @@ stepTree name term truths (Branchx termX path ts) s0 =
 -- for each answer for the subterm pointed to by path.
 
 applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
-   ([Int],[DefTree TcTv Tau]) ->
+   (Path,[DefTree TcTv Tau]) ->
    (Tau,([(TcLv,Level)],[(TcTv,Tau)])) ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
@@ -454,7 +455,7 @@ mapThread d0 f (x:xs) =
 ------------------------------------------------------
 -- operations on Paths
 
-getTermAtPath :: [Int] -> Tau -> Tau
+getTermAtPath :: Path -> Tau -> Tau
 getTermAtPath [] x = x
 getTermAtPath (n:ns) x = liftN h x
   where h (FunN nm ts) = getTermAtPath ns (ts !! n)
