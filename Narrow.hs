@@ -264,7 +264,7 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                                              (\(t2,u2) -> return([(TermP t2,truths,composeTwo u2  mU)],s1))
                                              (noProgress name term)
                                  else do { truths2 <- subRels mU truths
-                                         ; (b,s') <- mapThread s1 (matchSubAtPath path (TermP new, truths2, mU)) subtrees
+                                         ; (b,s') <- mapThread s1 (matchSubAtPath path new) subtrees
                                          ; warnM [Ds "HERE ", Ds (show b)]; return ([(TermP newest,truths2,mU)],s1)}}
 
 
@@ -273,8 +273,8 @@ incommensurable (TyCon _ _ n1 _) (TyCon _ _ n2 _) = n1 /= n2
 incommensurable _ _ = False
 
 matchSubAtPath :: Check m => Path -> (Prob Tau, Rel Tau, Unifier2) -> DefTree TcTv Tau -> ST Z -> m (Bool,ST Z)
-matchSubAtPath path (subTerm,truths,un) (Leaf pat free lhs rhs) s = do { warnM [Ds "matchSubAtPath ", Dd subTerm, Ds "  contra  ", Dd (getTermAtPath path lhs)]
-                                                                       ; return (incommensurable subTerm (getTermAtPath path lhs), s)}
+matchSubAtPath path sub (Leaf pat free lhs rhs) s = do { warnM [Ds "matchSubAtPath ", Dd sub, Ds "  contra  ", Dd (getTermAtPath path lhs)]
+                                                       ; return (incommensurable sub (getTermAtPath path lhs), s)}
 matchSubAtPath path sub (Branchx bterm bpath ts) s = do { warnM [Ds "matchSubAtPath recursing"]
                                                         ; (ans, s') <- mapThread s (matchSubAtPath path sub) ts
                                                         ; return (or ans, s')}
