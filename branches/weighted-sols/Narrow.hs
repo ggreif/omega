@@ -254,7 +254,7 @@ applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
   do { (ansListList0,s1) <- mapThread s0 (stepTree name term truths) subtrees
-     ; let reverify ((OnlyP Path t),truths,uns) = return ((OnlyP Path t),truths,uns)
+     ; let reverify ((OnlyP path t),truths,uns) = return ((OnlyP path t),truths,uns)
            reverify otherp = return otherp
      ; ansListList <- mapM reverify ansListList0
      ; let new = getTermAtPath path term
