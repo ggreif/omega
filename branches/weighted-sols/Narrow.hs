@@ -272,7 +272,7 @@ incommensurable :: Tau -> Tau -> Bool
 incommensurable (TyCon _ _ n1 _) (TyCon _ _ n2 _) = n1 /= n2
 incommensurable _ _ = False
 
-matchSubAtPath :: Check m => Path -> (Prob Tau, Rel Tau, Unifier2) -> DefTree TcTv Tau -> ST Z -> m (Bool,ST Z)
+matchSubAtPath :: Check m => Path -> Tau -> DefTree TcTv Tau -> ST Z -> m (Bool,ST Z)
 matchSubAtPath path sub (Leaf pat free lhs rhs) s = do { warnM [Ds "matchSubAtPath ", Dd sub, Ds "  contra  ", Dd (getTermAtPath path lhs)]
                                                        ; return (incommensurable sub (getTermAtPath path lhs), s)}
 matchSubAtPath path sub (Branchx bterm bpath ts) s = do { warnM [Ds "matchSubAtPath recursing"]
