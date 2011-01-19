@@ -236,7 +236,7 @@ stepTree name t truths (Leaf pat free lhs rhs) s0 =
 stepTree name term truths (Branchx termX path ts) s0 =
    maybeM (matches term termX)
           (do { (sols,s1) <- applyBranchRule s0 name term truths (path,ts)
-              ; let proper (OnlyP _,_,_) = False
+              ; let proper (OnlyP _ _,_,_) = False
                     proper _ = True
               ; return (filter proper sols, s1)})
           (return ([],s0))
