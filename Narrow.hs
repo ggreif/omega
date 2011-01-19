@@ -214,7 +214,7 @@ stepTerm s0 term truths =
                    (\ (t,u) -> do { truths2 <- subRels u truths
                                   ; return([(TermP t,truths2,u)],s0)})
                    (do { tree <- getDefTree nm
-                       ; stepTree nm term truths tree s0})
+                       ; stepTree True nm term truths tree s0})
    (ConN _ _) -> case pathTo1stFunN term of
                   Just path ->
                     do { let exp = getTermAtPath path term
@@ -228,15 +228,15 @@ reBuild term path (TermP x,ts,u) = (problem,ts,u)
     where problem = TermP(sub2Tau u (insertNewTermAtPath term path x))
 
 
-stepTree:: Check m => NName -> Tau -> Rel Tau -> DefTree TcTv Tau -> ST Z -> m(Sol,ST Z)
-stepTree name t truths (Leaf pat free lhs rhs) s0 =
+stepTree:: Check m => Bool -> NName -> Tau -> Rel Tau -> DefTree TcTv Tau -> ST Z -> m(Sol,ST Z)
+stepTree _ name t truths (Leaf pat free lhs rhs) s0 =
    maybeM (matches t pat)                             -- test
           (applyLfRule s0 t truths (free,lhs,rhs))    -- if successful
           (return ([],s0))                            -- if failure
-stepTree name term truths (Branchx termX path ts) s0 =
+stepTree atRoot name term truths (Branchx termX path ts) s0 =
    maybeM (matches term termX)
           (\un -> do { (sols,s1) <- applyBranchRule s0 name term truths (path,ts) un
-                     ; let proper (OnlyP _ _,_,_) = False
+                     ; let proper (OnlyP _ _,_,_) = not atRoot
                            proper _ = True
                      ; return (filter proper sols, s1)})
           (return ([],s0))
@@ -253,7 +253,7 @@ applyBranchRule :: Check m => ST Z -> NName -> Tau -> Rel Tau ->
    (Tau,([(TcLv,Level)],[(TcTv,Tau)])) ->
    m (Sol,ST Z)
 applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
-  do { (ansListList,s1) <- mapThread s0 (stepTree name term truths) subtrees
+  do { (ansListList,s1) <- mapThread s0 (stepTree False name term truths) subtrees
      ; 
      ; let new = getTermAtPath path term
      ; case all null ansListList of
