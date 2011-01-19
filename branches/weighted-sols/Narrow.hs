@@ -265,7 +265,7 @@ applyBranchRule s0 name term truths (path,subtrees) (matched,mU) =
                                              (noProgress name term)
                                  else do { truths2 <- subRels mU truths
                                          ; (b,s') <- mapThread s1 (matchSubAtPath path new) subtrees
-                                         ; warnM [Ds "HERE ", Ds (show b)]; return ([(TermP newest,truths2,mU)],s1)}}
+                                         ; warnM [Ds "HERE ", Ds (show b)]; return (if and b then [] else [(TermP newest,truths2,mU)],s1)}}
 
 
 incommensurable :: Tau -> Tau -> Bool
@@ -277,7 +277,7 @@ matchSubAtPath path sub (Leaf pat free lhs rhs) s = do { warnM [Ds "matchSubAtPa
                                                        ; return (incommensurable sub (getTermAtPath path lhs), s)}
 matchSubAtPath path sub (Branchx bterm bpath ts) s = do { warnM [Ds "matchSubAtPath recursing"]
                                                         ; (ans, s') <- mapThread s (matchSubAtPath path sub) ts
-                                                        ; return (or ans, s')}
+                                                        ; return (and ans, s')}
 
 noProgress:: Check m => NName -> Tau -> m a
 noProgress name term =
