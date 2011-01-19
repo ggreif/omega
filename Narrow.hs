@@ -215,9 +215,11 @@ stepTerm s0 term truths =
                                   ; return([(TermP t,truths2,u)],s0)})
                    (do { tree <- getDefTree nm
                        ; (sols,s1) <- stepTree nm term truths tree s0
-                       ; let unblock (BlockedP _ _ orig,truths,uns) = (orig,truths,uns)
-                             unblock u = u
-                       ; return (map unblock sols, s1)})
+                       ; let unblock [(BlockedP _ _ orig,truths,uns)] = [(orig,truths,uns)]
+                             unblock u = filter unblocked u
+                             unblocked (BlockedP _ _ _,_,_) = False
+                             unblocked _ = True
+                       ; return (unblockSingleton sols, s1)})
    (ConN _ _) -> case pathTo1stFunN term of
                   Just path ->
                     do { let exp = getTermAtPath path term
