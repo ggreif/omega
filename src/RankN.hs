@@ -1421,7 +1421,6 @@ generalize rho =
 
 polyP (Forall (Cons _ _)) = True
 polyP (Forall (Nil _)) = False
--- polyP x = False
 
 --------------------------------------------------------
 -- When we instantiate a Forall type, it might mention
@@ -1761,12 +1760,6 @@ nameOf x = ("",LvZero)
 
 zonkT :: TyCh m => Tau -> m Tau
 zonkT = zonk
-
-
-
-warning0 =
- "\nThis sometimes happens when a constructor has (implicit) existential "++
- "type variables, whose kind is assumed to be *0."
 
 ------------------------------------------------------------
 -- Now extend the basic Tau :: Tau, to other richer forms of types.
@@ -2556,13 +2549,6 @@ props = (try (do { x <- proposition; symbol "=>"; return[x]})) <|>
           (try (do { xs <- parens(sepBy (proposition) comma)
                    ; symbol "=>"; return xs}))                     <|>
           (return [])
-
-{- -- This function is unused
-typToRel t (TyApp' (TyCon' nm _) x) = return(Rel' nm t)
-typToRel t (TyApp' f x) = typToRel t f
-typToRel t (TyCon' nm _) = return(Rel' nm t)
-typToRel t _ = fail ("Expecting a relational predicate, found:\n  "++ show t)
--}
 
 -- A typing has many forms, some are listed below
 -- f :: a -> b                              simple
@@ -4315,6 +4301,5 @@ subtermsSigma (Forall l) ans = subtermsRho rho ans
   where (args,(preds,rho)) = unsafeUnwind l
 
 
-------------------------------------------------------------------
 ------------------------------------------------------------------
 
