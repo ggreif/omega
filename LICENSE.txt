@@ -18,10 +18,6 @@ modification, are permitted provided that the following conditions are met:
    products derived from this software without specific prior written
    permission.
 
- o The user may use this software for any teaching or research purpose, but
-   may not sell or use it for any commercial purpose. To do so requires
-   additional written permissions or license.
-
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
