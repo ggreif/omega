@@ -31,20 +31,13 @@ import SyntaxExt
 
 data Z = ZTv TcTv
        | ZInteger Integer
-       -- | ZVar Name Kind
-       -- | ZLev TcLv
 
 instance Show Z where
   show (ZTv x) = show(TcTv x)
   show (ZInteger n) = "Z"++show n
-  -- show (ZVar n k) = show (TyVar n k)
-  -- show (ZLev (LvMut uniq ref)) = "Level"++show uniq
-  -- show (ZLev (LvVar name)) = "Level"++show name
 
 
 instance Eq Z where
-  -- (ZLev x)==(ZLev y) = x==y
-  -- (ZVar a b) == (ZVar m n) = (TyVar a b) == (TyVar m n)
   (ZTv x) == (ZTv y) = (TcTv x) == (TcTv y)
   (ZInteger x) == (ZInteger y) = x==y
   x == y = False
@@ -140,8 +133,8 @@ unifyLevel s x y = do { a <- pruneLv x; b <- pruneLv y; walk (a,b)}
   where walk (LvZero,LvZero) = return()
         walk (LvSucc x,LvSucc y) = unifyLevel s x y
         walk (TcLv v,TcLv u) | u==v = return()
-        walk (TcLv(v@(LvMut u r)),y) = writeRef r (Just y) -- unifyLvVar v y
-        walk (y,TcLv(v@(LvMut u r))) = writeRef r (Just y) -- unifyLvVar v y
+        walk (TcLv(v@(LvMut u r)),y) = writeRef r (Just y)
+        walk (y,TcLv(v@(LvMut u r))) = writeRef r (Just y)
         walk (x,y) = failD 1 [Ds "\nLevels don't match ",Dd x,Ds " =/= ",Dd y
                              ,Ds ("\n  internal info "++show x++" =/= "++show y)
                              ,Ds ("\n                "++s)]
@@ -506,7 +499,7 @@ codeT =   TyCon Ox (lv 1) "Code" (poly star_star)
 ioT =     TyCon Ox (lv 1) "IO" (poly star_star)
 ptrT =    TyCon Ox (lv 1) "Ptr" (poly star_star)
 arrowT =  TyCon Ox (lv 1) "(->)" (poly (karr star (star_star)))
-eqT =     TyCon Ox (lv 1) "Equal" kind4Eq
+eqT =     TyCon Ox (lv 1) "Equal" kind4Equal
 chrSeqT = TyCon Ox (lv 1) "ChrSeq" (poly star)
 floatT =  TyCon Ox (lv 1) "Float" (poly star)
 stringT = TyApp        listT charT
@@ -516,31 +509,31 @@ notEqT =  TyCon Ox (lv 1) "(!=)" notEqKind
 
 declare (x@(TyCon _ _ name poly)) = (name,x,poly)
 
--- kind Tag = %name | %age | ... | for all legal symbols
--- data Label t = %name where t=%name | %age where t = %age | ...
+-- kind Tag = `name | `age | ... | for all legal symbols
+-- data Label :: Tag ~> * where { `name :: Label `name; `age :: Label `age; ... }
 tagT    = TyCon Ox (lv 2) "Tag" (poly star1)
 labelT  = TyCon Ox (lv 1) "Label" (poly (karr (MK tagT) star))
 tagKind = (K [] (simpleSigma tagT))
 
--- Row :: *1 ~> *1
--- kind Row x = RCons x (Row x) | RNil
+-- Row :: a ~> b ~> *1
+-- kind Row x y = RCons x y (Row x y) | RNil
 rowT     = TyCon Ox (lv 2) "Row" (poly (karr star1 star1))
 
--- RCons :: (forall (k:*1) . k ~> (Row k) ~> Row k)  = RCons
+-- RCons :: e ~> f ~> Row e f ~> Row e f
 rConsT   = TyCon Ox (lv 2) "RCons" (poly1 star1 f)
            where f k = k `karr` (trow k `karr` trow k)
--- RNil :: (forall (k:*1) . Row k)
+-- RNil :: Row e f
 rNilT    = TyCon Ox (lv 2) "RNil" (poly1 star1 (\ k -> trow k))
 
 
-kind4Eq :: PolyKind -- Eq :: (forall (k:*1) . k -> k -> *0)
-kind4Eq = K [] (Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
+kind4Equal :: PolyKind -- Equal :: level b . forall (a:*(1+b)).a ~> a ~> *
+kind4Equal = K [] (Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
    where k = TyVar name1 star1
          ty = Rtau(k `Karr` (k `Karr` (Star LvZero)))
 
-notEqKind = kind4Eq
+notEqKind = kind4Equal
 
-kind4Atom :: PolyKind -- Atom :: forall k: *1) . k -> *
+kind4Atom :: PolyKind -- Atom :: forall (a:*1).a ~> *
 kind4Atom = K [] (Forall (Cons (star1,All) (bind name1 (Nil ([],ty)))))
    where k = TyVar name1 star1
          ty = Rtau(k `Karr` (Star LvZero))
@@ -619,7 +612,7 @@ returntype m =
                (bind av (Nil ([],Rtau (a `tarr` (TyApp m a)))))))}
 
 
--- Eq :: (forall (k:*1) (u:k) (v:k) . (u = v) => Eq u v)
+-- Eq :: level b . forall (a:*(1+b)) (c:a:*(1+b)).Equal c c
 sigma4Eq = Forall (Cons (star1,All) (bind kname
                   (Cons (k,All) (bind uname
                   (Cons (k,All) (bind vname (Nil (eqns,Rtau eqty))))))))
