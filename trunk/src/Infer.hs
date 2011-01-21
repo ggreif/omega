@@ -6,7 +6,6 @@ module Infer where
 
 import Char(isAlpha,isUpper)
 import qualified Data.Map as Map
-   -- (Map,empty,member,insertWith,union,fromList,toList,lookup)
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 import System.Time(getClockTime)
