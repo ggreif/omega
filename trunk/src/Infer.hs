@@ -4231,59 +4231,62 @@ toEnvX =
   ,( infixEqName, TyCon Ox (lv 1) infixEqName equalKind, equalKind)
   ]
 
-predefined =
- "data Int = primitive\n"++
- "data Char = primitive\n"++
- "data Float = primitive\n"++
- "data ChrSeq = primitive\n"++
- "data Code (x::*0) = primitive\n"++
- "data Symbol = primitive\n"++
- "data IO (x::*0) = primitive\n"++
- "data Ptr (x::*0) = primitive\n"++
- "data Parser (x::*0) = primitive\n"++
- "kind Tag = primitive\n"++
- "data Label (t :: Tag) = primitive\n"++
- "prop DiffLabel (t :: Tag) (t :: Tag) = primitive\n"++
- "data Bool:: *0 where\n"++
- "  True:: Bool\n"++
- "  False:: Bool\n"++
- "data Ordering:: *0 where\n"++
- "  EQ:: Ordering\n"++
- "  LT:: Ordering\n"++ 
- "  GT:: Ordering\n"++  
- "data Maybe:: *0 ~> *0 where\n"++
- "  Just :: a -> Maybe a\n"++
- "  Nothing :: Maybe a\n"++
- "data Prop :: *1 where\n"++
- "  Success :: Prop\n"++
- "and:: Prop ~> Prop ~> Prop\n"++
- "{and Success x } = x\n"++
- "data Nat :: *1 where\n"++
- "  Z :: Nat\n"++
- "  S :: Nat ~> Nat\n"++
- " deriving Nat(t)\n"++
- "prop Nat' :: Nat ~> *0 where\n"++
- "  Z:: Nat' Z\n"++
- "  S:: forall (a:: Nat) . Nat' a -> Nat' (S a)\n"++
- " deriving Nat(v)\n"++
- "data Equal:: a ~> a ~> *0 where\n"++
- "  Eq:: Equal x x\n"++
- "data HiddenLabel :: *0 where\n"++
- "  HideLabel:: Label t -> HiddenLabel\n"++
- "data Row :: a ~> b ~> *1 where\n"++
- "  RNil :: Row x y\n"++
- "  RCons :: x ~> y ~> Row x y ~> Row x y\n deriving Record(r)\n"++
- "data Record :: Row Tag *0 ~> *0 where\n"++
- "   RecNil :: Record RNil\n"++
- "   RecCons :: Label a -> b -> Record r -> Record (RCons a b r)\n"++
- " deriving Record()\n"++
- "data Monad :: (*0 ~> *0) ~> *0 where\n"++
- "  Monad :: forall (m:: *0 ~> *0) .\n"++
- "                  ((forall a . a -> m a)) ->\n"++
- "                  ((forall a b . (m a) -> (a -> m b) -> m b)) ->\n"++
- "                  ((forall a . String -> m a)) ->\n"++
- "                  Monad m\n"
+predefinedLines = [
+   "data Int = primitive"
+ , "data Char = primitive"
+ , "data Float = primitive"
+ , "data ChrSeq = primitive"
+ , "data Code (x::*0) = primitive"
+ , "data Symbol = primitive"
+ , "data IO (x::*0) = primitive"
+ , "data Ptr (x::*0) = primitive"
+ , "data Parser (x::*0) = primitive"
+ , "kind Tag = primitive"
+ , "data Label (t :: Tag) = primitive"
+ , "prop DiffLabel (t :: Tag) (t :: Tag) = primitive"
+ , "data Bool:: *0 where"
+ , "  True:: Bool"
+ , "  False:: Bool"
+ , "data Ordering:: *0 where"
+ , "  EQ:: Ordering"
+ , "  LT:: Ordering" 
+ , "  GT:: Ordering"  
+ , "data Maybe:: *0 ~> *0 where"
+ , "  Just :: a -> Maybe a"
+ , "  Nothing :: Maybe a"
+ , "data Prop :: *1 where"
+ , "  Success :: Prop"
+ , "and:: Prop ~> Prop ~> Prop"
+ , "{and Success x } = x"
+ , "data Nat :: *1 where"
+ , "  Z :: Nat"
+ , "  S :: Nat ~> Nat"
+ , " deriving Nat(t)"
+ , "prop Nat' :: Nat ~> *0 where"
+ , "  Z:: Nat' Z"
+ , "  S:: forall (a:: Nat) . Nat' a -> Nat' (S a)"
+ , " deriving Nat(v)"
+ , "data Equal:: a ~> a ~> *0 where"
+ , "  Eq:: Equal x x"
+ , "data HiddenLabel :: *0 where"
+ , "  HideLabel:: Label t -> HiddenLabel"
+ , "data Row :: a ~> b ~> *1 where"
+ , "  RNil :: Row x y"
+ , "  RCons :: x ~> y ~> Row x y ~> Row x y
+ , " deriving Record(r)"
+ , "data Record :: Row Tag *0 ~> *0 where"
+ , "   RecNil :: Record RNil"
+ , "   RecCons :: Label a -> b -> Record r -> Record (RCons a b r)"
+ , " deriving Record()"
+ , "data Monad :: (*0 ~> *0) ~> *0 where"
+ , "  Monad :: forall (m:: *0 ~> *0) ."
+ , "                  ((forall a . a -> m a)) ->"
+ , "                  ((forall a b . (m a) -> (a -> m b) -> m b)) ->"
+ , "                  ((forall a . String -> m a)) ->"
+ , "                  Monad m"
+ , "\n"]
 
+predefined = concat $ intersperse "\n" predefinedLines
 
 -- Parse the predefined data decls
 -- then do a topological sort.
