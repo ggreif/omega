@@ -4272,7 +4272,7 @@ predefinedLines = [
  , "  HideLabel:: Label t -> HiddenLabel"
  , "data Row :: a ~> b ~> *1 where"
  , "  RNil :: Row x y"
- , "  RCons :: x ~> y ~> Row x y ~> Row x y
+ , "  RCons :: x ~> y ~> Row x y ~> Row x y"
  , " deriving Record(r)"
  , "data Record :: Row Tag *0 ~> *0 where"
  , "   RecNil :: Record RNil"
