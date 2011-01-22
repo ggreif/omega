@@ -14,7 +14,7 @@ The most important reason is that we want to use the familiar syntax for constru
 The idea to this proposal came after digesting Wadler et al.'s paper about the _arrow calculus_. There he introduces _arrow applications_, _lambdas_ and _lets_. For each arrow, presumably.
 
 Accidentally, in Haskell and Ωmega already use a similar mechanisms
-  * namely on the right hand side of the _::_ notation, where juxtaposition means application of kind arrows for parameterized data types (or type families/functions)
+  * namely on the right hand side of the `::` notation, where juxtaposition means application of kind arrows for parameterized data types (or type families/functions)
   * on the left hand side of equations, where juxtaposition means pattern construction and analysis
   * in Ωmega's `{typefun arg1 arg2}` brackets (or Haskell's _type family_ calls) it is type function application
   * following `type` or `data` keyword in definitions, the type parameters.
@@ -37,13 +37,38 @@ The `where do` clause forces the AST builder to rearrange juxtapositions to thei
 
 The equation after the `do` keyword must be a syntactically valid equation, with function-like pattern on the left side.
 
+== Another Variant ==
+
+Looking at the problem from another angle, Ωmega already has a way of building `Code`, namely with these brackets: `[| ... |]`. We can beat kill two flies with a fell swoop by introducing a new kind of syntax derivation:
+
+{{{
+data Codigo :: * where
+  Fun :: String -> Codgigo
+  Apply :: Codgigo -> Int -> Codgigo
+ deriving syntax(c) Code(Fun, Apply)
+}}}
+
+This allows us to write `[|"plus" 45 54|]c` and expands to `Apply (Apply (Fun "plus") 45) 54`.
+
+The second fly we killed is _escaping_: using `$(...)` we can get out of the syntactic expansion's world and fall back to the semantics of the outer context.
+
 == Lambdas? ==
 
 This clause could change the lambda syntax' behaviour: `where do \x -> "x"` as an example of the "C" stringize operator.
 
+In _code brackets_ these are  already present, we only need a new constructor, either
+  # `Abs :: Label var -> Codgigo -> Codgigo`, or
+  # `Abs :: String -> Codgigo -> Codgigo`.
+
 == `let` definitions? ==
 
 `where do let a = expr`
+
+In _code brackets_ these are  already present, we only need a new constructor, either
+  # `Let :: Record (Row Tag *) -> Codigo -> Codgigo`, or
+  # `Let :: [(String, a)] -> Codigo -> Codgigo`.
+
+The `where` clauses would map to `Let`.
 
 = References =
 
