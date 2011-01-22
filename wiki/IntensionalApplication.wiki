@@ -39,7 +39,7 @@ The equation after the `do` keyword must be a syntactically valid equation, with
 
 == Another Variant ==
 
-Looking at the problem from another angle, Ωmega already has a way of building `Code`, namely with these brackets: `[| ... |]`. We can beat kill two flies with a fell swoop by introducing a new kind of syntax derivation:
+Looking at the problem from another angle, Ωmega already has a way of building `Code`, namely with these brackets: `[| ... |]`. We can kill two birds with one stone by introducing a new kind of syntax derivation:
 
 {{{
 data Codigo :: * where
@@ -50,7 +50,7 @@ data Codigo :: * where
 
 This allows us to write `[|"plus" 45 54|]c` and expands to `Apply (Apply (Fun "plus") 45) 54`.
 
-The second fly we killed is _escaping_: using `$(...)` we can get out of the syntactic expansion's world and fall back to the semantics of the outer context.
+The second bird we killed is _escaping_: using `$(...)` we can get out of the syntactic expansion's world and fall back to the semantics of the outer context.
 
 == Lambdas? ==
 
