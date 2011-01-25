@@ -11,6 +11,7 @@ An important source of wisdom is also [http://darcs.haskell.org/ghc/docs/comm/ t
 
 = Zonking =
 
-Tree-like entities that contain writable references (which usually get filled by a unification-like process) are _zonked_ by elimination of all references that are already filled-in. Usually before two trees are unified, both trees must be zonked, so that references do not get overwritten. Without zonking, the unification (and similar) algorithms must be explicitly designed to not overwrite references that are already filled in an possibly to undo binding when unification fails.
+Tree-like entities that contain writable references (which usually get filled-in by a unification-like process) are _zonked_ by elimination of all references that are already filled-in. This happens in a monad that can dereference, and is basically a tree traversal that results in a copy.
+Usually before two trees are unified, both trees must be zonked, so that references do not get overwritten in theoriginals. Without zonking, the unification (and similar) algorithms must be explicitly designed to not overwrite references that are already filled-in and possibly to undo bindings when unification fails.
 
 In the process of zonking, usually another optimization is performed, namely the short-circuiting of reference chains by a target.
