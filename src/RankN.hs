@@ -1338,7 +1338,10 @@ instanPatConstr inject q loc s (K lvs (Forall ty)) =
          p _ = True
 
 unBindWith :: (TyCh m) => (Rho -> IO String) -> (Name -> Quant -> Kind -> m Tau) -> Sigma -> m ([TcTv],[Pred],Rho)
-unBindWith inject new (Forall b) = unBindWithL [] new inject b
+unBindWith inject new sigma@(Forall b) =
+   do { (_,levelvars) <- tvs_Sigma sigma
+      ; levelMap <- mapM (\lv@(LvVar _) -> do { new <- newLevel; return (lv, new) }) levelvars
+      ; unBindWithL levelMap new inject b }
 
 unBindWithL:: (TypeLike m c, Swap c) =>
               [(TcLv,Level)] -> (Name -> Quant -> Kind -> m Tau) ->
