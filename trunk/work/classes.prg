@@ -1,9 +1,12 @@
+import "../src/LangPrelude.prg"
+
 -- simulate classes as propositions first
 
 
 prop Functor :: (* ~> *) ~> * ~> * where
   Lfunctor :: Functor [] a
   Tfunctor :: Functor Tree a
+  Mfunctor :: Functor Maybe a
   Pairfunctor :: Functor ((,) a) b
 
 
@@ -15,6 +18,6 @@ data Tree a = Node a | Fork (Tree a) (Tree a)
 
 
 data Test :: * where
-  Test :: Monad' a t => a t -> Test
+  Test :: Monad' a t => Monad a -> a t -> Test
 
 
