@@ -15,6 +15,6 @@ data Tree a = Node a | Fork (Tree a) (Tree a)
 
 
 data Test :: * where
-  Test :: forall (a :: * ~> *) (t :: *) . Monad' a t => a t -> Test
+  Test :: Monad' a t => a t -> Test
 
 
