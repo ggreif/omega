@@ -9,19 +9,19 @@ isFunctor :: (* ~> *) ~> Prop
 {isFunctor []} = Success
 
 
-prop Functor :: (* ~> *) ~> Prop ~> * where
-  Lfunctor :: Functor [] Success
+prop Functor :: (* ~> *) ~> * where
+  Lfunctor :: Functor []
+  Tfunctor :: Functor Tree
 --  Lfunctor :: Functor a {isFunctor a}
 
-prop Monad' :: (* ~> *) ~> Prop ~> * where
-  M :: Functor a Success => Monad' a Success
+prop Monad' :: (* ~> *) ~> * where
+  M :: Functor a => Monad' a
 
 
 data Tree a = Node a | Fork (Tree a) (Tree a)
 
 
---data Test :: forall (a :: * ~> *) . Monad' a Success => a ~> * where
 data Test :: * where
-  Test :: forall (a :: * ~> *) (t :: *) . Monad' a Success => a t -> Test
+  Test :: forall (a :: * ~> *) (t :: *) . Monad' a => a t -> Test
 
 
