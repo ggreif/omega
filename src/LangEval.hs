@@ -432,7 +432,7 @@ elab prefix magic init (Fun loc nm _ cs) =
      ; return (extendV [(nm,u)] init) }
 elab prefix magic init (Data loc b strata nm sig args constrs derivs) =
     return(extendV xs init)
- where exts = error "Get exts from derivs? line 457 LangEval.hs"
+ where exts = error "Get exts from derivs? line 435 LangEval.hs"
        xs = map f constrs
        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))
 elab prefix magic init (GADT l p t k cs ds exts) =
