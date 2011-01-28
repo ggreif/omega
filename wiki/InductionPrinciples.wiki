@@ -1,4 +1,4 @@
-#summary Clever ideas of other people in the Howard-Curry field.
+#summary Clever ideas of other people in the Curry-Howard field.
 #labels Phase-Design
 
 = Introduction =
@@ -7,7 +7,7 @@ Each inductive datatype corresponds to some pattern functor. Interestingly these
 
 = Relevant Papers =
 
-== Inductive Types imply Induction Principles ==
+== Inductive Types Imply Induction Principles ==
 
 These give rise to propositions which can be pretty elaborate:
 
@@ -36,7 +36,7 @@ http://personal.cis.strath.ac.uk/~raa/inductive-refinement.pdf
 
 Might be interesting to see whether the ability to come up with index types means that an induction principle can be established and whether the user defined (or automatically derived) _initial algebra package_ can be proved terminating w.r.t. the induction principle (see _sized types_).
 
-== Initial algebra semantics for GADTs ==
+== Initial Algebra Semantics for GADTs ==
 
 Resorting to _left Kan extensions_ allows to rewrite GADTs to _nested ADTs_. Only the `Equal` GADT and existentials are needed for obtaining something that is isomorphic to any given GADT.
 
