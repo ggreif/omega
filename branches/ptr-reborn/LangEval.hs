@@ -565,9 +565,6 @@ vals =
   ("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
 
--- ,(".",make2(($)::(A -> B) -> A -> B))
-
-
  ,("trace",(traceV,gen(typeOf(undefined :: String -> A -> A))))
  ,("compare",(compareV,gen(typeOf(undefined :: A -> A -> Ordering))))
  ,("error",(to errorC,gen(typeOf(undefined :: String -> A))))
@@ -593,12 +590,10 @@ vals =
 
 
  ,("newPtr",(newPtr,gen(typeOf(undefined :: IO ({-exists a . -}Ptr A)))))
- {- 
-,("readPtr",(readPtr,gen(typeOf(undefined :: Ptr A -> IO (Maybe A)))))
- -}
+ ,("readPtr",(readPtr,gen(typeOf(undefined :: Ptr A -> IO (Maybe A)))))
  ,("writePtr",(writePtr,gen(typeOf(undefined :: Ptr A -> A -> IO () ))))
- {-
  ,("nullPtr",(nullPtr,gen(typeOf(undefined :: Ptr A -> IO Bool ))))
+ {-
  ,("initPtr",(initPtr,gen(typeOf(undefined :: Ptr A -> B -> IO(Eql A B)))))
  ,("samePtr",(samePtr,gen(typeOf(undefined :: Ptr A -> Ptr B -> IO(Eql A B)))))
  -}
