@@ -418,8 +418,8 @@ initPtr = Vprimfun "initPtr" (analyzeWith f) where
                    ; case x of
                       Nothing -> do { fio (writeIORef ref (Just b))
                                     ; myIo(Vcon (Global "Eq",Ox) [])}
-                      Just v -> return(Left "initPtrFails")}
-  f v = fail ("Non Ptr as argument to initPtr: "++show v)
+                      Just v -> return(Left "initPtr fails")}
+  f v = fail ("Non-Ptr as argument to initPtr: "++show v)
 
 writePtr :: V
 writePtr = Vprimfun "writePtr" (analyzeWith f) where
@@ -428,7 +428,7 @@ writePtr = Vprimfun "writePtr" (analyzeWith f) where
      g b = return(Vfio [] comp) where
          comp = do { fio (writeIORef ref (Just b))
                    ; myIo(Vlit Unit) }
-  f v = fail ("Non Ptr as argument to writePtr: "++show v)
+  f v = fail ("Non-Ptr as argument to writePtr: "++show v)
 
 readPtr :: V
 readPtr = Vprimfun "readPtr" (analyzeWith f) where
@@ -436,8 +436,8 @@ readPtr = Vprimfun "readPtr" (analyzeWith f) where
      comp = do { x <- fio(readIORef ref)
                ; case x of
                   Nothing -> myIo(Vcon (Global "Nothing",Ox) [])
-                  Just v ->  myIo(Vcon (Global "Just",Ox) [swaps cs v])}
-  f v = fail ("Non Ptr as argument to readPtr: "++show v)
+                  Just v -> myIo(Vcon (Global "Just",Ox) [swaps cs v])}
+  f v = fail ("Non-Ptr as argument to readPtr: "++show v)
 
 nullPtr :: V
 nullPtr = Vprimfun "nullPtr" (analyzeWith f) where
@@ -445,20 +445,19 @@ nullPtr = Vprimfun "nullPtr" (analyzeWith f) where
      comp = do { x <- fio(readIORef ref)
                ; case x of
                   Nothing -> myIo(Vcon (Global "True",Ox) [])
-                  Just v ->  myIo(Vcon (Global "False",Ox) [])}
-  f v = fail ("Non Ptr as argument to nullPtr: "++show v)
-
+                  Just v -> myIo(Vcon (Global "False",Ox) [])}
+  f v = fail ("Non-Ptr as argument to nullPtr: "++show v)
 
 samePtr :: V
 samePtr = Vprimfun "samePtr" (analyzeWith f) where
   f ptr1@(Vptr cs n ref) = return(Vprimfun name (analyzeWith g)) where
      name = "samePtr "++show ptr1
-     g ptr2@(Vptr cs2 n2 ref2)  = return(Vfio [] comp) where
+     g ptr2@(Vptr cs2 n2 ref2) = return(Vfio [] comp) where
          comp = if ref == ref2
                    then myIo(Vcon (Global "Eq",Ox) [])
                    else return(Left "samePtrFails")
-     g v = fail ("Non Ptr as 2nd argument to samePtr: "++show v)
-  f v = fail ("Non Ptr as 1st argument to samePtr: "++show v)
+     g v = fail ("Non-Ptr as 2nd argument to samePtr: "++show v)
+  f v = fail ("Non-Ptr as 1st argument to samePtr: "++show v)
 
 ------------------------------------------------------
 -- Labels

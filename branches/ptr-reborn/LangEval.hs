@@ -593,10 +593,8 @@ vals =
  ,("readPtr",(readPtr,gen(typeOf(undefined :: Ptr A -> IO (Maybe A)))))
  ,("writePtr",(writePtr,gen(typeOf(undefined :: Ptr A -> A -> IO () ))))
  ,("nullPtr",(nullPtr,gen(typeOf(undefined :: Ptr A -> IO Bool ))))
- {-
  ,("initPtr",(initPtr,gen(typeOf(undefined :: Ptr A -> B -> IO(Eql A B)))))
  ,("samePtr",(samePtr,gen(typeOf(undefined :: Ptr A -> Ptr B -> IO(Eql A B)))))
- -}
 
  ,("$",(dollar,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,(".",(composeV,gen(typeOf(undefined :: (A -> B) -> (C -> A) -> (C -> B)))))
