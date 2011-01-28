@@ -404,7 +404,7 @@ newPtr = Vfio [] action
   where action =
          do { r <- fio(newIORef Nothing);
             ; n <- nextInteger
-            ; return(Right (Vcon (Global "Nil",Ox) [Vptr [] n r]))}
+            ; return(Right (Vptr [] n r))}
 
 myIo :: V -> FIO (Either String V)
 myIo v = return (Right v)
