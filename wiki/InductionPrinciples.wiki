@@ -1,0 +1,36 @@
+#summary Clever ideas of other people in the Howard-Curry field.
+#labels Phase-Design
+
+= Introduction =
+
+Each inductive datatype corresponds to some pattern functor. Interestingly these functors give rise to different induction principles. I believe that the `prop` definitions in Ωmega are closely related.
+
+= Relevant Papers =
+
+== Inductive Types imply Induction Principles ==
+
+These give rise to propositions which can be pretty elaborate:
+
+http://homepages.inf.ed.ac.uk/als/ScottInScotland/ghani.pdf
+
+The `indNat` principle  has striking similarity with
+{{{
+data Nat :: *1 where
+  Z :: Nat
+  S :: Nat ~> Nat
+ deriving Nat(t)
+
+prop Nat' :: Nat ~> *0 where
+  Z:: Nat' Z
+  S:: forall (a:: Nat) . Nat' a -> Nat' (S a)
+ deriving Nat(v)
+}}}
+as defined in the Ωmega builtins. `prop` seems to project from `*` to `Prop`, the latter being the category of propositions.
+
+== Deriving Refinements ==
+
+Have to read this, but at first glance it tries to come up with the index types for non-indexed (G)ADTs.
+
+http://personal.cis.strath.ac.uk/~raa/inductive-refinement.pdf
+
+Might be interesting to see whether the ability to come up with index types means that an induction principle can be established and whether the user defined (or automatically derived) _initial algebra package_ can be proved terminating w.r.t. the induction principle (see _sized types_).
