@@ -455,7 +455,7 @@ samePtr = Vprimfun "samePtr" (analyzeWith f) where
      g ptr2@(Vptr cs2 n2 ref2) = return(Vfio [] comp) where
          comp = if ref == ref2
                    then myIo(Vcon (Global "Eq",Ox) [])
-                   else return(Left "samePtrFails")
+                   else return(Left "samePtr fails")
      g v = fail ("Non-Ptr as 2nd argument to samePtr: "++show v)
   f v = fail ("Non-Ptr as 1st argument to samePtr: "++show v)
 
