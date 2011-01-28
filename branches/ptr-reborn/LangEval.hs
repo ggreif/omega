@@ -588,8 +588,7 @@ vals =
  --,("Eq",(Vcon (Global "Eq") [],sigma4Eq))
  --,("Hide",(Vprimfun "Hide" (\ v -> return(Vcon (Global "Hide") [v])),sigma4Hide))
 
-
- ,("newPtr",(newPtr,gen(typeOf(undefined :: IO ({-exists a . -}Ptr A)))))
+ ,("newPtr",(newPtr,gen(typeOf(undefined :: IO (Ptr A)))))
  ,("readPtr",(readPtr,gen(typeOf(undefined :: Ptr A -> IO (Maybe A)))))
  ,("writePtr",(writePtr,gen(typeOf(undefined :: Ptr A -> A -> IO () ))))
  ,("nullPtr",(nullPtr,gen(typeOf(undefined :: Ptr A -> IO Bool ))))
