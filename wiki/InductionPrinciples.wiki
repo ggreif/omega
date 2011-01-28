@@ -12,7 +12,7 @@ Each inductive datatype corresponds to some pattern functor. Interestingly these
 These give rise to propositions which can be pretty elaborate:
 
 http://homepages.inf.ed.ac.uk/als/ScottInScotland/ghani.pdf
-(The [http://portal.acm.org/citation.cfm?id=1887488 full paper] corresponding to the presentation)
+(The [http://portal.acm.org/citation.cfm?id=1887488 full paper] corresponding to the presentation.)
 
 The `indNat` principle  has striking similarity with
 {{{
