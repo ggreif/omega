@@ -13,9 +13,9 @@ liftM f ma = do { a <- ma; return (f a) }
 liftM2 f ma mb = do { a <- ma; b <- mb; return (f a b) }
 
 ------- FINITE (VARIABLE) SETS & TERMS --------------
-data Fin:: Nat ~> *0 where
-  Fz:: Fin (S m)
-  Fs:: Fin m -> Fin (S m)
+data Fin :: Nat ~> *0 where
+  Fz :: Fin (S m)
+  Fs :: Fin m -> Fin (S m)
  deriving Nat(f)
 
 data Term n = Var (Fin n) | Leaf | Fork (Term n) (Term n)
@@ -48,47 +48,47 @@ for n t' x y = case thick n x y of
 
 -----------------------------------------------------
 -- substitution lists
-data AList:: Nat ~> Nat ~> *0 where
-  Anil:: AList n n
-  Asnoc:: AList m' n -> Term m' -> Fin (S m') -> AList (S m') n
+data AList :: Nat ~> Nat ~> *0 where
+  Anil :: AList n n
+  Asnoc :: AList m' n -> Term m' -> Fin (S m') -> AList (S m') n
  deriving LeftRecord(a)
 
 sub :: Nat' m -> AList m n -> (Fin m -> Term n)
-sub _ (Anil) = Var
-sub (S n) (Asnoc s t x) = compose(sub n s)(for n t x)
+sub _ {}a = Var
+sub (S n) {s; t=x}a = compose (sub n s) (for n t x)
+
 cat :: AList m n -> AList l m -> AList l n
-cat xs (Anil) = xs
-cat xs (Asnoc ys t x) = Asnoc (cat xs ys) t x
+cat xs {}a = xs
+cat xs {ys; t=x}a = {cat xs ys; t=x}a
 
 data SomeSub m = exists n . SomeSub (Nat' n) (AList m n)
 asnoc :: SomeSub m -> Term m -> Fin (S m) -> SomeSub (S m)
-asnoc (SomeSub m s) t x = SomeSub m (Asnoc s t x)
+asnoc (SomeSub m s) t x = SomeSub m {s; t=x}a
 
 -----------------------------------------------------
 -- unification
 mgu :: Nat' m -> Term m -> Term m -> Maybe (SomeSub m)
-mgu m s t = amgu m s t (SomeSub m Anil)
-
-amgu :: Nat' m -> Term m -> Term m -> SomeSub m -> Maybe (SomeSub m)
-amgu m (Leaf) (Leaf) acc = Just acc
-amgu m (Leaf) (Fork s t) acc = Nothing
-amgu m (Fork s t) (Leaf) acc = Nothing
-amgu m (Fork s1 t1) (Fork s2 t2) acc =
-     do { acc <- amgu m s1 t1 acc; amgu m s2 t2 acc }
-amgu m (Var x) (Var y) (SomeSub _ Anil) = Just (flexFlex m x y)
-amgu m (Var x) t (SomeSub _ Anil) = flexRigid m x t
-amgu m s (Var x) (SomeSub _ Anil) = flexRigid m x s
-amgu (S m) s t (SomeSub n (Asnoc sub r z)) =
-     do sub <- amgu m (subst (for m r z) s) (subst (for m r z) t) (SomeSub n sub)
-        return (asnoc sub r z)
+mgu m s t = amgu m s t (SomeSub m {}a)
+  where amgu :: Nat' m -> Term m -> Term m -> SomeSub m -> Maybe (SomeSub m)
+        amgu m (Leaf) (Leaf) acc = Just acc
+        amgu m (Leaf) (Fork s t) acc = Nothing
+        amgu m (Fork s t) (Leaf) acc = Nothing
+        amgu m (Fork s1 t1) (Fork s2 t2) acc =
+             do { acc <- amgu m s1 t1 acc; amgu m s2 t2 acc }
+        amgu m (Var x) (Var y) (SomeSub _ {}a) = Just (flexFlex m x y)
+        amgu m (Var x) t (SomeSub _ {}a) = flexRigid m x t
+        amgu m s (Var x) (SomeSub _ {}a) = flexRigid m x s
+        amgu (S m) s t (SomeSub n {sub; r=z}a) =
+             do sub <- amgu m (subst (for m r z) s) (subst (for m r z) t) (SomeSub n sub)
+                return (asnoc sub r z)
 
 flexFlex :: Nat' m -> Fin m -> Fin m -> SomeSub m
 flexFlex (S m) x y = case thick m x y of
-                     Just y' -> SomeSub m (Asnoc Anil (Var y') x)
-                     Nothing -> SomeSub (S m) Anil
+                     Just y' -> SomeSub m {Var y'=x}a
+                     Nothing -> SomeSub (S m) {}a
 
 flexRigid :: Nat' m -> Fin m -> Term m -> Maybe (SomeSub m)
 flexRigid (S m) x t = do
                       t' <- chk m x t
-                      return (SomeSub m (Asnoc Anil t' x))
+                      return (SomeSub m {t'=x}a)
 
