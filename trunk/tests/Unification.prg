@@ -7,6 +7,7 @@ return x = Just x
 fail s = Nothing
 bind Nothing g = Nothing
 bind (Just x) g = g x
+
 liftM :: (a -> b) -> Maybe a -> Maybe b
 liftM2 :: (a -> b -> c) -> Maybe a -> Maybe b -> Maybe c
 liftM f ma = do { a <- ma; return (f a) }
@@ -19,14 +20,17 @@ data Fin :: Nat ~> *0 where
  deriving Nat(f)
 
 data Term n = Var (Fin n) | Leaf | Fork (Term n) (Term n)
+  deriving syntax(t) Unit(Leaf) Item(Var) Pair(Fork)
 
 ------- SUBSTITUTIONS -------------------------------
 rename2sub :: (Fin m -> Fin n) -> Fin m -> Term n
 rename2sub f i = Var (f i)
+
 subst :: (Fin m -> Term n) -> Term m -> Term n
 subst sub (Var x) = sub x
 subst sub Leaf = Leaf
 subst sub (Fork s t) = Fork(subst sub s)(subst sub t)
+
 compose :: (Fin m -> Term n) -> (Fin l -> Term m) -> (Fin l -> Term n)
 compose f g i = subst f (g i)
 
@@ -41,6 +45,7 @@ chk :: Nat' n -> Fin (S n) -> Term (S n) -> Maybe (Term n)
 chk n x (Var y) = liftM Var (thick n x y)
 chk n x (Leaf) = Just Leaf
 chk n x (Fork s t) = liftM2 Fork(chk n x s)(chk n x t)
+
 for :: Nat' n -> Term n -> Fin (S n) -> Fin (S n) -> Term n
 for n t' x y = case thick n x y of
                Just y' -> Var y'
