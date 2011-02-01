@@ -146,7 +146,7 @@ data Body e
 
 data Stmt p e d
   = BindSt Loc p e
-  | LetSt Loc [ d ]
+  | LetSt Loc [d]
   | NoBindSt Loc e
 
 data Dec
@@ -155,12 +155,12 @@ data Dec
   | Pat Loc Var [Var] Pat               -- { Let x y z = App (Lam x z) y
   | TypeSig Loc Var PT                  -- { id :: a -> a }
   | Prim Loc Var PT                     -- { prim bind :: a -> b }
-  | Data Loc Bool Strata Var (Maybe PT) Targs [Constr][Derivation] -- { data T x (y : Nat ) = B (T x) deriving (Z,W)}
-  | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)][Derivation](SynExt String)
+  | Data Loc Bool Strata Var (Maybe PT) Targs [Constr] [Derivation] -- { data T x (y :: Nat) = B (T x) deriving (Z,W) }
+  | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)] [Derivation] (SynExt String)
   | Flag Var Var
   | Reject String [Dec]
   | AddTheorem Loc [(Var,Maybe Exp)]
-  | Import String (Maybe[ ImportItem ])
+  | Import String (Maybe [ImportItem])
   | TypeSyn Loc String Targs PT
   | TypeFun Loc String (Maybe PT) [([PT],PT)]
 
@@ -176,7 +176,7 @@ data ImportItem
 
 monadDec location e = Val location pat (Normal e) []
   where pat = Pcon (Global "Monad")
-                   [Pvar(Global "return") ,Pvar(Global "bind") ,Pvar(Global "fail")]
+                   [Pvar(Global "return"), Pvar(Global "bind"), Pvar(Global "fail")]
 
 ----------------------------------------------------
 
@@ -190,7 +190,7 @@ instance Show Derivation where
 
 instance Eq Derivation where
  (Syntax x) == (Syntax y) = x==y
-  
+
 bindsDeriv (Syntax Ox) = id
 bindsDeriv (Syntax x) = id -- addBind (Global ("#"++synName x++synKey x))
 
@@ -393,7 +393,7 @@ instance Eq Lit where
   (Tag s) == (Tag t) = s==t
   _ == _ = False
 
-  
+
 compLit (Int n) (Int m) = Just(compare n m)
 compLit (Char n) (Char m) = Just(compare n m)
 compLit (Symbol n) (Symbol m) = Just(compare n m)
@@ -401,7 +401,7 @@ compLit Unit Unit = Just EQ
 compLit (ChrSeq n) (ChrSeq m) = Just(compare n m)
 compLit (Float n) (Float m) = Just(compare n m)
 compLit (Tag n) (Tag m) = Just(compare n m)
-compLit _ _ = Nothing 
+compLit _ _ = Nothing
 
 
 applyE :: [Exp] -> Exp
@@ -1408,7 +1408,7 @@ ppPT x =
     TyApp' f x -> (ppPT f) <+> (ppPT x)
     Kinded f x -> text "(" <> (ppPT f) <> text "::" <+> (ppPT x) <> text ")"
     TyFun' xs -> PP.braces(PP.hsep (map ppPT xs))
-    TyCon' s Nothing -> text s  
+    TyCon' s Nothing -> text s
     TyCon' s (Just(0,n)) -> text (s++"_"++n)
     TyCon' s (Just(i,n)) -> text (concat[s,"_(",show i,"+",n,")"])
     Star' n Nothing -> text "*" <> PP.int n
