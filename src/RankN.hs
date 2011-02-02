@@ -3702,11 +3702,11 @@ exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
           let (d0,tags) = dTau d tag
               (d1,elem) = dTau d0 x
           in case y of
-              (TyCon ext' _ c2 _) | ext' == ext && recordNil c2 ext -> (d1,[tags <> text "=" <> elem])
+              (TyCon ext' _ c2 _) | ext' == ext && recordNil c2 ext -> (d1,[tags <> PP.equals <> elem])
               (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && recordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 y
-                      ans = (tags <> text "=" <> elem <> PP.comma):tail
-              other -> (d2,[tags <> text "=" <> elem <> PP.semi,ans])
+                      ans = (tags <> PP.equals <> elem <> PP.comma):tail
+              other -> (d2,[tags <> PP.equals <> elem <> PP.semi,ans])
                 where (d2,ans) = dTau d1 other
 exSynRecordD d t = (d,text("Ill-formed Record extension: "++sht t))
 
@@ -3718,11 +3718,11 @@ exSynLeftRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
           let (d0,tags) = dTau d tag
               (d1,elem) = dTau d0 y
           in case x of
-              (TyCon ext' _ c2 _) | ext' == ext && leftRecordNil c2 ext -> (d1,[tags <> text "=" <> elem])
+              (TyCon ext' _ c2 _) | ext' == ext && leftRecordNil c2 ext -> (d1,[tags <> PP.equals <> elem])
               (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && leftRecordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 x
-                      ans = tail ++ [PP.comma <> tags <> text "=" <> elem]
-              other -> (d2,[ans, PP.semi <> tags <> text "=" <> elem])
+                      ans = tail ++ [PP.comma <> tags <> PP.equals <> elem]
+              other -> (d2,[ans, PP.semi <> tags <> PP.equals <> elem])
                 where (d2,ans) = dTau d1 other
 exSynLeftRecordD d t = (d,text("Ill-formed LeftRecord extension: "++sht t))
 

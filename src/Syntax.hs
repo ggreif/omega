@@ -1185,7 +1185,7 @@ ppWhere [] = PP.empty
 ppWhere ds = text "where" <+> PP.vcat (map ppDec ds)
 
 ppClause (_,ps,b@(Guarded _) ,ds) = PP.sep [PP.sep [PP.hsep (map ppPat ps), ppBody b], PP.nest 2 $ ppWhere ds]
-ppClause (_,ps,b ,ds) = PP.vcat [PP.sep [PP.sep (map ppPat ps) <+> text "=", ppBody b], PP.nest 2 $ ppWhere ds]
+ppClause (_,ps,b ,ds) = PP.vcat [PP.sep [PP.sep (map ppPat ps) <+> PP.equals, ppBody b], PP.nest 2 $ ppWhere ds]
 
 ppImport (VarImport v) = ppVar v
 ppImport (SyntaxImport s y) = text ("deriving "++s++"("++y++")")
@@ -1195,18 +1195,18 @@ ppDec dec =
   case dec of
     Fun _ v Nothing ms -> PP.vcat $ map ((ppVar v) <+>) (map ppClause ms)
     Fun _ v (Just pt) ms -> PP.vcat ((text "*" <> ppVar v <+> text "::" <+> ppPT pt):(map ((ppVar v) <+>) (map ppClause ms)))
-    --Fun _ v Nothing ms -> (ppVar v) <+> (text "=") <+> PP.vcat (map ppMatch ms)
-    Val _ p b ds -> PP.vcat [PP.sep [ppPat p <+> text "=", PP.nest 2 $ ppBody b], PP.nest 2 $ ppWhere ds]
-    Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> text "=" <+> ppPat p
+    --Fun _ v Nothing ms -> (ppVar v) <+> PP.equals <+> PP.vcat (map ppMatch ms)
+    Val _ p b ds -> PP.vcat [PP.sep [ppPat p <+> PP.equals, PP.nest 2 $ ppBody b], PP.nest 2 $ ppWhere ds]
+    Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> PP.equals <+> ppPat p
     TypeSig _ v pt -> PP.sep (PP.punctuate PP.comma (map ppVar v)) <+> text "::" <+> ppPT pt
     Prim _ v pt -> text "prim" <+> ppVar v <+> text "::" <+> ppPT pt
     Data _ b n v sig args cs []   -> PP.vcat [ppSig sig v,
                                      ppStrat n <+> ppVar v <+>
-                                     PP.hsep (map ppArg args) <+> text "=" <+>
+                                     PP.hsep (map ppArg args) <+> PP.equals <+>
                                      myPP PP.vcat Front (PP.nest (-2) (text "| ")) (map ppConstr cs)]
     Data _ b n v sig args cs ders   -> PP.vcat [ppSig sig v,
                                        ppStrat n <+> ppVar v <+>
-                                       PP.hsep (map ppArg args) <+> text "=" <+>
+                                       PP.hsep (map ppArg args) <+> PP.equals <+>
                                        myPP PP.vcat Front (PP.nest (-2) (text "| ")) (map ppConstr cs),
                                        PP.nest 2 $ text "deriving" <+> PP.parens (myPP PP.hsep Back PP.comma (map ppDeriv ders))]
     GADT loc isprop nm kind cs ders exts ->
@@ -1218,16 +1218,16 @@ ppDec dec =
                    (myPP PP.vcat Back PP.empty (map ppDec ds))]
     Import s Nothing -> text "import" <+> PP.doubleQuotes (text s)
     Import s (Just vs) -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back PP.comma (map ppImport vs))
-    TypeSyn _ s args pt -> PP.sep [text ("type "++s) <+> PP.hsep (map ppArg args) <+> text "=",ppPT pt]
+    TypeSyn _ s args pt -> PP.sep [text ("type "++s) <+> PP.hsep (map ppArg args) <+> PP.equals,ppPT pt]
     TypeFun _ s Nothing ms -> PP.vcat ((text s <> text "::<no prototype>\n"):f1 ms)
     TypeFun _ s (Just pt) ms -> PP.vcat ((text (s++" :: ") <> ppPT pt):(f1 ms))
     AddTheorem loc xs -> text "theorem " <> (PP.vcat (map f xs))
      where f (x,Nothing) = ppVar x
-           f (x,Just e) = ppVar x <+> text "=" <+> ppExp e
+           f (x,Just e) = ppVar x <+> PP.equals <+> ppExp e
    where
       f (v,pts) = ppVar v <+> PP.hsep (map ppPT pts)
       f1 ms = (map f2 ms)
-      f2 (pts,pt) = PP.braces (PP.hsep (map ppPT pts)) <+> text "=" <+> ppPT pt
+      f2 (pts,pt) = PP.braces (PP.hsep (map ppPT pts)) <+> PP.equals <+> ppPT pt
 ppCs (loc,name,vars,preds,typ) =
    PP.sep [ ((ppVar name) <> text "::"),PP.nest 3 (PP.sep [(all vars),quals preds,ppPT typ]) ]
   where all [] = PP.empty
@@ -1264,7 +1264,7 @@ showM (v,pt) = PP.parens $ ppVar v <> text "::" <> ppPT pt
 ppVar (Global s) = text s
 ppVar (Alpha s1 n) = text (short (name2Int n))
 
-ppPred (Equality' x y) = PP.hsep [ppPT x, text "=", ppPT y]
+ppPred (Equality' x y) = PP.hsep [ppPT x, PP.equals, ppPT y]
 ppPred (Rel' _ t) = ppPT t
 
 expList (Prod x y) = x : expList y
@@ -1307,9 +1307,9 @@ ppLit l =
 ppBody b =
   case b of
     Guarded pes -> text "|" <+> myPP PP.vcat Front (PP.nest (-2) $ text "| ") (map f pes)
-      where f (e1,e2) = ppExp e1 <+> text "=" <+> ppExp e2
+      where f (e1,e2) = ppExp e1 <+> PP.equals <+> ppExp e2
       -- -> PP.hsep (map f pes)
-      --where f (e1,e2) = text "|" <+> ppExp e1 <+> text "=" <+> ppExp e2
+      --where f (e1,e2) = text "|" <+> ppExp e1 <+> PP.equals <+> ppExp e2
     Normal e -> ppExp e
     Unreachable -> text "unreachable"
 
@@ -1353,7 +1353,7 @@ ppExp e =
     Circ vs e ds -> PP.parens $ PP.vcat [PP.sep [text "circuit",
                                         PP.parens (myPP PP.hsep Back PP.comma (map ppVar vs)),
                                         ppExp e], PP.nest 2 (ppWhere ds)]
-                    --PP.vcat ((text "where"):(zipWith ((<+>).((flip $ (<+>))) (text "=")) (map ppVar vs) (map ppDec ds))))
+                    --PP.vcat ((text "where"):(zipWith ((<+>).((flip $ (<+>))) PP.equals) (map ppVar vs) (map ppDec ds))))
     Case e ms -> (text "case" <+> ppParExp e <+> text "of") $$
                  (PP.nest 2 (PP.vcat (map ppMatch ms)))
     Do _ ss -> text "do" <+> PP.braces (PP.space <> myPP PP.vcat Front (PP.nest (-2) $ text "; ") (map ppStmt ss) <> PP.space)
@@ -1443,7 +1443,7 @@ ppV [] = [PP.empty]
 shq All = PP.empty
 shq Ex  = text "'"
 
-ppP (Equality' x y) = PP.hsep [ppPT x, text "=", ppPT y]
+ppP (Equality' x y) = PP.hsep [ppPT x, PP.equals, ppPT y]
 ppP (Rel' _ t) = ppPT t
 
 -----------------------------------------------
