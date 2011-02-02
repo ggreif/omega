@@ -99,8 +99,8 @@ outLR (Left xs) = (Left, xs)
 -- Creating formatted documents
 
 ppExt :: (a -> Doc) -> Extension a -> Doc
-ppExt f((Listx (Right xs) (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ";",f x,text ("]"++s)])
-ppExt f((Listx (Left xs) (Just x) s)) = PP.sep ((text "["): f x: text ";": PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
+ppExt f((Listx (Right xs) (Just x) s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[PP.semi,f x,text ("]"++s)])
+ppExt f((Listx (Left xs) (Just x) s)) = PP.sep ((text "["): f x: PP.semi: PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
 ppExt f((Listx xs' Nothing s)) = PP.sep ((text "["): PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
                                  where (_, xs) = outLR xs'
 ppExt f((Natx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"++s)]
