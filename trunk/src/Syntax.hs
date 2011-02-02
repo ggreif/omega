@@ -478,7 +478,7 @@ expandTypeSigs loc pt = foldl (\ns n -> TypeSig loc n pt:ns)
 
 state0 :: Monad m => [Dec] -> m[Dec]
 state0 [] = return []
-state0 (MultiTypeSig loc ns pt:ds) = state0 (foldl (\ns n -> TypeSig loc n pt:ns) ds ns)
+state0 (MultiTypeSig loc ns pt:ds) = state0 (expandTypeSigs loc pt ds ns)
 state0 (d:ds) = case dt d of
   Fn x -> state1 x [d] [] ds    -- state1 is collecting contiguous clauses with same function name
   V   -> do { xs <- state0 ds; return(d:xs) }    -- x = [1,2,3]
