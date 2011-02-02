@@ -153,8 +153,7 @@ data Dec
   = Fun Loc Var (Maybe PT) [Match [Pat] Exp Dec]   -- { f p1 p2 = b where decs }
   | Val Loc Pat (Body Exp) [Dec]        -- { p = b where decs }
   | Pat Loc Var [Var] Pat               -- { Let x y z = App (Lam x z) y
-  | TypeSig Loc Var PT                  -- { id :: a -> a }
-  | MultiTypeSig Loc [Var] PT           -- { foo, bar, baz :: a -> a }
+  | TypeSig Loc [Var] PT                -- { id, di :: a -> a }
   | Prim Loc Var PT                     -- { prim bind :: a -> b }
   | Data Loc Bool Strata Var (Maybe PT) Targs [Constr] [Derivation] -- { data T x (y :: Nat) = B (T x) deriving (Z,W) }
   | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)] [Derivation] (SynExt String)
@@ -224,18 +223,18 @@ strat n = "data@"++show n
 ---------------------------------------------------
 isData (Data _ _ n _ _ _ _ _ ) = True
 isData (GADT loc isProp nm knd cs ders ext) = True
-isData (TypeSig loc (Global (x:xs)) pt) | isUpper x = True
+isData (TypeSig loc [Global (x:xs)] pt) | isUpper x = True
 isData _ = False
 
-isTypeSig (TypeSig loc _ _) = True
+isTypeSig (TypeSig loc [_] _) = True
 isTypeSig _ = False
 
 isTypeSyn (TypeSyn loc _ _ _) = True
 isTypeSyn _ = False
 
 isTypeFun (TypeFun _ _ _ _) = True
-isTypeFun (TypeSig loc (Global (x:xs)) (Karrow' _ _)) | isLower x = True
-isTypeFun (TypeSig loc (Global (x:xs)) (Forallx _ _ _ (Karrow' _ _))) | isLower x = True
+isTypeFun (TypeSig loc [Global (x:xs)] (Karrow' _ _)) | isLower x = True
+isTypeFun (TypeSig loc [Global (x:xs)] (Forallx _ _ _ (Karrow' _ _))) | isLower x = True
 isTypeFun _ = False
 
 isTheorem (AddTheorem _ _ ) = True
@@ -317,7 +316,7 @@ decname (GADT loc isProp nm knd cs ders _) = nm : map f cs
 decname (TypeSyn loc nm args ty) = [Global nm]
 decname (AddTheorem dec xs) = []
 decname (TypeFun loc nm k ms) = [Global nm]
-decname (TypeSig loc nm t) = [proto nm]
+decname (TypeSig loc [nm] t) = [proto nm]
 decname (Prim loc nm t) = [nm]
 decname (Flag s nm) =[flagNm nm]
 decname (Reject s ds) = concat (map decname ds)
@@ -337,7 +336,7 @@ decloc (GADT loc isProp nm knd cs ders _) = [(nm,loc)] ++ map f cs
 decloc (TypeSyn loc nm args ty) = [(Global nm,loc)]
 decloc (AddTheorem loc _) =[]
 decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
-decloc (TypeSig loc nm t) = [(proto nm,loc)]
+decloc (TypeSig loc [nm] t) = [(proto nm,loc)]
 decloc (Prim loc nm t) = [(nm,loc)]
 decloc (Flag s nm) =[]
 decloc (Reject s d) = decloc (head d)
@@ -462,7 +461,7 @@ mergeFun ds = state0 ds -- return(mf ds) --
 data DT = Fn Var | V | D | S | P | Syn | PT | TS Var | Flg | Rej | Pr | Im | TFun String | Thm
 dt (Fun _ x _ _) = Fn x
 dt (Val _ _ _ _) = V
-dt (TypeSig loc n _) = TS n
+dt (TypeSig loc [n] _) = TS n
 dt (Prim loc n _) = Pr
 dt (Data _ _ _ _ _ _ _ _ ) = D
 dt (GADT _  _ _ _ _ _ _) = D
@@ -474,11 +473,11 @@ dt (Reject s d) = Rej
 dt (Import s vs) = Im
 dt (AddTheorem _ _) = Thm
 
-expandTypeSigs loc pt = foldl (\ns n -> TypeSig loc n pt:ns)
+expandTypeSigs loc pt = foldl (\ns n -> TypeSig loc [n] pt:ns)
 
 state0 :: Monad m => [Dec] -> m[Dec]
 state0 [] = return []
-state0 (MultiTypeSig loc ns pt:ds) = state0 (expandTypeSigs loc pt ds ns)
+state0 (TypeSig loc ns pt:ds) | length ns > 1 = state0 (expandTypeSigs loc pt ds ns)
 state0 (d:ds) = case dt d of
   Fn x -> state1 x [d] [] ds    -- state1 is collecting contiguous clauses with same function name
   V   -> do { xs <- state0 ds; return(d:xs) }    -- x = [1,2,3]
@@ -857,7 +856,7 @@ instance Binds Dec where
      where y = boundBy p
   boundBy (Fun loc nm _ ms) = FX [nm] [proto nm] [] [] []
   boundBy (Pat loc nm nms p) = FX [nm] [] [] [] []
-  boundBy (TypeSig loc v t) =
+  boundBy (TypeSig loc [v] t) =
         if isTyCon v then FX [] [ ] [] (proto v :(nub binds)) [v]
                      else FX [proto v] (v:ff) [] (nub binds) []
      where (FX _ _ ff tbs tfs) = vars [] t emptyF
@@ -907,7 +906,7 @@ instance Vars Dec where
        vars bnd knd . varsL bnd cs
   -- where get (loc,c,free,preds,typ) = c
 
-  vars bnd (TypeSig loc v t) = addFreeT (nub free)
+  vars bnd (TypeSig loc [v] t) = addFreeT (nub free)
      where (FX _ _ _ tbs tfs) = vars bnd t emptyF
            (binds,free) = partition typVar tfs
   vars bnd (TypeSyn loc nm args ty) = underTs (map fst args) (vars bnd ty)
@@ -1199,7 +1198,7 @@ ppDec dec =
     --Fun _ v Nothing ms -> (ppVar v) <+> (text "=") <+> PP.vcat (map ppMatch ms)
     Val _ p b ds -> PP.vcat [PP.sep [ppPat p <+> text "=", PP.nest 2 $ ppBody b], PP.nest 2 $ ppWhere ds]
     Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> text "=" <+> ppPat p
-    TypeSig _ v pt -> ppVar v <+> text "::" <+> ppPT pt
+    TypeSig _ v pt -> PP.sep (PP.punctuate PP.comma (map ppVar v)) <+> text "::" <+> ppPT pt
     Prim _ v pt -> text "prim" <+> ppVar v <+> text "::" <+> ppPT pt
     Data _ b n v sig args cs []   -> PP.vcat [ppSig sig v,
                                      ppStrat n <+> ppVar v <+>
@@ -1282,7 +1281,7 @@ ppPat pat =
     Pvar v -> ppVar v
     Pprod e1 e2 ->
       case patList pat of
-        xs -> PP.parens(PP.sep (PP.punctuate (text ",") (map ppPat xs)))
+        xs -> PP.parens(PP.sep (PP.punctuate PP.comma (map ppPat xs)))
     -- Pprod p1 p2 -> PP.parens $ ppPat p1 <> text "," <+>  ppPat p2
     Psum L p -> PP.parens $ text "L" <+> ppPat p
     Psum R p -> PP.parens $ text "R" <+> ppPat p
@@ -1345,8 +1344,7 @@ ppExp e =
     Sum R e -> PP.parens $ text "R" <+> ppExp e
     Prod e1 e2 ->
       case expList e of
-        xs -> PP.parens(PP.sep (PP.punctuate (text ",") (map ppExp xs)))
-     -- PP.parens $ ppExp e1 <> text "," <> ppExp e2
+        xs -> PP.parens(PP.sep (PP.punctuate PP.comma (map ppExp xs)))
     x @ (App e1 e2) ->
       case (tryL x [Fpair isList ppList, Fpair isOp ppOp]) of
         Just ans -> ans

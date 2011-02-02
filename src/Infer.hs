@@ -1664,7 +1664,7 @@ checkDec frag (mod,rho,Reject s ds,skols) =
        -- Its is important the the inner fail have higher failure level (8) than
        -- the outer catching mechanism (7). Because if the decl doesn't fail we want to know.
  where errF n = do { outputString ("\n*** Negative test '"++ s ++ "' fails as expected.\n")
-                   ; return (TypeSig Z (Global "##test") tunit')}
+                   ; return (TypeSig Z [Global "##test"] tunit')}
 checkDec frag (mod,rho,t,skols) = failD 2 [Ds "Illegal dec in value binding group: ", Ds (show t)]
 
 
@@ -2361,7 +2361,7 @@ splitWhere (x:xs) (un,ps) = splitWhere xs (un,x:ps)
 isValFunPat (Val _ _ _ _) = True
 isValFunPat (Fun _ _ _ _) = True
 isValFunPat (Pat _ _ _ _) = True
-isValFunPat (TypeSig _ _ _) = True
+isValFunPat (TypeSig _ [_] _) = True
 isValFunPat (Reject s d) = True
 isValFunPat (Prim l n t) = True
 isValFunPat _ = False
@@ -2787,7 +2787,7 @@ pushHints protos (TypeFun loc nm sig ms) = TypeFun loc nm (applyName protos (Glo
 pushHints protos d = d
 
 applyName [] nm = Nothing
-applyName ((TypeSig loc var t):ps) nm =
+applyName ((TypeSig loc [var] t):ps) nm =
   if nm==var then Just t else applyName ps nm
 
 applyPat protos (pat@(Pvar var)) =
@@ -2803,7 +2803,7 @@ applyPat protos x = patg (applyPat protos) x
 useTypeSig :: [Dec] -> [Dec]
 useTypeSig decs = map (pushHints ps) ds
   where (ps,ds) = partition typeSigP decs
-        typeSigP (TypeSig _ _ _) = True
+        typeSigP (TypeSig _ [_] _) = True
         typeSigP _ = False
 
 -- ======================================================================
