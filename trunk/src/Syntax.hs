@@ -200,11 +200,13 @@ bindDs (d:ds) = bindsDeriv d . bindDs ds
 depExt x = addDepend(Global(extPrefix x ++ extKey x))
 
 extPrefix :: Extension a -> String
-extPrefix ((Listx xs _ s)) = "#L"
-extPrefix ((Natx n x s)) = "#N"
-extPrefix ((Pairx xs s)) = "#P"
-extPrefix ((Recordx xs _ s)) = "#R"
--- extPrefix ((Cseqx s)) = ""
+extPrefix (Unitx s) = "#U"
+extPrefix (Itemx x s) = "#I"
+extPrefix (Listx xs _ s) = "#L"
+extPrefix (Natx n x s) = "#N"
+extPrefix (Pairx xs s) = "#P"
+extPrefix (Recordx xs _ s) = "#R"
+extPrefix (Tickx i _ s) = "#T"
 
 --------------------------------------------------
 typeStrata = 0 :: Strata
@@ -222,7 +224,7 @@ strat n = "data@"++show n
 isData (Data _ _ n _ _ _ _ _ ) = True
 isData (GADT loc isProp nm knd cs ders ext) = True
 isData (TypeSig loc (Global (x:xs)) pt) | isUpper x = True
-isData x = False
+isData _ = False
 
 isTypeSig (TypeSig loc _ _) = True
 isTypeSig _ = False
