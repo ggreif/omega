@@ -1208,17 +1208,17 @@ ppDec dec =
                                        ppStrat n <+> ppVar v <+>
                                        PP.hsep (map ppArg args) <+> text "=" <+>
                                        myPP PP.vcat Front (PP.nest (-2) (text "| ")) (map ppConstr cs),
-                                       PP.nest 2 $ text "deriving" <+> PP.parens (myPP PP.hsep Back (text ",") (map ppDeriv ders))]
+                                       PP.nest 2 $ text "deriving" <+> PP.parens (myPP PP.hsep Back PP.comma (map ppDeriv ders))]
     GADT loc isprop nm kind cs ders exts ->
       (text "data" <+> ppVar nm <> text "::" <+> ppPT kind <+> text "where") $$
       (PP.nest 3 (PP.vcat (map ppCs cs))) $$
-      (PP.nest 2 (text "deriving" <+> PP.parens (myPP PP.hsep Back (text ",") (map ppDeriv ders))))
+      (PP.nest 2 (text "deriving" <+> PP.parens (myPP PP.hsep Back PP.comma (map ppDeriv ders))))
     Flag v1 v2 -> text "flag" <+> ppVar v1 <+> ppVar v2
     Reject s ds -> PP.vcat [text "##test" <+> PP.doubleQuotes (text s), PP.nest 2 $
                    --PP.braces (myPP PP.vcat Back (text ";") (map ppDec ds))]
                    (myPP PP.vcat Back PP.empty (map ppDec ds))]
     Import s Nothing -> text "import" <+> PP.doubleQuotes (text s)
-    Import s (Just vs) -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back (text ",") (map ppImport vs))
+    Import s (Just vs) -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back PP.comma (map ppImport vs))
     TypeSyn _ s args pt -> PP.sep [text ("type "++s) <+> PP.hsep (map ppArg args) <+> text "=",ppPT pt]
     TypeFun _ s Nothing ms -> PP.vcat ((text s <> text "::<no prototype>\n"):f1 ms)
     TypeFun _ s (Just pt) ms -> PP.vcat ((text (s++" :: ") <> ppPT pt):(f1 ms))
@@ -1255,7 +1255,7 @@ ppConstr (Constr _ args v pts mpps) =
         parenT (x@(Forallx _ _ _ _)) = PP.parens $ ppPT x
         parenT x = ppPT x
         eqf Nothing = PP.empty
-        eqf (Just xs) = text " where" <+> myPP PP.sep Back (text ",") (map ppPred xs)
+        eqf (Just xs) = text " where" <+> myPP PP.sep Back PP.comma (map ppPred xs)
         root' (TyApp' x y) = root' x
         root' x = x
 
@@ -1282,7 +1282,6 @@ ppPat pat =
     Pprod e1 e2 ->
       case patList pat of
         xs -> PP.parens(PP.sep (PP.punctuate PP.comma (map ppPat xs)))
-    -- Pprod p1 p2 -> PP.parens $ ppPat p1 <> text "," <+>  ppPat p2
     Psum L p -> PP.parens $ text "L" <+> ppPat p
     Psum R p -> PP.parens $ text "R" <+> ppPat p
     Pexists p -> PP.parens $ text "Ex" <+> ppPat p
@@ -1353,7 +1352,7 @@ ppExp e =
     Lam ps e vis -> text "\\" <+> PP.sep[PP.hsep (map ppPat ps)<+> text "->", PP.nest 3 (ppExp e)]
     Let ds e -> PP.vcat [text "let" <+> PP.vcat (map ppDec ds),PP.sep [text "in",ppExp e]]
     Circ vs e ds -> PP.parens $ PP.vcat [PP.sep [text "circuit",
-                                        PP.parens (myPP PP.hsep Back (text ",") (map ppVar vs)),
+                                        PP.parens (myPP PP.hsep Back PP.comma (map ppVar vs)),
                                         ppExp e], PP.nest 2 (ppWhere ds)]
                     --PP.vcat ((text "where"):(zipWith ((<+>).((flip $ (<+>))) (text "=")) (map ppVar vs) (map ppDec ds))))
     Case e ms -> (text "case" <+> ppParExp e <+> text "of") $$
@@ -1428,7 +1427,7 @@ ppPT x =
                          ,ppPT t]
     Forallx q vs ps t ->
         ppQ q <+> PP.sep [PP.sep (ppV vs) <+> text "."
-                         ,PP.parens (myPP PP.sep Back (text ",") (map ppP ps)) <+> text "=>"
+                         ,PP.parens (myPP PP.sep Back PP.comma (map ppP ps)) <+> text "=>"
                          ,ppPT t]
     AnyTyp -> text "*?"
     Ext x -> ppExt ppPT x

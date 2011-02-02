@@ -3542,9 +3542,9 @@ dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext || leftPairPr
 
 {-
 dTau xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug, use something like: ["L","Bush"]
-         = (ys,text nm <> text "(" <> text l' <> text "," <> PP.hcat vs' <> text "." <> k' <> text ")")
+         = (ys,text nm <> text "(" <> text l' <> PP.comma <> PP.hcat vs' <> text "." <> k' <> text ")")
      where (ys,l') = exhibit xs l
-           (ws,vs') = thread dSigma (text ",") ys (map LvVar vs)
+           (ws,vs') = thread dSigma PP.comma ys (map LvVar vs)
            (zs,k') = dTau ws k
 -}
 
@@ -3553,7 +3553,7 @@ dTau xs (t@(TyCon _ l s k))| polyLevel l = (ys,text (s++"_")<> text y)
 dTau xs (t@(TyCon _ l s k)) = (xs,text s)
 dTau e (TyApp (TyCon sx _ "[]" _) x) = (ys,text "[" <> ans <> text "]")
     where (ys,ans) = dTau e x
-dTau e (TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = (zs, text "(" <> a <> text "," <>  b <> text ")")
+dTau e (TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = (zs, text "(" <> a <> PP.comma <>  b <> text ")")
     where (ys,a) = dTau e x
           (zs,b) = dTau ys y
 dTau e (t@(TyApp (TyApp (TyCon sx _ "(->)" _) x) y)) = (d3,PP.cat list)
@@ -3585,7 +3585,7 @@ dRho:: (NameStore d) => d -> Rho -> (d,Doc)
 dRho xs (Rtau x) = dTau xs x
 dRho xs (t@(Rarrow x y)) = (d3,PP.cat list)
     where (d3,list) = arrowRho xs t
-dRho xs (Rpair x y) = (zs,PP.parens (a <> text "," <> b))
+dRho xs (Rpair x y) = (zs,PP.parens (a <> PP.comma <> b))
   where (ys,a) = dSigma xs x
         (zs,b) = dSigma ys y
 dRho xs (Rsum x y) = (zs,PP.parens (a <> text "+" <> b))
@@ -3649,7 +3649,7 @@ dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS])
           feqs d [] = (d,PP.empty)
           feqs d [x::Pred] = (d1,s <> text " => ") where (d1,s) = dPred d x
           feqs d xs = (d1,PP.parens(PP.cat s) <> text " => ")
-            where (d1,s) = thread dPred (text ",") d xs
+            where (d1,s) = thread dPred PP.comma d xs
           pp d2 (nm,MK k,q) =
             let (d3,name) = useStoreName nm (MK k) (prefix k) d2
                 prefix (TcTv (Tv _ (Skol _) _)) s = (case q of {Ex -> "!"; All -> ""})++s
@@ -3670,7 +3670,7 @@ exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
            (TyApp (TyApp (TyCon ext' _ c1 _) _) _) | ext' == ext && listCons c1 ext -> (d2,ans)
              where (d1,elem) = dTau d x
                    (d2,tail) = f d1 y
-                   ans = (elem <> text ","): tail
+                   ans = (elem <> PP.comma): tail
            other -> (d2, [elem <> text "; ", ans])
              where (d1,elem) = dTau d x
                    (d2,ans) = dTau d1 other
@@ -3687,7 +3687,7 @@ exSynLeftListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
            (TyApp (TyApp (TyCon ext' _ c1 _) _) _) | ext' == ext && leftListCons c1 ext -> (d2,ans)
              where (d1,elem) = dTau d y
                    (d2,tail) = f d1 x
-                   ans = tail ++ [text "," <> elem]
+                   ans = tail ++ [PP.comma <> elem]
            other -> (d2, [ans <> text "; ", elem])
              where (d1,elem) = dTau d y
                    (d2,ans) = dTau d1 other
@@ -3705,7 +3705,7 @@ exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
               (TyCon ext' _ c2 _) | ext' == ext && recordNil c2 ext -> (d1,[tags <> text "=" <> elem])
               (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && recordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 y
-                      ans = (tags <> text "=" <> elem <> text ","):tail
+                      ans = (tags <> text "=" <> elem <> PP.comma):tail
               other -> (d2,[tags <> text "=" <> elem <> text ";",ans])
                 where (d2,ans) = dTau d1 other
 exSynRecordD d t = (d,text("Ill-formed Record extension: "++sht t))
@@ -3721,7 +3721,7 @@ exSynLeftRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
               (TyCon ext' _ c2 _) | ext' == ext && leftRecordNil c2 ext -> (d1,[tags <> text "=" <> elem])
               (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && leftRecordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 x
-                      ans = tail ++ [text "," <> tags <> text "=" <> elem]
+                      ans = tail ++ [PP.comma <> tags <> text "=" <> elem]
               other -> (d2,[ans, text ";" <> tags <> text "=" <> elem])
                 where (d2,ans) = dTau d1 other
 exSynLeftRecordD d t = (d,text("Ill-formed LeftRecord extension: "++sht t))
@@ -3735,7 +3735,7 @@ exSynPairD d (t@(TyApp (TyApp (TyCon ext' _ c1 _) x) y))
         collect y = [y]
         (d1,x') = dTau d x
         (d2,y') = dTau d1 y
-        (d3,ws) = thread dTau (text ",") d (collect t)
+        (d3,ws) = thread dTau PP.comma d (collect t)
 
 exSynItemD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynItemD d (t@(TyApp (TyCon ext _ c1 _) x)) | itemItem c1 ext
