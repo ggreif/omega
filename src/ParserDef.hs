@@ -125,7 +125,7 @@ literal :: (Literal -> a) -> (Extension a -> a) -> Parser a
 literal fromLit fromExt = lexeme
    (try (fmap fromLit floatLit) <|>  -- float before natP or 123.45 leaves the .45
     try (fmap fromExt natP) <|>
-    try (fmap fromLit (chrSeqLit <|> chrLit <|> strLit <|> atomLit ))
+    try (fmap fromLit (chrSeqLit <|> chrLit <|> strLit <|> atomLit))
     <?> "literal")
 
 chrSeqLit = do{ satisfy ('#'==); s <- stringLiteral; return(LChrSeq s)}
@@ -634,7 +634,7 @@ importDec =
      ; args <- (fmap Just (parens (sepBy thing comma))) <|> (return Nothing)
      ; return(Import filename args)
      }
-  where thing = (deriv <|> var <|> oper )
+  where thing = (deriv <|> var <|> oper)
         var =  do { n <- name; return(VarImport n)}
         oper = do { x <- parens operator; return(VarImport (Global x))}
         deriv = do { try(symbol "syntax")

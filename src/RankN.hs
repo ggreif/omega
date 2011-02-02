@@ -902,7 +902,7 @@ binaryLift f a b = do { x <- a; y <- b; return(f x y)}
 
 unionP (a,b) (x,y) = (union a x, union b y)
 
-rigid (Rigid _ _ _ ) = True
+rigid (Rigid _ _ _) = True
 rigid _ = False
 
 -- TypeLike Tau
@@ -1511,7 +1511,7 @@ showKinds2 t =
  do { t1 <- zonkG t
     ; (free,zs) <- tvs t1
     ; return( (if (not(null free)) then [Ds "\nwhere types have kinds:\n   ",Dlf f free "\n   "] else [])++
-              (if (not(null zs)) then [Dlf g zs ", "] else []) )
+              (if (not(null zs)) then [Dlf g zs ", "] else []))
     }
  where f disp (v@(Tv un fl k)) = displays disp [Dd v, Ds ":",Dd k]
        g disp l = displays disp [Ds ("level("++show l++") "),Dd l ]
@@ -2482,7 +2482,7 @@ data ArrowSort
 
 arrTyp :: Parser PT
 arrTyp =
-   do { ts <- many1 (simpletyp)-- "f x y -> z"  parses as "(f x y) -> z"
+   do { ts <- many1 simpletyp    -- "f x y -> z"  parses as "(f x y) -> z"
       ; let d = (applyT' ts)     -- since (f x y) binds tighter than (->)
       ; range <- possible
            ((do {symbol "->"; ans <- typN; return(Single,ans)})  <|>
@@ -3307,12 +3307,12 @@ docs xs = Df f xs
            where (d2,docs) = threadx d xs
        threadx :: (NameStore t) => t -> [Docs] -> (t, [Doc])
        threadx d [] = (d,[])
-       threadx d (Dx x :xs ) = (d2,y : ys)
+       threadx d (Dx x :xs) = (d2,y : ys)
           where (d1,y) = dDoc d x
                 (d2,ys) = threadx d1 xs
-       threadx d (Dsp :xs ) = (d,text " " : ys)
+       threadx d (Dsp :xs) = (d,text " " : ys)
           where  (d2,ys) = threadx d xs
-       threadx d (Dds s :xs ) = (d,text s : ys)
+       threadx d (Dds s :xs) = (d,text s : ys)
           where  (d2,ys) = threadx d xs
        threadx d (Doc doc : xs) = (d2,doc : ys)
           where  (d2,ys) = threadx d xs
@@ -4208,8 +4208,8 @@ mguStar str beta ((x@(TyFun f _ ys),y@(TyFun g _ zs)):xs) | f==g =
   eitherM (mguStar str beta (zip ys zs))
      (\ (old,ps) -> eitherM (mguStar str beta (subPairs old xs))
                       (\ (new,qs) -> return(composeStar  (Left(new,ps++qs)) old))
-                      (\ err -> return(Right err)) )
-     (\ _ -> do { ans <- (mguStar str beta xs); return (emitStar (x,y) ans)} )
+                      (\ err -> return(Right err)))
+     (\ _ -> do { ans <- (mguStar str beta xs); return (emitStar (x,y) ans) })
 
 mguStar str beta ((x@(TyFun f _ ys),y):xs) =
    do { ans <-  (mguStar str beta xs); return (emitStar (x,y) ans) }
