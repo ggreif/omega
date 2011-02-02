@@ -3706,7 +3706,7 @@ exSynRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
               (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && recordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 y
                       ans = (tags <> text "=" <> elem <> PP.comma):tail
-              other -> (d2,[tags <> text "=" <> elem <> text ";",ans])
+              other -> (d2,[tags <> text "=" <> elem <> PP.semi,ans])
                 where (d2,ans) = dTau d1 other
 exSynRecordD d t = (d,text("Ill-formed Record extension: "++sht t))
 
@@ -3722,7 +3722,7 @@ exSynLeftRecordD d (t@(TyApp (TyApp (TyApp (TyCon ext _ c1 _) tag) x) y))
               (TyApp (TyApp (TyApp (TyCon ext' _ c1 _) _) _) _) | ext' == ext && leftRecordCons c1 ext -> (d2,ans)
                 where (d2,tail) = f d1 x
                       ans = tail ++ [PP.comma <> tags <> text "=" <> elem]
-              other -> (d2,[ans, text ";" <> tags <> text "=" <> elem])
+              other -> (d2,[ans, PP.semi <> tags <> text "=" <> elem])
                 where (d2,ans) = dTau d1 other
 exSynLeftRecordD d t = (d,text("Ill-formed LeftRecord extension: "++sht t))
 

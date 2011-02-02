@@ -1215,7 +1215,6 @@ ppDec dec =
       (PP.nest 2 (text "deriving" <+> PP.parens (myPP PP.hsep Back PP.comma (map ppDeriv ders))))
     Flag v1 v2 -> text "flag" <+> ppVar v1 <+> ppVar v2
     Reject s ds -> PP.vcat [text "##test" <+> PP.doubleQuotes (text s), PP.nest 2 $
-                   --PP.braces (myPP PP.vcat Back (text ";") (map ppDec ds))]
                    (myPP PP.vcat Back PP.empty (map ppDec ds))]
     Import s Nothing -> text "import" <+> PP.doubleQuotes (text s)
     Import s (Just vs) -> text "import" <+> PP.doubleQuotes (text s) <> PP.parens (myPP PP.hsep Back PP.comma (map ppImport vs))
