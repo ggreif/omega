@@ -647,9 +647,7 @@ typeSig =
    do{ pos <- getPosition
      ; ns <- (fmap (return . Global) conName <|> (sepBy name comma))
      ; (levels,t) <- typing
-     ; let f [n] = TypeSig (loc pos) n (polyLevel levels t)
-           f ns = MultiTypeSig (loc pos) ns (polyLevel levels t)
-     ; return $ f ns }
+     ; return $ TypeSig (loc pos) ns (polyLevel levels t) }
 
 typeSyn =
    do{ pos <- getPosition
