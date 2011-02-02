@@ -154,6 +154,7 @@ data Dec
   | Val Loc Pat (Body Exp) [Dec]        -- { p = b where decs }
   | Pat Loc Var [Var] Pat               -- { Let x y z = App (Lam x z) y
   | TypeSig Loc Var PT                  -- { id :: a -> a }
+  | MultiTypeSig Loc [Var] PT           -- { foo, bar, baz :: a -> a }
   | Prim Loc Var PT                     -- { prim bind :: a -> b }
   | Data Loc Bool Strata Var (Maybe PT) Targs [Constr] [Derivation] -- { data T x (y :: Nat) = B (T x) deriving (Z,W) }
   | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)] [Derivation] (SynExt String)
@@ -473,8 +474,11 @@ dt (Reject s d) = Rej
 dt (Import s vs) = Im
 dt (AddTheorem _ _) = Thm
 
+expandTypeSigs loc pt = foldl (\ns n -> TypeSig loc n pt:ns)
+
 state0 :: Monad m => [Dec] -> m[Dec]
 state0 [] = return []
+state0 (MultiTypeSig loc ns pt:ds) = state0 (foldl (\ns n -> TypeSig loc n pt:ns) ds ns)
 state0 (d:ds) = case dt d of
   Fn x -> state1 x [d] [] ds    -- state1 is collecting contiguous clauses with same function name
   V   -> do { xs <- state0 ds; return(d:xs) }    -- x = [1,2,3]

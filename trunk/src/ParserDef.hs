@@ -645,9 +645,11 @@ importDec =
 
 typeSig =
    do{ pos <- getPosition
-     ; n <- (fmap Global conName <|> name)
+     ; ns <- (fmap (return . Global) conName <|> (sepBy name comma))
      ; (levels,t) <- typing
-     ; return $ TypeSig (loc pos) n (polyLevel levels t) }
+     ; let f [n] = TypeSig (loc pos) n (polyLevel levels t)
+           f ns = MultiTypeSig (loc pos) ns (polyLevel levels t)
+     ; return $ f ns }
 
 typeSyn =
    do{ pos <- getPosition
