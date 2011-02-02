@@ -103,11 +103,11 @@ ppExt f((Listx (Right xs) (Just x) s)) = PP.sep (PP.lbrack: PP.punctuate PP.comm
 ppExt f((Listx (Left xs) (Just x) s)) = PP.sep (PP.lbrack: f x: PP.semi: PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
 ppExt f((Listx xs' Nothing s)) = PP.sep (PP.lbrack: PP.punctuate PP.comma (map f xs)++[text ("]"++s)])
                                  where (_, xs) = outLR xs'
-ppExt f((Natx n (Just x) s)) = PP.hcat [text "(",PP.int n,text "+",f x,text (")"++s)]
+ppExt f((Natx n (Just x) s)) = PP.hcat [PP.lparen,PP.int n,text "+",f x,text (")"++s)]
 ppExt f((Natx n Nothing s)) = PP.hcat [PP.int n,text s]
 ppExt f((Unitx s)) = text ("()"++s)
-ppExt f((Itemx x s)) = text "(" <> f x <> text (")"++s)
-ppExt f((Pairx xs' s)) = text "(" <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
+ppExt f((Itemx x s)) = PP.lparen <> f x <> text (")"++s)
+ppExt f((Pairx xs' s)) = PP.lparen <> PP.hcat(PP.punctuate PP.comma (map f xs)) <> text (")"++s)
   where (_, xs) = outLR xs'
 ppExt f((Recordx (Right xs) (Just x) s)) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> PP.semi <> f x <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
@@ -116,7 +116,7 @@ ppExt f((Recordx (Left xs) (Just x) s)) = text "{" <> f x <> PP.semi <> PP.hcat(
 ppExt f (Recordx xs' Nothing s) = text "{" <> PP.hcat(PP.punctuate PP.comma (map g xs)) <> text ("}"++s)
   where g (x,y) = f x <> text "=" <> f y
         (_, xs) = outLR xs'
-ppExt f((Tickx n x s)) = PP.hcat [text "(",f x,text "`",PP.int n,text (")"++s)]
+ppExt f((Tickx n x s)) = PP.hcat [PP.lparen,f x,text "`",PP.int n,text (")"++s)]
 
 
 -------------------------------------------------------

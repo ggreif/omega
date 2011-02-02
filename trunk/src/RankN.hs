@@ -3542,7 +3542,7 @@ dTau xs (t@(TyApp (TyApp (TyCon ext _ c _) _) _)) | pairProd c ext || leftPairPr
 
 {-
 dTau xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug, use something like: ["L","Bush"]
-         = (ys,text nm <> text "(" <> text l' <> PP.comma <> PP.hcat vs' <> text "." <> k' <> text ")")
+         = (ys,text nm <> parens (text l' <> PP.comma <> PP.hcat vs' <> text "." <> k'))
      where (ys,l') = exhibit xs l
            (ws,vs') = thread dSigma PP.comma ys (map LvVar vs)
            (zs,k') = dTau ws k
@@ -3729,7 +3729,7 @@ exSynLeftRecordD d t = (d,text("Ill-formed LeftRecord extension: "++sht t))
 
 exSynPairD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynPairD d (t@(TyApp (TyApp (TyCon ext' _ c1 _) x) y))
-     = (d3,text "(" <> PP.cat ws <> text (")"++postscript (synKey ext')))
+     = (d3, PP.lparen <> PP.cat ws <> text (")"++postscript (synKey ext')))
   where collect (TyApp (TyApp (TyCon ext _ c1 _) x) y) | ext == ext' && pairProd c1 ext = x : collect y
         collect (TyApp (TyApp (TyCon ext _ c1 _) x) y) | ext == ext' && leftPairProd c1 ext = collect x ++ [y]
         collect y = [y]
@@ -3739,7 +3739,7 @@ exSynPairD d (t@(TyApp (TyApp (TyCon ext' _ c1 _) x) y))
 
 exSynItemD:: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynItemD d (t@(TyApp (TyCon ext _ c1 _) x)) | itemItem c1 ext
-     = (d1,text "(" <> x' <> text (")"++postscript (synKey ext)))
+     = (d1, PP.lparen <> x' <> text (")"++postscript (synKey ext)))
   where (d1,x') = dTau d x
 
 
@@ -3753,22 +3753,22 @@ dPar xs z@(TyApp (TyApp (TyApp (TyCon rx _ c _) _) _) _) | leftRecordCons c rx =
 dPar xs z@(TyApp (TyApp (TyCon px _ c _) _) _) | pairProd c px = dTau xs z
 dPar xs z@(TyApp (TyCon nx _ c _) _) | natSucc c nx = dTau xs z
 dPar xs  z | isRow z = dTau xs z
-dPar xs x@(Karr _ _) = (ys,text "(" <>  ans <> text ")")
+dPar xs x@(Karr _ _) = (ys, PP.parens ans)
   where (ys,ans) = dTau xs x
-dPar xs x@(TyApp _ _) = (ys,text "(" <> ans <> text ")")
+dPar xs x@(TyApp _ _) = (ys, PP.parens ans)
   where (ys,ans) = dTau xs x
-dPar xs x@(TySyn nm n fs as t) | n>=1 =  (ys,text "(" <> ans <> text ")")
+dPar xs x@(TySyn nm n fs as t) | n>=1 =  (ys, PP.parens ans)
   where (ys,ans) = dTau xs x
-dPar xs x@(TyEx _) = (ys, text "(" <> ans <> text ")")
+dPar xs x@(TyEx _) = (ys, PP.parens ans)
   where (ys,ans) = dTau xs x
 dPar xs x = dTau xs x
 
 
-dArrow xs (t@(TyApp (TyApp (TyCon sx _ "(->)" _) x) y)) = (ys,text "(" <> z <> text ")")
+dArrow xs (t@(TyApp (TyApp (TyCon sx _ "(->)" _) x) y)) = (ys, PP.parens z)
   where (ys,z) = dTau xs t
-dArrow xs (t@(Karr _ _)) = (ys, text "(" <> z <> text ")")
+dArrow xs (t@(Karr _ _)) = (ys, PP.parens z)
   where (ys,z) = dTau xs t
-dArrow xs x@(TyEx _) = (ys,text "(" <>  ans <> text ")")
+dArrow xs x@(TyEx _) = (ys, PP.parens ans)
   where (ys,ans) = dTau xs x
 dArrow xs t = dTau xs t
 
