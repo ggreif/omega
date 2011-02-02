@@ -3551,14 +3551,14 @@ dTau xs (TyCon _ l nm (K vs k)) |  nm `elem` []  -- to debug, use something like
 dTau xs (t@(TyCon _ l s k))| polyLevel l = (ys,text (s++"_")<> text y)
       where (ys,y) = exhibit xs l
 dTau xs (t@(TyCon _ l s k)) = (xs,text s)
-dTau e (TyApp (TyCon sx _ "[]" _) x) = (ys,text "[" <> ans <> text "]")
+dTau e (TyApp (TyCon sx _ "[]" _) x) = (ys, PP.brackets ans)
     where (ys,ans) = dTau e x
-dTau e (TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = (zs, text "(" <> a <> PP.comma <>  b <> text ")")
+dTau e (TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = (zs, PP.parens (a <> PP.comma <> b))
     where (ys,a) = dTau e x
           (zs,b) = dTau ys y
 dTau e (t@(TyApp (TyApp (TyCon sx _ "(->)" _) x) y)) = (d3,PP.cat list)
     where (d3,list) = arrowTau e t
-dTau e (TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = (zs,text "(" <> a <> text "+" <> b <> text ")")
+dTau e (TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = (zs, PP.parens (a <> text "+" <> b))
     where (ys,a) = dPar e x
           (zs,b) = dPar ys y
 dTau xs (TyApp x y) = (zs,a <> text " " <> b)
@@ -3661,7 +3661,7 @@ dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS])
 
 exSynListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
-     = (d2, text "[" <> PP.cat ans <> text ("]"++postscript (synKey ext)))
+     = (d2, PP.lbrack <> PP.cat ans <> text ("]"++postscript (synKey ext)))
   where (d2,ans) = f d t
         f d (TyApp (TyApp (TyCon ext' _ c1 _) x) y) | ext' == ext && listCons c1 ext =
           case y of
@@ -3678,7 +3678,7 @@ exSynListD d t = (d,text ("Ill-formed List extension: "++sht t))
 
 exSynLeftListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynLeftListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))
-     = (d2, text "[" <> PP.cat ans <> text ("]"++postscript (synKey ext)))
+     = (d2, PP.lbrack <> PP.cat ans <> text ("]"++postscript (synKey ext)))
   where (d2,ans) = f d t
         f d (TyApp (TyApp (TyCon ext' _ c1 _) x) y) | ext' == ext && leftListCons c1 ext =
           case x of
