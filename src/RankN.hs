@@ -2498,8 +2498,8 @@ arrTyp =
 
 allPrefix:: Parser (Quant,[(String,PT,Quant)])
 allPrefix =
-    do { q2 <- ((reserved "forall") >> (return All)) <|>
-               ((reserved "exists") >> (return Ex))
+    do { q2 <- (reserved "forall" >> return All) <|>
+               (reserved "exists" >> return Ex)
        ; ns <- many1 (argument All)
        ; symbol "."
        ; return(q2,ns)
@@ -2515,11 +2515,11 @@ allTyp =
 
 argument:: Quant -> Parser(String,PT,Quant)
 argument q =
-  (do { x <- identifier; return(x,AnyTyp,q)})  <|>
+  (do { x <- identifier; return(x,AnyTyp,q)}) <|>
   (parens (do { x <- identifier
-              ; (reservedOp "::")
+              ; reservedOp "::"
               ; k <- typN
-              ; return(x,k,q)}))
+              ; return(x,k,q) }))
 
 
 typN :: Parser PT
@@ -2527,7 +2527,7 @@ typN = allTyp <|> arrTyp <|> parens typN
 
 ------------------------------------------------
 
-qual = (reservedOp "="  >> return "=" )
+qual = reservedOp "=" >> return "="
 
 -- A proposition looks like:  t1 = t2,  t1 != t2, or   T t1 t2 t3
 
