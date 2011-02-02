@@ -1409,7 +1409,7 @@ ppPT x =
     TyApp' (TyCon' "[]" _) x -> PP.brackets (ppPT x)
     TyApp' f x | needsParens x -> (ppPT f) <+> (PP.parens (ppPT x))
     TyApp' f x -> (ppPT f) <+> (ppPT x)
-    Kinded f x -> text "(" <> (ppPT f) <> text "::" <+> (ppPT x) <> text ")"
+    Kinded f x -> PP.parens (ppPT f <> text "::" <+> ppPT x)
     TyFun' xs -> PP.braces(PP.hsep (map ppPT xs))
     TyCon' s Nothing -> text s
     TyCon' s (Just(0,n)) -> text (s++"_"++n)
