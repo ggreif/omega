@@ -233,7 +233,8 @@ isTypeSyn (TypeSyn loc _ _ _) = True
 isTypeSyn _ = False
 
 isTypeFun (TypeFun _ _ _ _) = True
-isTypeFun (TypeSig loc (Global (x:xs)) pt) = True
+isTypeFun (TypeSig loc (Global (x:xs)) (Karrow' _ _)) | isLower x = True
+isTypeFun (TypeSig loc (Global (x:xs)) (Forallx _ _ _ (Karrow' _ _))) | isLower x = True
 isTypeFun _ = False
 
 isTheorem (AddTheorem _ _ ) = True
