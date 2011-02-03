@@ -16,7 +16,7 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,Dec(..),Constr(..),Stmt(..),Var(..)
              ,listExp,listExp2,patTuple,ifExp,mergeFun,consExp,expTuple
              ,binop,opList,var,freshE,swp,dvars,evars,
-             typeStrata,kindStrata,emptyF,Vars(..),freeOfDec,boundBy
+             typeStrata,kindStrata,emptyF,Vars(..),boundBy
              ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
 import List(partition)
 import Monads
