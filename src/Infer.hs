@@ -2378,7 +2378,7 @@ bindingGroupNames letOrWhere ds = message
 inferBndrForDecs :: String -> Bool -> [Dec] -> TC (Frag,[Dec])
 inferBndrForDecs letOrWhere renam [] = return(nullFrag,[])
 inferBndrForDecs letOrWhere renam ds =  many dss
-  where (dss,pairs) = topSortR freeOfDec ds
+  where (dss,_) = topSortR freeOfDec ds
         many [] =  return(nullFrag,[])
         many ([]:dss) = many dss
         many (ds:dss) =                                      -- For each mutually recursive nest
@@ -4293,7 +4293,7 @@ predefined = concat $ intersperse "\n" predefinedLines
 -- then do a topological sort.
 preDefDec = dss
   where (Right(Program ds,_)) = parse2 program predefined
-        (dss,pairs) = topSortR freeOfDec ds
+        (dss,_) = topSortR freeOfDec ds
 
 -- Go through each binding group in the topological sort
 -- and transform the environment

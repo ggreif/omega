@@ -1042,7 +1042,7 @@ instance Vars [Stmt Pat Exp Dec] where  -- Stmt's always come in lists, and thei
 ------------------------------------------------------------------------
 -- To compute topological sort we need a function that computes
 -- names bound and names depended on for each Dec. Since we have
--- two distict name spaces. We "flag" names in the type name space
+-- two distict name spaces, we "flag" names in the type name space
 -- so they'll be distinct.
 
 freeOfDec :: Dec -> ([Var],[Var])
