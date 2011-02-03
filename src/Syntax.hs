@@ -762,9 +762,9 @@ makeSubst xs = Par ext app inc esc
 data FX = FX { binds   :: [Var]  -- Binds these variables (in value space)
              , depends :: [Var]  -- Depends on the Dec that binds these
                                  -- but they don't appear as free variables
-             , free    :: [Var]  -- These occur free (implies dependancy)
+             , free    :: [Var]  -- These occur free (implies dependency)
              , tbinds  :: [Var]  -- Binds these (in type space)
-             , tfree   :: [Var]  -- these type vars occur free (implies dependancy)
+             , tfree   :: [Var]  -- these type vars occur free (implies dependency)
              }
 
 instance Show FX where
