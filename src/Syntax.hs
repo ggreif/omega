@@ -170,7 +170,7 @@ type Strata = Int
 data Program = Program [ Dec ]
 
 data ImportItem
-   = VarImport Var
+  = VarImport Var
    | SyntaxImport String String
  deriving Eq
 
@@ -423,7 +423,7 @@ pos x xs = p xs 0
 -------------------------------------------------
 -- Making Patterns and Expressions
 
-truePat  = Pcon (Global "True") []
+truePat = Pcon (Global "True") []
 falsePat = Pcon (Global "False") []
 
 ifExp (l1,l2) x y z = Case x [(l1,truePat,Normal y,[]),(l2,falsePat,Normal z,[])]
@@ -857,7 +857,7 @@ instance Binds Dec where
   boundBy (Fun loc nm _ ms) = FX [nm] [proto nm] [] [] []
   boundBy (Pat loc nm nms p) = FX [nm] [] [] [] []
   boundBy (TypeSig loc [v] t) =
-        if isTyCon v then FX [] [ ] [] (proto v :(nub binds)) [v]
+        if isTyCon v then FX [] [] [] (proto v :nub binds) [v]
                      else FX [proto v] (v:ff) [] (nub binds) []
      where (FX _ _ ff tbs tfs) = vars [] t emptyF
            (binds,free) = partition typVar tfs
@@ -869,13 +869,13 @@ instance Binds Dec where
 
   boundBy (Data l b 0 nm sig vs cs ders ) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (Constr loc skol c ts eqs) = c
-  boundBy (GADT loc isProp nm knd cs ders _)| definesValueConstr knd  =
+  boundBy (GADT loc isProp nm knd cs ders _)| definesValueConstr knd =
             bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (loc,c,free,preds,typ) = c
 
   boundBy (Data l b _ nm sig vs cs ders ) = bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (Constr loc skol c ts eqs) = c
-  boundBy (GADT loc isProp nm knd cs ders _) | not(definesValueConstr knd)  =
+  boundBy (GADT loc isProp nm knd cs ders _) | not(definesValueConstr knd) =
           bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (loc,c,free,preds,typ) = c
 
@@ -1005,7 +1005,7 @@ instance Vars Exp where
   vars bnd (Lam ps e xs) = underBinder ps (\ bnd -> vars bnd e) bnd
   vars bnd (Let ds e) = underBinder ds (\ bnd -> vars bnd e) bnd
   vars bnd (Circ vs e ds) = underBinder ds (\ bnd -> vars bnd e) bnd
-  vars bnd (Case e ms)  = (vars bnd e) . (varsL bnd ms)
+  vars bnd (Case e ms) = (vars bnd e) . (varsL bnd ms)
   vars bnd (Do (bindE,failE) ss) = vars bnd ss . vars bnd failE . vars bnd bindE
   vars bnd (CheckT x) = vars bnd x
   vars bnd (Lazy x) = vars bnd x
@@ -1195,7 +1195,6 @@ ppDec dec =
   case dec of
     Fun _ v Nothing ms -> PP.vcat $ map ((ppVar v) <+>) (map ppClause ms)
     Fun _ v (Just pt) ms -> PP.vcat ((text "*" <> ppVar v <+> text "::" <+> ppPT pt):(map ((ppVar v) <+>) (map ppClause ms)))
-    --Fun _ v Nothing ms -> (ppVar v) <+> PP.equals <+> PP.vcat (map ppMatch ms)
     Val _ p b ds -> PP.vcat [PP.sep [ppPat p <+> PP.equals, PP.nest 2 $ ppBody b], PP.nest 2 $ ppWhere ds]
     Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> PP.equals <+> ppPat p
     TypeSig _ v pt -> PP.sep (PP.punctuate PP.comma (map ppVar v)) <+> text "::" <+> ppPT pt
@@ -1229,7 +1228,7 @@ ppDec dec =
       f1 ms = (map f2 ms)
       f2 (pts,pt) = PP.braces (PP.hsep (map ppPT pts)) <+> PP.equals <+> ppPT pt
 ppCs (loc,name,vars,preds,typ) =
-   PP.sep [ ((ppVar name) <> text "::"),PP.nest 3 (PP.sep [(all vars),quals preds,ppPT typ]) ]
+   PP.sep [(ppVar name <> text "::"),PP.nest 3 (PP.sep [all vars,quals preds,ppPT typ])]
   where all [] = PP.empty
         all xs = text "forall" <+> PP.fsep (map showM xs) <+> text "."
         quals [] = PP.empty
@@ -1239,7 +1238,7 @@ ppCs (loc,name,vars,preds,typ) =
 
 sepBy f comma [] = []
 sepBy f comma [x] = [f x]
-sepBy f comma (x:xs) = ((f x)<>(text comma)):sepBy f comma xs
+sepBy f comma (x:xs) = ((f x) <> (text comma)):sepBy f comma xs
 
 ppConstr (Constr _ args v pts mpps) =
   exists args <+> ppVar v <+> PP.vcat [PP.hsep (map parenT pts), eqf mpps]
@@ -1308,8 +1307,6 @@ ppBody b =
   case b of
     Guarded pes -> text "|" <+> myPP PP.vcat Front (PP.nest (-2) $ text "| ") (map f pes)
       where f (e1,e2) = ppExp e1 <+> PP.equals <+> ppExp e2
-      -- -> PP.hsep (map f pes)
-      --where f (e1,e2) = text "|" <+> ppExp e1 <+> PP.equals <+> ppExp e2
     Normal e -> ppExp e
     Unreachable -> text "unreachable"
 
@@ -1395,13 +1392,12 @@ ppPT x =
   case x of
     PolyLevel ns x -> text "level " <> PP.sep (map text ns) <> text " . " <> ppPT x
     TyVar' s -> text s
-    Rarrow' x y -> PP.hsep [ ppAll x, text "->", ppAll y]
-    Karrow' x y -> PP.parens $ PP.hsep [ ppPT x, text "~>", ppPT y]
+    Rarrow' x y -> PP.hsep [ppAll x, text "->", ppAll y]
+    Karrow' x y -> PP.parens $ PP.hsep [ppPT x, text "~>", ppPT y]
     TyApp' (TyApp' (TyCon' "(,)" _) x) y ->
-        PP.sep[PP.lparen <> ppPT x,PP.comma<>ppPT y,PP.rparen]
-        --PP.sep[ppPT x <> PP.comma,PP.nest 1 (ppPT y)]
+        PP.sep[PP.lparen <> ppPT x,PP.comma <> ppPT y,PP.rparen]
     TyApp' (TyApp' (TyCon' "(+)" _) x) y ->
-        PP.sep[PP.lparen <> ppPT x,text "+"<>ppPT y,PP.rparen]
+        PP.sep[PP.lparen <> ppPT x,text "+" <> ppPT y,PP.rparen]
     TyApp' (TyApp' (TyCon' "(->)" _) x) y ->
         PP.sep[ppPT x <+> text "->",PP.nest 1 (ppPT y)]
     TyApp' (TyApp' (TyCon' "Equal" _) x) y ->
@@ -1441,7 +1437,7 @@ ppV [(s,k,q)] = [PP.parens $ text s <> shq q <+> text "::" <+> ppPT k] -- <+> te
 ppV ((s,k,q):xs) = (PP.parens $ text s <> shq q <+> text "::" <+> ppPT k):(ppV xs)
 ppV [] = [PP.empty]
 shq All = PP.empty
-shq Ex  = text "'"
+shq Ex = text "'"
 
 ppP (Equality' x y) = PP.hsep [ppPT x, PP.equals, ppPT y]
 ppP (Rel' _ t) = ppPT t
