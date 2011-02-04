@@ -788,8 +788,7 @@ addBind v x = x {binds = v : binds x}
 addDepend v x = x {depends = v : depends x}
 addBindT ts x = x {tbinds = union ts (tbinds x)}
 addFreeT ts x = x {tfree = union ts (tfree x)}
-addFreeTvar nm x = x {tfree = union [Global nm] (tfree x)}
-addFreeTfun nm x = x {tfree = union [Global ('%':nm)] (tfree x)}
+addFreeTname nm x = x {tfree = union [Global nm] (tfree x)}
 
 underBinder :: Vars a => a -> ([Var] -> FX -> FX) -> [Var] -> FX -> FX
 underBinder binders bindee bnd x = bindee (bnd2++bnd) (appF y2 x)
@@ -957,16 +956,16 @@ instance Vars (Var,[PT]) where
 
 instance Vars PPred where
   vars bnd (Equality' x y) = vars bnd x . vars bnd y
-  vars bnd (Rel' nm ts) = addFreeTfun nm . vars bnd ts
+  vars bnd (Rel' nm ts) = addFreeTname nm . vars bnd ts
 
 instance Vars PT where
-  vars bnd (TyVar' s) = addFreeTvar s
-  vars bnd (TyCon' s _) = addFreeTfun s
+  vars bnd (TyVar' s) = addFreeTname s
+  vars bnd (TyCon' s _) = addFreeTname s
   vars bnd (TyApp' x y) = vars bnd x . vars bnd y
   vars bnd (Kinded x y) = vars bnd x . vars bnd y
   vars bnd (Rarrow' x y) = vars bnd x . vars bnd y
   vars bnd (Karrow' x y) = vars bnd x . vars bnd y
-  vars bnd (TyFun' (TyVar' f :xs)) = addFreeTfun f . varsL bnd xs
+  vars bnd (TyFun' (TyVar' f :xs)) = addFreeTname f . varsL bnd xs
   vars bnd (w@(TyFun' (f :xs))) = error ("Bad type function: "++show f++" -- "++show w)
   vars bnd (Star' _ _) = id
   vars bnd (Forallx q ss eqs t) = underTs args (vars bnd t) . underTs args (varsL bnd eqs)
@@ -1053,8 +1052,7 @@ freeOfDec d = (bound,deps)
         bound = map flagBind (binds x) ++ map flagNm (filter (not . typVar) (tbinds x))
         deps = map flagBind (free x) ++ map flagBind (depends x) ++ map flagNm (tfree x)
 
-flagNm g@(Global x) | not (flagged g) = Global('%':x)
-flagNm (Alpha x nm) = Alpha ('%':x) nm
+flagNm g@(Global x) = if flagged g then g else Global ('%':x)
 flagNm g = g
 
 flagged (Global ('%':s)) = True
