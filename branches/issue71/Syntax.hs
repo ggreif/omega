@@ -809,7 +809,8 @@ underTs ss f x = FX a b c d (nub e \\ ss)
 typVar (Global (c:cs)) = isLower c
 typVar _ = False
 
-proto (Global s) = (Global ("::"++s))
+proto (Global ('%':s)) = Global ("%::"++s)
+proto (Global s) = Global ("::"++s)
 proto x = x
 
 showV :: Dec -> String
