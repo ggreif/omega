@@ -788,6 +788,7 @@ addBind v x = x {binds = v : binds x}
 addDepend v x = x {depends = v : depends x}
 addBindT ts x = x {tbinds = union ts (tbinds x)}
 addFreeT ts x = x {tfree = union ts (tfree x)}
+addFreeTname nm x = x {tfree = union [Global nm] (tfree x)}
 
 underBinder :: Vars a => a -> ([Var] -> FX -> FX) -> [Var] -> FX -> FX
 underBinder binders bindee bnd x = bindee (bnd2++bnd) (appF y2 x)
@@ -808,7 +809,8 @@ underTs ss f x = FX a b c d (nub e \\ ss)
 typVar (Global (c:cs)) = isLower c
 typVar _ = False
 
-proto (Global s) = (Global ("::"++s))
+proto (Global ('%':s)) = Global ("%::"++s)
+proto (Global s) = Global ("::"++s)
 proto x = x
 
 showV :: Dec -> String
@@ -856,13 +858,16 @@ instance Binds Dec where
      where y = boundBy p
   boundBy (Fun loc nm _ ms) = FX [nm] [proto nm] [] [] []
   boundBy (Pat loc nm nms p) = FX [nm] [] [] [] []
-  boundBy (TypeSig loc [v] t) =
+  boundBy ts@(TypeSig loc [v] t) =
         if isTyCon v then FX [] [] [] (proto v :nub binds) [v]
+                     else if isTypeFun ts then FX [] [] [] (proto v':nub binds) [v']
                      else FX [proto v] (v:ff) [] (nub binds) []
      where (FX _ _ ff tbs tfs) = vars [] t emptyF
            (binds,free) = partition typVar tfs
            isTyCon (Global (x:xs)) = isUpper x
            isTyCon _ = False
+           preflag (Global nm) = Global ('%':nm)
+           v' = preflag v
   boundBy (Prim l nm t) = FX [nm] [] [] [] constrs
      where (FX _ _ _ tbs tfs) = vars [] t emptyF
            (vs,constrs) = partition typVar tfs
@@ -879,9 +884,10 @@ instance Binds Dec where
           bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (loc,c,free,preds,typ) = c
 
-  boundBy (Import s vs) = FX [] [] [] [] []
+  boundBy (Import s vs) = emptyF
   boundBy (TypeSyn loc nm args ty) = FX [] [] [] [Global nm] [proto (Global nm)]
-  boundBy (TypeFun loc nm ty ms) = FX [Global nm] [proto (Global nm)] [] [] []
+  boundBy (TypeFun loc nm ty ms) = FX [] [] [] [Global nm'] [proto (Global nm')]
+    where nm' = '%':nm
   boundBy (AddTheorem _ _) = emptyF
   boundBy _ = emptyF
 
@@ -922,7 +928,7 @@ instance Vars (Loc,Var,[([Char],PT)],[PPred],PT) where
     varsL bnd preds . vars bnd typ
 
 instance Vars ([PT],PT) where
-  vars bnd (args,body) = (addFreeT constrs) . (underTs vs (vars bnd body))
+  vars bnd (args,body) = addFreeT constrs . underTs vs (vars bnd body)
     where (FX _ _ _ _ argfree) = varsL bnd args emptyF
           (vs,constrs) = partition typVar argfree
 
@@ -955,16 +961,16 @@ instance Vars (Var,[PT]) where
 
 instance Vars PPred where
   vars bnd (Equality' x y) = vars bnd x . vars bnd y
-  vars bnd (Rel' nm ts) = addFreeT [Global nm] . vars bnd ts
+  vars bnd (Rel' nm ts) = addFreeTname nm . vars bnd ts
 
 instance Vars PT where
-  vars bnd (TyVar' s) = addFreeT [Global s]
-  vars bnd (TyCon' s _) = addFreeT [Global s]
+  vars bnd (TyVar' s) = addFreeTname s
+  vars bnd (TyCon' s _) = addFreeTname s
   vars bnd (TyApp' x y) = vars bnd x . vars bnd y
   vars bnd (Kinded x y) = vars bnd x . vars bnd y
   vars bnd (Rarrow' x y) = vars bnd x . vars bnd y
   vars bnd (Karrow' x y) = vars bnd x . vars bnd y
-  vars bnd (TyFun' (TyVar' f :xs)) = addFree bnd (Global f) . varsL bnd xs
+  vars bnd (TyFun' (TyVar' f :xs)) = addFreeTname ('%':f) . varsL bnd xs
   vars bnd (w@(TyFun' (f :xs))) = error ("Bad type function: "++show f++" -- "++show w)
   vars bnd (Star' _ _) = id
   vars bnd (Forallx q ss eqs t) = underTs args (vars bnd t) . underTs args (varsL bnd eqs)
@@ -1049,8 +1055,8 @@ freeOfDec d = (bound,deps)
         bound = binds x ++ map flagNm (filter (not . typVar) (tbinds x))
         deps = free x ++ depends x ++ map flagNm (tfree x)
 
-flagNm (Global x) = Global("%"++x)
-flagNm (Alpha x nm) = Alpha ("%"++x) nm
+flagNm g@(Global x) = if flagged g then g else Global ('%':x)
+flagNm g = g
 
 flagged (Global ('%':s)) = True
 flagged (Alpha ('%':s) n) = True
@@ -1360,7 +1366,7 @@ ppExp e =
     Escape e -> text "$" <> PP.parens (ppExp e)
     Run e -> text "run" <+> PP.parens (ppExp e)
     Reify s (Vlit c) -> ppLit c
-    Reify s v -> text $ "%"++s
+    Reify s v -> text $ '%':s
     Ann e pt -> PP.parens $ ppExp e <> text "::" <> ppPT pt
     ExtE x -> ppExt ppExp x
 

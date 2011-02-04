@@ -49,9 +49,9 @@ le:: Nat ~> Nat ~> Boolean
 {le (S n) Z} = F
 {le (S n) (S m)} = {le n m}
 
-and:: Boolean ~> Boolean ~> Boolean
-{and T x} = x
-{and F x} = F
+andB:: Boolean ~> Boolean ~> Boolean
+{andB T x} = x
+{andB F x} = F
 
 even :: Nat ~> Boolean
 {even Z} = T

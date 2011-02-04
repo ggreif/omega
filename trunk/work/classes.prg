@@ -24,3 +24,8 @@ data Test :: * where
   Test :: Monad' a t => Monad a -> a t -> Test
 
 
+-- play with instances
+
+data Instance :: (f ~> other) ~> * where
+  Inst :: Monad a -> Instance ((Monad' a) other)
+
