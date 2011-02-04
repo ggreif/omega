@@ -789,7 +789,7 @@ addDepend v x = x {depends = v : depends x}
 addBindT ts x = x {tbinds = union ts (tbinds x)}
 addFreeT ts x = x {tfree = union ts (tfree x)}
 addFreeTvar nm x = x {tfree = union [Global nm] (tfree x)}
-addFreeTfun nm x = x {tfree = union [Global nm] (tfree x)}
+addFreeTfun nm x = x {tfree = union [Global ('%':nm)] (tfree x)}
 
 underBinder :: Vars a => a -> ([Var] -> FX -> FX) -> [Var] -> FX -> FX
 underBinder binders bindee bnd x = bindee (bnd2++bnd) (appF y2 x)
@@ -1053,8 +1053,9 @@ freeOfDec d = (bound,deps)
         bound = map flagBind (binds x) ++ map flagNm (filter (not . typVar) (tbinds x))
         deps = map flagBind (free x) ++ map flagBind (depends x) ++ map flagNm (tfree x)
 
-flagNm (Global x) = Global("%"++x)
-flagNm (Alpha x nm) = Alpha ("%"++x) nm
+flagNm g@(Global x) | not (flagged g) = Global('%':x)
+flagNm (Alpha x nm) = Alpha ('%':x) nm
+flagNm g = g
 
 flagged (Global ('%':s)) = True
 flagged (Alpha ('%':s) n) = True
@@ -1364,7 +1365,7 @@ ppExp e =
     Escape e -> text "$" <> PP.parens (ppExp e)
     Run e -> text "run" <+> PP.parens (ppExp e)
     Reify s (Vlit c) -> ppLit c
-    Reify s v -> text $ "%"++s
+    Reify s v -> text $ '%':s
     Ann e pt -> PP.parens $ ppExp e <> text "::" <> ppPT pt
     ExtE x -> ppExt ppExp x
 
