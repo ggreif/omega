@@ -857,13 +857,16 @@ instance Binds Dec where
      where y = boundBy p
   boundBy (Fun loc nm _ ms) = FX [nm] [proto nm] [] [] []
   boundBy (Pat loc nm nms p) = FX [nm] [] [] [] []
-  boundBy (TypeSig loc [v] t) =
+  boundBy ts@(TypeSig loc [v] t) =
         if isTyCon v then FX [] [] [] (proto v :nub binds) [v]
+                     else if isTypeFun ts then FX [] [] [] (proto v':nub binds) [v']
                      else FX [proto v] (v:ff) [] (nub binds) []
      where (FX _ _ ff tbs tfs) = vars [] t emptyF
            (binds,free) = partition typVar tfs
            isTyCon (Global (x:xs)) = isUpper x
            isTyCon _ = False
+           preflag (Global nm) = Global ('%':nm)
+           v' = preflag v
   boundBy (Prim l nm t) = FX [nm] [] [] [] constrs
      where (FX _ _ _ tbs tfs) = vars [] t emptyF
            (vs,constrs) = partition typVar tfs
@@ -882,7 +885,8 @@ instance Binds Dec where
 
   boundBy (Import s vs) = emptyF
   boundBy (TypeSyn loc nm args ty) = FX [] [] [] [Global nm] [proto (Global nm)]
-  boundBy (TypeFun loc nm ty ms) = FX [Global nm] [proto (Global nm)] [] [] []
+  boundBy (TypeFun loc nm ty ms) = FX [] [] [] [Global nm'] [proto (Global nm')]
+    where nm' = '%':nm
   boundBy (AddTheorem _ _) = emptyF
   boundBy _ = emptyF
 
@@ -965,7 +969,7 @@ instance Vars PT where
   vars bnd (Kinded x y) = vars bnd x . vars bnd y
   vars bnd (Rarrow' x y) = vars bnd x . vars bnd y
   vars bnd (Karrow' x y) = vars bnd x . vars bnd y
-  vars bnd (TyFun' (TyVar' f :xs)) = addFreeTname f . varsL bnd xs
+  vars bnd (TyFun' (TyVar' f :xs)) = addFreeTname ('%':f) . varsL bnd xs
   vars bnd (w@(TyFun' (f :xs))) = error ("Bad type function: "++show f++" -- "++show w)
   vars bnd (Star' _ _) = id
   vars bnd (Forallx q ss eqs t) = underTs args (vars bnd t) . underTs args (varsL bnd eqs)
@@ -1047,7 +1051,7 @@ instance Vars [Stmt Pat Exp Dec] where  -- Stmt's always come in lists, and thei
 freeOfDec :: Dec -> ([Var],[Var])
 freeOfDec d = (bound,deps)
   where x = vars [] [d] emptyF
-        flagBind v | isTypeFun d = flagNm v
+        --flagBind v | isTypeFun d = flagNm v
         flagBind v = v
         bound = map flagBind (binds x) ++ map flagNm (filter (not . typVar) (tbinds x))
         deps = map flagBind (free x) ++ map flagBind (depends x) ++ map flagNm (tfree x)
