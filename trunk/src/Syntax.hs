@@ -902,9 +902,8 @@ instance Vars Dec where
   vars bnd (Data loc b strata nm sig vs cs _) =
        underTs (map fst vs) (varsL bnd cs) . (varsL bnd (map snd vs)) . (vars bnd sig)
 
-  vars bnd (GADT loc isProp nm knd cs _ _) =  -- | definesValueConstr knd =
+  vars bnd (GADT loc isProp nm knd cs _ _) =
        vars bnd knd . varsL bnd cs
-  -- where get (loc,c,free,preds,typ) = c
 
   vars bnd (TypeSig loc [v] t) = addFreeT (nub free)
      where (FX _ _ _ tbs tfs) = vars bnd t emptyF
