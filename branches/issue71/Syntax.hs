@@ -1051,10 +1051,8 @@ instance Vars [Stmt Pat Exp Dec] where  -- Stmt's always come in lists, and thei
 freeOfDec :: Dec -> ([Var],[Var])
 freeOfDec d = (bound,deps)
   where x = vars [] [d] emptyF
-        --flagBind v | isTypeFun d = flagNm v
-        flagBind v = v
-        bound = map flagBind (binds x) ++ map flagNm (filter (not . typVar) (tbinds x))
-        deps = map flagBind (free x) ++ map flagBind (depends x) ++ map flagNm (tfree x)
+        bound = binds x ++ map flagNm (filter (not . typVar) (tbinds x))
+        deps = free x ++ depends x ++ map flagNm (tfree x)
 
 flagNm g@(Global x) = if flagged g then g else Global ('%':x)
 flagNm g = g
