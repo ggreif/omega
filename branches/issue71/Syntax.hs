@@ -880,7 +880,7 @@ instance Binds Dec where
           bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (loc,c,free,preds,typ) = c
 
-  boundBy (Import s vs) = FX [] [] [] [] []
+  boundBy (Import s vs) = emptyF
   boundBy (TypeSyn loc nm args ty) = FX [] [] [] [Global nm] [proto (Global nm)]
   boundBy (TypeFun loc nm ty ms) = FX [Global nm] [proto (Global nm)] [] [] []
   boundBy (AddTheorem _ _) = emptyF
