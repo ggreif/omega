@@ -221,7 +221,7 @@ strat 3 = "class"
 strat n = "data@"++show n
 
 ---------------------------------------------------
-isData (Data _ _ n _ _ _ _ _ ) = True
+isData (Data _ _ n _ _ _ _ _) = True
 isData (GADT loc isProp nm knd cs ders ext) = True
 isData (TypeSig loc [Global (x:xs)] pt) | isUpper x = True
 isData _ = False
@@ -237,7 +237,7 @@ isTypeFun (TypeSig loc [Global (x:xs)] (Karrow' _ _)) | isLower x = True
 isTypeFun (TypeSig loc [Global (x:xs)] (Forallx _ _ _ (Karrow' _ _))) | isLower x = True
 isTypeFun _ = False
 
-isTheorem (AddTheorem _ _ ) = True
+isTheorem (AddTheorem _ _) = True
 isTheorem _ = False
 -----------------------------------------------------------
 
@@ -309,7 +309,7 @@ binop nm e1 e2 = App(App (Var (Global nm)) e1) e2
 decname (Val loc pat b ds) = patBinds pat
 decname (Fun loc nm _ cs) = [nm]
 decname (Pat loc nm ps p) = [nm]
-decname (Data loc b strata nm sig args cs ds ) = nm : map f cs
+decname (Data loc b strata nm sig args cs ds) = nm : map f cs
   where f (Constr loc skol nm ts eqs) = nm
 decname (GADT loc isProp nm knd cs ders _) = nm : map f cs
   where f (loc,c,free,preds,typ) = c
@@ -329,7 +329,7 @@ decloc :: Dec -> [(Var,Loc)]
 decloc (Val loc pat b ds) = map (\ nm -> (nm,loc)) (patBinds pat)
 decloc (Fun loc nm _ cs) = [(nm,loc)]
 decloc (Pat loc nm ps p) = [(nm,loc)]
-decloc (Data loc b strata nm sig args cs ds ) = [(nm,loc)] ++ map f cs
+decloc (Data loc b strata nm sig args cs ds) = [(nm,loc)] ++ map f cs
   where f (Constr loc skol nm ts eqs) = (nm,loc)
 decloc (GADT loc isProp nm knd cs ders _) = [(nm,loc)] ++ map f cs
   where f (loc,c,free,preds,typ) = (c,loc)
@@ -463,7 +463,7 @@ dt (Fun _ x _ _) = Fn x
 dt (Val _ _ _ _) = V
 dt (TypeSig loc [n] _) = TS n
 dt (Prim loc n _) = Pr
-dt (Data _ _ _ _ _ _ _ _ ) = D
+dt (Data _ _ _ _ _ _ _ _) = D
 dt (GADT _  _ _ _ _ _ _) = D
 dt (TypeSyn _ _ _ _) = Syn
 dt (TypeFun _ s _ _) = TFun s
@@ -867,13 +867,13 @@ instance Binds Dec where
      where (FX _ _ _ tbs tfs) = vars [] t emptyF
            (vs,constrs) = partition typVar tfs
 
-  boundBy (Data l b 0 nm sig vs cs ders ) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
+  boundBy (Data l b 0 nm sig vs cs ders) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (Constr loc skol c ts eqs) = c
   boundBy (GADT loc isProp nm knd cs ders _)| definesValueConstr knd =
             bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (loc,c,free,preds,typ) = c
 
-  boundBy (Data l b _ nm sig vs cs ders ) = bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
+  boundBy (Data l b _ nm sig vs cs ders) = bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
      where get (Constr loc skol c ts eqs) = c
   boundBy (GADT loc isProp nm knd cs ders _) | not(definesValueConstr knd) =
           bindDs ders (FX [] [] [] (nm : map get cs) [proto nm])
@@ -899,7 +899,7 @@ instance Vars Dec where
   vars bnd (Fun loc _ _ ms) = varsL bnd ms
   vars bnd (Pat loc nm nms p) = \ y -> foldr (addFree bnd) y (depends x)
      where x = vars [] p emptyF -- pattern C x y = (x,D y)  has "D" as free.
-  vars bnd (Data loc b strata nm sig vs cs _ ) =
+  vars bnd (Data loc b strata nm sig vs cs _) =
        underTs (map fst vs) (varsL bnd cs) . (varsL bnd (map snd vs)) . (vars bnd sig)
 
   vars bnd (GADT loc isProp nm knd cs _ _) =  -- | definesValueConstr knd =
@@ -933,12 +933,12 @@ instance Vars a => Vars (Maybe a) where
 
 -- Organize and sequence the two steps
 -- Combine "binds" "depends" "tbinds" from step 1
--- with "free" abd "tfree" of second step.
+-- with "free" and "tfree" of second step.
 
 instance Vars [Dec] where
-  vars bnd ds x = FX vbnd deps fs tbnd (tfs ++ tfs2)               -- Combine
-    where (FX vbnd deps    _  tbnd tfs2 ) = boundBy ds             -- Step 1
-          (FX _    _ fs _    tfs) = foldr (vars (vbnd++bnd)) x ds  -- Step 2
+  vars bnd ds x = FX vbnd deps fs tbnd (tfs ++ tfs2)         -- Combine
+    where (FX vbnd deps _ tbnd tfs2) = boundBy ds            -- Step 1
+          (FX _ _ fs _ tfs) = foldr (vars (vbnd++bnd)) x ds  -- Step 2
 
 ----------------------------------------------------
 -- Vars instances for types other than [Dec]
@@ -999,7 +999,7 @@ instance Vars Var where
 instance Vars Exp where
   vars bnd (Var v) = addFree bnd v
   vars bnd (Lit _) = id
-  vars bnd (Sum _ e ) = vars bnd e
+  vars bnd (Sum _ e) = vars bnd e
   vars bnd (Prod e1 e2) = (vars bnd e1) . (vars bnd e2)
   vars bnd (App e1 e2) = (vars bnd e1) . (vars bnd e2)
   vars bnd (Lam ps e xs) = underBinder ps (\ bnd -> vars bnd e) bnd
@@ -1118,10 +1118,10 @@ instance Eq Dec where
   (Pat _ v1 vs1 p1) == (Pat _ v2 vs2 p2) = v1==v2 && vs1==vs2 && p1==p2
   (TypeSig _ v1 pt1) == (TypeSig _ v2 pt2) = v1==v2 && pt1==pt2
   (Prim _ v1 pt1) == (Prim _ v2 pt2) = v1==v2 && pt1==pt2
-  (Data _ b1 str1 v1 Nothing targ1 cs1 ders1 ) == (Data _ b2 str2 v2 Nothing targ2 cs2 ders2 ) =
-    b1==b2 && str1==str2 && v1==v2 && targ1==targ2 && cs1==cs2 && ders1==ders2
-  (Data _ b1 str1 v1 (Just pt1) targ1 cs1 ders1 ) == (Data _ b2 str2 v2 (Just pt2) targ2 cs2 ders2 ) =
-    b1==b2 && str1==str2 && v1==v2 && pt1==pt2 && targ1==targ2 && cs1==cs2 && ders1==ders2
+  (Data _ b1 str1 v1 Nothing targ1 cs1 ders1) == (Data _ b2 str2 v2 Nothing targ2 cs2 ders2) =
+     b1==b2 && str1==str2 && v1==v2 && targ1==targ2 && cs1==cs2 && ders1==ders2
+  (Data _ b1 str1 v1 (Just pt1) targ1 cs1 ders1) == (Data _ b2 str2 v2 (Just pt2) targ2 cs2 ders2) =
+     b1==b2 && str1==str2 && v1==v2 && pt1==pt2 && targ1==targ2 && cs1==cs2 && ders1==ders2
   (GADT x1 x2 x3 x4 x5 x6 x7) == (GADT y1 y2 y3 y4 y5 y6 y7) =
      x2==y2 && x3==y3 && x4==y4 && map f x5== map f y5
        where f (loc,v,cs,ps,r) = (v,cs,ps,r)
@@ -1129,11 +1129,11 @@ instance Eq Dec where
   (Reject s1 ds1) == (Reject s2 ds2) = s1==s2 && ds1==ds2
   (Import s1 vs1) == (Import s2 vs2) = s1==s2 && vs1==vs2
   (TypeSyn _ s1 targs1 pt1) == (TypeSyn _ s2 targs2 pt2) =
-    s1==s2 && targs1==targs2 && pt1==pt2
+     s1==s2 && targs1==targs2 && pt1==pt2
   (TypeFun _ s1 Nothing xs1) == (TypeFun _ s2 Nothing xs2) =
-    s1==s2 && xs1==xs2
+     s1==s2 && xs1==xs2
   (TypeFun _ s1 (Just pt1) xs1) == (TypeFun _ s2 (Just pt2) xs2) =
-    s1==s2 && pt1==pt2 && xs1==xs2
+     s1==s2 && pt1==pt2 && xs1==xs2
   _ == _ = False
 
 instance (Eq p, Eq e, Eq d) => Eq (Stmt p e d) where
