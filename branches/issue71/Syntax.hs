@@ -964,7 +964,7 @@ instance Vars PT where
   vars bnd (Kinded x y) = vars bnd x . vars bnd y
   vars bnd (Rarrow' x y) = vars bnd x . vars bnd y
   vars bnd (Karrow' x y) = vars bnd x . vars bnd y
-  vars bnd (TyFun' (TyVar' f :xs)) = addFree bnd (Global f) . varsL bnd xs
+  vars bnd (TyFun' (TyVar' f :xs)) = addFreeT [Global f] . varsL bnd xs
   vars bnd (w@(TyFun' (f :xs))) = error ("Bad type function: "++show f++" -- "++show w)
   vars bnd (Star' _ _) = id
   vars bnd (Forallx q ss eqs t) = underTs args (vars bnd t) . underTs args (varsL bnd eqs)
@@ -1046,8 +1046,10 @@ instance Vars [Stmt Pat Exp Dec] where  -- Stmt's always come in lists, and thei
 freeOfDec :: Dec -> ([Var],[Var])
 freeOfDec d = (bound,deps)
   where x = vars [] [d] emptyF
-        bound = binds x ++ map flagNm (filter (not . typVar) (tbinds x))
-        deps = free x ++ depends x ++ map flagNm (tfree x)
+        flagBind v | isTypeFun d = flagNm v
+        flagBind v = v
+        bound = map flagBind (binds x) ++ map flagNm (filter (not . typVar) (tbinds x))
+        deps = map flagBind (free x) ++ map flagBind (depends x) ++ map flagNm (tfree x)
 
 flagNm (Global x) = Global("%"++x)
 flagNm (Alpha x nm) = Alpha ("%"++x) nm
