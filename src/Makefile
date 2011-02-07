@@ -11,7 +11,7 @@ HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 SVN              = svn
 
-.PHONY: all tests clean manual update
+.PHONY: all tests clean cleaner manual update
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
