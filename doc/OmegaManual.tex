@@ -790,7 +790,7 @@ prompt> newLabel "a"              -- A pure value
 
 \om\ includes two staging annotations and brackets: (\verb+[| _ |]+),
 escape (\verb+$( _ )+), and two functions: 
-{\tt lift::(forall a . a -> Code a)} and {\tt run::(forall a . (Code a) -> a)}
+{\tt lift::(forall a . a -> Code a)} and {\tt run::(forall a . Code a -> a)}
 for building and manipulating code. \om\ uses
 the Template Haskell\cite{Sheard02} conventions for creating code. For example:
 \begin{verbatim}
