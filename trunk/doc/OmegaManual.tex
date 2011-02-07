@@ -1603,7 +1603,7 @@ tag in the special syntax.
 The list-like syntax associates two functions with each
 tag. These functions play the role of {\tt Nil} and {\tt Cons}.
 For example if the tag "{\tt i}" is associated with
-the functions {\tt (C,N)}, then the expansion is as follows.
+the functions {\tt (C,N)}, then the expansion is as follows:
 \begin{verbatim}
 []i         ---> N
 [x,y,z]i    ---> C x (C y (C z N))
@@ -1663,7 +1663,7 @@ the functions {\tt (RC,RN)}, then the expansion is as follows:
 The unary-increment syntax associates one function with each tag. This function
 plays the role of an increment function {\tt Tick}. 
 For example if the tag "{\tt w}" is associated with
-the function {\tt Tick}, then the expansion is as follows.
+the function {\tt Tick}, then the expansion is as follows:
 \begin{verbatim}
 (x`0)w     ---> x
 (x`1)w     ---> Tick x
