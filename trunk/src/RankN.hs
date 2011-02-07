@@ -4,6 +4,7 @@
   , FlexibleInstances
   , UndecidableInstances
   , TypeSynonymInstances
+  , GADTs
   #-}
 module RankN where
 
@@ -3295,11 +3296,11 @@ infiniteNames = makeNames "abcdefghijklmnopqrstuvwxyz"
 class DocReady t where
    dDoc:: NameStore d => d -> t -> (d,Doc)
 
-data Docs  where
-   Dx:: DocReady x => x -> Docs
+data Docs where
+   Dx :: DocReady x => x -> Docs
    Dsp :: Docs
-   Doc:: Doc -> Docs
-   Dds:: String -> Docs
+   Doc :: Doc -> Docs
+   Dds :: String -> Docs
 
 docs :: [Docs] -> DispElem Z
 docs xs = Df f xs

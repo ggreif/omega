@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses
   , FunctionalDependencies
   , FlexibleInstances
+  , ScopedTypeVariables
   #-}
 module Monads where
 

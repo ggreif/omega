@@ -93,7 +93,7 @@ eval env@(Ev xs) x =
       -- ; writeln("<< "++show ans)
       ; return ans }
 
-evalZ ::  Env -> Exp -> FIO V
+evalZ :: Env -> Exp -> FIO V
 evalZ env (Var s) = evalVar env s
 evalZ env (Lit (ChrSeq s)) = return(VChrSeq s)
 evalZ env (Lit (CrossStage v)) = return v
@@ -132,7 +132,7 @@ evalZ env (Bracket e) =
   do { e2 <- freshE e
      ; e3 <- rebuild 1 env e2
      ; return (Vcode e3 empty) }
-evalZ env (Escape e) = fail ("Escape not allowed at level 0" ++ (show (Escape e))) --evalZ env e
+evalZ env (Escape e) = fail ("Escape not allowed at level 0" ++ show (Escape e))
 evalZ env (Run e) =
   do { x <- eval env e
      ; let f (Vcode c env2) = eval env2 c
@@ -148,8 +148,10 @@ evalZ env e = fail ("\n\nNo such exp yet: "++show e)
 -- "rebuild" is an almost generic walk over a term. We build a (Par m)
 --  to indicate where its not generic.
 
+rebuild :: Int -> Env -> Exp -> FIO Exp
 rebuild level env e = parE e (makeR env 1 [])
 
+makeR :: Env -> Int -> Perm -> Par FIO
 makeR env level perm = Par ext app inc esc
   where ext (Global s) = return(Global s,makeR env level perm)
         ext (Alpha s n) =
