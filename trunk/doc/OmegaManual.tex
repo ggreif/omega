@@ -1045,13 +1045,12 @@ diverge.
 
 Type checking {\tt app}, generates and propagates equalities, and requires
 solving the equations like {\tt (S\{plus t m\} = \{plus n m\})} and {\tt (n =
-S t)}. As of version 1.2.2, the \om\ typechecker solves such equations using a
-form of narrowing.
+S t)}. The \om\ typechecker solves such equations using a form of narrowing.
 
 \subsection{Solving Type-Checking Equations Using Narrowing}
 
 \om\ uses a number of techniques to solve equations which arise from
-type checking. One of these is Narrowing.
+type checking. One of these is narrowing.
 Narrowing is a well studied computational mechanism, and is the primary means of
 computation in the functional logic language Curry
 \cite{Hanus06Curry,journals/jflp/HanusS99}. Narrowing combines the power of reduction
