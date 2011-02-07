@@ -1607,7 +1607,7 @@ the functions {\tt (C,N)}, then the expansion is as follows.
 \begin{verbatim}
 []i         ---> N
 [x,y,z]i    ---> C x (C y (C z N))
-[x;xs]i     ---> (C x xs)
+[x ; xs]i   ---> C x xs
 [x,y ; zs]i ---> C x (C y zs)
 \end{verbatim}
 \noindent
@@ -1656,7 +1656,7 @@ the functions {\tt (RC,RN)}, then the expansion is as follows:
 \begin{verbatim}
 {}i             ---> RN
 {a=x,b=y}i      ---> RC a x (RC b y RN)
-{a=x;xs}i       ---> (RC a x xs)
+{a=x ; xs}i     ---> RC a x xs
 {a=x,b=y ; zs}i ---> RC a x (RC b y zs)
 \end{verbatim}
 
