@@ -43,6 +43,7 @@ OmegaManual.ps: version.tex OmegaManual.tex
 	bibtex$(EXT) OmegaManual
 	latex$(EXT) OmegaManual.tex && latex$(EXT) OmegaManual.tex
 	dvips$(EXT) OmegaManual
+	- dvipdf$(EXT) OmegaManual
 
 update:
 	$(SVN) update ..
