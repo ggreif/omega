@@ -117,10 +117,8 @@ move1file time (dir,name,".txt") =
    copyfile (dir++name++".txt") (distrDir++"/"++name++".txt")
 move1file time (dir,name,ext@".ps") =
    system ("cp "++dir++name++ext++" "++distrDir++name++ext) >> return ()
-   --copyfile (dir++name++ext) (distrDir++"/"++name++ext)
 move1file time (dir,name,ext@".pdf") =
    system ("cp "++dir++name++ext++" "++distrDir++name++ext) >> return ()
-   --copyfile (dir++name++ext) (distrDir++"/"++name++ext)
 move1file time (dir,name,"") =
    copyfile (dir++name++"") (distrDir++"/"++name++"")
 move1file time (dir,name,ext) =
@@ -141,8 +139,6 @@ writeVersionInfo time =
      ; writeFile versionfile body
      }
 
---time = unsafePerformIO(getTime)
-
 
 manuals =
  [ (manualDir, "OmegaManual", ".ps"),
@@ -150,9 +146,7 @@ manuals =
  ]
 
 makeManual dir time =
-  do { --setCurrentDirectory dir
-     ; system ("make -C "++dir++" manual EXT="++extension)
-     --; system ("cp "++manualDir++"OmegaManual.ps "++distrDir++"/OmegaManual.ps")
+  do { system ("make -C "++dir++" manual EXT="++extension)
      ; mapM (move1file time) manuals 
      }
 
