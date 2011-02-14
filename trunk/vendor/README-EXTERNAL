@@ -2,15 +2,19 @@ This directory contains imported code
 of relevant algorithms which are *not*
 part of the Omega project.
 
-Currently two algorithms are present:
+Currently three algorithms are present:
 
 o "Practical type inference for arbitrary-rank types" by Peyton Jones et al.
   http://research.microsoft.com/en-us/um/people/simonpj/papers/higher-rank/
- 
+
+o "FPH: first-class polymorphism for Haskell" by Dimitrios Vytiniotis et al.
+  retrieved from http://research.microsoft.com/pubs/79865/fph-impl.gz
+
 o "Algorithm P" from Chuan-kai Lin's PhD thesis
   http://sites.google.com/site/chklin/research
 
 
-Both are archived here with permission of the respective authors
-under the BSD (3-clause) license.
+All of them are archived here with permission of their respective
+authors under the BSD (3-clause) license. Please consult the checkin
+comments ('svn log') on the directories for more details.
 
