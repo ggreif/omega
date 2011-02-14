@@ -1,0 +1,13 @@
+Prototype for the Boxy Constrained System [Bidirectional Version]
+March 2008, Dimitrios Vytiniotis 
+
+
+Compiling and Using:
+====================
+
+To compile make sure you have GHC installed and simply run `make'. 
+To run with an example file type: 
+ 
+  ./Main example.hs 
+
+Examples are included in the example.hs file
