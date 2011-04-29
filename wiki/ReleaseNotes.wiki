@@ -22,7 +22,7 @@ The `Omega15` file has been compressed by following commands (on a linux machine
 zip -v -r Omega15 distr -x \*.pdf -x \*.ps --to-crlf
 zip -v -u Omega15 distr/*.pdf distr/*.ps
 }}}
-So all text files are with CR/LF line endings but the .pdf and .ps onws, which are left binary.
+So all text files are with CR/LF line endings but the `.pdf` and `.ps` ones, which are left binary.
 
 = Older Releases =
 
