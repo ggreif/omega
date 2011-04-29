@@ -1840,7 +1840,7 @@ captured sig1 sig2 rho mess =
 -- Subsumption instances
 
 instance TyCh m => Subsumption m Tau Tau where
-   morepoly s x y = -- warnM [Ds "Insubsumption Tau Tau ",Dd x,Ds "=?=" ,Dd y] >>
+   morepoly s x y = -- warnM [Ds "In subsumption Tau Tau ",Dd x,Ds "=?=" ,Dd y] >>
                     unify x y
 
 instance (TypeLike m b,Subsumption m b b) => Subsumption m b (Expected b) where
@@ -1870,10 +1870,10 @@ instance TyCh m => Subsumption m Sigma Sigma where
         }
 
 instance TyCh m => Subsumption m Sigma (Expected Rho) where
-   morepoly s s1 (Check e2) = -- warnM [Ds "Insubsumption Sigma ExpectedRho ",Dd s1,Ds "=?=" ,Dd e2] >>
+   morepoly s s1 (Check e2) = -- warnM [Ds "In subsumption Sigma ExpectedRho ",Dd s1,Ds "=?=" ,Dd e2] >>
                               morepoly s s1 e2
    morepoly s s1 (Infer ref) =
-      do { -- warnM [Ds "Insubsumption Sigma ExpectedRho ",Dd s1,Ds "=?= Infer"];
+      do { -- warnM [Ds "In subsumption Sigma ExpectedRho ",Dd s1,Ds "=?= Infer"];
            (preds,rho1) <- instanTy [] s1
          ; injectA " morepoly Sigma (Expected Rho) " preds -- ## DO THIS WITH THE PREDS?
          ; writeRef ref rho1
