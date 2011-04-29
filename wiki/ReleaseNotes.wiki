@@ -1,7 +1,7 @@
 #summary Added features and notable problems or improvements for each of the releases in temporal order.
 #labels Featured
 
-= _Upcoming_ Release 1.5 =
+= Release 1.5 _(2011-04-29)_=
 
 Release 1.5 marks the first milestone without major involvement of [http://code.google.com/u/sheardOmega/ Tim], who is directing his attention towards [http://code.google.com/p/trellys Trellys], a compiled language with dependent types. Big thanks to him for all the awesome work on Ωmega in the past, we will miss his vision, wisdom an profound understanding of the matter. With some luck he can still contribute an occasional fix here or there.
 
@@ -15,6 +15,9 @@ Additional syntax extensions can be derived. These include:
 
 == Bug Fixes ==
 Many bugs have been fixed, most notably displaying higher-rank (issue 75) and arrow (issue 83) types. Thanks for the attached patches we received!
+
+== Obtaining the Release ==
+Please visit [http://code.google.com/p/omega/downloads/list the downloads tab] for getting the sources. You will need a modestly recent GHC to compile it.
 
 == Format of the Download Archive ==
 The `Omega15` file has been compressed by following commands (on a linux machine)
