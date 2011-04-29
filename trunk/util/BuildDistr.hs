@@ -2,11 +2,12 @@ module BuildDistr  where
 
 import Directory(doesFileExist,doesDirectoryExist,removeFile,
                  getCurrentDirectory,setCurrentDirectory,
-                 createDirectory,getDirectoryContents)
+                 getDirectoryContents)
+import System.Directory(createDirectoryIfMissing)
 import System(system)
 import Time(getClockTime,toCalendarTime,calendarTimeToString)
 import BuildSpecific(distrDir,srcDir,parseDir,libDir,manualDir
-                    ,testsDir,rootDir,version)
+                    ,testsDir,rootDir,extension,version)
 import System.IO.Unsafe(unsafePerformIO)
 
 license =
@@ -55,10 +56,9 @@ sources =
    (srcDir, "Version", ".hs"),
 
    (srcDir, "LangPrelude", ".prg"),
-   --(srcDir, "buildMain", ".txt"),
    (rootDir, "LICENSE", ".txt"),
    (srcDir, "Makefile","")
-  ]
+ ]
 
 
 -- ====================================================================
@@ -83,7 +83,7 @@ cleanTarget =
           ; mapM f files
           ; setCurrentDirectory current
           })
-      (createDirectory distrDir)
+      (createDirectoryIfMissing True distrDir)
 
 
 getTime =
@@ -115,25 +115,20 @@ verbatimFile source target =
 
 move1file time (dir,name,".txt") =
    copyfile (dir++name++".txt") (distrDir++"/"++name++".txt")
+move1file time (dir,name,ext@".ps") =
+   system ("cp "++dir++name++ext++" "++distrDir++name++ext) >> return ()
+move1file time (dir,name,ext@".pdf") =
+   system ("cp "++dir++name++ext++" "++distrDir++name++ext) >> return ()
 move1file time (dir,name,"") =
    copyfile (dir++name++"") (distrDir++"/"++name++"")
 move1file time (dir,name,ext) =
     prepend time license
             (dir++name++ext) (distrDir++"/"++name++ext)
 
-cvsUpdate dir =
-  do { let --command = ("C:\\cygwin\\bin\\bash --login -c \"cd "++dir++" ; cvs update\"")
-           command = ("bash --login -c \"cd "++dir++" ; cvs update\"")
-     ; putStr "\n**********************************************\n"
-     ; putStr ("*** CVS UPDATE "++dir++"\n"++command++"\n")
-     --; system "bash --login -c"
-     ; system command
-     }
-
 compile dir =
   do { setCurrentDirectory dir
      ; system "which ghc"
-     ; system "make"
+     ; system ("make EXT="++extension)
      }
 
 writeVersionInfo time =
@@ -144,28 +139,31 @@ writeVersionInfo time =
      ; writeFile versionfile body
      }
 
-time = unsafePerformIO(getTime)
 
+manuals =
+ [ (manualDir, "OmegaManual", ".ps"),
+   (manualDir, "OmegaManual", ".pdf")
+ ]
 
-makeManual dir =
-  do { setCurrentDirectory dir
-     ; system "make manual" 
-     ; system ("cp "++manualDir++"OmegaManual.ps "++distrDir++"/OmegaManual.ps")
+makeManual dir time =
+  do { system ("make -C "++dir++" manual EXT="++extension)
+     ; mapM (move1file time) manuals 
      }
 
 main =
-  do { --cvsUpdate ??
+  do { system ("make -C "++srcDir++" update")
      ; time <- getTime
      ; putStr time
      ; cleanTarget
      ; writeVersionInfo time
      ; mapM (move1file time) sources
-     ; makeManual distrDir  -- compiles, calls omega -manual, and then laTex
+     ; makeManual srcDir time -- compiles, calls omega -manual, and then LaTeX
      ; setCurrentDirectory distrDir
      ; system "make clean"
-     ; putStr (version++"\n"++time++"\n")
+     ; putStr ("\n"++version++"\n"++time++"\n")
      ; putStr ("Target Directory:  "++distrDir++"\n")
-     ; putStr ("Root Directory:    "++srcDir++"\n")
+     ; putStr ("Root Directory:    "++rootDir++"\n")
+     ; putStr ("Source Directory:  "++srcDir++"\n")
      ; putStr ("Parse Directory:   "++parseDir++"\n")
      ; putStr ("Library Directory: "++libDir++"\n")
      }
