@@ -10,7 +10,7 @@ The highlight of this release is the change of licensing terms to become a pure 
 
 == Syntax ==
 Additional syntax extensions can be derived. These include:
-  * left-associative variants to `Pair`, `List` and `Record`
+  * left-associative variants to `Pair`, `List` and `Record` (spelled as `LeftPair` etc.)
   * nullary `Unit` and unary `Item` extensions
 
 == Bug Fixes ==
