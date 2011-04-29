@@ -3,7 +3,7 @@
 
 = Release 1.5 _(2011-04-29)_=
 
-Release 1.5 marks the first milestone without major involvement of [http://code.google.com/u/sheardOmega/ Tim], who is directing his attention towards [http://code.google.com/p/trellys Trellys], a compiled language with dependent types. Big thanks to him for all the awesome work on Ωmega in the past, we will miss his vision, wisdom an profound understanding of the matter. With some luck he can still contribute an occasional fix here or there.
+Release 1.5 marks the first milestone without major involvement of [http://code.google.com/u/@UBJVQVdRBxdNWwR9/ Tim], who is directing his attention towards [http://code.google.com/p/trellys Trellys], a compiled language with dependent types. Big thanks to him for all the awesome work on Ωmega in the past, we will miss his vision, wisdom an profound understanding of the matter. With some luck he can still contribute an occasional fix here or there.
 
 == Licensing ==
 The highlight of this release is the change of licensing terms to become a pure 3-clause BSD license. Previously an additional clause prohibited use in commercial settings without written consent (issue 74). 
