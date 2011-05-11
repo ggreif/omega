@@ -110,7 +110,7 @@ instance Eq TcLv where
   x == y = False
 
 lv 0 = LvZero
-lv (n+1) = LvSucc (lv n)
+lv n = LvSucc (lv (n-1))
 
 fromLevel LvZero = Just 0
 fromLevel (LvSucc x) = fmap (+1) (fromLevel x)
@@ -1362,6 +1362,7 @@ unBindWithL lvs new inject b = f b []
              ; f xs env2 }
        extend (n,var) (name,tau) = do { tau2 <- subst [(n,var)] tau; return(name,tau2)}
        comp (n,var) xs = do { ys <- mapM (extend (n,var)) xs ; return(ys ++ [(n,var)])}
+       subst :: (TypeLike m c) => [(Name,Tau)] -> c -> m c
        subst env t = sub (env,[],[],lvs) t
        patch t (name,x @ (TcTv (Tv unq (Rigid q loc (s,ref)) k))) =
          do { writeRef ref (inject t); return (name,x)}
