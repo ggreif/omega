@@ -1,5 +1,10 @@
-#summary Added features and notable problems or improvements for each of the releases in temporal order.
+#summary Added features and notable problems or improvements for each of the releases in (inverse) temporal order.
 #labels Featured
+
+= _Upcoming_ Release 1.5.1 =
+
+== Bugs fixed ==
+Issue 93, causing a compile error on the GHC 7.x compilers has been fixed.
 
 = Release 1.5 _(2011-04-29)_=
 
