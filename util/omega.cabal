@@ -1,0 +1,12 @@
+Name:                omega
+Version:             1.5.1
+Description:         A purely functional programming language and a proof system
+License:             BSD3
+License-file:        LICENSE.txt
+Author:              Tim Sheard, his students and heisenbug
+Maintainer:          ggreif@gmail.com
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+Executable omega
+  Main-is:           Main.hs
+  Build-Depends:     base >= 3 && < 5
