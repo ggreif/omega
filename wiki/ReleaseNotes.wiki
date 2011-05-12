@@ -6,6 +6,7 @@
 == Bugs fixed ==
 Issue 93, causing a compile error on the GHC 7.x compilers has been fixed.
 
+----
 = Release 1.5 _(2011-04-29)_=
 
 Release 1.5 marks the first milestone without major involvement of [http://code.google.com/u/@UBJVQVdRBxdNWwR9/ Tim], who is directing his attention towards [http://code.google.com/p/trellys Trellys], a compiled language with dependent types. Big thanks to him for all the awesome work on Ωmega in the past, we will miss his vision, wisdom an profound understanding of the matter. With some luck he can still contribute an occasional fix here or there.
