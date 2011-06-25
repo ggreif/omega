@@ -7,8 +7,9 @@ An important source of wisdom is also [http://darcs.haskell.org/ghc/docs/comm/ t
 
 = Freshness =
 
-Freshness is an important concept when dealing with _sharing_ in the internal representation. For example constants can always be shared, but when it comes to bindable entities (like type variables etc.) any performed bindings amount to a specialization of the original data and thus it is not semantically equivalent any more.
-Since bindings are (usually) tracked with an auxiliary map a parametrized type cannot be included in a new type twice with differing parameters unless it gets freshened before each parametrization. The process of replacing the names of formals before a performed binding with a fresh set of names is called _freshening_ and the overall concept is called _freshness_.
+Freshness is an important concept when dealing with _sharing_ in the internal representation. For example constants can always be shared, but when it comes to bindable entities (like type variables etc.) any performed bindings amount to a specialization of the original data and thus (before and after) are not semantically equivalent any more.
+
+Since bindings are (usually) tracked with an auxiliary map, a parametrized type cannot be included in a new type twice with differing parameters unless it gets freshened before each parametrization. The process of replacing the names of formals before a performed binding with a fresh set of names is called _freshening_ and the overall concept is called _freshness_.
 
 = Rank-N =
 
