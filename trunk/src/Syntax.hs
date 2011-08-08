@@ -268,7 +268,7 @@ patTuple [p] = p
 patTuple [x,y] = Pprod x y
 patTuple (x:xs) = Pprod x (patTuple xs)
 
-expTuple :: [Exp] -> Exp -- Form an Expression with is a tuple like (3,4-9)
+expTuple :: [Exp] -> Exp -- Form an Expression which is a tuple like (3,4-9)
 expTuple [] = Lit Unit
 expTuple [p] = p
 expTuple [x,y] = Prod x y
