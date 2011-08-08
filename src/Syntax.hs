@@ -1485,6 +1485,3 @@ instance Show (Body Exp) where
 instance Show (Stmt Pat Exp Dec) where
   show s = render(ppStmt s)
 
--------------------------------------------------------------------------
--- traceSh s x = unsafePerformIO(putStrLn ("\n--- Trace ---\n"++s++show x))
-
