@@ -1230,7 +1230,7 @@ sigmaPair t = do { t2 <- zonk t; sigmaP t2}
 
 sigmaSum :: TyCh m => Sigma -> m (Sigma,Sigma)
 sigmaSum t = do { t2 <- zonk t; sigmaS t2}
-  where sigmaS (Forall (Nil ([],Rsum x y))) = return (x,x)
+  where sigmaS (Forall (Nil ([],Rsum x y))) = return (x,y)
         sigmaS x = sigmaTwo tsum x
 
 expecting ::
