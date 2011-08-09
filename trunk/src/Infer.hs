@@ -84,7 +84,7 @@ import Value(Label(..),Equal(..))
 
 instance Check (Mtc TcEnv Pred) where
   getMode s = getM s False
-  wait = waitN  -- warnM [Ds "<return> to continue ..."] >> fio2Mtc(fio (getLine))
+  wait = waitN  -- warnM [Ds "<return> to continue ..."] >> fio2Mtc(fio getLine)
   rewNestedEqual (t1,t2) =
     do { rs <- getLemmaRules "Equal"
        ; env <- tcEnv
@@ -1647,7 +1647,7 @@ checkDec mutRecFrag (mod,rho,Val loc pat body ds,skols) = newLoc loc $
      ; solveDecObligations lhsString rho (getEqs frag) oblig
      ; return(Val loc pat body2 ds2) }
 checkDec mutRecFrag (mod,rho,Pat loc nm vs p,skols) = newLoc loc $
-  do { ((Forall (Nil (assump,ty))),(Frag xs tvs tenv eqs theta rs exts),p2)
+  do { (Forall (Nil (assump,ty)),Frag xs tvs tenv eqs theta rs exts,p2)
                <- lambdaExtend ("the pattern "++show p)
                                mutRecFrag (inferBndr False nullFrag p)
 
