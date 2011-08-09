@@ -1225,7 +1225,7 @@ sigmaTwo mkTwo (Forall xs) =
 
 sigmaPair :: TyCh m => Sigma -> m (Sigma,Sigma)
 sigmaPair t = do { t2 <- zonk t; sigmaP t2}
-  where sigmaP (Forall (Nil ([],Rpair x y))) = return (x,x)
+  where sigmaP (Forall (Nil ([],Rpair x y))) = return (x,y)
         sigmaP x = sigmaTwo tpair x
 
 sigmaSum :: TyCh m => Sigma -> m (Sigma,Sigma)
