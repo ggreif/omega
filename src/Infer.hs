@@ -1629,9 +1629,11 @@ checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
                Rtau(tau @(TcTv _)) ->
                    do { ref <- newRef (error "no rho yet")
                       ; ans <- typeMatchPs mod (show nm,loc,ps,bod,ds) (Infer ref)
-                      ; Rtau v <- readRef ref
-                      ; unify tau v
-                      ; return ans}
+                      ; inferred <- readRef ref
+                      ; case inferred of
+                        Rtau v -> do { unify tau v; return ans }
+                        complicated -> failM 3 [ Ds "Inference for functions with Rho type (", Dd complicated
+                                               , Ds ") not supported yet, please supply a type signature for now."] }
                other -> typeMatchPs mod (show nm,loc,ps,bod,ds) (Check rho)
            stripName (nm,loc,ps,bod,ds) = (loc,ps,bod,ds)
        ; (ms2,oblig) <- collectPred
