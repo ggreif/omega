@@ -5,6 +5,7 @@
 
 == Bugs fixed ==
 Issue 93, causing a compile error on the GHC 7.x compilers has been fixed.
+
 Issue 94, a problem inferring the second component of types involving impredicative types has been fixed.
 
 ----
