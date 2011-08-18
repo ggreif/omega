@@ -10,6 +10,7 @@ import Value
 import List(unionBy)
 import Bind
 import SyntaxExt(SynExt(..),listx,normalList)
+import Parser
 
 type Symbol = Name
 
@@ -105,6 +106,10 @@ instance (Generic a, Generic b) => Generic(Either a b) where
     where geta (Left x) = x
           getb (Right x) = x
 
+instance Generic a => Generic (Parser a) where
+  typeOf x = tparser(typeOf(trick x))
+    where trick :: Parser a -> a
+          trick = undefined
 
 -------------------------------------------------
 
