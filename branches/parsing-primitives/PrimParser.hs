@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-module PrimParser (intLitV,parserPairs) where
+module PrimParser (intLitV,parserPairs,runParser) where
 
 import ParserAll
 import Encoding
@@ -152,7 +152,15 @@ toChrSeqV = lift1 "toChrSeq" f where
 fromChrSeqV = lift1 "toChrSeq" f where
   f (VChrSeq cs) = return(to cs)
 
+---------------------------------------------------------------
+-- Running a parser
 
+-- runParser = lift2 "runParser" f where
+runParser :: String -> Parser a -> Maybe a
+runParser str p = case parse p "<omega input>" str of
+                  Left _ -> Nothing
+                  Right y -> Just y
+--SourceName -> Source -> Either ParseError a
 ---------------------------------------------------------------
 -- The list of pairs that is exported
 

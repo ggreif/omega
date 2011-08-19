@@ -18,7 +18,7 @@ import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import Parser(Parser)
-import PrimParser (intLitV,parserPairs)
+import PrimParser--(intLitV,parserPairs,runParser)
 import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
 
 
@@ -504,6 +504,14 @@ mkFun :: String -> ([V] -> V) -> Int -> [V] -> V
 mkFun s f 0 vs = f (reverse vs)
 mkFun s f n vs = Vprimfun s (\ v -> return(mkFun s f (n-1) (v:vs)) )
 
+---------------------------------------------------------------
+-- Encoding the datatypes necessary to implement Parsers
+-- FIXME: also in PrimParser?
+
+instance Encoding a => Encoding (Parser a) where
+   to p = Vparser (p >>= \x -> return (to x))
+   from (Vparser p) = p >>= \x -> return (from x)
+   from v = error ("Value not a Parser: "++(show v))
 
 
 vals :: [(String,String->(V,Sigma))]
@@ -564,6 +572,7 @@ vals =
 
  ,("show",make1(show :: A -> String))
  ,("unsafeCast",make1(unsafeCast:: A -> B))
+ ,("runParser",make2(runParser :: String -> Parser A -> Maybe A))
  ] ++ map (\(name, x) -> (name, \ _ -> x)) [
   ("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
@@ -602,7 +611,9 @@ vals =
  ,(".",(composeV,gen(typeOf(undefined :: (A -> B) -> (C -> A) -> (C -> B)))))
 
  ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
-
+-- ,("runParser",make2(runParser :: String -> Parser A -> Maybe A))
+-- ,("runParser",make2(runParser))
+-- ,("runParser",(runParser,gen(typeOf(undefined :: String -> Parser A -> Maybe A))))
  ]
 
 
