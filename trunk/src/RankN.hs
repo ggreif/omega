@@ -563,8 +563,7 @@ teq x y = TyApp (TyApp eqT x) y
 tlabel x = TyApp labelT x
 ttag s = (TyCon Ox (lv 1) (s) tagKind)
 trow (MK x) = MK(TyApp rowT x)
-
-
+tparser x = TyApp parserT x
 
 tprods [t] = t
 tprods (x:xs) = tpair x (tprods xs)
