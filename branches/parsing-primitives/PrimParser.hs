@@ -30,6 +30,12 @@ instance (Encoding a,Encoding b) => Encoding (a -> Parser b) where
                            Ok (v@(Vlazy _ _)) -> help(analyzeWith return v)
                            Ok v -> v
                            Fail loc _ _ mess -> error("Near "++show loc++"\n"++mess)
+    from (Vf f _ _) = from . help . f . to
+      where help :: FIO V -> V
+            help (FIO w) = case unsafePerformIO w of
+                           Ok (v@(Vlazy _ _)) -> help(analyzeWith return v)
+                           Ok v -> v
+                           Fail loc _ _ mess -> error("Near "++show loc++"\n"++mess)
     from v = error ("Value not a function: "++(show v))
 
 {-
