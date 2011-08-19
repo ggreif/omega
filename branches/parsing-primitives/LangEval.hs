@@ -17,7 +17,7 @@ import ParserDef(pe)
 import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
-import Parser(Parser)
+import Parser((<|>),Parser)
 import PrimParser(intLitV,parserPairs,runParser)
 import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
 
@@ -565,6 +565,7 @@ vals =
  ,("show",make1(show :: A -> String))
  ,("unsafeCast",make1(unsafeCast:: A -> B))
  ,("runParser",make2(runParser :: Parser A -> String -> Maybe A))
+ ,("<|>",make2((<|>) :: Parser A -> Parser A -> Parser A))
  ] ++ map (\(name, x) -> (name, \ _ -> x)) [
   ("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
