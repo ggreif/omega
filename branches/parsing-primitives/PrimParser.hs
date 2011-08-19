@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}  -- << not needed any more??
 module PrimParser (intLitV,parserPairs,runParser) where
 
 import ParserAll
@@ -17,6 +17,12 @@ stringLit = stringLiteral
 ---------------------------------------------------------------
 -- Encoding the datatypes necessary to implement Parsers
 
+instance Encoding a => Encoding (Parser a) where
+   to p = Vparser (p >>= \x -> return (to x))
+   from (Vparser p) = p >>= \x -> return (from x)
+   from v = error ("Value not a Parser: "++(show v))
+
+{-
 instance Encoding (Parser V) where
    to p = Vparser p
    from (Vparser p) = p
@@ -26,6 +32,7 @@ instance Encoding (Parser(V -> V)) where
    to p = Vparser (fmap (\ f -> lift1 "Parser(V->V)" (return.f)) p)
    from (Vparser p) = fmap backwards p
    from v = error ("Not a Parser: "++show v)
+-}
 
 backwards :: V -> (V -> V)
 backwards fun v = help ((getf fun) v)
@@ -38,13 +45,16 @@ backwards fun v = help ((getf fun) v)
         getf (Vprimfun _ f) = f
         getf v = error ("Not function in backwards: "++ show v)
 
+{-
 instance Encoding (Parser(V -> V -> V)) where
    to p = Vparser (fmap (\ f -> lift2 "Parser(V->V->V)" (\ a b ->return(f a b))) p)
    from (Vparser p) = fmap back2 p
      where back2 :: V -> (V -> V -> V)
            back2 v a b = backwards ((backwards v) a) b
    from v = error ("Not a Parser: "++show v)
+-}
 
+{-
 instance Encoding (Operator V) where
    to (Infix p x) = Vcon (Global "Infix",Ox) [to p,to x]
    to (Prefix p) = Vcon (Global "Prefix",Ox) [to p]
@@ -53,6 +63,7 @@ instance Encoding (Operator V) where
    from (Vcon (Global "Prefix",_) [p]) = Prefix (from p)
    from (Vcon (Global "Postfix",_) [p]) = Postfix (from p)
    from v = error ("Not an Operator: "++(show v))
+-}
 
 instance Encoding Assoc where
    to AssocLeft  = Vcon (Global "AssocLeft",Ox)  []
@@ -138,11 +149,11 @@ failParserP = lift1 "failParser" f where
 
 --------------------------------------------------------------
 -- Make Expression Parsers
-
+{-
 buildExpressionParserP = lift2 "buildExpressionParser" f where
   f oper parser = return(Vparser(buildExpressionParser
                                   (from oper) (from parser)))
-
+-}
 ----------------------------------------------------------------
 -- ChrSeq to and from [Char]
 
@@ -153,14 +164,13 @@ fromChrSeqV = lift1 "toChrSeq" f where
   f (VChrSeq cs) = return(to cs)
 
 ---------------------------------------------------------------
--- Running a parser
+-- Running a parser (simplistic, suppress error messages)
 
--- runParser = lift2 "runParser" f where
-runParser :: String -> Parser a -> Maybe a
-runParser str p = case parse p "<omega input>" str of
+runParser :: Parser a -> String -> Maybe a
+runParser p str = case parse p "<omega input>" str of
                   Left _ -> Nothing
                   Right y -> Just y
---SourceName -> Source -> Either ParseError a
+
 ---------------------------------------------------------------
 -- The list of pairs that is exported
 
@@ -173,6 +183,6 @@ parserPairs =
   ,("between",betweenP),("sepBy",sepByP)
   ,("returnParser",returnParserP),("bindParser",bindParserP)
   ,("failParser",failParserP)
-  ,("buildExpressionParser",buildExpressionParserP)
+  --,("buildExpressionParser",buildExpressionParserP)
   ,("toChrSeq",toChrSeqV),("fromChrSeq",fromChrSeqV)
   ]
