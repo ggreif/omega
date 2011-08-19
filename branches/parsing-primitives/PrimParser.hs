@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-module PrimParser (intLitV,parserPairs,runParser) where
+module PrimParser (charLitV,intLitV,parserPairs,runParser) where
 
 import ParserAll
 import Encoding

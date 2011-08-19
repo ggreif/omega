@@ -18,7 +18,7 @@ import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
 import Parser((<|>),Parser)
-import PrimParser(intLitV,parserPairs,runParser)
+import PrimParser(charLitV,intLitV,parserPairs,runParser)
 import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
 
 
@@ -606,6 +606,7 @@ vals =
  ,("$",(dollar,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,(".",(composeV,gen(typeOf(undefined :: (A -> B) -> (C -> A) -> (C -> B)))))
 
+ ,("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
  ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
  ]
 
