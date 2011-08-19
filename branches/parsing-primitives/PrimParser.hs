@@ -1,4 +1,4 @@
-{- # LANGUAGE FlexibleInstances # -}  -- << not needed any more??
+{-# LANGUAGE FlexibleInstances #-}
 module PrimParser (intLitV,parserPairs,runParser) where
 
 import ParserAll
@@ -21,6 +21,11 @@ instance Encoding a => Encoding (Parser a) where
    to p = Vparser (p >>= return . to)
    from (Vparser p) = p >>= return . from
    from v = error ("Value not a Parser: "++(show v))
+
+instance (Encoding a,Encoding b) => Encoding (a -> Parser b) where
+    to f = undefined -- Vprimfun "->" (return . to . f . from)
+    --from (Vprimfun s f) = (fmap from) . f . to
+    from v = error ("Value not a function: "++(show v))
 
 {-
 instance Encoding (Parser V) where

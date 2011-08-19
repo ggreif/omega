@@ -566,6 +566,9 @@ vals =
  ,("unsafeCast",make1(unsafeCast:: A -> B))
  ,("runParser",make2(runParser :: Parser A -> String -> Maybe A))
  ,("<|>",make2((<|>) :: Parser A -> Parser A -> Parser A))
+ ,("returnParser",make1(return :: A -> Parser A))
+ ,("bindParser",make2((>>=) :: Parser A -> (A -> Parser B) -> Parser B))
+ ,("failParser",make1(fail :: String -> Parser A))
  ] ++ map (\(name, x) -> (name, \ _ -> x)) [
   ("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
