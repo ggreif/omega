@@ -140,7 +140,7 @@ sepByP = lift2 "sepBy" f where
 
 
 ------------------------------------------------
--- Make Parser an monad
+-- Make Parser a Monad
 
 returnParserP = lift1 "returnParser" ret
   where ret v = return(Vparser(return v))
