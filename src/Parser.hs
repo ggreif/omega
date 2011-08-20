@@ -44,7 +44,6 @@ module Parser(
              , chainr1, chainl1
              , option, optional
              , choice, between
-             --, oneOf, noneOf
              , anySymbol
              , notFollowedBy
 
@@ -61,7 +60,6 @@ module Parser(
              --primitive
              , satisfy
              , try
-             , token                        --obsolete, use try instead
              , pzero, onFail, unexpected
              , getPosition, setPosition
              , getInput, setInput
@@ -111,8 +109,6 @@ digit               = satisfy (isDigit)     <?> "digit"
 hexDigit            = satisfy (isHexDigit)  <?> "hexadecimal digit"
 octDigit            = satisfy (isOctDigit)  <?> "octal digit"
 
-
--- char c              = satisfy (==c)  <?> show [c]
 char c              = do{ string [c]; return c}  <?> show [c]
 anyChar             = anySymbol
 
@@ -396,9 +392,6 @@ try (Parser p)
           empty                 -> empty
       )
 
-token p --obsolete, use "try" instead
-    = try p
-
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy test
     = Parser (\state@(State input (pos @ (SourcePos name line col tabs))) ->
@@ -429,9 +422,6 @@ update c cs name line col tabs =
     '\t'  -> State cs (SourcePos name line (col + 8 - ((col-1) `mod` 8)) tabs)
     '\r'  -> State cs (SourcePos name line col tabs)
     other -> State cs (SourcePos name line (col + 1) tabs)
-
-xx = update '\n' " where tim = 3" "TE" 6 1 [1]
-yy = skip whiteSpace (" where tim = 3","TE",6+1,1,[])
 
 
 skipToNextToken input name line col [] = State input (SourcePos name line col [])
@@ -552,7 +542,7 @@ stringHelp s
 
 -----------------------------------------------------------
 -- White space & symbols
--- we moved the definitions for whiteSpce here, since
+-- we moved the definitions for whiteSpace here, since
 -- we'd get a set of mutually recursive modules if we don't.
 -- we need white space in layout, since we need to skip to the next
 -- non-whitespace character after a newline when in layout mode.
@@ -570,50 +560,49 @@ lexeme p
     = do{ x <- p; whiteSpace; return x  }
 
 
---whiteSpace
 whiteSpace
     | noLine && noMulti  = skipMany (simpleSpace <?> "")
     | noLine             = skipMany (simpleSpace <|> multiLineComment <?> "")
     | noMulti            = skipMany (simpleSpace <|> oneLineComment <?> "")
     | otherwise          = skipMany (simpleSpace <|> oneLineComment <|> multiLineComment <?> "")
     where
-      noLine  = null cLine  --(commentLine tokenDef)
-      noMulti = null cStart --(commentStart tokenDef)
+      noLine  = null cLine
+      noMulti = null cStart
 
 
 simpleSpace =
     skipMany1 (satisfy isSpace)
 
 oneLineComment =
-    do{ try (string cLine) --(commentLine tokenDef))
+    do{ try (string cLine)
       ; skipMany (satisfy (/= '\n'))
       ; return ()
       }
 
 multiLineComment =
-    do { try (string cStart) --(commentStart tokenDef))
+    do { try (string cStart)
        ; inComment
        }
 
 inComment
-    | nestedC = inCommentMulti  --nestedComments tokenDef  = inCommentMulti
+    | nestedC = inCommentMulti
     | otherwise                = inCommentSingle
 
 inCommentMulti
-    =   do{ try (string cEnd) -- (commentEnd tokenDef))
+    =   do{ try (string cEnd)
           ; return () }
     <|> do{ multiLineComment                     ; inCommentMulti }
     <|> do{ skipMany1 (noneOf startEnd)          ; inCommentMulti }
     <|> do{ oneOf startEnd                       ; inCommentMulti }
     <?> "end of comment"
     where
-      startEnd   = nub (cEnd ++ cStart) -- (commentEnd tokenDef ++ commentStart tokenDef)
+      startEnd   = nub (cEnd ++ cStart)
 
 inCommentSingle
-    =   do{ try (string cEnd) --(commentEnd tokenDef))
+    =   do{ try (string cEnd)
           ; return () }
     <|> do{ skipMany1 (noneOf startEnd)         ; inCommentSingle }
     <|> do{ oneOf startEnd                      ; inCommentSingle }
     <?> "end of comment"
     where
-      startEnd   = nub (cEnd ++ cStart) -- (commentEnd tokenDef ++ commentStart tokenDef)
+      startEnd   = nub (cEnd ++ cStart)
