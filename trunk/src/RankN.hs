@@ -2606,7 +2606,7 @@ okLevels declared found =
 pt s = case parse2 (typN) s of { Right(x,more) -> x; Left s -> error (show s) }
 parsePT = pt
 
-intThenTyp n = do { m <- token(possible natural); t <- typN; return (pick m,t)}
+intThenTyp n = do { m <- try (possible natural); t <- typN; return (pick m,t)}
   where pick Nothing = (n::Int)
         pick (Just i) = fromInteger i
 
