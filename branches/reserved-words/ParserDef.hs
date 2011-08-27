@@ -304,14 +304,16 @@ expr =  lambdaExpression
     <|> try (do { p <- simpleExpression; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
-    <|> try runExp
     <|> infixExpression     --names last
     <?> "expression"
 
+exprNonApp = expr
+{-
 exprNonApp = do e <- expr
                 case e of
                   App _ _ -> fail ("must use parentheses like this: "++show e)
                   _ -> return e
+-}
 
 -- 123  #34 45n
 num = lexeme(try (do { n <- natP; return(extToExp n)}))
