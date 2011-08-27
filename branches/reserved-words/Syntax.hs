@@ -268,11 +268,11 @@ patTuple [p] = p
 patTuple [x,y] = Pprod x y
 patTuple (x:xs) = Pprod x (patTuple xs)
 
-expTuple :: [Exp] -> Exp -- Form an Expression which is a tuple like (3,4-9)
-expTuple [] = Lit Unit
-expTuple [p] = p
-expTuple [x,y] = Prod x y
-expTuple (x:xs) = Prod x (expTuple xs)
+expTuple :: Bool -> [Exp] -> Exp -- Form an Expression which is a tuple like (3,4-9)
+expTuple _ [] = Lit Unit
+expTuple _ [p] = p
+expTuple _ [x,y] = Prod x y
+expTuple _ (x:xs) = Prod x (expTuple False xs)
 
 -------------------------------------------------------------------
 -- Defining Infix and Prefix operators

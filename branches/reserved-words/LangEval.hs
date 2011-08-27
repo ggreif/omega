@@ -427,7 +427,7 @@ elab prefix magic init (Fun loc nm _ cs) =
            getpat (loc,pat,body,ds) = pat
      ; newNames <- mapM new (getpat (head cs))
      ; let tupleUpPats (loc,ps, b,ds) = (loc,patTuple ps,b,ds)
-           tuple = expTuple(map Var newNames)
+           tuple = (expTuple False) (map Var newNames)
            patterns = (map Pvar newNames)
            caseExp = Case tuple (map tupleUpPats cs)
            u = makeLam patterns caseExp [] [] magic

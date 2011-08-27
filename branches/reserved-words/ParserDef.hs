@@ -190,7 +190,7 @@ name = terminal identifier Global
 -- If a syntactic extension has the empty string as a suffix
 -- turn it into the normal kind of syntactic sugar
 
-extToExp (Pairx (Right xs) "") = expTuple xs
+extToExp (Pairx (Right xs) "") = expTuple True xs
 extToExp (Listx (Right xs) Nothing "") = listExp xs
 extToExp (Listx (Right xs) (Just tail) "") = listExp2 xs tail
 extToExp (Natx n Nothing "") = Lit(Int n)
@@ -308,6 +308,11 @@ expr =  lambdaExpression
     <|> infixExpression     --names last
     <?> "expression"
 
+exprNonApp = do e <- expr
+                case e of
+                  App _ _ -> fail ("must use parentheses like this: "++show e)
+                  _ -> return e
+
 -- 123  #34 45n
 num = lexeme(try (do { n <- natP; return(extToExp n)}))
 
@@ -317,19 +322,19 @@ pairOper = (try (string "(,)" >> return(Var (Global "(,)"))))
 
 checkExp =
     do { reserved "check"
-       ; e <- expr
+       ; e <- try exprNonApp
        ; return(CheckT e)
        }
 
 lazyExp =
     do { reserved "lazy"
-       ; e <- expr
+       ; e <- exprNonApp
        ; return(Lazy e)
        }
 
 existExp =
     do { reserved "Ex"
-       ; e <- expr
+       ; e <- exprNonApp
        ; return(Exists e)
        }
 
@@ -522,7 +527,9 @@ escapeExp = escVar <|> escParen  where
 runExp  =
     do { reserved "run"
        ; e <- expr
-       ; return (Run e) }
+       ; case e of
+         App _ _ -> fail "add parens"
+         _ -> return (Run e) }
 
 -- [| 3 + x |]
 code =
@@ -779,7 +786,7 @@ newStylePx arityCs =
      ; return(Syntax(Parsex(tag,NEW,arityCs,exts)))
      }
      
-casesPx =  
+casesPx =
   do { name <- conName 
      ; args <- parens(sepBy1 conName (symbol ","))
      ; return(name,args)}
