@@ -173,11 +173,19 @@ name = terminal identifier Global
 -- Syntactic Extensions
 -- They come with or without suffixes. Without suffixes they are
 -- the standard kind of syntactic sugar
--- type     no-suffix   with suffix
--- Numbers  23          9i   (2+n)i
--- Lists    [2,3]       [3,4]i  [3,4,5; x]i
--- Tuples   (2,True)    (2,True,"x")i
--- Records              {a=4, b=True}i  {a=4, b=True; r}i
+--
+-- type     no-suffix        with suffix
+-----------------------------------------------------------
+-- Numbers  23               9i   (2+n)i
+-- Ticked   (var`2)          (var`2)i
+-- Lists    [2,3]            [3,4]i  [3,4,5; x]i
+-- Tuples   (2,True)         (2,True,"x")i
+-- Records  {a=4, b=True}    {a=Int, b=Bool}r  {a=Int; r}r
+-- Items                     (x)i
+-- Units                     ()i
+-----------------------------------------------------------
+-- Left{List,Pair,Record} are the left-associative variants
+--
 
 -- If a syntactic extension has the empty string as a suffix
 -- turn it into the normal kind of syntactic sugar
