@@ -526,13 +526,6 @@ escapeExp = escVar <|> escParen  where
                 ; e <- expr; symbol ")"
                 ; return (Escape e) }
 
-runExp  =
-    do { reserved "run"
-       ; e <- expr
-       ; case e of
-         App _ _ -> fail "add parens"
-         _ -> return (Run e) }
-
 -- [| 3 + x |]
 code =
   do { resOp "[|"

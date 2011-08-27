@@ -775,13 +775,6 @@ typeExp mod (Escape exp) expect =
                  ; e <- levelDec (typeExp mod exp (Check (tcode t)))
                  ; writeRef ref t
                  ; return(Escape e) }}
-typeExp mod (Run exp) (Check t) =
-      do { e <- typeExp mod exp (Check(tcode t)); return(Run e)}
-typeExp mod (Run exp) (Infer ref) =
-      do { t <- newRho star
-         ; e <- typeExp mod exp (Check(tcode t))
-         ; writeRef ref t
-         ; return(Run e) }
 typeExp mod (Reify s v) expect = error ("Unexpected reified value: "++s)
 typeExp mod (ExtE x) expect =
   do { new <- elabExtensionExp x
