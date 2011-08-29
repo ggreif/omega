@@ -178,6 +178,7 @@ name = terminal identifier Global
 
 expApplicative (App f a) = App (App (Var (Global "App")) (expApplicative f)) (expApplicative a)
 expApplicative (Var (Global name)) = App (Var (Global "Var")) (Lit (Tag name))
+expApplicative (Lam [Pvar (Global name)] e []) = App (App (Var $ Global "Lam") (Lit $ Tag name)) (expApplicative e)
 expApplicative l@(Lit _) = l
 expApplicative _ = Lit Unit -- FIXME
 
