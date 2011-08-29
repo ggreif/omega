@@ -152,7 +152,7 @@ data Stmt p e d
 data Dec
   = Fun Loc Var (Maybe PT) [Match [Pat] Exp Dec]   -- { f p1 p2 = b where decs }
   | Val Loc Pat (Body Exp) [Dec]        -- { p = b where decs }
-  | Pat Loc Var [Var] Pat               -- { Let x y z = App (Lam x z) y
+  | Pat Loc Var [Var] Pat               -- { pattern Let x y z = App (Lam x z) y
   | TypeSig Loc [Var] PT                -- { id, di :: a -> a }
   | Prim Loc Var PT                     -- { prim bind :: a -> b }
   | Data Loc Bool Strata Var (Maybe PT) Targs [Constr] [Derivation] -- { data T x (y :: Nat) = B (T x) deriving (Z,W) }
