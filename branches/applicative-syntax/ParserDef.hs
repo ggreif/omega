@@ -176,9 +176,10 @@ name,constructor :: Parser Var
 constructor = terminal conName Global
 name = terminal identifier Global
 
-expApplicative [] = Lit Unit -- FIXME
-expApplicative xs = foldl1 application xs
-  where application f a = App (App (Var (Global "App")) f) a
+expApplicative (App f a) = App (App (Var (Global "App")) (expApplicative f)) (expApplicative a)
+expApplicative _ = Lit Unit -- FIXME
+-- expApplicative xs = foldl1 application xs
+--  where application f a = App (App (Var (Global "App")) (f) a
 
 -----------------------------------------------------------
 -- Syntactic Extensions
@@ -202,7 +203,7 @@ expApplicative xs = foldl1 application xs
 -- turn it into the normal kind of syntactic sugar
 
 extToExp (Pairx (Right xs) "") = expTuple xs
-extToExp (Pairx (Right xs) "ac") = expApplicative xs
+extToExp (Itemx x "ac") = expApplicative x
 extToExp (Listx (Right xs) Nothing "") = listExp xs
 extToExp (Listx (Right xs) (Just tail) "") = listExp2 xs tail
 extToExp (Natx n Nothing "") = Lit(Int n)
