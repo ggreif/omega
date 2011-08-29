@@ -159,7 +159,12 @@ expvariable = terminal identifier (Var . Global)
 conNameUnreserved = conName >>= \s -> if isReservedName s then
                                       fail ("reserved name '"++s++"' must not appear here")
                                       else return s
-expconstructor = terminal conNameUnreserved (\s -> Var (Global s))
+expconstructor = terminal conNameUnreserved prepareCon
+                   where prepareCon "L" = buildLambda L
+                         prepareCon "R" = buildLambda R
+                         prepareCon s = var s
+                         buildLambda s = Lam [Pvar (Global "x")] (Sum s $ var "x") []
+                         var = Var . Global
 
 patvariable :: Parser Pat
 patvariable = do { (result@(Pvar x)) <- terminal identifier (Pvar . Global)
@@ -497,9 +502,12 @@ buildPrefix name x = App (Var (Global name)) x
 infixExpression =
     buildExpressionParser ([[Infix quotedInfix AssocLeft]] ++ operators) applyExpression
 
+tryEtaOnSum (Lam [Pvar (Global "x")] (Sum s (Var (Global "x"))) []) a = Sum s a
+tryEtaOnSum f a = App f a
+
 applyExpression =
     do{ exprs <- many1 simpleExpression
-      ; return (foldl1 App exprs)
+      ; return (foldl1 tryEtaOnSum exprs)
       }
 
 -- `mem`  `elem`
