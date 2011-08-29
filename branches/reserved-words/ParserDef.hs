@@ -321,12 +321,6 @@ expr =  lambdaExpression
     <?> "expression"
 
 
-exprNonApp = do { e <- try (fmap Right (parens expr)) <|> try (fmap Left applyExpression) <|> fmap Right expr
-                ; case e of
-                  (Left app@(App _ _)) -> fail ("must use parentheses like this: ("++show app++")")
-                  (Left exp) -> return exp
-                  (Right exp) -> return exp }
-
 -- 123  #34 45n
 num = lexeme(try (do { n <- natP; return(extToExp n)}))
 
