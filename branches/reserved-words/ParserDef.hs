@@ -221,7 +221,7 @@ pConsUp pnil (p:ps) = Pcon (Global ":") [p,pConsUp pnil ps]
 
 pattern =
       try asPattern
-  <|> try (do { p <- simplePattern; symbol "::"; t <- typN; return(Pann p t)})
+  <|> try (do { p <- (try conApp <|> simplePattern); symbol "::"; t <- typN; return(Pann p t)})
   <|> try infixPattern
   <|> conApp
   <|> simplePattern
