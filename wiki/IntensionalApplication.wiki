@@ -70,7 +70,24 @@ In _code brackets_ these are  already present, we only need a new constructor, e
 
 The `where` clauses would map to `Let`.
 
+== A Third Variant ==
+
+A third idea hatched my mind, `derive syntax(ac) Applicative (App, Lam, Let)`.
+
+In the meantime I have a good understanding on how such a thing could be implemented.
+
+For example use the standard Ωmega parser to read everything between the following parentheses:
+{{{
+(let l = \x -> p in l m)ac
+}}}
+Then the _Applicative_ (here with an `ac` suffix) syntax extension walks the `Exp` tree and converts all
+  * abstractions to calls of constructor `Lam` with a `Label t` as the first argument and the `Exp` as the second,
+  * parsed apply nodes get converted to `App` constructors, and
+  * finally the (recursive) `let`s get mapped to `Let sym e1 e2`.
+
+One could even convert `[expr]` to arrow units. The two forms of _escape_ would interface to the pure world.
+
 = References =
 
   * http://web.cecs.pdx.edu/~sheard/papers/HFL07Sheard.pdf
-  * http://homepages.inf.ed.ac.uk/wadler/papers/arrows/arrows.pdf
+  * http://homepages.inf.ed.ac.uk/wadler/papers/arrows-jfp/arrows-jfp.pdf
