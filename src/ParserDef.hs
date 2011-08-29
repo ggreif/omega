@@ -242,14 +242,6 @@ infixPattern =
      ; return (Pcon (Global x) [p1,p2])
      }
 
-failUnaryPcon con = fail ("unary pattern constructor '" ++ con
-                          ++ "' used where a nullary one is expected (did you mean '("
-                          ++ con ++ " p)'?)")
-nullaryPcon (Global "L") = failUnaryPcon "L"
-nullaryPcon (Global "R") = failUnaryPcon "R"
-nullaryPcon (Global "Ex") = failUnaryPcon "Ex"
-nullaryPcon nm = return $ Pcon nm []
-
 simplePattern :: Parser Pat
 simplePattern =
         literalP
@@ -259,16 +251,22 @@ simplePattern =
     <|> (do { nm <- constructor; nullaryPcon nm })
     <|> patvariable
     <?> "simple pattern"
+  where nullaryPcon (Global "L") = failUnaryPcon "L"
+        nullaryPcon (Global "R") = failUnaryPcon "R"
+        nullaryPcon (Global "Ex") = failUnaryPcon "Ex"
+        nullaryPcon nm = return $ Pcon nm []
+        failUnaryPcon con = fail ("unary pattern constructor '" ++ con
+                                  ++ "' used where a nullary one is expected (did you mean '("
+                                  ++ con ++ " p)'?)")
 
 conApp =
-   (do { name <- constructor
+   do { name <- constructor
       ; ps <- many simplePattern
-      ; return (pcon name ps)})
-
-pcon (Global "L") [p] = Psum L p
-pcon (Global "R") [p] = Psum R p
-pcon (Global "Ex") [p] = Pexists p
-pcon n ps = Pcon n ps
+      ; return (pcon name ps)}
+     where pcon (Global "L") [p] = Psum L p
+           pcon (Global "R") [p] = Psum R p
+           pcon (Global "Ex") [p] = Pexists p
+           pcon n ps = Pcon n ps
 
 resOp x = reservedOp x >> return ""
 
@@ -480,25 +478,22 @@ buildPrefix name x = App (Var (Global name)) x
 infixExpression =
     buildExpressionParser ([[Infix quotedInfix AssocLeft]] ++ operators) applyExpression
 
-tryEtaOnSum (Lam [Pvar (Global "x")] (Sum s (Var (Global "x"))) []) a = Sum s a
-tryEtaOnSum f a = App f a
-
-applyBuiltin builtin (arg1:rest) = return $ foldl1 App (builtin arg1:rest)
-
-assembleApply (Left "Ex") args@(_:_) = applyBuiltin Exists args
-assembleApply (Left "check") args@(_:_) = applyBuiltin CheckT args
-assembleApply (Left "lazy") args@(_:_) = applyBuiltin Lazy args
-assembleApply (Left f) [] = fail ("builtin '"++f++"' must be applied to an argument")
-assembleApply (Right f) args = return (foldl1 tryEtaOnSum (f:args))
-
-reservedFun name = reserved name >> return name
-reservedFuns = reservedFun "Ex" <|> reservedFun "check" <|> reservedFun "lazy"
-
 applyExpression =
     do { fun <- fmap Left reservedFuns <|> fmap Right simpleExpression
        ; args <- many simpleExpression
        ; assembleApply fun args
        }
+     where assembleApply (Left "Ex") args@(_:_) = applyBuiltin Exists args
+           assembleApply (Left "check") args@(_:_) = applyBuiltin CheckT args
+           assembleApply (Left "lazy") args@(_:_) = applyBuiltin Lazy args
+           assembleApply (Left f) [] = fail ("builtin '"++f++"' must be applied to an argument")
+           assembleApply (Right f) args = return (foldl1 tryEtaOnSum (f:args))
+           applyBuiltin builtin (arg1:rest) = return $ foldl1 App (builtin arg1:rest)
+           tryEtaOnSum (Lam [Pvar (Global "x")] (Sum s (Var (Global "x"))) []) a = Sum s a
+           tryEtaOnSum f a = App f a
+           reservedFun name = reserved name >> return name
+           reservedFuns = reservedFun "Ex" <|> reservedFun "check" <|> reservedFun "lazy"
+
 
 -- `mem`  `elem`
 quotedInfix = try
