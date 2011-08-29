@@ -314,9 +314,6 @@ expr =  lambdaExpression
     <|> circExpression
     <|> ifExpression
     <|> doexpr
-    <|> checkExp
-    <|> lazyExp
-    <|> existExp
     <|> try (do { p <- simpleExpression; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
@@ -336,24 +333,6 @@ num = lexeme(try (do { n <- natP; return(extToExp n)}))
 -- (,)
 pairOper = (try (string "(,)" >> return(Var (Global "(,)"))))
 
-
-checkExp =
-    do { reserved "check"
-       ; e <- try exprNonApp
-       ; return(CheckT e)
-       }
-
-lazyExp =
-    do { reserved "lazy"
-       ; e <- exprNonApp
-       ; return(Lazy e)
-       }
-
-existExp =
-    do { reserved "Ex"
-       ; e <- exprNonApp
-       ; return(Exists e)
-       }
 
 lambdaExpression =
     do{ reservedOp "\\"
@@ -511,10 +490,19 @@ infixExpression =
 tryEtaOnSum (Lam [Pvar (Global "x")] (Sum s (Var (Global "x"))) []) a = Sum s a
 tryEtaOnSum f a = App f a
 
+assembleApply (Left "Ex") [arg] = return $ Exists arg
+assembleApply (Left "check") [arg] = return $ CheckT arg
+assembleApply (Left "lazy") [arg] = return $ Lazy arg
+assembleApply (Right f) args = return (foldl1 tryEtaOnSum (f:args))
+
+reservedFun name = reserved name >> return name
+reservedFuns = reservedFun "Ex" <|> reservedFun "check" <|> reservedFun "lazy"
+
 applyExpression =
-    do{ exprs <- many1 simpleExpression
-      ; return (foldl1 tryEtaOnSum exprs)
-      }
+    do { fun <- fmap Left reservedFuns <|> fmap Right simpleExpression
+       ; args <- many simpleExpression
+       ; assembleApply fun args
+       }
 
 -- `mem`  `elem`
 quotedInfix = try
