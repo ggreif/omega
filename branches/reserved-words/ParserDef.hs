@@ -492,9 +492,9 @@ tryEtaOnSum f a = App f a
 
 applyBuiltin builtin (arg1:rest) = return $ foldl1 App (builtin arg1:rest)
 
-assembleApply (Left "Ex") (arg1:rest) = return $ foldl1 App (Exists arg1:rest)
-assembleApply (Left "check") (arg1:rest) = return $ foldl1 App (CheckT arg1:rest)
-assembleApply (Left "lazy") (arg1:rest) = return $ foldl1 App (Lazy arg1:rest)
+assembleApply (Left "Ex") args@(_:_) = applyBuiltin Exists args
+assembleApply (Left "check") args@(_:_) = applyBuiltin CheckT args
+assembleApply (Left "lazy") args@(_:_) = applyBuiltin Lazy args
 assembleApply (Left f) [] = fail ("builtin '"++f++"' must be applied to an argument")
 assembleApply (Right f) args = return (foldl1 tryEtaOnSum (f:args))
 
