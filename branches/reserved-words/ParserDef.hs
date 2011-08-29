@@ -351,7 +351,7 @@ existExp =
 
 lambdaExpression =
     do{ reservedOp "\\"
-      ; pats <- many1 (try conApp <|> simplePattern)
+      ; pats <- many1 simplePattern
       ; symbol "->"
       ; e <- expr
       ; return $ Lam pats e []
@@ -638,7 +638,7 @@ flagdecl =
 
 vdecl =
   do{ pos <- getPosition
-    ; ps <- many1 (try conApp <|> simplePattern)
+    ; ps <- many1 simplePattern
     ; e <- bodyP (reservedOp "=")
     ; ds <- whereClause
     ; toDecl (loc pos) (ps,e,ds) }
