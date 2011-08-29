@@ -155,7 +155,11 @@ terminal p inject = do { v <- p; return (inject v)}
 
 expvariable,expconstructor :: Parser Exp
 expvariable = terminal identifier (Var . Global)
-expconstructor = terminal conName (\ s -> Var (Global s))
+
+conNameUnreserved = conName >>= \s -> if isReservedName s then
+                                      fail ("reserved name '"++s++"' must not appear here")
+                                      else return s
+expconstructor = terminal conNameUnreserved (\s -> Var (Global s))
 
 patvariable :: Parser Pat
 patvariable = do { (result@(Pvar x)) <- terminal identifier (Pvar . Global)
