@@ -183,6 +183,7 @@ expApplicative (Lam [Pvar (Global name)] e []) = (Var $ Global "Lam")
 expApplicative (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) = (Var $ Global "Let")
                `App` (Lit $ Tag name) `App` (expApplicative e1) `App` (expApplicative e2)
 expApplicative l@(Lit _) = l
+expApplicative (Escape e) = e
 expApplicative _ = Lit Unit -- FIXME
 
 -----------------------------------------------------------
