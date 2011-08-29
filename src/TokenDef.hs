@@ -4,24 +4,24 @@ import StdTokenDef
 import CommentDef
 
 
-stratusStyle = haskellStyle
+omegaStyle = haskellStyle
    { commentEnd = cEnd
    , commentStart = cStart
    , commentLine = cLine
    , nestedComments = nestedC
-   , reservedNames = ["let","case","in","of","data","kind","prop","where"
-                     ,"type","then","else","deriving"
-                     ,"circuit", "theorem"
-                     ,"forall","exists","Ex","check","lazy","flag"
-                     , "monad", "primitive", "unreachable"
+   , reservedNames = [ "let", "in", "case", "of", "data", "kind", "prop", "where"
+                     , "type", "if", "then", "else", "deriving", "do"
+                     , "circuit", "theorem"
+                     , "forall", "exists", "Ex", "check", "lazy", "flag"
+                     , "monad", "primitive", "unreachable", "import"
                      ]
-   , reservedOpNames= ["=","\\"
-                      ,"[|","|]"
-                      ,"[e|"
-                      ,"[d|"
-                      ,"[p|"
-                      ,"[t|"
+   , reservedOpNames= [ "=", "\\"
+                      , "[|", "|]"
+                      , "[e|"
+                      , "[d|"
+                      , "[p|"
+                      , "[t|"
                       ]
    }
 
-tokenDef = stratusStyle
+tokenDef = omegaStyle
