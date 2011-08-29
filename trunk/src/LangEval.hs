@@ -134,13 +134,6 @@ evalZ env (Bracket e) =
      ; e3 <- rebuild 1 env e2
      ; return (Vcode e3 empty) }
 evalZ env (Escape e) = fail ("Escape not allowed at level 0" ++ show (Escape e))
-evalZ env (Run e) =
-  do { x <- eval env e
-     ; let f (Vcode c env2) = eval env2 c
-           f v = fail ("Run expression:\n  "++show (Run e)++
-                       "\nDoes not evaluate to code:\n   "++show v)
-     ; analyzeWith f x }
-
 evalZ env (Reify s v) = return(push env v)
 evalZ env (Ann x t) = eval env x
 evalZ env e = fail ("\n\nNo such exp yet: "++show e)
