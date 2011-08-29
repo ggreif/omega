@@ -4,9 +4,10 @@
 = _Upcoming_ Release 1.5.1 =
 
 == Bugs fixed ==
-Issue 93, causing a compile error on the GHC 7.x compilers has been fixed.
-
-Issue 94, a problem inferring the second component of types involving impredicative types has been fixed.
+  * Issue 65, lots of ugly interactions between reserved words and expressions have been rectified.
+  * Issue 89, incorrect scoping of expression annotations is now corrected.
+  * Issue 93, causing a compile error on the GHC 7.x compilers has been fixed.
+  * Issue 94, a problem inferring the second component of types involving impredicative types has been fixed.
 
 ----
 = Release 1.5 _(2011-04-29)_=
