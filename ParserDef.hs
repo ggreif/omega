@@ -176,9 +176,10 @@ name,constructor :: Parser Var
 constructor = terminal conName Global
 name = terminal identifier Global
 
-expApplicative (App f a) = App (App (Var (Global "App")) (expApplicative f)) (expApplicative a)
-expApplicative (Var (Global name)) = App (Var (Global "Var")) (Lit (Tag name))
-expApplicative (Lam [Pvar (Global name)] e []) = App (App (Var $ Global "Lam") (Lit $ Tag name)) (expApplicative e)
+expApplicative (App f a) = (Var $ Global "App") `App` (expApplicative f) `App` (expApplicative a)
+expApplicative (Var (Global name)) = (Var $ Global "Var") `App` (Lit $ Tag name)
+expApplicative (Lam [Pvar (Global name)] e []) = (Var $ Global "Lam")
+               `App` (Lit $ Tag name) `App` (expApplicative e)
 expApplicative (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) = (Var $ Global "Let")
                `App` (Lit $ Tag name) `App` (expApplicative e1) `App` (expApplicative e2)
 expApplicative l@(Lit _) = l
