@@ -9,18 +9,18 @@ stratusStyle = haskellStyle
    , commentStart = cStart
    , commentLine = cLine
    , nestedComments = nestedC
-   , reservedNames = ["let","case","in","of","data","kind","prop","where"
-                     ,"type","if","then","else","deriving"
-                     ,"circuit", "theorem"
-                     ,"forall","exists","Ex","check","lazy","flag"
-                     , "monad", "primitive", "unreachable"
+   , reservedNames = [ "let", "in", "case", "of", "data", "kind", "prop", "where"
+                     , "type", "if", "then", "else", "deriving", "do"
+                     , "circuit", "theorem"
+                     , "forall", "exists", "Ex", "check", "lazy", "flag"
+                     , "monad", "primitive", "unreachable", "import"
                      ]
-   , reservedOpNames= ["=","\\"
-                      ,"[|","|]"
-                      ,"[e|"
-                      ,"[d|"
-                      ,"[p|"
-                      ,"[t|"
+   , reservedOpNames= [ "=", "\\"
+                      , "[|", "|]"
+                      , "[e|"
+                      , "[d|"
+                      , "[p|"
+                      , "[t|"
                       ]
    }
 
