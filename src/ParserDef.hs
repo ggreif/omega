@@ -312,7 +312,7 @@ expr =  lambdaExpression
     <|> circExpression
     <|> ifExpression
     <|> doexpr
-    <|> try (do { p <- applyExpression
+    <|> try (do { p <- infixExpression
                 ; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
