@@ -177,9 +177,9 @@ constructor = terminal conName Global
 name = terminal identifier Global
 
 expApplicative (App f a) = App (App (Var (Global "App")) (expApplicative f)) (expApplicative a)
+expApplicative (Var (Global name)) = App (Var (Global "Var")) (Lit (Tag name))
+expApplicative l@(Lit _) = l
 expApplicative _ = Lit Unit -- FIXME
--- expApplicative xs = foldl1 application xs
---  where application f a = App (App (Var (Global "App")) (f) a
 
 -----------------------------------------------------------
 -- Syntactic Extensions
