@@ -242,13 +242,21 @@ infixPattern =
      ; return (Pcon (Global x) [p1,p2])
      }
 
+failUnaryPcon con = fail ("unary pattern constructor '" ++ con
+                          ++ "' used where a nullary one is expected (did you mean '("
+                          ++ con ++ " p)'?)")
+nullaryPcon (Global "L") = failUnaryPcon "L"
+nullaryPcon (Global "R") = failUnaryPcon "R"
+nullaryPcon (Global "Ex") = failUnaryPcon "Ex"
+nullaryPcon nm = return $ Pcon nm []
+
 simplePattern :: Parser Pat
 simplePattern =
         literalP
     <|> (do { p <- extP pattern; return(extToPat p)})
     <|> (try (fmap lit2Pat (parens signedNumLiteral)))
     <|> (do { symbol "_"; return Pwild})
-    <|> (do { nm <- constructor; return(Pcon nm []) })
+    <|> (do { nm <- constructor; nullaryPcon nm })
     <|> patvariable
     <?> "simple pattern"
 
