@@ -490,9 +490,12 @@ infixExpression =
 tryEtaOnSum (Lam [Pvar (Global "x")] (Sum s (Var (Global "x"))) []) a = Sum s a
 tryEtaOnSum f a = App f a
 
-assembleApply (Left "Ex") [arg] = return $ Exists arg
-assembleApply (Left "check") [arg] = return $ CheckT arg
-assembleApply (Left "lazy") [arg] = return $ Lazy arg
+applyBuiltin builtin (arg1:rest) = return $ foldl1 App (builtin arg1:rest)
+
+assembleApply (Left "Ex") (arg1:rest) = return $ foldl1 App (Exists arg1:rest)
+assembleApply (Left "check") (arg1:rest) = return $ foldl1 App (CheckT arg1:rest)
+assembleApply (Left "lazy") (arg1:rest) = return $ foldl1 App (Lazy arg1:rest)
+assembleApply (Left f) [] = fail ("builtin '"++f++"' must be applied to an argument")
 assembleApply (Right f) args = return (foldl1 tryEtaOnSum (f:args))
 
 reservedFun name = reserved name >> return name
