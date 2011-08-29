@@ -314,9 +314,6 @@ expr =  lambdaExpression
     <|> circExpression
     <|> ifExpression
     <|> doexpr
-    <|> checkExp
-    <|> lazyExp
-    <|> existExp
     <|> try (do { p <- simpleExpression; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
@@ -329,24 +326,6 @@ num = lexeme(try (do { n <- natP; return(extToExp n)}))
 -- (,)
 pairOper = (try (string "(,)" >> return(Var (Global "(,)"))))
 
-
-checkExp =
-    do { reserved "check"
-       ; e <- expr
-       ; return(CheckT e)
-       }
-
-lazyExp =
-    do { reserved "lazy"
-       ; e <- expr
-       ; return(Lazy e)
-       }
-
-existExp =
-    do { reserved "Ex"
-       ; e <- expr
-       ; return(Exists e)
-       }
 
 lambdaExpression =
     do{ reservedOp "\\"
@@ -504,10 +483,22 @@ infixExpression =
 tryEtaOnSum (Lam [Pvar (Global "x")] (Sum s (Var (Global "x"))) []) a = Sum s a
 tryEtaOnSum f a = App f a
 
+applyBuiltin builtin (arg1:rest) = return $ foldl1 App (builtin arg1:rest)
+
+assembleApply (Left "Ex") args@(_:_) = applyBuiltin Exists args
+assembleApply (Left "check") args@(_:_) = applyBuiltin CheckT args
+assembleApply (Left "lazy") args@(_:_) = applyBuiltin Lazy args
+assembleApply (Left f) [] = fail ("builtin '"++f++"' must be applied to an argument")
+assembleApply (Right f) args = return (foldl1 tryEtaOnSum (f:args))
+
+reservedFun name = reserved name >> return name
+reservedFuns = reservedFun "Ex" <|> reservedFun "check" <|> reservedFun "lazy"
+
 applyExpression =
-    do{ exprs <- many1 simpleExpression
-      ; return (foldl1 tryEtaOnSum exprs)
-      }
+    do { fun <- fmap Left reservedFuns <|> fmap Right simpleExpression
+       ; args <- many simpleExpression
+       ; assembleApply fun args
+       }
 
 -- `mem`  `elem`
 quotedInfix = try
