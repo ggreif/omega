@@ -4,7 +4,7 @@ import StdTokenDef
 import CommentDef
 
 
-stratusStyle = haskellStyle
+omegaStyle = haskellStyle
    { commentEnd = cEnd
    , commentStart = cStart
    , commentLine = cLine
@@ -24,4 +24,4 @@ stratusStyle = haskellStyle
                       ]
    }
 
-tokenDef = stratusStyle
+tokenDef = omegaStyle
