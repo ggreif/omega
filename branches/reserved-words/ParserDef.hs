@@ -509,9 +509,12 @@ buildPrefix name x = App (Var (Global name)) x
 infixExpression =
     buildExpressionParser ([[Infix quotedInfix AssocLeft]] ++ operators) applyExpression
 
+tryEtaOnSum (Lam [Pvar (Global "x")] (Sum s (Var (Global "x"))) []) a = Sum s a
+tryEtaOnSum f a = App f a
+
 applyExpression =
     do{ exprs <- many1 simpleExpression
-      ; return (foldl1 App exprs)
+      ; return (foldl1 tryEtaOnSum exprs)
       }
 
 -- `mem`  `elem`
