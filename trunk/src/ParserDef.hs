@@ -312,7 +312,8 @@ expr =  lambdaExpression
     <|> circExpression
     <|> ifExpression
     <|> doexpr
-    <|> try (do { p <- simpleExpression; symbol "::"
+    <|> try (do { p <- applyExpression
+                ; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
     <|> infixExpression     --names last
