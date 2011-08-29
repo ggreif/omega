@@ -300,7 +300,6 @@ simpleExpression =
     <|> pairOper                  -- (,)
     <|> section                   -- (+)
     <|> caseExpression
-    <|> sumExpression             -- like (L x) or (R 3), Must precede expconstructor
     <|> expconstructor            -- Node Cons
     <|> fmap extToExp (extP expr) -- Syntax extensions, like
                                   -- (2,True)p [3,4,5]l {`a=5,`b=True}r
@@ -428,14 +427,6 @@ arm =
       ; return $ (loc pos,pat,e,ds)
       }
 
-sumExpression =
-  do { inj <- (reserved "R" >> return True) <|>
-              (reserved "L" >> return False)
-     ; x <- expr
-     ; let f True x = Sum R x
-           f False x = Sum L x
-     ; return (f inj x)
-     }
 
 section = try(do { symbol "("
                  ; z <- oper
