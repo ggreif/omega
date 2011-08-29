@@ -304,7 +304,6 @@ expr =  lambdaExpression
     <|> try (do { p <- simpleExpression; symbol "::"
                 ; t <- typN
                 ; return(Ann p t)})
-    <|> try runExp
     <|> infixExpression     --names last
     <?> "expression"
 
@@ -518,11 +517,6 @@ escapeExp = escVar <|> escParen  where
                 ; whiteSpace                  -- where the $ and ( must be adjacent
                 ; e <- expr; symbol ")"
                 ; return (Escape e) }
-
-runExp  =
-    do { reserved "run"
-       ; e <- expr
-       ; return (Run e) }
 
 -- [| 3 + x |]
 code =

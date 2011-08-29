@@ -126,7 +126,6 @@ instance Swap Exp where
   swaps cs (Exists e) = Exists (swaps cs e)
   swaps cs (Bracket e) = Bracket (swaps cs e)
   swaps cs (Escape e) = Escape(swaps cs e)
-  swaps cs (Run e) = Run (swaps cs e)
   swaps cs (Reify s v) = Reify s (swaps cs v)
 
 swapsMatch [] trip = trip

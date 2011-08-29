@@ -132,7 +132,6 @@ data Exp
   | Exists Exp
   | Bracket Exp
   | Escape Exp
-  | Run Exp
   | Reify String V
   | Ann Exp PT
   | ExtE (Extension Exp)
@@ -594,7 +593,6 @@ parE (Exists x) f = do { a <- parE x f; return(Exists a)}
 parE (App x y) f = do { a <- parE x f; b <- parE y f; return(App a b) }
 parE (Bracket x) f = do { a <- parE x (incP f); return (Bracket a) }
 parE (Escape x) f = escFun f x
-parE (Run x) f = do {a <- parE x f; return (Run a) }
 parE (Reify s v) f = return(Reify s v)
 parE (Case e ms) f =
    do { e2 <- parE e f
@@ -1016,7 +1014,6 @@ instance Vars Exp where
   vars bnd (Exists x) = vars bnd x
   vars bnd (Bracket e) = vars bnd e
   vars bnd (Escape e) = vars bnd e
-  vars bnd (Run e) = vars bnd e
   vars bnd (Reify s v) = id
   vars bnd (Ann x t) = vars bnd x
   vars bnd (ExtE x) = depExt x . varsL bnd (extList x)
@@ -1095,7 +1092,6 @@ instance Eq Exp where
   (Exists e1) == (Exists e2) = e1==e2
   (Bracket e1) == (Bracket e2) = e1==e2
   (Escape e1) == (Escape e2) = e1==e2
-  (Run e1) == (Run e2) = e1==e2
   (Reify s1 v1) == (Reify s2 v2) = s1==s2 && v1==v2
   (Ann e1 pt1) == (Ann e2 pt2) = e1==e2 && pt1==pt2
   (ExtE x) == (ExtE y) = x==y
@@ -1364,7 +1360,6 @@ ppExp e =
     Bracket e -> PP.brackets $ text "|" <+> ppExp e <+> text "|"
     Escape (Var v) -> text "$" <> ppVar v
     Escape e -> text "$" <> PP.parens (ppExp e)
-    Run e -> text "run" <+> PP.parens (ppExp e)
     Reify s (Vlit c) -> ppLit c
     Reify s v -> text $ '%':s
     Ann e pt -> PP.parens $ ppExp e <> text "::" <> ppPT pt
