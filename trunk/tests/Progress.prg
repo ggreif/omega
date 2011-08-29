@@ -178,7 +178,7 @@ progress (S0 x) =
 progress (term@(If0 tst th el)) = 
   case progress tst of
    L (ValZ) -> R (Ex StepIfZ)
-   L (ValS p) -> R (Ex StepIfS p)
+   L (ValS p) -> R (Ex (StepIfS p))
    R (Ex p) -> R(Ex (StepIf p))
 progress (term@(App0 f x)) =
   case progress f of
