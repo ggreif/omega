@@ -1,5 +1,5 @@
 #summary Syntax for name juxtaposition being more general than function application.
-#labels crazy
+#labels speculative
 
 = Introduction =
 
@@ -81,11 +81,14 @@ For example use the standard Ωmega parser to read everything between the follow
 (let l = \x -> p in l m)ac
 }}}
 Then the _Applicative_ (here with an `ac` suffix) syntax extension walks the `Exp` tree and converts all
+  * _Names_ (global variables at this point) get converted to `Label t` (or better `Var`s?),
   * abstractions to calls of constructor `Lam` with a `Label t` as the first argument and the `Exp` as the second,
   * parsed apply nodes get converted to `App` constructors, and
   * finally the (recursive) `let`s get mapped to `Let sym e1 e2`.
 
 One could even convert `[expr]` to arrow units. The two forms of _escape_ would interface to the pure world.
+
+Patterns seem feasible too.
 
 = References =
 
