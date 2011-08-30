@@ -27,6 +27,7 @@ data Extension t
   | Tickx Int t String                --  (e`3)i
   | Unitx String                      --  ()i
   | Itemx t String                    --  (e)i
+  | Applicativex t String             --  (f a b)i
 
 -------------------------------------------------------------
 -- Show instances
@@ -77,6 +78,7 @@ extKey (Unitx s) = s
 extKey (Itemx x s) = s
 extKey (Pairx xs s) = s
 extKey (Tickx n x s) = s
+extKey (Applicativex x s) = s 
 
 
 extName :: Extension a -> String
@@ -90,6 +92,7 @@ extName (Itemx _ s) = "Item"
 extName (Pairx (Right xs) s) = "Pair"
 extName (Pairx (Left xs) s) = "LeftPair"
 extName (Tickx n _ s) = "Tick"
+extName (Applicativex _ s) = "Applicative" 
 
 
 outLR (Right xs) = (Right, xs)
@@ -138,6 +141,7 @@ extList ((Itemx x _)) = [x]
 extList ((Pairx xs' _)) = xs
   where (_, xs) = outLR xs'
 extList ((Tickx n x _)) = [x]
+extList ((Applicativex x _)) = [x]
 
 instance Eq t => Eq (Extension t) where
  (Listx (Right ts1) (Just t1) s1) == (Listx (Right xs1) (Just x1) s2) = s1==s2 && (t1:ts1)==(x1:xs1)
@@ -152,6 +156,7 @@ instance Eq t => Eq (Extension t) where
  (Recordx (Left ts1) (Just t1) s1) == (Recordx (Left xs1) (Just x1) s2) = s1==s2 && t1==x1 && ts1==xs1
  (Recordx ts1 Nothing s1) == (Recordx xs1 Nothing s2) = s1==s2 && ts1==xs1
  (Tickx n t1 s1) == (Tickx m x1 s2) = s1==s2 && t1==x1 && n==m
+ (Applicativex x s) == (Applicativex y t) = x==y && s==t
  _ == _ = False
 
 extM :: Monad a => (b -> a c) -> Extension b -> a (Extension c)
@@ -173,6 +178,7 @@ extM f (Recordx xs' Nothing s) = do { ys <- mapM g xs; return(Recordx (lr ys) No
  where g (x,y) = do { a <- f x; b <- f y; return(a,b) }
        (lr, xs) = outLR xs'
 extM f (Tickx n x s) = do { y <- f x; return((Tickx n y s))} 
+extM f (Applicativex x s) =  do { y <- f x; return((Applicativex y s))}
 
 
 threadL f [] n = return([],n)
@@ -224,6 +230,7 @@ instance Functor Extension where
   fmap f (Recordx xs' Nothing s) = (Recordx (lr (map (cross f) xs)) Nothing s)
     where (lr, xs) = outLR xs'
   fmap f (Tickx n x s) = (Tickx n (f x) s)
+  fmap f (Applicativex x s) =  (Applicativex (f x) s) 
 
 --------------------------------------------------------
 -- Other primitive operations like selection and equality
@@ -267,6 +274,7 @@ matchExt (Pairx (Left _) s)     (Ix(t,_,_,Just(Left _),_,_,_,_)) | s==t = return
 matchExt (Recordx (Right _) _ s) (Ix(t,_,_,_,Just(Right _),_,_,_)) | s==t = return True
 matchExt (Recordx (Left _) _ s) (Ix(t,_,_,_,Just(Left _),_,_,_)) | s==t = return True
 matchExt (Tickx _ _ s)   (Ix(t,_,_,_,_,Just _,_,_)) | s==t = return True
+--matchExt (Applicativex _ s) (Ix(t,_,_,_,_,_,_,_,Just _)) | s==t = return True
 matchExt _ _                = return False
 
 ----------------------------------------------------------
@@ -279,6 +287,7 @@ findM mes p (x:xs) =
      ; if b then return x else findM mes p xs}
 
 -- harmonizeExt: correct inevitable little errors that happened during parsing
+--
 harmonizeExt x@(Listx (Right xs) Nothing s) ys = case findM "" (matchExt x') ys of
                                                   Nothing -> return x
                                                   Just _ -> return x'
@@ -297,7 +306,10 @@ harmonizeExt x@(Pairx (Right xs) s) ys = case findM "" (matchExt x') ys of
                                           Nothing -> return x
                                           Just _ -> return x'
                                          where x' = Pairx (Left xs) s
-
+harmonizeExt x@(Itemx e s) ys = case findM "" (matchExt x') ys of
+                                 Nothing -> return x
+                                 Just _ -> return x'
+                                where x' = Applicativex e s
 harmonizeExt x _ = return x
 
 rot3 f a b c = f c a b
@@ -513,6 +525,7 @@ expectedArities =
   ,("Record",Just "LeftRecord",[("RecNil ",0),("RecCons",3)])
   ,("LeftRecord",Just "Record",[("RecNil ",0),("RecSnoc",3)])
   ,("Tick"    ,Nothing    ,[("Tick   ",1)])
+  ,("Applicative",Nothing ,[("Apply  ",2)])
   ]
 
 -- Check a list of arities against the expected arities, indicate with
@@ -537,11 +550,11 @@ checkArities name style expected actual =
         extrafix NEW d = "Remove, extra constructor "++detrail d++" from the syntax clause for "++name++"."
         missingfix OLD c = "Add a constructor for "++detrail c++" to the data declaration."
         missingfix NEW c = "Add a constructor for "++detrail c++" to the syntax clause for "++name++"."
-                
+
 suggestFix style [] = ""
 suggestFix style ((True,_,fix): xs) = suggestFix style xs
 suggestFix style ((False,_,fix): xs) = "\n   "++fix ++ suggestFix style xs
-  
+
 detrail xs = reverse (dropWhile (==' ') (reverse xs))
 
 fstOfTriple (x,y,z) = x
