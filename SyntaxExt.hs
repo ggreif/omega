@@ -313,9 +313,15 @@ harmonizeExt x@(Itemx e s) ys = case findM "" (matchExt x') ys of
                                 where x' = Applicativex e s
 harmonizeExt x _ = return x
 
+
+data ApplicativeSyntaxDict a = AD { var :: a -> a
+                                  , app :: a -> a -> a
+                                  , lam :: a -> a -> a
+                                  , lt  :: a -> a -> a -> a }
+
 class ApplicativeSyntax a where 
-  expandApplicative :: Show a => a -> (a -> a -> a) -> a
-  expandApplicative a _ = error ("Cannot expand applicative: "++show a)
+  expandApplicative :: Show a => ApplicativeSyntaxDict a -> a -> a
+  expandApplicative _ a = error ("Cannot expand applicative: "++show a)
 
 rot3 f a b c = f c a b
 
@@ -343,7 +349,8 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Itemx x _,Ix(tag,_,_,_,_,_,_,Just item,_)) -> return(buildItem (lift1 item) x)
         (Pairx (Right xs) _,Ix(tag,_,_,Just(Right pair),_,_,_,_,_)) -> return(buildTuple (lift2 pair) xs)
         (Pairx (Left xs) _,Ix(tag,_,_,Just(Left pair),_,_,_,_,_)) -> return(buildTuple (flip $ lift2 pair) (reverse xs))                
-        (Applicativex x _,Ix(tag,_,_,_,_,_,_,_,Just (var,app,lam,lt))) -> return(expandApplicative x (lift2 app))
+        (Applicativex x _,Ix(tag,_,_,_,_,_,_,_,Just (va,ap,la,le))) -> return(expandApplicative dict x)
+                where dict = AD {var = lift1 va, app = lift2 ap, lam = lift2 la, lt = lift3 le}
         _ -> fail ("\nSyntax extension: "++extKey x++" doesn't match use, at "++loc)}
 
 buildNat :: Num a => b -> (b -> b) -> a -> b
@@ -509,7 +516,7 @@ mergey ("LeftPair",[a])   (Ix(k,l,n,Nothing,r,t,u,i,ap)) = Ix(k,l,n,Just$Left a,
 mergey ("Record",[a,b])   (Ix(k,l,n,p,Nothing,t,u,i,ap)) = Ix(k,l,n,p,Just$Right(a,b),t,u,i,ap)
 mergey ("LeftRecord",[a,b]) (Ix(k,l,n,p,Nothing,t,u,i,ap)) = Ix(k,l,n,p,Just$Left(a,b),t,u,i,ap)
 mergey ("Tick",[a])       (Ix(k,l,n,p,r,Nothing,u,i,ap)) = Ix(k,l,n,p,r,Just a,u,i,ap)
-mergey ("Applicative",[a]) (Ix(k,l,n,p,r,t,u,i,Nothing)) = Ix(k,l,n,p,r,t,u,i,Just (undefined,a,undefined,undefined))
+mergey ("Applicative",[v,a,lam,lt]) (Ix(k,l,n,p,r,t,u,i,Nothing)) = Ix(k,l,n,p,r,t,u,i,Just (v,a,lam,lt))
 mergey _                  i                           = i
 
 -----------------------------------------------------------
@@ -532,7 +539,7 @@ expectedArities =
   ,("Record",Just "LeftRecord",[("RecNil ",0),("RecCons",3)])
   ,("LeftRecord",Just "Record",[("RecNil ",0),("RecSnoc",3)])
   ,("Tick"    ,Nothing    ,[("Tick   ",1)])
-  ,("Applicative",Nothing ,[("Apply  ",2)])
+  ,("Applicative",Nothing ,[("Var    ",1),("Apply  ",2),("Lambda ",2),("Let   ",3)])
   ]
 
 -- Check a list of arities against the expected arities, indicate with
