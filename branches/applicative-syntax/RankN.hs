@@ -1994,6 +1994,8 @@ data PT
   | Ext (Extension PT)
   | PolyLevel [String] PT
 
+instance ApplicativeSyntax PT
+
 arityPT:: PT -> Int
 arityPT (Rarrow' x y) = 1 + arityPT y
 arityPT (Karrow' x y) = 1 + arityPT y

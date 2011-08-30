@@ -186,6 +186,9 @@ expApplicative l@(Lit _) = l
 expApplicative (Escape e) = e
 expApplicative _ = Lit Unit -- FIXME
 
+instance ApplicativeSyntax Exp where
+  expandApplicative = expApplicative
+
 -----------------------------------------------------------
 -- Syntactic Extensions
 -- They come with or without suffixes. Without suffixes they are
@@ -208,12 +211,13 @@ expApplicative _ = Lit Unit -- FIXME
 -- turn it into the normal kind of syntactic sugar
 
 extToExp (Pairx (Right xs) "") = expTuple xs
-extToExp (Itemx x "ac") = expApplicative x
 extToExp (Listx (Right xs) Nothing "") = listExp xs
 extToExp (Listx (Right xs) (Just tail) "") = listExp2 xs tail
 extToExp (Natx n Nothing "") = Lit(Int n)
 extToExp (Natx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
+
+instance ApplicativeSyntax Pat
 
 extToPat (Pairx (Right xs) "") =  patTuple xs
 extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
