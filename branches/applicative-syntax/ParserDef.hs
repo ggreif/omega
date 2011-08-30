@@ -201,6 +201,7 @@ instance ApplicativeSyntax Exp where
 -- Records  {a=4, b=True}    {a=Int, b=Bool}r  {a=Int; r}r
 -- Items                     (x)i
 -- Units                     ()i
+-- Applicative               (let foo = \a -> b in foo c)i
 -----------------------------------------------------------
 -- Left{List,Pair,Record} are the left-associative variants
 --
