@@ -177,15 +177,16 @@ constructor = terminal conName Global
 name = terminal identifier Global
 
 instance ApplicativeSyntax Exp where
-  expandApplicative (App f a) = (Var $ Global "App") `App` (expandApplicative f) `App` (expandApplicative a)
-  expandApplicative (Var (Global name)) = (Var $ Global "Var") `App` (Lit $ Tag name)
-  expandApplicative (Lam [Pvar (Global name)] e []) = (Var $ Global "Lam")
-                    `App` (Lit $ Tag name) `App` (expandApplicative e)
-  expandApplicative (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) = (Var $ Global "Let")
-                    `App` (Lit $ Tag name) `App` (expandApplicative e1) `App` (expandApplicative e2)
-  expandApplicative l@(Lit _) = l
-  expandApplicative (Escape e) = e
-  expandApplicative _ = Lit Unit -- FIXME
+  expandApplicative (App f a) (*) = {-(Var $ Global "App") *-} (expandApplicative f(*))
+                                    * (expandApplicative a (*))
+  expandApplicative (Var (Global name)) _ = (Var $ Global "Var") `App` (Lit $ Tag name)
+  expandApplicative (Lam [Pvar (Global name)] e []) (*) = (Var $ Global "Lam")
+                    `App` (Lit $ Tag name) `App` (expandApplicative e (*))
+  expandApplicative (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) (*) = (Var $ Global "Let")
+                    `App` (Lit $ Tag name) `App` (expandApplicative e1 (*)) `App` (expandApplicative e2 (*))
+  expandApplicative l@(Lit _) _ = l
+  expandApplicative (Escape e) _ = e
+  expandApplicative _ _ = Lit Unit -- FIXME
 
 -----------------------------------------------------------
 -- Syntactic Extensions
