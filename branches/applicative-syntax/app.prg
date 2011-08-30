@@ -4,5 +4,5 @@ data Appl :: * where
   Lam :: Label t -> Appl -> Appl
   In :: Appl -- don't use
   Let :: Label t -> Appl -> Appl -> Appl
- deriving syntax(ac) Item(Var) Record(In, Let)
+ deriving syntax(ac) Applicative(App) Record(In, Let)
 
