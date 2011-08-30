@@ -178,14 +178,14 @@ name = terminal identifier Global
 
 instance ApplicativeSyntax Exp where
   expandApplicative dict exp = expand exp
-    where expand (App f a) = expand f * expand a
+    where expand (App f a) = expand f <*> expand a
           expand (Var (Global name)) = v name
           expand (Lam [Pvar (Global name)] e []) = lam' (sym name) (expand e)
           expand (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) = let' (sym name) (expand e1) (expand e2)
           expand l@(Lit _) = l
           expand (Escape e) = e
           expand _ = Lit Unit -- FIXME
-          (*) = app dict
+          (<*>) = app dict
           v = SyntaxExt.var dict . sym
           lam' = lam dict
           let' = lt dict
