@@ -16,7 +16,7 @@ type SynAssoc a = Either a a
 
 data SynExt t -- Syntax Extension
   = Ox        -- no extension
-  | Ix (String,Maybe (SynAssoc (t,t)),Maybe(t,t),Maybe (SynAssoc t),Maybe (SynAssoc (t,t)),Maybe t,Maybe t,Maybe t,Maybe t)
+  | Ix (String,Maybe (SynAssoc (t,t)),Maybe(t,t),Maybe (SynAssoc t),Maybe (SynAssoc (t,t)),Maybe t,Maybe t,Maybe t,Maybe (t,t,t,t))
   | Parsex (String,SyntaxStyle,[(t,Int)],[(t,[t])])
 
 data Extension t
@@ -343,7 +343,7 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Itemx x _,Ix(tag,_,_,_,_,_,_,Just item,_)) -> return(buildItem (lift1 item) x)
         (Pairx (Right xs) _,Ix(tag,_,_,Just(Right pair),_,_,_,_,_)) -> return(buildTuple (lift2 pair) xs)
         (Pairx (Left xs) _,Ix(tag,_,_,Just(Left pair),_,_,_,_,_)) -> return(buildTuple (flip $ lift2 pair) (reverse xs))                
-        (Applicativex x _,Ix(tag,_,_,_,_,_,_,_,Just app)) -> return(expandApplicative x (lift2 app))
+        (Applicativex x _,Ix(tag,_,_,_,_,_,_,_,Just (var,app,lam,lt))) -> return(expandApplicative x (lift2 app))
         _ -> fail ("\nSyntax extension: "++extKey x++" doesn't match use, at "++loc)}
 
 buildNat :: Num a => b -> (b -> b) -> a -> b
@@ -509,7 +509,7 @@ mergey ("LeftPair",[a])   (Ix(k,l,n,Nothing,r,t,u,i,ap)) = Ix(k,l,n,Just$Left a,
 mergey ("Record",[a,b])   (Ix(k,l,n,p,Nothing,t,u,i,ap)) = Ix(k,l,n,p,Just$Right(a,b),t,u,i,ap)
 mergey ("LeftRecord",[a,b]) (Ix(k,l,n,p,Nothing,t,u,i,ap)) = Ix(k,l,n,p,Just$Left(a,b),t,u,i,ap)
 mergey ("Tick",[a])       (Ix(k,l,n,p,r,Nothing,u,i,ap)) = Ix(k,l,n,p,r,Just a,u,i,ap)
-mergey ("Applicative",[a]) (Ix(k,l,n,p,r,t,u,i,Nothing)) = Ix(k,l,n,p,r,t,u,i,Just a)
+mergey ("Applicative",[a]) (Ix(k,l,n,p,r,t,u,i,Nothing)) = Ix(k,l,n,p,r,t,u,i,Just (undefined,a,undefined,undefined))
 mergey _                  i                           = i
 
 -----------------------------------------------------------
@@ -641,7 +641,8 @@ computeArity printname arityCs c =
                        ," constructors: ",plistf fst "" arityCs ", " ".\n"])
     Just n -> return (c,n)
       
-wExt = Ix("w",Just$Right("Nil","Cons"),Just("Zero","Succ"),Just$Right "Pair",Just$Right("RNil","RCons"),Just "Next",Just "Unit",Just "Item", Just "Apply")
+wExt = Ix("w",Just$Right("Nil","Cons"),Just("Zero","Succ"),Just$Right "Pair",Just$Right("RNil","RCons"),
+              Just "Next",Just "Unit",Just "Item",Just ("Var","Apply","Lambda","Let"))
 
                                               
 go x = case checkMany OLD "tag" x of
