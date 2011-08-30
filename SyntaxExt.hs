@@ -313,9 +313,13 @@ harmonizeExt x@(Itemx e s) ys = case findM "" (matchExt x') ys of
                                 where x' = Applicativex e s
 harmonizeExt x _ = return x
 
+class ApplicativeSyntax a where 
+  expandApplicative :: Show a => a -> a
+  expandApplicative a = error ("Cannot expand applicative: "++show a)
+
 rot3 f a b c = f c a b
 
-buildExt :: (Show c,Show b,Monad m) => String -> (b -> c,b -> c -> c,b -> c -> c -> c,b -> c -> c -> c -> c) ->
+buildExt :: (Show c,Show b,Monad m,ApplicativeSyntax c) => String -> (b -> c,b -> c -> c,b -> c -> c -> c,b -> c -> c -> c -> c) ->
                       Extension c -> [SynExt b] -> m c
 buildExt loc (lift0,lift1,lift2,lift3) x ys =
   do { x <- harmonizeExt x ys
@@ -339,6 +343,7 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Itemx x _,Ix(tag,_,_,_,_,_,_,Just item,_)) -> return(buildItem (lift1 item) x)
         (Pairx (Right xs) _,Ix(tag,_,_,Just(Right pair),_,_,_,_,_)) -> return(buildTuple (lift2 pair) xs)
         (Pairx (Left xs) _,Ix(tag,_,_,Just(Left pair),_,_,_,_,_)) -> return(buildTuple (flip $ lift2 pair) (reverse xs))                
+        (Applicativex x _,Ix(tag,_,_,_,_,_,_,_,Just item)) -> return(expandApplicative x)
         _ -> fail ("\nSyntax extension: "++extKey x++" doesn't match use, at "++loc)}
 
 buildNat :: Num a => b -> (b -> b) -> a -> b
