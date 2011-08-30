@@ -255,7 +255,14 @@ showSynTick (Vcon (Global c,ext) [x])     | tickSucc c ext = (f 1 x)++ postscrip
             f n v = "("++show v++"`"++show n++")"
 showSynTick v = showVconInParens v
 
-tim = Vcon (Global "A",wExt) [] 
+--showSynVar (Vcon (Global c,ext) [x]) | applicativeVar c ext =
+--   "FIXME"
+--showSynVar v = showVconInParens v
+
+showSynApply (Vcon (Global c,ext) xs) | applicativeApply c ext =
+   "(" ++ show xs ++ ")" ++ postscript (synKey ext)
+showSynApply v = showVconInParens v
+
 
 showVcon (Vcon (c,_) vs) =
   case vs of
@@ -300,6 +307,7 @@ instance Show V where
   show (v@(Vcon (Global c,ext) _)) | recordExt c ext = showSynRecord v
   show (v@(Vcon (Global c,ext) _)) | leftRecordExt c ext = showSynLeftRecord v
   show (v@(Vcon (Global c,ext) _)) | tickSucc c ext = showSynTick v
+  show (v@(Vcon (Global c,ext) _)) | applicativeApply c ext = showSynApply v
   show (Vcode e (Ev xs)) = "[| " ++ show e ++" |]" -- " | "++ free ++ " |]"
       where free = plistf show "" (map fst xs) "," ""
   show (Vswap cs u) =  show (swaps cs u)

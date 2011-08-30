@@ -69,6 +69,7 @@ instance Show x => Show(Extension x) where
   show (Recordx (Left ts) (Just ys) tag) =  "{" ++ show ys ++ "; " ++ plistf f "" ts "," ("}"++tag)
     where f (x,y) = show x++"="++show y
   show (Tickx n t tag) = "("++show t++"`"++show n++")"++tag
+  show (Applicativex x tag) = "("++show x++")"++tag
 
 extKey :: Extension a -> String
 extKey (Listx xs _ s) = s
@@ -120,7 +121,7 @@ ppExt f (Recordx xs' Nothing s) = PP.lbrace <> PP.hcat(PP.punctuate PP.comma (ma
   where g (x,y) = f x <> PP.equals <> f y
         (_, xs) = outLR xs'
 ppExt f((Tickx n x s)) = PP.hcat [PP.lparen,f x,text "`",PP.int n,text (")"++s)]
-
+ppExt f((Applicativex x s)) = PP.hcat [PP.lparen,f x,text (")"++s)]
 
 -------------------------------------------------------
 -- map and fold-like operations
@@ -429,6 +430,9 @@ leftRecordNil c _ = False
 
 tickSucc c (Ix(k,_,_,_,_,Just succ,_,_,_)) = c==succ
 tickSucc c _ = False
+
+applicativeApply c (Ix(k,_,_,_,_,_,_,_,Just (_,app,_,_))) = c==app
+applicativeApply _ _ = False
 
 -- recognizing extension tags
 
