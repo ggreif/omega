@@ -431,6 +431,9 @@ leftRecordNil c _ = False
 tickSucc c (Ix(k,_,_,_,_,Just succ,_,_,_)) = c==succ
 tickSucc c _ = False
 
+applicativeVar c (Ix(k,_,_,_,_,_,_,_,Just (var,_,_,_))) = c==var
+applicativeVar _ _ = False
+
 applicativeApply c (Ix(k,_,_,_,_,_,_,_,Just (_,app,_,_))) = c==app
 applicativeApply _ _ = False
 
