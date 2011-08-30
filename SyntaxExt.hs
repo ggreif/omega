@@ -504,7 +504,7 @@ mergey ("LeftPair",[a])   (Ix(k,l,n,Nothing,r,t,u,i,ap)) = Ix(k,l,n,Just$Left a,
 mergey ("Record",[a,b])   (Ix(k,l,n,p,Nothing,t,u,i,ap)) = Ix(k,l,n,p,Just$Right(a,b),t,u,i,ap)
 mergey ("LeftRecord",[a,b]) (Ix(k,l,n,p,Nothing,t,u,i,ap)) = Ix(k,l,n,p,Just$Left(a,b),t,u,i,ap)
 mergey ("Tick",[a])       (Ix(k,l,n,p,r,Nothing,u,i,ap)) = Ix(k,l,n,p,r,Just a,u,i,ap)
-mergey ("Item",[a])       (Ix(k,l,n,p,r,t,u,i,Nothing)) = Ix(k,l,n,p,r,t,u,i,Just a)
+mergey ("Applicative",[a]) (Ix(k,l,n,p,r,t,u,i,Nothing)) = Ix(k,l,n,p,r,t,u,i,Just a)
 mergey _                  i                           = i
 
 -----------------------------------------------------------
