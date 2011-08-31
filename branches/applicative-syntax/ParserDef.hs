@@ -337,7 +337,7 @@ lit2Pat (LString s) = pConsUp patNil (map (Plit . Char) s)
 -- simple expressions are one token, or surrounded by bracket-like things
 simpleExpression :: Parser Exp
 simpleExpression =
-        literalE                  -- "abc"   23.5   'x'   `d  123  #34 45n
+        literalE                  -- "abc"   23.5   'x'   `d  123  #34 45v
     <|> code                      -- [| 3 + x |]
     <|> try escapeExp             -- $x  $(f 3)
     <|> pairOper                  -- (,)
