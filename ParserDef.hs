@@ -257,6 +257,7 @@ applicativeExp2pat (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) =
                                   ; e2' <- applicativeExp2pat e2
                                   ; return $  Pcon (Global "let ") [Pvar (Global name), e1', e2'] }
 applicativeExp2pat (Lit lit) = return $ Plit lit
+applicativeExp2pat (Escape e) = applicativeExp2pat e
 applicativeExp2pat x = fail ("applicative expression cannot appear as pattern: " ++ show x)
 
 expPattern =
