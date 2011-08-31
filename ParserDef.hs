@@ -233,10 +233,10 @@ instance ApplicativeSyntax Pat where
           let' = lt dict
           sym = Plit . Tag
 
-extToPat (Pairx (Right xs) "") =  patTuple xs
-extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
-extToPat (Listx (Right xs) (Just tail) "") =  pConsUp tail xs
-extToPat (Natx n Nothing "") = Plit(Int n)
+extToPat (Pairx (Right xs) "") = patTuple xs
+extToPat (Listx (Right xs) Nothing "") = pConsUp patNil xs
+extToPat (Listx (Right xs) (Just tail) "") = pConsUp tail xs
+extToPat (Natx n Nothing "") = Plit (Int n)
 extToPat x = ExtP x
 
 patNil = Pcon (Global "[]") []
@@ -246,14 +246,21 @@ pConsUp pnil (p:ps) = Pcon (Global ":") [p,pConsUp pnil ps]
 -------------------------------------------------------------
 -- Pattern parsing
 
-exp2pat (Var global) = Pvar global
-exp2pat (App f a) = Pcon (Global "") [exp2pat f, exp2pat a]
-exp2pat (Lam [Pvar (Global name)] e []) = Pcon (Global "\\") [Pvar (Global name), exp2pat e]
-exp2pat (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) = Pcon (Global "let ") [Pvar (Global name), exp2pat e1, exp2pat e2]
-exp2pat (Lit lit) = Plit lit
+applicativeExp2pat (Var global) = return $ Pvar global
+applicativeExp2pat (App f a) = do { f' <- applicativeExp2pat f
+                                  ; a' <- applicativeExp2pat a
+                                  ; return $ Pcon (Global "") [f', a'] }
+applicativeExp2pat (Lam [Pvar (Global name)] e []) = do { e' <- applicativeExp2pat e
+                                                        ; return $ Pcon (Global "\\") [Pvar (Global name), e'] }
+applicativeExp2pat (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) =
+                               do { e1' <- applicativeExp2pat e1
+                                  ; e2' <- applicativeExp2pat e2
+                                  ; return $  Pcon (Global "let ") [Pvar (Global name), e1', e2'] }
+applicativeExp2pat (Lit lit) = return $ Plit lit
+applicativeExp2pat x = fail ("applicative expression cannot appear as pattern: " ++ show x)
 
 expPattern =
-      try $ fmap exp2pat (lambdaExpression <|> letExpression <|> applyExpression)
+      try ((lambdaExpression <|> letExpression <|> applyExpression) >>= applicativeExp2pat)
   <|> pattern
 
 pattern =
