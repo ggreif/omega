@@ -221,7 +221,9 @@ extToExp (Natx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
 
 instance ApplicativeSyntax Pat where
-  expandApplicative dict (Pvar (Global name)) = SyntaxExt.var dict $ Plit (Tag name)
+  expandApplicative dict = expand
+    where expand (Pvar (Global name)) = SyntaxExt.var dict $ Plit (Tag name)
+          expand (Pcon (Global name) ps) = error (show name ++ show ps)
 
 extToPat (Pairx (Right xs) "") =  patTuple xs
 extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
@@ -235,6 +237,13 @@ pConsUp pnil (p:ps) = Pcon (Global ":") [p,pConsUp pnil ps]
 
 -------------------------------------------------------------
 -- Pattern parsing
+
+exp2pat (App f a) = Pcon (Global "") [exp2pat f, exp2pat a]
+exp2pat (Var global) = Pvar global
+
+expPattern =
+      try (fmap exp2pat applyExpression)
+  <|> pattern
 
 pattern =
       try asPattern
@@ -262,7 +271,7 @@ infixPattern =
 simplePattern :: Parser Pat
 simplePattern =
         literalP
-    <|> (do { p <- extP pattern; return(extToPat p)})
+    <|> (do { p <- extP expPattern; return(extToPat p)})
     <|> (try (fmap lit2Pat (parens signedNumLiteral)))
     <|> (do { symbol "_"; return Pwild})
     <|> (do { nm <- constructor; nullaryPcon nm })
