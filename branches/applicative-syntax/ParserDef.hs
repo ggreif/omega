@@ -220,7 +220,8 @@ extToExp (Natx n Nothing "") = Lit(Int n)
 extToExp (Natx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
 
-instance ApplicativeSyntax Pat
+instance ApplicativeSyntax Pat where
+  expandApplicative dict (Pvar (Global name)) = SyntaxExt.var dict $ Plit (Tag name)
 
 extToPat (Pairx (Right xs) "") =  patTuple xs
 extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
