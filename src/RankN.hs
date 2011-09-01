@@ -2446,7 +2446,7 @@ tyCon0 x = TyCon' x Nothing
 
 simpletyp ::Parser PT
 simpletyp =
-       fmap extToPT (extP typN)                          -- #"abc"   #[x,y : zs]i  #(a,b,c)i
+       fmap extToPT (extP typN)                          -- [x,y ; zs]i  (a,b,c)i
    <|> lexeme explicitCon                                -- T
    <|> (parse_tag (\ s -> TyCon' ("`"++s) (Just(1,"")))) -- `abc
    <|> (fmap TyVar' identifier)                          -- x
@@ -2458,9 +2458,6 @@ simpletyp =
                              symbol ","  <|>
                              symbol "==")
                ; return(TyCon' ("("++x++")") Nothing)})
-
---   <|> try(do {ts <- parens(sepBy1 typN (symbol ","))  -- (t,t,t)
---              ; return (tprods' ts)})
 
    <|> try(do {ts <- parens(sepBy1 typN (symbol "+"))  -- (t+t+t)
               ; return (tsums' ts)})
