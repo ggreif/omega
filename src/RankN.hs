@@ -293,9 +293,9 @@ pred2Tau (Rel x) = x
 -----------------------------------------------------------
 
 data PolyKind = K [Name] Sigma  -- some Type Constrs have polymorphic kinds!
-data Kind = MK Tau
+newtype Kind = MK Tau
 data L x = Nil x | Cons (Kind,Quant) (Bind Name (L x))
-data Sigma = Forall (L ([Pred],Rho))
+newtype Sigma = Forall (L ([Pred],Rho))
 
 data Rho
   = Rarrow Sigma Rho
