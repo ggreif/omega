@@ -3,6 +3,13 @@
 
 = _Upcoming_ Release 1.5.1 =
 
+== New Feature: _Backquoted_ Operators at the Type Level ==
+
+Similar to Haskell, type constructors and type function calls can now be written with a backquoted  infix name between the arguments, like this
+{{{
+Eq :: n `Equal` {m `plus` k}
+}}}
+
 == Bugs fixed ==
   * Issue 65, lots of ugly interactions between reserved words and expressions have been rectified.
   * Issue 89, incorrect scoping of expression annotations is now corrected.
