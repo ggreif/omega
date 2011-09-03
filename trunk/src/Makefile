@@ -28,6 +28,9 @@ hugs-%: %.hs
 tests: all
 	./$(EXEC) -tests ../tests
 
+%.prg: all
+	./$(EXEC) $@
+
 clean:
 	rm -f *.hi *.o *.prof
 
