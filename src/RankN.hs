@@ -2424,12 +2424,25 @@ conlevel:: Char -> Parser(Maybe(Int,String))
 conlevel '#' = return Nothing
 conlevel '_' = (underbar <|> (return Nothing)) <?> "Explicit constructor level"
   where underbar = (parens plusexp) <|> (return Nothing)
-num =  do { ds <- many1 digit; return((read ds)::Int)}
+num = do { ds <- many1 digit; return((read ds)::Int)}
 plusexp = try prefixPlus <|> try postfixPlus <|> try justnum <|> try justvar <|> (return Nothing)
 justnum = do { i <- num; return(Just(i,""))}
 justvar = do { n <- identifier; return(Just(0::Int,n))}
 prefixPlus = do { i <- num; char '+'; n <- identifier; return(Just(i,n)) }
 postfixPlus = do { n <- identifier;  char '+'; i <- num; return(Just(i,n)) }
+
+applied item op = do { item1 <- item
+                     ; more <- try quoted <|> (fmap Right $ many item)
+                     ; return $ case more of
+                                Left [v, item2] -> [v, item1, item2]
+                                Right more -> item1:more }
+  where quoted = do { whiteSpace
+                    ; char '`'
+                    ; v <- op
+                    ; char '`'
+                    ; whiteSpace
+                    ; item2 <- item
+                    ; return (Left [v, item2]) } <?> "quoted infix type operator"
 
 parseStar :: Parser PT
 parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
@@ -2444,12 +2457,14 @@ parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
 
 tyCon0 x = TyCon' x Nothing
 
-simpletyp ::Parser PT
+tyIdentifier = fmap TyVar' identifier
+
+simpletyp :: Parser PT
 simpletyp =
        fmap extToPT (extP typN)                          -- [x,y ; zs]i  (a,b,c)i
    <|> lexeme explicitCon                                -- T
    <|> (parse_tag (\ s -> TyCon' ("`"++s) (Just(1,"")))) -- `abc
-   <|> (fmap TyVar' identifier)                          -- x
+   <|> tyIdentifier                                      -- x
    <|> parseStar                                         -- * *1 *2
    <|> fmap extToPT natP                                 -- #2  4t (2+x)i
    <|> try (fmap tyCon0 (symbol "()" <|> symbol "[]"))   -- () and []
@@ -2459,13 +2474,12 @@ simpletyp =
                              symbol "==")
                ; return(TyCon' ("("++x++")") Nothing)})
 
-   <|> try(do {ts <- parens(sepBy1 typN (symbol "+"))  -- (t+t+t)
+   <|> try(do { ts <- parens(sepBy1 typN (symbol "+"))  -- (t+t+t)
               ; return (tsums' ts)})
    <|> try(parens(do { t <- typN; symbol "::"; k <- typN; return(Kinded t k)}))
-   <|> do {t <- squares typN; return (list' t)}        -- [t]
-   <|> (do { xs <- braces (many1 simpletyp); return(TyFun' xs)}) -- {f x y}
-   <|> (do { n <- natural
-           ; unexpected (show n++" is not a type. Use #"++show n++" for Nat constants")})
+   <|> do { t <- squares typN; return (list' t)}       -- [t]
+   <|> do { xs <- braces (applied simpletyp tyIdentifier)
+          ; return(TyFun' xs) }                        -- {f x y} or {x `f` y}
 
 
 val :: String -> Int
@@ -2480,8 +2494,8 @@ data ArrowSort
 
 arrTyp :: Parser PT
 arrTyp =
-   do { ts <- many1 simpletyp    -- "f x y -> z"  parses as "(f x y) -> z"
-      ; let d = (applyT' ts)     -- since (f x y) binds tighter than (->)
+   do { ts <- applied simpletyp explicitCon -- "f x y -> z" or "x `f` y" parses as "(f x y) -> z"
+      ; let d = (applyT' ts)                -- since (f x y) binds tighter than (->)
       ; range <- possible
            ((do {symbol "->"; ans <- typN; return(Single,ans)})  <|>
             (do {symbol "~>"; ans <- typN; return(Wavy,ans)})    <|>
