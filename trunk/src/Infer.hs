@@ -1799,7 +1799,6 @@ checkPT name loc pt =
                ; newname <- registerDisp syn v    -- Update the Display to map the rigid to the PT name
                ; return(subst3,v:skols)}
         rigid _ _ subst = return(subst,[])
-        -- err s = failD 2 [Ds "The prototype:  ",Dd pt,Ds "\ndoes not have kind *0, because ",Ds s]
 
 -- prototypes can be one of two forms
 -- implicit, like: f :: (a -> b) -> [a] -> [b]
@@ -2821,7 +2820,6 @@ hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) =
   do { (nmSigmaType,monoKind,nmTypeKind,names) <- inferPolyPT [] pt
      ; let polyt@(K _ (sigma)) = K names (nmSigmaType)
      ; clauses <- mapM (checkLhsMatch (type_env env1) sigma) ms
-     --; let f d (ts,ps,t) = displays d [Dl ts ",",Ds " ----> ",Dd t]
      ; morepairs <- hasMonoTypeFun env1 more
      ; rule@(NarR(a,xs))  <- makeRule nm polyt clauses
      ; trees <- defTree rule
