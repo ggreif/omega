@@ -264,12 +264,9 @@ importFile count (Import name vs) tenv =
                    ; let new2 = adjustImports name time deps new
                    ; return(importNames name vs new2 tenv,name,time) }
 
-
-importNames :: String -> -- ClockTime -> [(String,ClockTime)] -> 
-                        Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
-importNames name -- time deps 
-            items new old =
-  old { imports = addI (imports new) (imports old) -- addI ((name,time,deps,new):(imports new)) (imports old),
+importNames :: String -> Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
+importNames name items new old =
+  old { imports = addI (imports new) (imports old)
       , var_env = addListToFM (var_env old) (filter okToAddVar (toList (var_env new)))
       , type_env = (filter q (type_env new)) ++ (type_env old)
       , runtime_env = add (runtime_env new) (runtime_env old)
