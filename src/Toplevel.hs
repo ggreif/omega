@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 module Toplevel where
 
 import Char(isAlpha,isDigit)
@@ -277,6 +278,7 @@ importNames name items new old =
       
  where elemOf x Nothing = True          -- No import list, so everything is imported
        elemOf x (Just vs) = elem x vs   -- is it in the import list?
+       okToAddVar :: forall a . (Var ,a) -> Bool
        okToAddVar (x,y) = elemOf x vs
        okToAddTyFun (x,y) = elemOf (Global x) vs
        p2 (s,y) = elemOf (Global s) vs
