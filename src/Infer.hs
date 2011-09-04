@@ -1372,9 +1372,6 @@ inferPat rename k pat =
 
 exFree d x = displays d [Dd x, Ds " = ",Ds(shtt x)]
 
-removeSyn (Forall (Nil([],Rtau(TySyn _ _ _ _ x)))) = Forall (Nil([],Rtau x))
-removeSyn x = x
-
 checkPat :: Bool -> Mod -> Frag -> Sigma -> Pat -> TC(Frag,Pat)
 checkPat rename mod k t pat =
   case (pat,mod) of
@@ -1789,8 +1786,8 @@ checkPT name loc pt =
      ; rho2 <- sub (nameMap,[],[],[]) rho          -- make fresh Rho
      ; mapM (arises6 name rho2) skol
      ; eqn2 <- sub (nameMap,[],[],[]) eqns         -- and fresh equations
-    -- ; warnM [Ds "\ncheckPT names = ",Dl names ", ",Ds "\n snMap = ",Dl snMap ", "
-    --         ,Ds "\n nameMap = ",Dl nameMap ", "]
+     -- ; warnM [Ds "\ncheckPT names = ",Dl names ", ",Ds "\n snMap = ",Dl snMap ", "
+     --         ,Ds "\n nameMap = ",Dl nameMap ", "]
      ; return (s,(rho2,eqn2,skol))}
   where rigid ((s,nm):xs) ((nm2,k,q):ys) subst =
             do { k2 <- sub (subst,[],[],[]) k   -- in explicit foralls, earlier may bind
@@ -1802,7 +1799,7 @@ checkPT name loc pt =
                ; newname <- registerDisp syn v    -- Update the Display to map the rigid to the PT name
                ; return(subst3,v:skols)}
         rigid _ _ subst = return(subst,[])
-        err s = failD 2 [Ds "The prototype:  ",Dd pt,Ds "\ndoes not have kind *0, because ",Ds s]
+        -- err s = failD 2 [Ds "The prototype:  ",Dd pt,Ds "\ndoes not have kind *0, because ",Ds s]
 
 -- prototypes can be one of two forms
 -- implicit, like: f :: (a -> b) -> [a] -> [b]
@@ -2003,7 +2000,7 @@ fixSigma (Forall z) = (Forall (windup polynames (preds,t')),list,(name,lev))
 -- Actually specialize a level polymorphic sigma at level 0
 specializeAt0 cname (K levelnames (Forall z)) =
      do { let (sigma2,list2,(name,levl)) = fixSigma (Forall z)
-	      levels2 = map (\ x -> (x,LvSucc LvZero)) list2
+              levels2 = map (\ x -> (x,LvSucc LvZero)) list2
               good (TcLv (LvVar x)) name = x /= name
               good (LvSucc x) name = good x name
               good other name = True
@@ -2824,7 +2821,7 @@ hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) =
   do { (nmSigmaType,monoKind,nmTypeKind,names) <- inferPolyPT [] pt
      ; let polyt@(K _ (sigma)) = K names (nmSigmaType)
      ; clauses <- mapM (checkLhsMatch (type_env env1) sigma) ms
-     ; let f d (ts,ps,t) = displays d [Dl ts ",",Ds " ----> ",Dd t]
+     --; let f d (ts,ps,t) = displays d [Dl ts ",",Ds " ----> ",Dd t]
      ; morepairs <- hasMonoTypeFun env1 more
      ; rule@(NarR(a,xs))  <- makeRule nm polyt clauses
      ; trees <- defTree rule
@@ -3369,21 +3366,24 @@ simplyTrue (p@(Equality x y)) =
      }
 simplyTrue _ = return Nothing
 
-moreThanOne context truths originalVar x others =
- do { solvedByDecisionProc <- tryCooper (foldr pred2Pair [] truths) x
-    ; case (x,solvedByDecisionProc) of
+moreThanOne :: (String, Rho) -> [Pred] -> ((TcTv, Tau) -> Bool) -> Prob Tau -> [(Tau, ([(TcLv, Level)], [(TcTv, Tau)]))]
+               -> TC([(TcLv, Level)], [(TcTv, Tau)])
+moreThanOne context truths originalVar prob others =
+ do { solvedByDecisionProc <- tryCooper (foldr pred2Pair [] truths) prob
+    ; case (prob, solvedByDecisionProc) of
         (_,True) -> return ([],[])
         (EqP(x,y),_) ->
             (maybeM (simplyTrue (Equality x y))
-                    (\ u -> exit x (Just u))
-                    (exit x Nothing))
-        (other,_) -> exit x Nothing}
+                    (\ u -> exit (TermP x) (Just u))
+                    (exit (TermP x) Nothing))
+        (other,_) -> exit prob Nothing}
  where proj (t,(ls,u)) = (ls,filter originalVar u)
        short = map proj others
        contextElem (name,Rtau(Star LvZero)) =
            Ds ("While inferring the type for: "++name)
        contextElem (name,rho) =
            Dr [Ds ("\nWhile checking: "++name++":: "),Dd rho]
+       exit :: Prob Tau -> Maybe ([(TcLv, Level)], [(TcTv, Tau)]) -> TC([(TcLv, Level)], [(TcTv, Tau)])
        exit origterm (Just u) = return u
        exit origterm Nothing = failM 2
           [contextElem context
@@ -3804,7 +3804,7 @@ rootConst _ _ = fail "Not an application of a TyCon"
 -- most general unifiers (i.e. those that bind the fewest variables),
 -- because these place fewer constraints on future steps.
 -- This is why we sort. If a predicate matches exactly against a truth
--- (i.e. the unifier is the identity), any other other match of that
+-- (i.e. the unifier is the identity), any other match of that
 -- predicate against another truth should be removed, because it
 -- is irrelevant to the solution, and could only lead the solver
 -- down dead ends. For example when solving
@@ -4415,18 +4415,17 @@ checkReadEvalPrint (hint,env) =
                       ; warnM [Ds (x ++ " :: "),Dd s1]
                       ; verbose <- getMode "kind"
                       ; when verbose (showKinds varsOfPoly s1)
-                      ; return (True)}
+                      ; return True}
                 Nothing -> do { putS ("Unknown name: "++x); return (True)}
           (ColonCom "norm" e) ->
-	     do { exp <- getExp e
-	        ; (t,exp2) <- inferExp exp
-	        ; t1 <- zonk t
-	        ; (t2,_,_) <- nfRho t1
-	        ; updateDisp
-	        ; warnM [docs [Dds(show exp),Dds " :: ",Dx t1]]
-	        ; warnM[Ds"\n\n",docs[Dds "Normalizes to:",Dsp,Dx t2]]
-	        ; return (True)
-                }
+             do { exp <- getExp e
+                ; (t,exp2) <- inferExp exp
+                ; t1 <- zonk t
+                ; (t2,_,_) <- nfRho t1
+                ; updateDisp
+                ; warnM [docs [Dds(show exp),Dds " :: ",Dx t1]]
+                ; warnM[Ds"\n\n",docs[Dds "Normalizes to:",Dsp,Dx t2]]
+                ; return True }
           (ColonCom "try" e) ->
              do {  exp <- getExp e
                 ; ((ty::Rho,_),oblig) <- collectPred (infer exp)
@@ -4458,7 +4457,7 @@ checkReadEvalPrint (hint,env) =
                          ; (t2,_,_) <- nfRho ty
                          ; (e2,_,_) <- nfRho expect
                          ; whenM (not(similar ty t2))
-                         	 [Ds"\n\n",docs[Dds "*** Normalizes to:",Dsp,Dx t2]]
+                                 [Ds"\n\n",docs[Dds "*** Normalizes to:",Dsp,Dx t2]]
                          ; whenM (not(similar expect e2))
                                  [Ds "\n*** The expected type:\n",
                                   docs[Dx expect,Dsp,Dds "*** normalizes to",Dsp,Dx e2]]
