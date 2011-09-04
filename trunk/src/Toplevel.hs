@@ -92,7 +92,7 @@ main = runFIO(do { let sources = ["LangPrelude.prg"]
                  ; return () }) errF
 
 
--- load the prelude and then load the file "s", and then go into the toplevel loop.
+-- Load the prelude and then load the file "s", and then go into the toplevel loop.
 go :: String -> IO ()
 go s =
   runFIO(do { writeln (version++"  --  Type ':?' for command line help."++"\n\n")
@@ -269,16 +269,16 @@ importNames :: String -> Maybe [ImportItem] -> TcEnv -> TcEnv -> TcEnv
 importNames name items new old =
   old { imports = addI (imports new) (imports old)
       , var_env = addListToFM (var_env old) (filter okToAddVar (toList (var_env new)))
-      , type_env = (filter q (type_env new)) ++ (type_env old)
+      , type_env = filter q (type_env new) ++ type_env old
       , runtime_env = add (runtime_env new) (runtime_env old)
       , rules = appendFM2 (rules old) (filter p2 (toList (rules new)))
       , syntaxExt = addSyntax syntax (syntaxExt new) (syntaxExt old)
-      , tyfuns = (filter okToAddTyFun (tyfuns new)) ++ (tyfuns old)
+      , tyfuns = filter okToAddTyFun (tyfuns new) ++ tyfuns old
       }
       
  where elemOf x Nothing = True          -- No import list, so everything is imported
        elemOf x (Just vs) = elem x vs   -- is it in the import list?
-       okToAddVar :: forall a . (Var ,a) -> Bool
+       okToAddVar :: forall a . (Var, a) -> Bool
        okToAddVar (x,y) = elemOf x vs
        okToAddTyFun (x,y) = elemOf (Global x) vs
        p2 (s,y) = elemOf (Global s) vs
@@ -319,7 +319,7 @@ multDef ds names = if null dups then return () else fail (foldr report "" dups)
                   acc (name,Z) ls = ls
 
 -----------------------------------------------------
--- this command is for the maintainers of Omega, it trys
+-- this command is for the maintainers of Omega, it tries
 -- to load all the files in the TestPrograms directory with
 -- extension ".prg"   It is used to exercise Omega.
 
