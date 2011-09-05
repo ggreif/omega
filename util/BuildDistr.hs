@@ -6,8 +6,8 @@ import Directory(doesFileExist,doesDirectoryExist,removeFile,
 import System.Directory(createDirectoryIfMissing)
 import System(system)
 import Time(getClockTime,toCalendarTime,calendarTimeToString)
-import BuildSpecific(distrDir,srcDir,parseDir,libDir,manualDir
-                    ,testsDir,rootDir,extension,version)
+import BuildSpecific( distrDir, srcDir, utilDir, parseDir, libDir
+                    , manualDir, testsDir, rootDir, extension, version)
 import System.IO.Unsafe(unsafePerformIO)
 
 license =
@@ -57,7 +57,8 @@ sources =
 
    (srcDir, "LangPrelude", ".prg"),
    (rootDir, "LICENSE", ".txt"),
-   (srcDir, "Makefile","")
+   (srcDir, "Makefile",""),
+   (utilDir, "omega",".cabal") 
  ]
 
 
@@ -113,8 +114,10 @@ verbatimFile source target =
     ; writeFile target ("\\begin{verbatim}\n"++string++"\\end{verbatim}\n")
     }
 
-move1file time (dir,name,".txt") =
-   copyfile (dir++name++".txt") (distrDir++"/"++name++".txt")
+move1file time (dir,name,typ@".txt") =
+   copyfile (dir++name++typ) (distrDir++"/"++name++".txt")
+move1file time (dir,name,typ@".cabal") =
+   copyfile (dir++name++typ) (distrDir++"/"++name++".cabal")
 move1file time (dir,name,ext@".ps") =
    system ("cp "++dir++name++ext++" "++distrDir++name++ext) >> return ()
 move1file time (dir,name,ext@".pdf") =
