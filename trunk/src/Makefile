@@ -10,11 +10,24 @@ GHC_OPT_FLAGS    =
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 SVN              = svn
+DISTR            = ~/Omega/distr/
 
-.PHONY: all tests clean cleaner manual update
+.PHONY: all cabal cabal-check tests clean cleaner manual update
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
+
+cabal:
+	rm -r $(DISTR)
+	cd ../util && runhaskell BuildDistr.hs
+	cd $(DISTR) && cabal configure -v && cabal build -v
+
+cabal-check:
+	@ grep -i version $(DISTR)/* | grep "1\." | grep -v "Open Font License"
+	@ grep /tags/ $(DISTR)/*     | grep "1."
+	@ grep tag: $(DISTR)/*       | grep "1."
+	@ echo
+	@ cd $(DISTR) && cabal check
 
 %: %.hs *.hs
 	$(GHC) $(GHC_FLAGS) --make $*
