@@ -11,9 +11,9 @@ import BuildSpecific( distrDir, srcDir, utilDir, parseDir, libDir
 import System.IO.Unsafe(unsafePerformIO)
 
 license =
- "-- Copyright (c) 2002-2011, Tim Sheard\n"++
- "-- OGI School of Science & Engineering, Oregon Health & Science University\n"++
- "-- Maseeh College of Engineering, Portland State University\n"++
+ "-- Copyright (c) 2002-2011, Tim Sheard\n" ++
+ "-- OGI School of Science & Engineering, Oregon Health & Science University\n" ++
+ "-- Maseeh College of Engineering, Portland State University\n" ++
  "-- Subject to conditions of distribution and use; see LICENSE.txt for details.\n"
 ---------------------------------------------------------------------
 
@@ -58,7 +58,8 @@ sources =
    (srcDir, "LangPrelude", ".prg"),
    (rootDir, "LICENSE", ".txt"),
    (srcDir, "Makefile",""),
-   (utilDir, "omega",".cabal") 
+   (utilDir, "omega",".cabal"), 
+   (utilDir, "Setup",".hs")
  ]
 
 
@@ -98,7 +99,7 @@ getTime =
 
 
 prepend time license source2path targetpath =
-  do { writeFile targetpath (license++"-- "++time++"\n-- "++version++"\n\n")
+  do { writeFile targetpath (license ++ "-- " ++ time ++ "\n-- " ++ version ++ "\n\n")
      ; source2String <- readFile source2path
      ; appendFile targetpath source2String
      }
@@ -111,34 +112,34 @@ copyfile source target =
 
 verbatimFile source target =
  do { string <- readFile source
-    ; writeFile target ("\\begin{verbatim}\n"++string++"\\end{verbatim}\n")
+    ; writeFile target ("\\begin{verbatim}\n" ++ string ++ "\\end{verbatim}\n")
     }
 
-move1file time (dir,name,typ@".txt") =
-   copyfile (dir++name++typ) (distrDir++"/"++name++".txt")
-move1file time (dir,name,typ@".cabal") =
-   copyfile (dir++name++typ) (distrDir++"/"++name++".cabal")
-move1file time (dir,name,ext@".ps") =
-   system ("cp "++dir++name++ext++" "++distrDir++name++ext) >> return ()
-move1file time (dir,name,ext@".pdf") =
-   system ("cp "++dir++name++ext++" "++distrDir++name++ext) >> return ()
-move1file time (dir,name,"") =
-   copyfile (dir++name++"") (distrDir++"/"++name++"")
-move1file time (dir,name,ext) =
+move1file time (dir, name, typ@".txt") =
+   copyfile (dir ++ name ++ typ) (distrDir ++ "/" ++ name ++ typ)
+move1file time (dir, name, typ@".cabal") =
+   copyfile (dir ++ name ++ typ) (distrDir ++ "/" ++ name ++ typ)
+move1file time (dir, name, typ@".ps") =
+   system ("cp " ++ dir ++ name ++ typ ++ " " ++ distrDir ++ name ++ typ) >> return ()
+move1file time (dir, name, typ@".pdf") =
+   system ("cp " ++ dir ++ name ++ typ ++ " " ++ distrDir ++ name ++ typ) >> return ()
+move1file time (dir, name, "") =
+   copyfile (dir ++ name) (distrDir ++ "/" ++ name)
+move1file time (dir, name, typ) =
     prepend time license
-            (dir++name++ext) (distrDir++"/"++name++ext)
+            (dir ++ name ++ typ) (distrDir ++ "/" ++ name ++ typ)
 
 compile dir =
   do { setCurrentDirectory dir
      ; system "which ghc"
-     ; system ("make EXT="++extension)
+     ; system ("make EXT=" ++ extension)
      }
 
 writeVersionInfo time =
-  do { let versionfile = srcDir++"Version.hs"
-           body = "module Version where\n"++
-                  "version = \""++version++"\"\n"++
-                  "buildtime = \""++time++"\"\n"
+  do { let versionfile = srcDir ++ "Version.hs"
+           body = "module Version where\n" ++
+                  "version = \"" ++ version ++ "\"\n" ++
+                  "buildtime = \"" ++ time ++ "\"\n"
      ; writeFile versionfile body
      }
 
@@ -149,12 +150,12 @@ manuals =
  ]
 
 makeManual dir time =
-  do { system ("make -C "++dir++" manual EXT="++extension)
+  do { system ("make -C " ++ dir ++ " manual EXT=" ++ extension)
      ; mapM (move1file time) manuals 
      }
 
 main =
-  do { system ("make -C "++srcDir++" update")
+  do { system ("make -C " ++ srcDir ++ " update")
      ; time <- getTime
      ; putStr time
      ; cleanTarget
@@ -163,12 +164,12 @@ main =
      ; makeManual srcDir time -- compiles, calls omega -manual, and then LaTeX
      ; setCurrentDirectory distrDir
      ; system "make clean"
-     ; putStr ("\n"++version++"\n"++time++"\n")
-     ; putStr ("Target Directory:  "++distrDir++"\n")
-     ; putStr ("Root Directory:    "++rootDir++"\n")
-     ; putStr ("Source Directory:  "++srcDir++"\n")
-     ; putStr ("Parse Directory:   "++parseDir++"\n")
-     ; putStr ("Library Directory: "++libDir++"\n")
+     ; putStr ("\n" ++ version ++ "\n" ++ time ++ "\n")
+     ; putStr ("Target Directory:  " ++ distrDir ++ "\n")
+     ; putStr ("Root Directory:    " ++ rootDir ++ "\n")
+     ; putStr ("Source Directory:  " ++ srcDir ++ "\n")
+     ; putStr ("Parse Directory:   " ++ parseDir ++ "\n")
+     ; putStr ("Library Directory: " ++ libDir ++ "\n")
      }
 
 
