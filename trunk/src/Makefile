@@ -12,7 +12,8 @@ HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 SVN              = svn
 DISTR            = ~/Omega/distr/
 
-.PHONY: all cabal cabal-check tests clean cleaner manual update
+.PHONY: all cabal cabal-check cabal-pack omega-pack \
+        tests clean cleaner manual update
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
@@ -31,6 +32,12 @@ cabal-check:
 
 cabal-pack:
 	cd $(DISTR) && cabal sdist -v
+
+omega-pack:
+	cd $(DISTR)/.. \
+	&& rm -rf distr/dist && rm -f distr/omega.cabal && rm -f distr/Setup.hs \
+	&& zip -v -r Omega151 distr -x \*.pdf -x \*.ps --to-crlf \
+	&& zip -v -u Omega151 distr/*.pdf distr/*.ps
 
 %: %.hs *.hs
 	$(GHC) $(GHC_FLAGS) --make $*
