@@ -37,7 +37,8 @@ omega-pack:
 	cd $(DISTR)/.. \
 	&& rm -rf distr/dist && rm -f distr/omega.cabal && rm -f distr/Setup.hs \
 	&& zip -v -r Omega151 distr -x \*.pdf -x \*.ps --to-crlf \
-	&& zip -v -u Omega151 distr/*.pdf distr/*.ps
+	&& zip -v -u Omega151 distr/*.pdf distr/*.ps \
+	&& ls -l Omega1*
 
 %: %.hs *.hs
 	$(GHC) $(GHC_FLAGS) --make $*
