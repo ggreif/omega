@@ -3,6 +3,11 @@
 
 = _Upcoming_ Release 1.5.1 =
 
+== On Hackage Now ==
+
+We are now downloadable from [http://hackage.haskell.org/package/omega-1.5.1 Hackage].
+Please use your [http://www.haskell.org/cabal/ favorite] Haskell package manager to install Ωmega automatically! This gets us close to resolving issue 92 :-)
+
 == New Feature: _Backquoted_ Operators at the Type Level ==
 
 Similar to Haskell, type constructors and type function calls can now be written with a backquoted  infix name between the arguments, like this
@@ -13,6 +18,7 @@ Eq :: n `Equal` {m `plus` k}
 == Bugs fixed ==
   * Issue 65, lots of ugly interactions between reserved words and expressions have been rectified.
   * Issue 89, incorrect scoping of expression annotations is now corrected.
+  * Issue 91, a remedy has been incorporated, but this is not the final fix.
   * Issue 93, causing a compile error on the GHC 7.x compilers has been fixed.
   * Issue 94, a problem inferring the second component of types involving impredicative types has been fixed.
 
