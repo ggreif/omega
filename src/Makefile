@@ -35,7 +35,7 @@ cabal-pack:
 
 omega-pack:
 	cd $(DISTR)/.. \
-	&& zip -v -r Omega151 distr --to-crlf -x \*.cabal \*Setup.hs \*.pdf \*.ps distr/dist\* \
+	&& zip -v -r Omega151 distr --to-crlf -x \*.cabal distr/Setup.hs \*.pdf \*.ps distr/dist/\* \
 	&& zip -v -u Omega151 distr/*.pdf distr/*.ps \
 	&& ls -l Omega1*
 
