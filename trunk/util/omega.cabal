@@ -17,6 +17,8 @@ Maintainer:          ggreif@gmail.com
 Homepage:            http://code.google.com/p/omega/
 Bug-Reports:         http://code.google.com/p/omega/issues/
 Build-Type:          Simple
+Extra-Source-Files:  ./*.hs, LangPrelude.prg
+Data-Files:          OmegaManual.pdf
 Cabal-Version:       >= 1.6
 Tested-With:         GHC == 7.0.3
 
@@ -34,4 +36,3 @@ Executable omega
                      old-time, haskell98, pretty, array,
                      containers
   Extensions:        GADTs
-
