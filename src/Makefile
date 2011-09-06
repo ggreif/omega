@@ -18,7 +18,7 @@ all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
 
 cabal:
-	rm -r $(DISTR)
+	- rm -r $(DISTR)
 	cd ../util && runhaskell BuildDistr.hs
 	cd $(DISTR) && cabal configure -v && cabal build -v
 
@@ -28,6 +28,9 @@ cabal-check:
 	@ grep tag: $(DISTR)/*       | grep "1."
 	@ echo
 	@ cd $(DISTR) && cabal check
+
+cabal-pack:
+	cd $(DISTR) && cabal sdist -v
 
 %: %.hs *.hs
 	$(GHC) $(GHC_FLAGS) --make $*
