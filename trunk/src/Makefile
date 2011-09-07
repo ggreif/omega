@@ -10,7 +10,7 @@ GHC_OPT_FLAGS    =
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 SVN              = svn
-DISTR            = ~/Omega/distr/
+DISTR            = ~/Omega/distr
 
 .PHONY: all cabal cabal-check cabal-pack omega-pack \
         tests clean cleaner manual update
@@ -25,8 +25,9 @@ cabal:
 
 cabal-check:
 	@ grep -i version $(DISTR)/* | grep "1\." | grep -v "Open Font License"
-	@ grep /tags/ $(DISTR)/*     | grep "1."
-	@ grep tag: $(DISTR)/*       | grep "1."
+	@ grep /tags/ $(DISTR)/*     | grep "1\."
+	@ grep tag: $(DISTR)/*       | grep "1\."
+	@ grep 2010 $(DISTR)/*
 	@ echo
 	@ cd $(DISTR) && cabal check
 
