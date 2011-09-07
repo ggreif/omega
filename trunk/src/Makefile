@@ -70,7 +70,7 @@ OmegaManual.ps: version.tex OmegaManual.tex
 	latex$(EXT) OmegaManual.tex
 	bibtex$(EXT) OmegaManual
 	latex$(EXT) OmegaManual.tex && latex$(EXT) OmegaManual.tex
-	dvips$(EXT) OmegaManual
+	dvips$(EXT) -o $@ OmegaManual
 	- dvipdf$(EXT) OmegaManual
 
 update:
