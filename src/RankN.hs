@@ -1340,7 +1340,13 @@ instanPatConstr inject q loc s (K lvs (Forall ty)) =
 unBindWith :: (TyCh m) => (Rho -> IO String) -> (Name -> Quant -> Kind -> m Tau) -> Sigma -> m ([TcTv],[Pred],Rho)
 unBindWith inject new sigma@(Forall b) =
    do { (_,levelvars) <- tvs_Sigma sigma
-      ; levelMap <- mapM (\lv -> do { new <- newLevel; return (lv, new) }) levelvars
+      ; let freshLevel lv@(LvVar _) = do { new <- newLevel; return (lv, new) }
+            freshLevel lv@(LvMut _ _) =
+                   do { warnM [ Ds "warning: potentially redundant type variable in\n  "
+                              , Dd sigma, Ds "   -- (issue 91)"]
+                      ; new <- newLevel;
+                      ; return (lv, new) }
+      ; levelMap <- mapM freshLevel levelvars
       ; unBindWithL levelMap new inject b }
 
 unBindWithL:: (TypeLike m c, Swap c) =>
