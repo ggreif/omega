@@ -5,7 +5,24 @@
 
 == New Feature: _Applicative_ Syntax Extension ==
 
-... to be detailed ...
+The new syntax extension, like e.g. `Pair` and `LeftRecord`, will map standard application and lambda syntax to a data type:
+{{{
+data Expr = App Expr Expr
+          | Lam (Label l) Expr
+          | Var (Label l)
+          | Let (Label l) Expr Expr
+  deriving Applicative(lc)
+}}}
+
+Now you can write terms in regular syntax in parentheses suffixed by `lc`, and they'll be translated into the `Expr` data type:
+{{{
+(let a = \a->a a in a a)
+ ----> Let `a (Lam `a (App (Var `a) (Var `a))) (App (Var `a) (Var `a))
+}}}
+
+Ωmega will take care of pretty printing them too (unlike in the response above) and you'll be able to escape out into the surrounding world by a wormhole that is opened by `$(...)`.
+
+See some of the design ideas on the wiki: IntensionalApplication.
 
 ----
 = Release 1.5.1 _(2011-09-07)_ =
