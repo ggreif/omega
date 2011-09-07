@@ -6,15 +6,14 @@ module BuildSpecific where
 shortVersion = "1.5.1"
 version = "Omega Interpreter: version " ++ shortVersion
 
-home = "/home/gabor"
-distrDir = home ++ "/Omega/distr/"
+distrDir home = home ++ "/Omega/distr/"
 
-rootDir = home ++ "/omega/"
-srcDir = rootDir++"src/"
-utilDir = rootDir++"util/"
-parseDir = rootDir++"src/"
-libDir = rootDir++"src/"
-manualDir = rootDir++"doc/"
-testsDir = rootDir++"tests/"
+rootDir home = home ++ "/omega/"
+srcDir home = rootDir home ++ "src/"
+utilDir home = rootDir home ++ "util/"
+parseDir home = rootDir home ++ "src/"
+libDir home = rootDir home ++ "src/"
+manualDir home = rootDir home ++ "doc/"
+testsDir home = rootDir home ++ "tests/"
 
 extension = ""

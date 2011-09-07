@@ -10,7 +10,7 @@ GHC_OPT_FLAGS    =
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 SVN              = svn
-DISTR            = ~/Omega/distr
+DISTR            = $(HOME)/Omega/distr
 
 .PHONY: all cabal cabal-check cabal-pack omega-pack \
         tests clean cleaner manual update
@@ -20,7 +20,7 @@ all: *.hs
 
 cabal:
 	- rm -r $(DISTR)
-	cd ../util && runhaskell BuildDistr.hs
+	cd ../util && runhaskell BuildDistr.hs "$(HOME)"
 	cd $(DISTR) && cabal configure -v && cabal build -v
 
 cabal-check:

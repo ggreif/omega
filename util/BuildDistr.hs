@@ -1,14 +1,14 @@
 module BuildDistr  where
 
-import Directory(doesFileExist,doesDirectoryExist,removeFile,
-                 getCurrentDirectory,setCurrentDirectory,
-                 getDirectoryContents)
-import System.Directory(createDirectoryIfMissing)
-import System(system)
-import Time(getClockTime,toCalendarTime,calendarTimeToString)
-import BuildSpecific( distrDir, srcDir, utilDir, parseDir, libDir
-                    , manualDir, testsDir, rootDir, extension, version)
-import System.IO.Unsafe(unsafePerformIO)
+import Directory ( doesFileExist, doesDirectoryExist, removeFile
+                 , getCurrentDirectory,setCurrentDirectory
+                 , getDirectoryContents)
+import System.Directory (createDirectoryIfMissing)
+import System (system, getArgs)
+import Time (getClockTime, toCalendarTime, calendarTimeToString)
+import BuildSpecific ( distrDir, srcDir, utilDir, parseDir, libDir
+                     , manualDir, testsDir, rootDir, extension, version)
+import System.IO.Unsafe (unsafePerformIO)
 
 license =
  "-- Copyright (c) 2002-2011, Tim Sheard\n" ++
@@ -17,7 +17,7 @@ license =
  "-- Subject to conditions of distribution and use; see LICENSE.txt for details.\n"
 ---------------------------------------------------------------------
 
-sources =
+sources libDir parseDir srcDir testsDir rootDir utilDir =
  [ (libDir, "Auxillary", ".hs"),
    (libDir, "Bind", ".hs"),
    (libDir, "DepthFirstSearch", ".hs"),
@@ -74,7 +74,7 @@ ifM test x y = do { b <- test; if b then x else y }
 pwd = do { current <- getCurrentDirectory; putStrLn current}
 cd s = setCurrentDirectory s
 
-cleanTarget =
+cleanTarget distrDir =
   ifM (doesDirectoryExist distrDir)
       (do { current <- getCurrentDirectory
           ; setCurrentDirectory distrDir
@@ -115,17 +115,17 @@ verbatimFile source target =
     ; writeFile target ("\\begin{verbatim}\n" ++ string ++ "\\end{verbatim}\n")
     }
 
-move1file time (dir, name, typ@".txt") =
+move1file time  distrDir (dir, name, typ@".txt") =
    copyfile (dir ++ name ++ typ) (distrDir ++ "/" ++ name ++ typ)
-move1file time (dir, name, typ@".cabal") =
+move1file time  distrDir (dir, name, typ@".cabal") =
    copyfile (dir ++ name ++ typ) (distrDir ++ "/" ++ name ++ typ)
-move1file time (dir, name, typ@".ps") =
+move1file time  distrDir (dir, name, typ@".ps") =
    system ("cp " ++ dir ++ name ++ typ ++ " " ++ distrDir ++ name ++ typ) >> return ()
-move1file time (dir, name, typ@".pdf") =
+move1file time  distrDir (dir, name, typ@".pdf") =
    system ("cp " ++ dir ++ name ++ typ ++ " " ++ distrDir ++ name ++ typ) >> return ()
-move1file time (dir, name, "") =
+move1file time  distrDir (dir, name, "") =
    copyfile (dir ++ name) (distrDir ++ "/" ++ name)
-move1file time (dir, name, typ) =
+move1file time  distrDir (dir, name, typ) =
     prepend time license
             (dir ++ name ++ typ) (distrDir ++ "/" ++ name ++ typ)
 
@@ -135,7 +135,7 @@ compile dir =
      ; system ("make EXT=" ++ extension)
      }
 
-writeVersionInfo time =
+writeVersionInfo time srcDir =
   do { let versionfile = srcDir ++ "Version.hs"
            body = "module Version where\n" ++
                   "version = \"" ++ version ++ "\"\n" ++
@@ -143,33 +143,42 @@ writeVersionInfo time =
      ; writeFile versionfile body
      }
 
-
-manuals =
+manuals :: String -> [(String, String, String)]
+manuals manualDir =
  [ (manualDir, "OmegaManual", ".ps"),
    (manualDir, "OmegaManual", ".pdf")
  ]
 
-makeManual dir time =
+makeManual dir time distrDir manualDir =
   do { system ("make -C " ++ dir ++ " manual EXT=" ++ extension)
-     ; mapM (move1file time) manuals 
+     ; mapM (move1file time distrDir) (manuals manualDir)
      }
 
 main =
-  do { system ("make -C " ++ srcDir ++ " update")
-     ; time <- getTime
+  do { time <- getTime
      ; putStr time
-     ; cleanTarget
-     ; writeVersionInfo time
-     ; mapM (move1file time) sources
-     ; makeManual srcDir time -- compiles, calls omega -manual, and then LaTeX
-     ; setCurrentDirectory distrDir
+     ; [home] <- getArgs
+     ; let libDir' = libDir home
+           parseDir' = parseDir home
+           srcDir' = srcDir home
+           testsDir' = testsDir home
+           rootDir' = rootDir home
+           utilDir' = utilDir home
+           distrDir' = distrDir home
+           manualDir' = manualDir home
+     ; system $ "make -C " ++ rootDir' ++ " update"
+     ; cleanTarget distrDir'
+     ; writeVersionInfo time srcDir'
+     ; mapM (move1file time distrDir') $ sources libDir' parseDir' srcDir' testsDir' rootDir' utilDir'
+     ; makeManual srcDir' time distrDir' manualDir' -- compiles, calls omega -manual, and then LaTeX
+     ; setCurrentDirectory $ distrDir'
      ; system "make clean"
      ; putStr ("\n" ++ version ++ "\n" ++ time ++ "\n")
-     ; putStr ("Target Directory:  " ++ distrDir ++ "\n")
-     ; putStr ("Root Directory:    " ++ rootDir ++ "\n")
-     ; putStr ("Source Directory:  " ++ srcDir ++ "\n")
-     ; putStr ("Parse Directory:   " ++ parseDir ++ "\n")
-     ; putStr ("Library Directory: " ++ libDir ++ "\n")
+     ; putStr ("Target Directory:  " ++ distrDir' ++ "\n")
+     ; putStr ("Root Directory:    " ++ rootDir' ++ "\n")
+     ; putStr ("Source Directory:  " ++ srcDir' ++ "\n")
+     ; putStr ("Parse Directory:   " ++ parseDir' ++ "\n")
+     ; putStr ("Library Directory: " ++ libDir' ++ "\n")
      }
 
 
