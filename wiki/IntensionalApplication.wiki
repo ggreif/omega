@@ -1,5 +1,5 @@
 #summary Syntax for name juxtaposition being more general than function application.
-#labels speculative
+#labels Phase-Design
 
 = Introduction =
 
