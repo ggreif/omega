@@ -1,7 +1,13 @@
 #summary Added features and notable problems or improvements for each of the releases in (inverse) temporal order.
 #labels Featured
 
-= _Upcoming_ Release 1.5.1 =
+= _Upcoming_ Release 1.5.2 =
+
+= Release 1.5.1 _(2011-09-07)_ =
+
+Ωmega v1.5.1 is mainly a bugfix and infrastructural release. We have built some fundament on which we can base new features in the close future and get releases out faster.
+
+Now, read on for the news...
 
 == On Hackage Now ==
 
@@ -18,12 +24,12 @@ Eq :: n `Equal` {m `plus` k}
 == Bugs fixed ==
   * Issue 65, lots of ugly interactions between reserved words and expressions have been rectified.
   * Issue 89, incorrect scoping of expression annotations is now corrected.
-  * Issue 91, a remedy has been incorporated, but this is not the final fix.
+  * Issue 91, a remedy has been incorporated, but this is not the final fix. We display a warning for now.
   * Issue 93, causing a compile error on the GHC 7.x compilers has been fixed.
   * Issue 94, a problem inferring the second component of types involving impredicative types has been fixed.
 
 ----
-= Release 1.5 _(2011-04-29)_=
+= Release 1.5 _(2011-04-29)_ =
 
 Release 1.5 marks the first milestone without major involvement of [http://code.google.com/u/@UBJVQVdRBxdNWwR9/ Tim], who is directing his attention towards [http://code.google.com/p/trellys Trellys], a compiled language with dependent types. Big thanks to him for all the awesome work on Ωmega in the past, we will miss his vision, wisdom an profound understanding of the matter. With some luck he can still contribute an occasional fix here or there.
 
