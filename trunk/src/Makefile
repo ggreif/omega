@@ -37,11 +37,22 @@ cabal-check:
 cabal-pack:
 	cd $(DISTR) && cabal sdist -v
 
+cabal-upload:
+	false ### always fail!
+	cabal upload --username=GaborGreif --password=jXXXX $(DISTR)/dist/omega-1.5.1.tar.gz
+
 omega-pack:
 	cd $(DISTR)/.. \
-	&& zip -v -r Omega151 distr --to-crlf -x \*.cabal distr/Setup.hs \*.pdf \*.ps distr/dist/\* \
+	&& zip -v -r Omega151 distr -l -x \*.cabal distr/Setup.hs \*.pdf \*.ps distr/dist/\* \
 	&& zip -v -u Omega151 distr/*.pdf distr/*.ps \
 	&& ls -l Omega1*
+
+omega-tag:
+	false ### always fail!
+	$(SVN) cp -m "tag Omega 1.5.1" ^/trunk ^/tags/omega-1.5.1 #### not tested
+	$(SVN) switch ^/tags/omega-1.5.1/src/Version.hs Version.hs
+	$(SVN) ci -m "update version to match distribution" Version.hs
+	$(SVN) switch ^/trunk/src/Version.hs Version.hs
 
 %: %.hs *.hs
 	$(GHC) $(GHC_FLAGS) --make $*
