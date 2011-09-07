@@ -3,6 +3,11 @@
 
 = _Upcoming_ Release 1.5.2 =
 
+== New Feature: _Applicative_ Syntax Extension ==
+
+... to be detailed ...
+
+----
 = Release 1.5.1 _(2011-09-07)_ =
 
 Ωmega v1.5.1 is mainly a bugfix and infrastructural release. We have built some fundament on which we can base new features in the close future and get releases out faster.
