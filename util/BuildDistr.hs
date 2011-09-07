@@ -166,7 +166,7 @@ main =
            utilDir' = utilDir home
            distrDir' = distrDir home
            manualDir' = manualDir home
-     ; system $ "make -C " ++ rootDir' ++ " update"
+     ; system $ "make -C " ++ srcDir' ++ " update"
      ; cleanTarget distrDir'
      ; writeVersionInfo time srcDir'
      ; mapM (move1file time distrDir') $ sources libDir' parseDir' srcDir' testsDir' rootDir' utilDir'
