@@ -24,10 +24,11 @@ cabal:
 	cd $(DISTR) && cabal configure -v && cabal build -v
 
 cabal-check:
-	@ grep -i version $(DISTR)/* | grep "1\." | grep -v "Open Font License"
+	@ grep -i version $(DISTR)/* | grep "1\." | grep -v "Open Font License" \
+	| grep -v "Omega Interpreter: version 1.5.1"
 	@ grep /tags/ $(DISTR)/*     | grep "1\."
 	@ grep tag: $(DISTR)/*       | grep "1\."
-	@ grep 2010 $(DISTR)/*
+	@ grep 2011 $(DISTR)/*       | grep -v "2002-2011" | grep -v "CEST 2011"
 	@ echo
 	@ cd $(DISTR) && cabal check
 
