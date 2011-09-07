@@ -2,7 +2,7 @@
 module Toplevel where
 
 import Char(isAlpha,isDigit)
-import List(partition,(\\),nub,find,deleteBy)
+import List(partition,(\\),nub,find,deleteBy,sort)
 import Data.Map(Map,toList)
 import IO
 
@@ -325,8 +325,9 @@ multDef ds names = if null dups then return () else fail (foldr report "" dups)
 
 alltests dir =
   do { setCurrentDirectory dir
-     ; files <- getDirectoryContents "."
+     ; files' <- getDirectoryContents "."
      ; let ok x = case reverse x of { ('g':'r':'p':'.':_) -> True; _ -> False}
+     ; let files = sort files'
      ; print (filter ok files)
      ; mapM try_to_load (filter ok files)
      ; setCurrentDirectory ".."
