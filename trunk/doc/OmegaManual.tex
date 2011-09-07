@@ -51,11 +51,16 @@
 {\bf {\Large \om~ Users' Guide}}\\
 \vspace{0.5cm}
 \input{version}
-%\hrule
+
+\vspace{0.5cm}
 {\large Tim Sheard}\\
 Computer Science Department\\
 Maseeh College of Engineering and Computer Science\\
 Portland State University\\
+
+\vspace{0.5cm}
+{\large Gabor Greif}\\
+Alcatel-Lucent\\
 }
 \end{center}
 
@@ -92,10 +97,10 @@ Portland State University\\
 
 \section{Introduction}\label{intro}
 
-The \om\ interpreter is styled after the Hugs Haskell Interpreter. In fact,
-users of Hugs will find many similarities, and this is intentional. Like Hugs,
-the \om\ interpreter is a read-typecheck-eval-print loop. It can load whole
-files, and the top-level loop allows the user to experiment by typing
+The \om\ interpreter is styled after the Hugs Haskell Interpreter (or GHCi). In
+fact, users of Hugs will find many similarities, and this is intentional. Like
+Hugs, the \om\ interpreter is a read-typecheck-eval-print loop. It can load
+whole files, and the top-level loop allows the user to experiment by typing
 expressions to be evaluated, and by querying the program environment.
 
 The \om\ syntax is based upon the syntax of Haskell. If you're unsure
@@ -832,7 +837,7 @@ Once inside the \om\ interpreter the user interacts
 with \om\ using command-level prompts. Most
 commands begin with the letter {\tt ':'}
 In Figure \ref{commands}, the command level prompts are defined and their
-usage is explained. Commands are modelled after the Hugs command
+usage is explained. Commands are modelled after the Hugs (or GHCi) command
 level prompts. There are far fewer commands in \om\ than in Hugs.
 The {\tt :set} and {\tt :clear} command are discussed
 in much more detail in Section \ref{tracing} where we discuss 
@@ -1676,8 +1681,8 @@ the function {\tt Tick}, then the expansion is as follows:
 Syntactic extension can be applied to any GADT, at either the value or type level. The
 new syntax can be used by the programmer for terms, types, or patterns. \om\ uses the
 new syntax to display such terms. The constructor based mechanism can also still
-be used. The tags are specified using a deriving clause in a GADT. As of the March 2010
-release there are two styles of syntax derivations: old-style, and new-style. Both are
+be used. The tags are specified using a deriving clause in a GADT.
+There are two styles of syntax derivations: old-style, and new-style. Both are
 supported. The new-style is more expressive, and all old-style derivations
 can be replaced by equivalent new-style ones. Eventually the old-style will
 be deprecated and removed from the system.
