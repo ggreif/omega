@@ -16,7 +16,7 @@ data Expr = App Expr Expr
 
 Now you can write terms in regular syntax in parentheses suffixed by `lc`, and they'll be translated into the `Expr` data type:
 {{{
-(let a = \a->a a in a a)
+(let a = \a -> a a in a a)lc
  ----> Let `a (Lam `a (App (Var `a) (Var `a))) (App (Var `a) (Var `a))
 }}}
 
