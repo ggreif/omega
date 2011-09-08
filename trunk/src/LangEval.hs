@@ -1,5 +1,5 @@
 module LangEval(env0,vals,elaborate,Prefix(..),
-                Env,eval,mPatStrict,extendV) where
+                Env,eval,mPatStrict,extendV,typeForImportableVal) where
 
 import Auxillary
 import Syntax
@@ -8,9 +8,9 @@ import Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..))
 import Value
-import RankN --(Sigma,runType,liftType, sigma4Eq,sigma4Hide,ToEnv,
-             -- star,star_star,poly,intT)
-import RankN(Z)
+import RankN ( Sigma, runType, liftType, sigma4Eq, ToEnv, Z
+             , star, star_star, poly, intT, short
+             , Level(LvZero), PT(Rarrow', Karrow'), PolyKind(K), Tau(TyCon) )
 import Char(chr,ord)
 
 import ParserDef(pe)
@@ -442,10 +442,15 @@ elab prefix magic init (GADT l p t k cs ds exts) =
        size _ = 0
 
 elab prefix magic init (TypeSig loc nm t) = return init
-elab prefix magic init (Prim loc nm t) =
+elab prefix magic init (Prim loc (Explicit nm t)) =
    case lookup nm primitives of
      Just v -> return(extendV [(nm,v)] init)
      Nothing -> fail ("Can't find implementation for primitive: "++show nm)
+elab prefix magic init (Prim loc (Implicit bindings)) = foldM checkPresence init bindings
+  where checkPresence init gl@(Global nm) =
+            case lookup nm importableVals of
+            Just (v,_) -> return $ extendV [(gl,v)] init
+            Nothing -> fail ("Can't find implementation for primitive: "++show nm)
 elab prefix magic init (Flag _ _) = return init
 elab prefix magic init (Reject s ds) =
    handle 4 (do { outputString ("Elaborating Reject"++show ds)
@@ -497,7 +502,20 @@ mkFun :: String -> ([V] -> V) -> Int -> [V] -> V
 mkFun s f 0 vs = f (reverse vs)
 mkFun s f n vs = Vprimfun s (\ v -> return(mkFun s f (n-1) (v:vs)) )
 
+typeForImportableVal nm = do { (v, t) <- lookup nm importableVals; return t }
 
+importableVals :: [(String,(V,Sigma))]
+importableVals =
+ [("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
+ ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
+ ] ++ map (\ (nm, maker) -> (nm, maker nm))
+ [("returnParser",make1(return :: A -> Parser A))
+ ,("bindParser",make2((>>=) :: Parser A -> (A -> Parser B) -> Parser B))
+ ,("failParser",make1(fail :: String -> Parser A))
+ ,("runParser",make2(runParser :: Parser A -> String -> Maybe A))
+ ,("<|>",make2((<|>) :: Parser A -> Parser A -> Parser A))
+ ,("<?>",make2((<?>) :: Parser A -> String -> Parser A))
+ ]
 
 vals :: [(String,String->(V,Sigma))]
 vals =
@@ -557,12 +575,6 @@ vals =
 
  ,("show",make1(show :: A -> String))
  ,("unsafeCast",make1(unsafeCast:: A -> B))
- ,("runParser",make2(runParser :: Parser A -> String -> Maybe A))
- ,("<|>",make2((<|>) :: Parser A -> Parser A -> Parser A))
- ,("<?>",make2((<?>) :: Parser A -> String -> Parser A))
- ,("returnParser",make1(return :: A -> Parser A))
- ,("bindParser",make2((>>=) :: Parser A -> (A -> Parser B) -> Parser B))
- ,("failParser",make1(fail :: String -> Parser A))
  ] ++ map (\(name, x) -> (name, \ _ -> x)) [
   ("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
@@ -599,9 +611,6 @@ vals =
 
  ,("$",(dollar,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,(".",(composeV,gen(typeOf(undefined :: (A -> B) -> (C -> A) -> (C -> B)))))
-
- ,("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
- ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
  ]
 
 
