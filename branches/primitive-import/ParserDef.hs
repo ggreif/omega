@@ -13,7 +13,7 @@ import System.IO.Unsafe(unsafePerformIO)
 
 import ParserAll
 import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
-             ,Dec(..),Constr(..),Stmt(..),Var(..)
+             ,Dec(..),PrimBinding(..),Constr(..),Stmt(..),Var(..)
              ,listExp,listExp2,patTuple,ifExp,mergeFun,consExp,expTuple
              ,binop,opList,var,freshE,swp,dvars,evars,
              typeStrata,kindStrata,emptyF,Vars(..),boundBy
@@ -668,15 +668,28 @@ typeFunDec =
                   ; zs <- many1 simpletyp
                   ; return(f,TyVar' f : zs) }
 
+
 primDec =
-   do{ pos <- getPosition
+  do { pos <- getPosition
      ; reserved "primitive"
-     ; n <- (name <|> parens operator)
-     ; (levels,t) <- typing
-     ; return $ Prim (loc pos) n (polyLevel levels t) }
- where operator =
-          do { cs <- many (opLetter tokenDef)
-             ; return(Global cs) }
+     ; bindings <- primImported <|> primTypedDec
+     ; return $ Prim (loc pos) bindings }
+
+primName = name <|> parens operator
+  where operator =
+          do { cs <- many1 (opLetter tokenDef)
+             ; return $ Global cs }
+
+primTypedDec = 
+  do { n <- primName
+     ; (levels, t) <- typing
+     ; return [Explicit n (polyLevel levels t)] }
+
+primImported :: Parser [PrimBinding]
+primImported =
+  do { reserved "import"
+     ; parens (many $ fmap Implicit primName) }
+
 
 patterndecl =
   do { pos <- getPosition
