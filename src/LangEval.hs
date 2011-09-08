@@ -19,7 +19,7 @@ import List(union,unionBy,(\\),find)
 import Bind
 import Parser( (<|>),(<?>),Parser, satisfy, char, string, many, many1
              , try, between, sepBy, symbol )
-import PrimParser( charLitV, intLitV, stringLitV, identifierV
+import PrimParser( charLiteral, intLiteral, stringLiteral, identifierV
                  , parserPairs, runParser, parens )
 import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
 
@@ -508,10 +508,7 @@ typeForImportableVal nm = do { (v, t) <- lookup nm importableVals; return t }
 
 importableVals :: [(String,(V,Sigma))]
 importableVals =
- [("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
- ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
- ,("parseString",(stringLitV,gen(typeOf(undefined :: Parser String))))
- ,("parseIdentifier",(identifierV,gen(typeOf(undefined :: Parser String))))
+ [ ("parseIdentifier",(identifierV,gen(typeOf(undefined :: Parser String))))
 
  ] ++ map (\ (nm, maker) -> (nm, maker nm))
  [("returnParser",make1(return :: A -> Parser A))
@@ -530,6 +527,9 @@ importableVals =
  ,("sepBy",make2(Parser.sepBy :: Parser A -> Parser B -> Parser [A]))
  ,("symbol",make1(symbol :: String -> Parser String))
  --,("satisfy",(make1(satisfy :: (Char -> Bool) -> Parser Char)))
+ ,("parseChar",make(charLiteral :: Parser Char))
+ ,("parseInt",make(intLiteral :: Parser Integer))
+ ,("parseString",make(stringLiteral :: Parser String))
  ]
 
 vals :: [(String,String->(V,Sigma))]
