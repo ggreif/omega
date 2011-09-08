@@ -17,8 +17,10 @@ import ParserDef(pe)
 import System.IO.Unsafe(unsafePerformIO)
 import List(union,unionBy,(\\),find)
 import Bind
-import Parser((<|>),(<?>),Parser)
-import PrimParser(charLitV,intLitV,parserPairs,runParser)
+import Parser( (<|>),(<?>),Parser, satisfy, char, string, many, many1
+             , try, between, sepBy, symbol )
+import PrimParser( charLitV, intLitV, stringLitV, identifierV
+                 , parserPairs, runParser, parens )
 import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
 
 
@@ -508,6 +510,10 @@ importableVals :: [(String,(V,Sigma))]
 importableVals =
  [("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
  ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
+ ,("parseString",(stringLitV,gen(typeOf(undefined :: Parser String))))
+ ,("parseIdentifier",(identifierV,gen(typeOf(undefined :: Parser String))))
+ --,("parseSymbol",(,gen(typeOf(undefined :: Parser String))))
+
  ] ++ map (\ (nm, maker) -> (nm, maker nm))
  [("returnParser",make1(return :: A -> Parser A))
  ,("bindParser",make2((>>=) :: Parser A -> (A -> Parser B) -> Parser B))
@@ -515,6 +521,16 @@ importableVals =
  ,("runParser",make2(runParser :: Parser A -> String -> Maybe A))
  ,("<|>",make2((<|>) :: Parser A -> Parser A -> Parser A))
  ,("<?>",make2((<?>) :: Parser A -> String -> Parser A))
+ ,("char",(make1(char :: Char -> Parser Char)))
+ ,("string",(make1(string :: String -> Parser String)))
+ ,("many",(make1(many :: Parser A -> Parser [A])))
+ ,("many1",(make1(many :: Parser A -> Parser [A])))
+ ,("parens",make1(parens :: Parser A -> Parser A))
+ ,("try",make1(try :: Parser A -> Parser A))
+ ,("between",make3(between :: Parser C -> Parser B -> Parser A -> Parser A))
+ ,("sepBy",make2(Parser.sepBy :: Parser A -> Parser B -> Parser [A]))
+ ,("symbol",make1(symbol :: String -> Parser String))
+ --,("satisfy",(make1(satisfy :: (Char -> Bool) -> Parser Char)))
  ]
 
 vals :: [(String,String->(V,Sigma))]

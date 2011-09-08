@@ -13,6 +13,14 @@ primitive import (runParser)
 --
 primitive import ((<|>), (<?>))
 
+-- parsers for basic things
+--
+primitive import (char, {-satisfy,-} string, many, parens
+                 , try, between, sepBy)
+
+
 -- parsers for Omega literals
-primitive import (parseChar, parseInt)
+--
+primitive import ( parseChar, parseInt, parseString
+                 , parseIdentifier{-, parseSymbol-} )
 
