@@ -505,7 +505,7 @@ mkFun s f n vs = Vprimfun s (\ v -> return(mkFun s f (n-1) (v:vs)) )
 typeForImportableVal nm = do { (v, t) <- lookup nm importableVals; return t }
 
 importableVals :: [(String,(V,Sigma))]
-importableVals = -- map (\(name, x) -> (name, \ _ -> x))
+importableVals =
  [("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
  ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
  ]

@@ -1604,14 +1604,10 @@ getDecTyp rename [] = return(nullFrag,[])
 getDecTyp rename (prim@(Prim _ (Implicit vs)):ds) =
   do { let frag1 = Frag (map f vs) [] [] [] [] [] []
            f gl@(Global nm) = case typeForImportableVal nm of
-                                      Just sigma -> (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
+                              Just sigma -> (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
      ; (frag2,triples) <- getDecTyp rename ds
      ; frag3 <- frag2 +++ frag1
      ; return(frag3,(Wob,error "Shouldn't Check Implicit Prim type",prim,[]):triples) }
---frag0 = Frag (map f vals) [] [] [] [] [] []
---  where f (nm,maker) = g (nm,maker nm)
---        g (nm,(v,sigma)) = (Global nm,(K [] sigma,Rig,0,Var (Global nm)),LetBnd)
---
 getDecTyp rename (d:ds) =
   do { (frag1,mod,rho,d,skols) <- frag4OneDeclsNames rename d
      ; (frag2,triples) <- getDecTyp rename ds  -- do the rest of the list
@@ -2430,14 +2426,6 @@ frag4OneDeclsNames rename (Reject s ds) = return (nullFrag,Wob,Rtau unitT,Reject
 frag4OneDeclsNames rename prim@(Prim l (Explicit nm t)) =
   do { (sigma,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
      ; return(frag,Wob,error "Shouldn't Check Prim type",prim,[]) }
---frag4OneDeclsNames rename (Prim l bs@(Implicit [v@(Global nm)])) = return(nullFrag,[])
---  case typeForImportableVal nm of
---  Just t -> frag4OneDeclsNames rename (Prim l (Explicit  t))
---  Nothing -> 
---  where getType 
--- typeForImportableVal
---  where getType
---  return (frag,Wob,error "Shouldn't Check Prim type",Prim l bs,[])
 frag4OneDeclsNames rename d = failD 2 [Ds "Illegal dec in value binding group: ",Ds (show d)]
 
 
