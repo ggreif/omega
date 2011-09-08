@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
-module PrimParser ( charLitV, intLitV, stringLitV
+
+module PrimParser ( charLiteral, intLiteral, stringLiteral
                   , identifierV, parens
                   , parserPairs, runParser ) where
 
@@ -21,7 +22,7 @@ instance Encoding a => Encoding (Parser a) where
 
 instance (Encoding a,Encoding b) => Encoding (a -> Parser b) where
     to f = Vprimfun "->" (return . to . f . from)
-    from f = from . help . (getf f) . to
+    from f = from . help . getf f . to
       where help :: FIO V -> V
             help (FIO w) = case unsafePerformIO w of
                            Ok (v@(Vlazy _ _)) -> help(analyzeWith return v)
@@ -75,9 +76,7 @@ satisfyV = lift1 "satisfy" f where
 
 -- Lexeme oriented parsers that eat trailing white space
 
-intLitV = Vparser(fmap (Vlit . Int .fromInteger) natural)
-charLitV = Vparser(fmap (Vlit . Char) charLiteral)
-stringLitV = Vparser(fmap toStr stringLiteral)
+intLiteral = fmap fromInteger natural
 identifierV = Vparser(fmap toStr identifier)
 
 choiceD = lift2 "<!>" f where
