@@ -1,5 +1,5 @@
 module LangEval(env0,vals,elaborate,Prefix(..),
-                Env,eval,mPatStrict,extendV) where
+                Env,eval,mPatStrict,extendV,typeForImportableVal) where
 
 import Auxillary
 import Syntax
@@ -447,9 +447,9 @@ elab prefix magic init (Prim loc (Explicit nm t)) =
      Just v -> return(extendV [(nm,v)] init)
      Nothing -> fail ("Can't find implementation for primitive: "++show nm)
 elab prefix magic init (Prim loc (Implicit bindings)) = foldM checkPresence init bindings
-  where checkPresence init nm =
-            case lookup nm primitives of
-            Just v -> return $ extendV [(nm,v)] init
+  where checkPresence init gl@(Global nm) =
+            case lookup nm importableVals of
+            Just (v,_) -> return $ extendV [(gl,v)] init
             Nothing -> fail ("Can't find implementation for primitive: "++show nm)
 elab prefix magic init (Flag _ _) = return init
 elab prefix magic init (Reject s ds) =
@@ -502,6 +502,13 @@ mkFun :: String -> ([V] -> V) -> Int -> [V] -> V
 mkFun s f 0 vs = f (reverse vs)
 mkFun s f n vs = Vprimfun s (\ v -> return(mkFun s f (n-1) (v:vs)) )
 
+typeForImportableVal nm = do { (v, t) <- lookup nm importableVals; return t }
+
+importableVals :: [(String,(V,Sigma))]
+importableVals = -- map (\(name, x) -> (name, \ _ -> x))
+ [("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
+ ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
+ ]
 
 
 vals :: [(String,String->(V,Sigma))]
@@ -604,9 +611,6 @@ vals =
 
  ,("$",(dollar,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,(".",(composeV,gen(typeOf(undefined :: (A -> B) -> (C -> A) -> (C -> B)))))
-
- ,("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
- ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
  ]
 
 

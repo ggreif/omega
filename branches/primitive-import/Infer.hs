@@ -39,7 +39,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,failD,failK,failM,warnM,handleM,whenM
             ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
             ,extendref, failIfInConsistent
-            ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv  -- splitU,split3,
+            ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newFlexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
             ,instanTy,instanPatConstr,checkArgs,nameOf
@@ -68,7 +68,7 @@ import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backsp
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns
                 ,initDI)
-import LangEval(vals,env0,Prefix(..),elaborate,eval)
+import LangEval(vals,env0,Prefix(..),elaborate,eval,typeForImportableVal)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
@@ -246,7 +246,9 @@ initTcEnv = addFrag frag0 tcEnv0
 
 frag0 = Frag (map f vals) [] [] [] [] [] []
   where f (nm,maker) = g (nm,maker nm)
-        g (nm,(v,sigma)) = (Global nm,(K [] sigma,Rig,0,Var (Global nm)),LetBnd)
+        g (nm,(_,sigma)) = (global, (K [] sigma, Rig, 0, var), LetBnd)
+                              where global = Global nm
+                                    var = Var global
 
 -- Used for adding simple Frags, where we don't expect things like theorems etc.
 addFrag (Frag pairs rigid tenv eqs theta rs exts) env =
@@ -1599,6 +1601,17 @@ instance TypableBinder [Dec] where
 
 getDecTyp :: Bool -> [Dec] -> TC (Frag,[(Mod,Rho,Dec,[TcTv])])
 getDecTyp rename [] = return(nullFrag,[])
+getDecTyp rename (prim@(Prim _ (Implicit vs)):ds) =
+  do { let frag1 = Frag (map f vs) [] [] [] [] [] []
+           f gl@(Global nm) = case typeForImportableVal nm of
+                                      Just sigma -> (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
+     ; (frag2,triples) <- getDecTyp rename ds
+     ; frag3 <- frag2 +++ frag1
+     ; return(frag3,(Wob,error "Shouldn't Check Implicit Prim type",prim,[]):triples) }
+--frag0 = Frag (map f vals) [] [] [] [] [] []
+--  where f (nm,maker) = g (nm,maker nm)
+--        g (nm,(v,sigma)) = (Global nm,(K [] sigma,Rig,0,Var (Global nm)),LetBnd)
+--
 getDecTyp rename (d:ds) =
   do { (frag1,mod,rho,d,skols) <- frag4OneDeclsNames rename d
      ; (frag2,triples) <- getDecTyp rename ds  -- do the rest of the list
@@ -1609,7 +1622,7 @@ getDecTyp rename (d:ds) =
 -- set of decls are already in the frag passed as input (See Step 1).
 
 checkDec :: Frag -> (Mod,Rho,Dec,[TcTv]) -> TC Dec
-checkDec frag (mod,_,Prim loc (Explicit nm t),skols) = newLoc loc $ return(Prim loc (Explicit nm t))
+checkDec frag (mod,_,prim@(Prim loc _),skols) = newLoc loc $ return prim
 checkDec frag (mod,rho,Fun loc nm hint ms,skols) | unequalArities ms =
   failD 3 [Ds ("\n\nThe equations for function: "++show nm++", give different arities.")]
 checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
@@ -2414,9 +2427,17 @@ frag4OneDeclsNames rename (Pat loc nm vs p) = newLoc loc $
      ; (rigid,assump,rho) <- rigidTy Ex loc (show nm) sigma
      ; return(addPred assump frag,Wob,rho,Pat loc nm2 vs p,[])}
 frag4OneDeclsNames rename (Reject s ds) = return (nullFrag,Wob,Rtau unitT,Reject s ds,[])
-frag4OneDeclsNames rename (Prim l (Explicit nm t)) =
+frag4OneDeclsNames rename prim@(Prim l (Explicit nm t)) =
   do { (sigma,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
-     ; return(frag,Wob,error "Shouldn't Check Prim type",Prim l (Explicit nm t),[]) }
+     ; return(frag,Wob,error "Shouldn't Check Prim type",prim,[]) }
+--frag4OneDeclsNames rename (Prim l bs@(Implicit [v@(Global nm)])) = return(nullFrag,[])
+--  case typeForImportableVal nm of
+--  Just t -> frag4OneDeclsNames rename (Prim l (Explicit  t))
+--  Nothing -> 
+--  where getType 
+-- typeForImportableVal
+--  where getType
+--  return (frag,Wob,error "Shouldn't Check Prim type",Prim l bs,[])
 frag4OneDeclsNames rename d = failD 2 [Ds "Illegal dec in value binding group: ",Ds (show d)]
 
 
