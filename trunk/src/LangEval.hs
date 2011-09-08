@@ -512,7 +512,6 @@ importableVals =
  ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
  ,("parseString",(stringLitV,gen(typeOf(undefined :: Parser String))))
  ,("parseIdentifier",(identifierV,gen(typeOf(undefined :: Parser String))))
- --,("parseSymbol",(,gen(typeOf(undefined :: Parser String))))
 
  ] ++ map (\ (nm, maker) -> (nm, maker nm))
  [("returnParser",make1(return :: A -> Parser A))
