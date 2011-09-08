@@ -1609,7 +1609,7 @@ getDecTyp rename (d:ds) =
 -- set of decls are already in the frag passed as input (See Step 1).
 
 checkDec :: Frag -> (Mod,Rho,Dec,[TcTv]) -> TC Dec
-checkDec frag (mod,_,Prim loc [Explicit nm t],skols) = newLoc loc $ return(Prim loc [Explicit nm t])
+checkDec frag (mod,_,Prim loc (Explicit nm t),skols) = newLoc loc $ return(Prim loc (Explicit nm t))
 checkDec frag (mod,rho,Fun loc nm hint ms,skols) | unequalArities ms =
   failD 3 [Ds ("\n\nThe equations for function: "++show nm++", give different arities.")]
 checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
@@ -2414,9 +2414,9 @@ frag4OneDeclsNames rename (Pat loc nm vs p) = newLoc loc $
      ; (rigid,assump,rho) <- rigidTy Ex loc (show nm) sigma
      ; return(addPred assump frag,Wob,rho,Pat loc nm2 vs p,[])}
 frag4OneDeclsNames rename (Reject s ds) = return (nullFrag,Wob,Rtau unitT,Reject s ds,[])
-frag4OneDeclsNames rename (Prim l [Explicit nm t]) =
+frag4OneDeclsNames rename (Prim l (Explicit nm t)) =
   do { (sigma,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
-     ; return(frag,Wob,error "Shouldn't Check Prim type",Prim l [Explicit nm t],[]) }
+     ; return(frag,Wob,error "Shouldn't Check Prim type",Prim l (Explicit nm t),[]) }
 frag4OneDeclsNames rename d = failD 2 [Ds "Illegal dec in value binding group: ",Ds (show d)]
 
 

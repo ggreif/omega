@@ -148,16 +148,16 @@ data Stmt p e d
   | LetSt Loc [d]
   | NoBindSt Loc e
 
-data PrimBinding
+data PrimBindings
   = Explicit Var PT                     -- { primitive bind :: a -> b }
-  | Implicit Var                        -- { primitive import (a, b, c) }
+  | Implicit [Var]                      -- { primitive import (a, b, c) }
 
 data Dec
   = Fun Loc Var (Maybe PT) [Match [Pat] Exp Dec]   -- { f p1 p2 = b where decs }
   | Val Loc Pat (Body Exp) [Dec]        -- { p = b where decs }
   | Pat Loc Var [Var] Pat               -- { pattern Let x y z = App (Lam x z) y
   | TypeSig Loc [Var] PT                -- { id, di :: a -> a }
-  | Prim Loc [PrimBinding]
+  | Prim Loc PrimBindings
   | Data Loc Bool Strata Var (Maybe PT) Targs [Constr] [Derivation] -- { data T x (y :: Nat) = B (T x) deriving (Z,W) }
   | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)] [Derivation] (SynExt String)
   | Flag Var Var
@@ -320,7 +320,7 @@ decname (TypeSyn loc nm args ty) = [Global nm]
 decname (AddTheorem dec xs) = []
 decname (TypeFun loc nm k ms) = [Global nm]
 decname (TypeSig loc [nm] t) = [proto nm]
-decname (Prim loc [Explicit nm t]) = [nm]
+decname (Prim loc (Explicit nm t)) = [nm]
 decname (Flag s nm) =[flagNm nm]
 decname (Reject s ds) = concat (map decname ds)
 decname (Import s xs) = []
@@ -340,7 +340,7 @@ decloc (TypeSyn loc nm args ty) = [(Global nm,loc)]
 decloc (AddTheorem loc _) =[]
 decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
 decloc (TypeSig loc [nm] t) = [(proto nm,loc)]
-decloc (Prim loc [Explicit nm t]) = [(nm,loc)]
+decloc (Prim loc (Explicit nm t)) = [(nm,loc)]
 decloc (Flag s nm) =[]
 decloc (Reject s d) = decloc (head d)
 decloc (Import s vs) = []
@@ -870,7 +870,7 @@ instance Binds Dec where
            isTyCon _ = False
            preflag (Global nm) = Global ('%':nm)
            v' = preflag v
-  boundBy (Prim l [Explicit nm t]) = FX [nm] [] [] [] constrs
+  boundBy (Prim l (Explicit nm t)) = FX [nm] [] [] [] constrs
      where (FX _ _ _ tbs tfs) = vars [] t emptyF
            (vs,constrs) = partition typVar tfs
 
@@ -1121,7 +1121,7 @@ instance Eq Dec where
      p1==p2 && b1==b2 && ds1==ds2
   (Pat _ v1 vs1 p1) == (Pat _ v2 vs2 p2) = v1==v2 && vs1==vs2 && p1==p2
   (TypeSig _ v1 pt1) == (TypeSig _ v2 pt2) = v1==v2 && pt1==pt2
-  (Prim _ [Explicit v1 pt1]) == (Prim _ [Explicit v2 pt2]) = v1==v2 && pt1==pt2
+  (Prim _ (Explicit v1 pt1)) == (Prim _ (Explicit v2 pt2)) = v1==v2 && pt1==pt2
   (Data _ b1 str1 v1 Nothing targ1 cs1 ders1) == (Data _ b2 str2 v2 Nothing targ2 cs2 ders2) =
      b1==b2 && str1==str2 && v1==v2 && targ1==targ2 && cs1==cs2 && ders1==ders2
   (Data _ b1 str1 v1 (Just pt1) targ1 cs1 ders1) == (Data _ b2 str2 v2 (Just pt2) targ2 cs2 ders2) =
@@ -1194,6 +1194,8 @@ ppClause (_,ps,b ,ds) = PP.vcat [PP.sep [PP.sep (map ppPat ps) <+> PP.equals, pp
 ppImport (VarImport v) = ppVar v
 ppImport (SyntaxImport s y) = text ("deriving "++s++"("++y++")")
 
+ppParensCommaSep x = PP.parens (PP.sep (PP.punctuate PP.comma x))
+
 ppDec :: Dec -> Doc
 ppDec dec =
   case dec of
@@ -1202,7 +1204,9 @@ ppDec dec =
     Val _ p b ds -> PP.vcat [PP.sep [ppPat p <+> PP.equals, PP.nest 2 $ ppBody b], PP.nest 2 $ ppWhere ds]
     Pat _ v vs p  -> text "pattern" <+> ppVar v <+> PP.hsep (map ppVar vs) <+> PP.equals <+> ppPat p
     TypeSig _ v pt -> PP.sep (PP.punctuate PP.comma (map ppVar v)) <+> text "::" <+> ppPT pt
-    Prim _ [Explicit v pt] -> text "prim" <+> ppVar v <+> text "::" <+> ppPT pt
+    Prim _ bindings -> text "primitive" <+> ppBindings bindings
+      where ppBindings (Explicit v pt) = ppVar v <+> text "::" <+> ppPT pt
+            ppBindings (Implicit vs) = text "import" <+> ppParensCommaSep (map ppVar vs)
     Data _ b n v sig args cs []   -> PP.vcat [ppSig sig v,
                                      ppStrat n <+> ppVar v <+>
                                      PP.hsep (map ppArg args) <+> PP.equals <+>
@@ -1283,14 +1287,13 @@ ppPat pat =
     Pvar v -> ppVar v
     Pprod e1 e2 ->
       case patList pat of
-        xs -> PP.parens(PP.sep (PP.punctuate PP.comma (map ppPat xs)))
+        xs -> ppParensCommaSep (map ppPat xs)
     Psum L p -> PP.parens $ text "L" <+> ppPat p
     Psum R p -> PP.parens $ text "R" <+> ppPat p
     Pexists p -> PP.parens $ text "Ex" <+> ppPat p
     Paspat v p -> PP.parens $ ppVar v <> text "@" <> ppPat p
     Pwild -> text "_"
     Pcon v [] -> ppVar v
-    --Yang Chen: pattern Cp x y zs = (y:zs,x) --> pattern Cp x y zs = ((: y zs),x) Wrong!
     Pcon (Global ":") (p1:ps) -> PP.parens $ ppPat p1 <+> text  ":" <+> PP.hsep (map ppPat ps)
     Pcon v ps -> PP.parens $ ppVar v <+> PP.hsep (map ppPat ps)
     Pann p pt -> ppPat p <+> text "::" <+> ppPT pt
@@ -1343,7 +1346,7 @@ ppExp e =
     Sum R e -> PP.parens $ text "R" <+> ppExp e
     Prod e1 e2 ->
       case expList e of
-        xs -> PP.parens(PP.sep (PP.punctuate PP.comma (map ppExp xs)))
+        xs -> ppParensCommaSep (map ppExp xs)
     x @ (App e1 e2) ->
       case (tryL x [Fpair isList ppList, Fpair isOp ppOp]) of
         Just ans -> ans

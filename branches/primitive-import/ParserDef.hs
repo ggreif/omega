@@ -13,7 +13,7 @@ import System.IO.Unsafe(unsafePerformIO)
 
 import ParserAll
 import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
-             ,Dec(..),PrimBinding(..),Constr(..),Stmt(..),Var(..)
+             ,Dec(..),PrimBindings(..),Constr(..),Stmt(..),Var(..)
              ,listExp,listExp2,patTuple,ifExp,mergeFun,consExp,expTuple
              ,binop,opList,var,freshE,swp,dvars,evars,
              typeStrata,kindStrata,emptyF,Vars(..),boundBy
@@ -683,12 +683,11 @@ primName = name <|> parens operator
 primTypedDec = 
   do { n <- primName
      ; (levels, t) <- typing
-     ; return [Explicit n (polyLevel levels t)] }
+     ; return $ Explicit n (polyLevel levels t) }
 
-primImported :: Parser [PrimBinding]
 primImported =
   do { reserved "import"
-     ; parens (many $ fmap Implicit primName) }
+     ; fmap Implicit $ parens (sepBy primName comma) }
 
 
 patterndecl =

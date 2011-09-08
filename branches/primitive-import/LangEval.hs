@@ -442,7 +442,7 @@ elab prefix magic init (GADT l p t k cs ds exts) =
        size _ = 0
 
 elab prefix magic init (TypeSig loc nm t) = return init
-elab prefix magic init (Prim loc [Explicit nm t]) =
+elab prefix magic init (Prim loc (Explicit nm t)) =
    case lookup nm primitives of
      Just v -> return(extendV [(nm,v)] init)
      Nothing -> fail ("Can't find implementation for primitive: "++show nm)

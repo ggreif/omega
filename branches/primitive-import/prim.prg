@@ -2,5 +2,6 @@
 -- primitive Susy :: Int
 -- primitive linda :: Int -> Int
 
-primitive import (Joel Billy)
+primitive import (Joel)
+-- primitive import (Joel, Billy)
 

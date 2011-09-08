@@ -149,7 +149,7 @@ instance Swap Dec where
   swaps cs (Val loc p b ds) = Val loc (swaps cs p) (swaps cs b) (swaps cs ds)
   swaps cs (Pat loc v vs p) = Pat loc (swaps cs v) (swaps cs vs) (swaps cs p)
   swaps cs (TypeSig loc v t) = TypeSig loc v t -- What do we do here?
-  swaps cs (Prim loc [Explicit nm t]) = Prim loc [Explicit nm t]
+  swaps cs (Prim loc (Explicit nm t)) = Prim loc (Explicit nm t)
   swaps cs (Data loc b n v sig vs cons ds ) = Data loc b n v sig vs cons ds
   swaps cs (GADT x1 x2 x3 x4 x5 x6 x7) = (GADT x1 x2 x3 x4 x5 x6 x7)
   swaps cs (TypeSyn loc nm args ty) = TypeSyn loc nm args ty
