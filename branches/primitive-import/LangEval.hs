@@ -508,8 +508,14 @@ importableVals :: [(String,(V,Sigma))]
 importableVals =
  [("parseChar",(charLitV,gen(typeOf(undefined :: Parser Char))))
  ,("parseInt",(intLitV,gen(typeOf(undefined :: Parser Int))))
+ ] ++ map (\ (nm, maker) -> (nm, maker nm))
+ [("returnParser",make1(return :: A -> Parser A))
+ ,("bindParser",make2((>>=) :: Parser A -> (A -> Parser B) -> Parser B))
+ ,("failParser",make1(fail :: String -> Parser A))
+ ,("runParser",make2(runParser :: Parser A -> String -> Maybe A))
+ ,("<|>",make2((<|>) :: Parser A -> Parser A -> Parser A))
+ ,("<?>",make2((<?>) :: Parser A -> String -> Parser A))
  ]
-
 
 vals :: [(String,String->(V,Sigma))]
 vals =
@@ -569,12 +575,6 @@ vals =
 
  ,("show",make1(show :: A -> String))
  ,("unsafeCast",make1(unsafeCast:: A -> B))
- ,("runParser",make2(runParser :: Parser A -> String -> Maybe A))
- ,("<|>",make2((<|>) :: Parser A -> Parser A -> Parser A))
- ,("<?>",make2((<?>) :: Parser A -> String -> Parser A))
- ,("returnParser",make1(return :: A -> Parser A))
- ,("bindParser",make2((>>=) :: Parser A -> (A -> Parser B) -> Parser B))
- ,("failParser",make1(fail :: String -> Parser A))
  ] ++ map (\(name, x) -> (name, \ _ -> x)) [
   ("mimic",(mimic,gen(typeOf(undefined :: (A -> B) -> A -> B))))
  ,("strict",(strict,gen(typeOf(undefined :: (A -> A)))))
