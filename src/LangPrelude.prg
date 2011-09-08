@@ -24,7 +24,6 @@ listM =  (Monad unit bind fail)
         bind (x:xs) f = f x ++ bind xs f
 
 ioM = Monad returnIO bindIO failIO
-parseM = Monad returnParser bindParser failParser
 
 const x _ = x
 

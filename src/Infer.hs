@@ -39,7 +39,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,failD,failK,failM,warnM,handleM,whenM
             ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
             ,extendref, failIfInConsistent
-            ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv  -- splitU,split3,
+            ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newFlexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
             ,instanTy,instanPatConstr,checkArgs,nameOf
@@ -68,7 +68,7 @@ import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backsp
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns
                 ,initDI)
-import LangEval(vals,env0,Prefix(..),elaborate,eval)
+import LangEval(vals,env0,Prefix(..),elaborate,eval,typeForImportableVal)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
@@ -246,7 +246,9 @@ initTcEnv = addFrag frag0 tcEnv0
 
 frag0 = Frag (map f vals) [] [] [] [] [] []
   where f (nm,maker) = g (nm,maker nm)
-        g (nm,(v,sigma)) = (Global nm,(K [] sigma,Rig,0,Var (Global nm)),LetBnd)
+        g (nm,(_,sigma)) = (global, (K [] sigma, Rig, 0, var), LetBnd)
+                              where global = Global nm
+                                    var = Var global
 
 -- Used for adding simple Frags, where we don't expect things like theorems etc.
 addFrag (Frag pairs rigid tenv eqs theta rs exts) env =
@@ -1609,7 +1611,7 @@ getDecTyp rename (d:ds) =
 -- set of decls are already in the frag passed as input (See Step 1).
 
 checkDec :: Frag -> (Mod,Rho,Dec,[TcTv]) -> TC Dec
-checkDec frag (mod,_,Prim loc nm t,skols) = newLoc loc $ return(Prim loc nm t)
+checkDec frag (mod,_,prim@(Prim loc _),skols) = newLoc loc $ return prim
 checkDec frag (mod,rho,Fun loc nm hint ms,skols) | unequalArities ms =
   failD 3 [Ds ("\n\nThe equations for function: "++show nm++", give different arities.")]
 checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
@@ -2352,7 +2354,7 @@ isValFunPat (Fun _ _ _ _) = True
 isValFunPat (Pat _ _ _ _) = True
 isValFunPat (TypeSig _ [_] _) = True
 isValFunPat (Reject s d) = True
-isValFunPat (Prim l n t) = True
+isValFunPat (Prim _ _) = True
 isValFunPat _ = False
 
 -- We assume ds are all "where" or "let" declarations, such as
@@ -2414,9 +2416,16 @@ frag4OneDeclsNames rename (Pat loc nm vs p) = newLoc loc $
      ; (rigid,assump,rho) <- rigidTy Ex loc (show nm) sigma
      ; return(addPred assump frag,Wob,rho,Pat loc nm2 vs p,[])}
 frag4OneDeclsNames rename (Reject s ds) = return (nullFrag,Wob,Rtau unitT,Reject s ds,[])
-frag4OneDeclsNames rename (Prim l nm t) =
-  do { (sigma,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
-     ; return(frag,Wob,error "Shouldn't Check Prim type",Prim l nm t,[]) }
+frag4OneDeclsNames rename prim@(Prim l binders) =
+  do { let inferBinders (Explicit nm t) = do { (_,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
+                                             ; return frag }
+           inferBinders (Implicit vs) = do { vs' <- mapM f vs
+                                           ; return $ Frag vs' [] [] [] [] [] [] }
+             where f gl@(Global nm) = case typeForImportableVal nm of
+                                      Just sigma -> return (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
+                                      Nothing -> fail $ "primitive binding not importable: " ++ nm
+     ; frag <- inferBinders binders
+     ; return(frag,Wob,error "Shouldn't Check Prim type",prim,[]) }
 frag4OneDeclsNames rename d = failD 2 [Ds "Illegal dec in value binding group: ",Ds (show d)]
 
 
