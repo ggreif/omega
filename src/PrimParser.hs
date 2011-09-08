@@ -11,11 +11,6 @@ import System.IO.Unsafe(unsafePerformIO)
 import Value(pv,analyzeWith)
 import SyntaxExt(SynExt(..))
 
-intLit :: Parser Int
-intLit = natural >>= (return . fromInteger)
-charLit = charLiteral
-stringLit = stringLiteral
-
 ---------------------------------------------------------------
 -- Encoding the datatypes necessary to implement Parsers
 
@@ -36,17 +31,6 @@ instance (Encoding a,Encoding b) => Encoding (a -> Parser b) where
             getf (Vf f _ _) = f
             getf v = error ("Value not a function: "++(show v))
 
-{-
-instance Encoding (Parser V) where
-   to p = Vparser p
-   from (Vparser p) = p
-   from v = error ("Value not a Parser: "++(show v))
-
-instance Encoding (Parser(V -> V)) where
-   to p = Vparser (fmap (\ f -> lift1 "Parser(V->V)" (return.f)) p)
-   from (Vparser p) = fmap backwards p
-   from v = error ("Not a Parser: "++show v)
--}
 
 backwards :: V -> (V -> V)
 backwards fun v = help ((getf fun) v)
@@ -58,15 +42,6 @@ backwards fun v = help ((getf fun) v)
         getf (Vf f _ _) = f
         getf (Vprimfun _ f) = f
         getf v = error ("Not function in backwards: "++ show v)
-
-{-
-instance Encoding (Parser(V -> V -> V)) where
-   to p = Vparser (fmap (\ f -> lift2 "Parser(V->V->V)" (\ a b ->return(f a b))) p)
-   from (Vparser p) = fmap back2 p
-     where back2 :: V -> (V -> V -> V)
-           back2 v a b = backwards ((backwards v) a) b
-   from v = error ("Not a Parser: "++show v)
--}
 
 {-
 instance Encoding (Operator V) where
@@ -93,56 +68,30 @@ instance Encoding Assoc where
 
 -- Char Oriented Parsers
 
---charV = Vparser(char >>= (return . Vlit . Char))
---charV = Vparser(fmap (Vlit . Char) char)
---charV = Vparser(fmap (Vlit . Char) char)
-
---charV = lift1 "char" f where
---  f (Vlit(Char c)) = return(Vparser(char c >>= (return . Vlit . Char)))
-
 satisfyV = lift1 "satisfy" f where
   f v = return(Vparser(do { c <- satisfy g; return(Vlit(Char c)) }))
         where g u = from (backwards v (to u))
 
-stringV = lift1 "string" f where
-  f v = return(Vparser(fmap to (string (from v))))
 
 -- Lexeme oriented parsers that eat trailing white space
 
-intLitV = Vparser(intLit >>= (return . Vlit . Int))
-charLitV = Vparser(charLit >>= (return . Vlit . Char))
-stringLitV = Vparser(stringLit >>= (return . toStr))
-identifierV = Vparser(identifier >>= (return . toStr))
---symbolV = Vparser(fmap toStr symbol)
+intLitV = Vparser(fmap (Vlit . Int .fromInteger) natural)
+charLitV = Vparser(fmap (Vlit . Char) charLiteral)
+stringLitV = Vparser(fmap toStr stringLiteral)
+identifierV = Vparser(fmap toStr identifier)
 
---symbolV = lift1 "symbol" f where
---  f v = return(Vparser(symbol (from v) >>= (return . toStr)))
 choiceD = lift2 "<!>" f where
   f (Vparser x) vf = return(Vparser(
      case backwards vf (Vlit Unit) of
        (Vparser y) -> x <|> y
        v -> error ("Not parsing value: "++show v)))
 
-manyP = lift1 "many" f where
-  f (Vparser p) = return(Vparser(do { vs <- many p; return(consUp vs) }))
-parensP = lift1 "parens" f where
-  f (Vparser p) = return(Vparser(parens p))
-tryP = lift1 "try" f where
-  f (Vparser p) = return(Vparser(try p))
 parse2P = lift2 "parse2" f where
   f (Vparser p) (VChrSeq cs)  =
      case parse2 p cs of
       Left message -> return(Vsum L (toStr message))
       Right(v,rest) -> return(Vsum R (Vprod v (VChrSeq rest)))
   f x y = fail ("bad inputs to parse2: "++show x++" and "++ pv y)
-
-
-betweenP = lift3 "between" f where
-  f (Vparser a) (Vparser b) (Vparser c) = return(Vparser(between a b c))
-
-sepByP = lift2 "sepBy" f where
-  f (Vparser a) (Vparser b) = return(Vparser(fmap to (sepBy a b)))
-
 
 --------------------------------------------------------------
 -- Make Expression Parsers
@@ -172,13 +121,10 @@ runParser p str = case parse p "<omega input>" str of
 -- The list of pairs that is exported
 
 parserPairs =
-  [--("char",charV),("satisfy",satisfyV),("string",stringV)
-  --,("intLit",intLitV),("stringLit",stringLitV),("charLit",charLitV)
+  [--("satisfy",satisfyV),
   --,("identifier",identifierV),("symbol",symbolV)
   --,("<!>",choiceD)
-  --,("many",manyP),("parens",parensP),("try",tryP)
   ("parse2",parse2P)
-  --,("between",betweenP),("sepBy",sepByP)
   --,("buildExpressionParser",buildExpressionParserP)
   ,("toChrSeq",toChrSeqV),("fromChrSeq",fromChrSeqV)
   ]

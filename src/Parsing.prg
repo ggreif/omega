@@ -22,5 +22,5 @@ primitive import (char, {-satisfy,-} string, many, parens
 -- parsers for Omega literals
 --
 primitive import ( parseChar, parseInt, parseString
-                 , parseIdentifier{-, parseSymbol-} )
+                 , parseIdentifier )
 
