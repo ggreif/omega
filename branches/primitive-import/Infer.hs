@@ -2419,9 +2419,11 @@ frag4OneDeclsNames rename (Reject s ds) = return (nullFrag,Wob,Rtau unitT,Reject
 frag4OneDeclsNames rename prim@(Prim l binders) =
   do { let inferBinders (Explicit nm t) = do { (_,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
                                              ; return frag }
-           inferBinders (Implicit vs) = return $ Frag (map f vs) [] [] [] [] [] []
+           inferBinders (Implicit vs) = do { vs' <- mapM f vs
+                                           ; return $ Frag vs' [] [] [] [] [] [] }
              where f gl@(Global nm) = case typeForImportableVal nm of
-                                      Just sigma -> (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
+                                      Just sigma -> return (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
+                                      Nothing -> fail $ "primitive binding not importable: " ++ nm
      ; frag <- inferBinders binders
      ; return(frag,Wob,error "Shouldn't Check Prim type",prim,[]) }
 frag4OneDeclsNames rename d = failD 2 [Ds "Illegal dec in value binding group: ",Ds (show d)]
