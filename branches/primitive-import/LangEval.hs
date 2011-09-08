@@ -8,8 +8,9 @@ import Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..))
 import Value
-import RankN --(Sigma,runType,liftType, sigma4Eq,sigma4Hide,ToEnv,
-             -- star,star_star,poly,intT)
+import RankN ( Sigma, runType, liftType, sigma4Eq, ToEnv
+             , star, star_star, poly, intT, short
+             , Level(LvZero), PT(Rarrow', Karrow'), PolyKind(K), Tau(TyCon) )
 import RankN(Z)
 import Char(chr,ord)
 
