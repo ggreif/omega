@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
-module PrimParser (charLitV,intLitV,parserPairs,runParser) where
+module PrimParser ( charLitV, intLitV, stringLitV
+                  , identifierV, parens
+                  , parserPairs, runParser ) where
 
 import ParserAll
 import Encoding
@@ -91,8 +93,12 @@ instance Encoding Assoc where
 
 -- Char Oriented Parsers
 
-charV = lift1 "char" f where
-  f (Vlit(Char c)) = return(Vparser(char c >>= (return . Vlit . Char)))
+--charV = Vparser(char >>= (return . Vlit . Char))
+--charV = Vparser(fmap (Vlit . Char) char)
+--charV = Vparser(fmap (Vlit . Char) char)
+
+--charV = lift1 "char" f where
+--  f (Vlit(Char c)) = return(Vparser(char c >>= (return . Vlit . Char)))
 
 satisfyV = lift1 "satisfy" f where
   f v = return(Vparser(do { c <- satisfy g; return(Vlit(Char c)) }))
@@ -107,11 +113,10 @@ intLitV = Vparser(intLit >>= (return . Vlit . Int))
 charLitV = Vparser(charLit >>= (return . Vlit . Char))
 stringLitV = Vparser(stringLit >>= (return . toStr))
 identifierV = Vparser(identifier >>= (return . toStr))
-symbolV = lift1 "symbol" f where
-  f v = return(Vparser(symbol (from v) >>= (return . toStr)))
-choiceP = lift2 "<|>" f where
-  f (Vparser x) (Vparser y) = return(Vparser( x <|> y))
+--symbolV = Vparser(fmap toStr symbol)
 
+--symbolV = lift1 "symbol" f where
+--  f v = return(Vparser(symbol (from v) >>= (return . toStr)))
 choiceD = lift2 "<!>" f where
   f (Vparser x) vf = return(Vparser(
      case backwards vf (Vlit Unit) of
@@ -138,26 +143,6 @@ betweenP = lift3 "between" f where
 sepByP = lift2 "sepBy" f where
   f (Vparser a) (Vparser b) = return(Vparser(fmap to (sepBy a b)))
 
-
-------------------------------------------------
--- Make Parser a Monad
-
-returnParserP = lift1 "returnParser" ret
-  where ret v = return(Vparser(return v))
-
-bindParserP = lift2 "bindParser" bind where
- bind (Vparser p) f = return(Vparser
-  (do { v <- p
-      ; let (FIO z) = case f of
-                        Vf f _ _ -> f v
-                        Vprimfun _ f -> f v
-      ; case unsafePerformIO z of
-          Ok(Vparser q) -> q
-          Fail loc n k message -> fail ("\n\n**** Near "++show loc++"\n"++message)
-      }))
-
-failParserP = lift1 "failParser" f where
-  f (VChrSeq s) = return(Vparser(fail s))
 
 --------------------------------------------------------------
 -- Make Expression Parsers
@@ -187,14 +172,13 @@ runParser p str = case parse p "<omega input>" str of
 -- The list of pairs that is exported
 
 parserPairs =
-  [("char",charV),("satisfy",satisfyV),("string",stringV)
-  ,("intLit",intLitV),("stringLit",stringLitV),("charLit",charLitV)
-  ,("identifier",identifierV),("symbol",symbolV)
-  ,("<|>",choiceP),("<!>",choiceD)
-  ,("many",manyP),("parens",parensP),("try",tryP),("parse2",parse2P)
-  ,("between",betweenP),("sepBy",sepByP)
-  ,("returnParser",returnParserP),("bindParser",bindParserP)
-  ,("failParser",failParserP)
+  [--("char",charV),("satisfy",satisfyV),("string",stringV)
+  --,("intLit",intLitV),("stringLit",stringLitV),("charLit",charLitV)
+  --,("identifier",identifierV),("symbol",symbolV)
+  --,("<!>",choiceD)
+  --,("many",manyP),("parens",parensP),("try",tryP)
+  ("parse2",parse2P)
+  --,("between",betweenP),("sepBy",sepByP)
   --,("buildExpressionParser",buildExpressionParserP)
   ,("toChrSeq",toChrSeqV),("fromChrSeq",fromChrSeqV)
   ]
