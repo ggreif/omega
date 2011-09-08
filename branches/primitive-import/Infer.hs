@@ -1601,13 +1601,6 @@ instance TypableBinder [Dec] where
 
 getDecTyp :: Bool -> [Dec] -> TC (Frag,[(Mod,Rho,Dec,[TcTv])])
 getDecTyp rename [] = return(nullFrag,[])
-getDecTyp rename (prim@(Prim _ (Implicit vs)):ds) =
-  do { let frag1 = Frag (map f vs) [] [] [] [] [] []
-           f gl@(Global nm) = case typeForImportableVal nm of
-                              Just sigma -> (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
-     ; (frag2,triples) <- getDecTyp rename ds
-     ; frag3 <- frag2 +++ frag1
-     ; return(frag3,(Wob,error "Shouldn't Check Implicit Prim type",prim,[]):triples) }
 getDecTyp rename (d:ds) =
   do { (frag1,mod,rho,d,skols) <- frag4OneDeclsNames rename d
      ; (frag2,triples) <- getDecTyp rename ds  -- do the rest of the list
@@ -2423,8 +2416,13 @@ frag4OneDeclsNames rename (Pat loc nm vs p) = newLoc loc $
      ; (rigid,assump,rho) <- rigidTy Ex loc (show nm) sigma
      ; return(addPred assump frag,Wob,rho,Pat loc nm2 vs p,[])}
 frag4OneDeclsNames rename (Reject s ds) = return (nullFrag,Wob,Rtau unitT,Reject s ds,[])
-frag4OneDeclsNames rename prim@(Prim l (Explicit nm t)) =
-  do { (sigma,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
+frag4OneDeclsNames rename prim@(Prim l binders) =
+  do { let inferBinders (Explicit nm t) = do { (_,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
+                                             ; return frag }
+           inferBinders (Implicit vs) = return $ Frag (map f vs) [] [] [] [] [] []
+             where f gl@(Global nm) = case typeForImportableVal nm of
+                                      Just sigma -> (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
+     ; frag <- inferBinders binders
      ; return(frag,Wob,error "Shouldn't Check Prim type",prim,[]) }
 frag4OneDeclsNames rename d = failD 2 [Ds "Illegal dec in value binding group: ",Ds (show d)]
 
