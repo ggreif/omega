@@ -1,4 +1,4 @@
-module TokenDef(tokenDef) where
+module TokenDef ( tokenDef ) where
 
 import StdTokenDef
 import CommentDef
