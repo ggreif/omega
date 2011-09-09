@@ -259,22 +259,20 @@ simplePattern =
                                   ++ "' used where a nullary one is expected (did you mean '("
                                   ++ con ++ " p)'?)")
 
-conApp = do { pat <- try quotedInfix <|> regular
-            ; case pat of
-              Right p -> return p
-              Left (p@(Pcon _ [_,_])) -> return p
-              _ -> fail "bad right hand side of quoted operator pattern" }
+conApp = try quotedInfix <|> regular
   where regular = do { name <- constructor
                      ; ps <- many simplePattern
-                     ; return $ Right (pcon name ps) }
+                     ; return $ pcon name ps }
         quotedInfix = do { p1 <- simplePattern
                          ; whiteSpace
                          ; char '`'
                          ; n <- constructor
                          ; char '`'
-                         ; whiteSpace;
-                         ; ps <- many simplePattern
-                         ; return $ Left (Pcon n (p1:ps)) }
+                         ; whiteSpace
+                         ; ps <- many1 simplePattern
+                         ; case ps of
+                           [_] -> return $ Pcon n (p1:ps)
+                           _ -> fail "bad right hand side of quoted operator pattern" }
                       <?> "quoted infix Constructor"
         pcon (Global "L") [p] = Psum L p
         pcon (Global "R") [p] = Psum R p
