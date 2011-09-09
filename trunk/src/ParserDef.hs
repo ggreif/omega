@@ -259,25 +259,27 @@ simplePattern =
                                   ++ "' used where a nullary one is expected (did you mean '("
                                   ++ con ++ " p)'?)")
 
-conApp = try quotedInfix <|> regular
-     where regular = do { name <- constructor
-                        ; ps <- many simplePattern
-                        ; return (pcon name ps) }
-           quotedInfix = do { p1 <- simplePattern
-                            ; whiteSpace
-                            ; char '`'
-                            ; n <- constructor
-                            ; char '`'
-                            ; whiteSpace;
-                            ; ps <- many1 simplePattern
-                            ; case ps of
-                              [p2] -> return $ Pcon n [p1, p2]
-                              _ -> fail "right hand side of quoted operator pattern has more that one simple pattern" }
-                         <?> "quoted infix Constructor"
-           pcon (Global "L") [p] = Psum L p
-           pcon (Global "R") [p] = Psum R p
-           pcon (Global "Ex") [p] = Pexists p
-           pcon n ps = Pcon n ps
+conApp = do { pat <- try quotedInfix <|> regular
+            ; case pat of
+              Right p -> return p
+              Left (p@(Pcon _ [_,_])) -> return p
+              _ -> fail "bad right hand side of quoted operator pattern" }
+  where regular = do { name <- constructor
+                     ; ps <- many simplePattern
+                     ; return $ Right (pcon name ps) }
+        quotedInfix = do { p1 <- simplePattern
+                         ; whiteSpace
+                         ; char '`'
+                         ; n <- constructor
+                         ; char '`'
+                         ; whiteSpace;
+                         ; ps <- many simplePattern
+                         ; return $ Left (Pcon n (p1:ps)) }
+                      <?> "quoted infix Constructor"
+        pcon (Global "L") [p] = Psum L p
+        pcon (Global "R") [p] = Psum R p
+        pcon (Global "Ex") [p] = Pexists p
+        pcon n ps = Pcon n ps
 
 
 resOp x = reservedOp x >> return ""
