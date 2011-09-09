@@ -1,0 +1,49 @@
+#summary Most containers (like lists) have order, but sometimes we do not want that.
+#labels speculative,Phase-Requirements
+
+= Introduction =
+
+Issue 6 calls for `Set`-like data structures. Here we explore the design space a bit.
+
+= Kinds of Orderless Data Structures =
+
+Clearly these are _associative_ and _commutative_ both of which are at odds with our classical _constructor approach_.
+
+I envision three semantic forms:
+  * `Bag`s: these respect insertion and removal, i.e. size always updates. Duplicates are always preserved.
+  * `Set`s: these respect removal, but cancel duplicated insertions.
+  * A `Supply` respects insertions, but disrespects removals: added once, you can get it back any time.
+
+In any case a pattern match with a head position that is not in the container will fail.
+
+== How to Deal with Pattern Match Failure ==
+
+  # we could live in a `Maybe`-like monad
+  # we could always wrap the pattern with `Just` (what is `Nothing` then?)
+  # only the `_` pattern matches an empty orderless container? Not a particularly good idea, since this is not inductively sequential (i.e. _type functions_ are out).
+  # having 3 constructors:
+    * `Nil :: C a`,
+    * `Cons :: a -> C a -> C a` meaning, yes I _found it_, and
+    * `ComeBackLater :: C a -> C a -> C a` :-) Neither the left nor the right contain what you are looking for.
+
+`ComeBackLater` should only occur in patterns. It could also be _nullary_.
+
+=== Non-joker semantics ===
+
+I see one more alternative: Use `Cons` with a pattern (that has free variables) at the head position: matches something, but with an expression `$(expr)` or closed pattern we get a membership test.
+
+== Use case for `Supply`s ==
+
+Universal truths, proofs and similar _ideal_ terms are good candidates to be put into supplies. Resource-like things on the other hand are better suited for being contained in `Bag`s or `Set`s.
+
+For example in a theorem prover one could move all proved propositions into a `Supply` and get them back any number of times. Of course this must happen in a referentially transparent manner, but that is an implementation detail.
+
+= Implementation Details =
+
+Let's think about how this stuff can be implemented...
+
+We need a new _type class_ `ConstructorLike` which has instances for all these types of strange consructors and the classical ones too. It needs an operation `null`, _membership test_ and _splitting_.
+
+= Surface Language =
+
+Contrary to InductionPrinciples (see "Set and Bag-like Theorems") I now believe that we need a `deriving semantics Supply` clause for `data` declarations. These would instantiate the exotic constructors.
