@@ -245,10 +245,10 @@ infixPattern =
 simplePattern :: Parser Pat
 simplePattern =
         literalP
-    <|> (do { p <- extP pattern; return(extToPat p)})
-    <|> (try (fmap lit2Pat (parens signedNumLiteral)))
-    <|> (do { symbol "_"; return Pwild})
-    <|> (do { nm <- constructor; nullaryPcon nm })
+    <|> do { p <- extP pattern; return(extToPat p)}
+    <|> try (fmap lit2Pat (parens signedNumLiteral))
+    <|> do { symbol "_"; return Pwild}
+    <|> do { nm <- constructor; nullaryPcon nm }
     <|> patvariable
     <?> "simple pattern"
   where nullaryPcon (Global "L") = failUnaryPcon "L"
@@ -259,14 +259,26 @@ simplePattern =
                                   ++ "' used where a nullary one is expected (did you mean '("
                                   ++ con ++ " p)'?)")
 
-conApp =
-   do { name <- constructor
-      ; ps <- many simplePattern
-      ; return (pcon name ps)}
-     where pcon (Global "L") [p] = Psum L p
+conApp = try quotedInfix <|> regular
+     where regular = do { name <- constructor
+                        ; ps <- many simplePattern
+                        ; return (pcon name ps) }
+           quotedInfix = do { p1 <- simplePattern
+                            ; whiteSpace
+                            ; char '`'
+                            ; n <- constructor
+                            ; char '`'
+                            ; whiteSpace;
+                            ; ps <- many1 simplePattern
+                            ; case ps of
+                              [p2] -> return $ Pcon n [p1, p2]
+                              _ -> fail "right hand side of quoted operator pattern has more that one simple pattern" }
+                         <?> "quoted infix Constructor"
+           pcon (Global "L") [p] = Psum L p
            pcon (Global "R") [p] = Psum R p
            pcon (Global "Ex") [p] = Pexists p
            pcon n ps = Pcon n ps
+
 
 resOp x = reservedOp x >> return ""
 
@@ -498,12 +510,12 @@ applyExpression =
 
 -- `mem`  `elem`
 quotedInfix = try
- ((do { whiteSpace
-      ; (char '`')
+  (do { whiteSpace
+      ; char '`'
       ; v <- name
-      ; (char '`')
+      ; char '`'
       ; whiteSpace;
-      ; return (\x y -> App (App (Var  v) x) y) }) <?> "quoted infix operator")
+      ; return (\x y -> App (App (Var  v) x) y) } <?> "quoted infix operator")
 
 -----------------------------------------------------------------------
 -- Syntax for building code
