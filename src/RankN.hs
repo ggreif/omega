@@ -2392,7 +2392,7 @@ applyT' (x : y : z) = applyT' ((TyApp' x y):z)
 
 parse_tag inject =
      try (do { whiteSpace
-             ; (char '`')
+             ; char '`'
              ; v <- ident
              ; notFollowedBy (char '`')
              ; whiteSpace
@@ -2437,16 +2437,19 @@ justvar = do { n <- identifier; return(Just(0::Int,n))}
 prefixPlus = do { i <- num; char '+'; n <- identifier; return(Just(i,n)) }
 postfixPlus = do { n <- identifier;  char '+'; i <- num; return(Just(i,n)) }
 
+backQuoted a = do { whiteSpace
+                  ; char '`'
+                  ; a' <- a
+                  ; char '`'
+                  ; whiteSpace
+                  ; return a' }
+
 applied item op = do { item1 <- item
                      ; more <- try quoted <|> (fmap Right $ many item)
                      ; return $ case more of
                                 Left [v, item2] -> [v, item1, item2]
                                 Right more -> item1:more }
-  where quoted = do { whiteSpace
-                    ; char '`'
-                    ; v <- op
-                    ; char '`'
-                    ; whiteSpace
+  where quoted = do { v <- backQuoted op
                     ; item2 <- item
                     ; return (Left [v, item2]) } <?> "quoted infix type operator"
 
