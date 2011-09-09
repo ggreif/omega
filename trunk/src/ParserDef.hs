@@ -1,9 +1,9 @@
-module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
-                pattern,expr,decl,
-                program,parse2,parse,parseString,parseFile
-                ,parseHandle, Handle
-                ,Command(..),pCommand
-                ,d1)
+module ParserDef ( pp, pe, pd, name, getExp, getInt, getBounds
+                 , pattern, expr, decl
+                 , program, parse2, parse, parseString, parseFile
+                 , parseHandle, Handle
+                 , Command(..), pCommand
+                 )
                 where
 
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
@@ -20,8 +20,9 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
 import List(partition)
 import Monads
-import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
-            ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName,arityPT)
+import RankN( PT(..), typN, simpletyp, proposition, pt, allTyp
+            , ptsub, getFree, parse_tag, props, typingHelp
+            , typing, conName, arityPT,  backQuoted )
 import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
 import Auxillary(Loc(..),plistf,plist)
 import Char(isLower,isUpper)
@@ -264,11 +265,7 @@ conApp = try quotedInfix <|> regular
                      ; ps <- many simplePattern
                      ; return $ pcon name ps }
         quotedInfix = do { p1 <- simplePattern
-                         ; whiteSpace
-                         ; char '`'
-                         ; n <- constructor
-                         ; char '`'
-                         ; whiteSpace
+                         ; n <- backQuoted constructor
                          ; ps <- many1 simplePattern
                          ; case ps of
                            [_] -> return $ Pcon n (p1:ps)
@@ -507,14 +504,9 @@ applyExpression =
            reservedFun name = reserved name >> return name
            reservedFuns = reservedFun "Ex" <|> reservedFun "check" <|> reservedFun "lazy"
 
-
 -- `mem`  `elem`
 quotedInfix = try
-  (do { whiteSpace
-      ; char '`'
-      ; v <- name
-      ; char '`'
-      ; whiteSpace;
+  (do { v <- backQuoted name
       ; return (\x y -> App (App (Var  v) x) y) } <?> "quoted infix operator")
 
 -----------------------------------------------------------------------
