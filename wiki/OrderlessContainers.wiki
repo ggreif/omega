@@ -36,7 +36,7 @@ I see one more alternative: Use `Cons` with a pattern (that has free variables) 
 
 Universal truths, proofs and similar _ideal_ terms are good candidates to be put into supplies. Resource-like things on the other hand are better suited for being contained in `Bag`s or `Set`s.
 
-For example in a theorem prover one could move all proved propositions into a `Supply` and get them back any number of times. Of course this must happen in a referentially transparent manner, but that is an implementation detail.
+For example in a theorem prover one could move all proven propositions into a `Supply` and get them back any number of times. Of course this must happen in a referentially transparent manner, but that is an implementation detail.
 
 = Implementation Details =
 
