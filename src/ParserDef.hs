@@ -20,10 +20,11 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
 import List(partition)
 import Monads
-import RankN( PT(..), typN, simpletyp, proposition, pt, allTyp
-            , ptsub, getFree, parse_tag, props, typingHelp
-            , typing, conName, arityPT,  backQuoted )
-import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
+import RankN ( PT(..), typN, simpletyp, proposition, pt, allTyp
+             , ptsub, getFree, parse_tag, props, typingHelp
+             , typing, conName, arityPT,  backQuoted )
+import SyntaxExt ( Extension(..), extP, SynExt(..)
+                 , natP, SyntaxStyle(..) )
 import Auxillary(Loc(..),plistf,plist)
 import Char(isLower,isUpper)
 ---------------------------------------------------------
