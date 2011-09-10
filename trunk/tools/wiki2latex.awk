@@ -47,11 +47,11 @@ coding {
 }
 
 ## NO CODING BELOW THIS POINT
-coding { print "###code???####"; }
+coding { print "###code???####"; next; }
 
 
 ## pragmas do not count
-!coding && /\#labels/ {
+/\#labels/ {
   next;
 }
 
@@ -80,7 +80,7 @@ quoting && !/^  / {
 }
 
 ## empty lines do not count
-!coding && /^ *$/ {
+/^ *$/ {
   next;
 }
 
@@ -120,7 +120,7 @@ itemizing && /^   *\*/ {
 }
 
 
-!coding && /^  / {
+/^  / {
   print "\\begin{quotation}";
   quoting = 1;
   sub(/^  /, "");
