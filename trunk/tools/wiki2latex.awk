@@ -114,12 +114,10 @@ quoting && (inItem || !/^ /) {
   gsub(/#/, "\\#");
 }
 /\[/ {
-  sub(/\[/, "\\mbox{$[$}");
-  ## repeat!
+  gsub(/\[/, "\\mbox{$[$}");
 }
 /\]/ {
-  sub(/\]/, "\\mbox{$]$}");
-  ## repeat!
+  gsub(/\]/, "\\mbox{$]$}");
 }
 
 
