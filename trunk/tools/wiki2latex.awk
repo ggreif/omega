@@ -57,14 +57,14 @@ coding { print "###code???####"; next; }
 
 
 ## make sure that control sequences are always at the front
-/ *=/ { sub(/ */, "") }
+/^ *=/ { sub(/^ *=/, "=") }
 
-quoting && /^ / {
-  sub(/^ /, "");
-  print;
-  next;
+## check itemness
+{ inItem = 0 }
+/^   *\*/ {
+  inItem = 1
+  ## print " ########## ITEM"
 }
-
 
 itemizing && !/^   *\*/ {
   print "\\end{itemize}";
@@ -75,7 +75,7 @@ itemizing && !/^   *\*/ {
 
 ## quoting stops when item appears
 ## or not indented any more
-quoting && (/^   *\*/ || !/^ /) {
+quoting && (inItem || !/^ /) {
   print "\\end{quotation}";
   print ""
   quoting = 0;
@@ -106,6 +106,12 @@ quoting && (/^   *\*/ || !/^ /) {
   print;
   print "";
   print "\\label{f0}";
+  next;
+}
+
+quoting && /^ / {
+  sub(/^ /, "");
+  print;
   next;
 }
 
