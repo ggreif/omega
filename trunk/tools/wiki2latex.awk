@@ -107,7 +107,21 @@ quoting && (inItem || !/^ /) {
   sub(/`/, "\\texttt{", line);
   sub(/`/, "}", line);
   $0 = line
+  ## repeat!
 }
+
+/.#/ {
+  gsub(/#/, "\\#");
+}
+/\[/ {
+  sub(/\[/, "\\mbox{$[$}");
+  ## repeat!
+}
+/\]/ {
+  sub(/\]/, "\\mbox{$]$}");
+  ## repeat!
+}
+
 
 /^==/ {
   sub(/^==/, "\\subsection*{");
@@ -122,6 +136,7 @@ quoting && (inItem || !/^ /) {
   print;
   print "";
   print "\\label{f0}";
+  print "";
   next;
 }
 
