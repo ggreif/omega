@@ -10,6 +10,7 @@ BEGIN {
   print "";
   quoting = 0;
   itemizing = 0;
+  coding = 0;
 }
 
 END {
@@ -22,9 +23,17 @@ END {
 }
 
 ## pragmas do not count
-/\#labels/ {
+!coding && /\#labels/ {
   next;
 }
+
+
+## make sure that control sequences are always at the front
+/ *{{{/ { sub(/ */, "") }
+/ *}}}/ { sub(/ */, "") }
+/ *=/ { sub(/ */, "") }
+
+
 
 itemizing && !/^   *\*/ {
   print "\\end{itemize}";
@@ -43,7 +52,7 @@ quoting && !/^  / {
 }
 
 ## empty lines do not count
-/^ *$/ {
+!coding && /^ *$/ {
   next;
 }
 
@@ -54,15 +63,15 @@ quoting && !/^  / {
   $0 = line
 }
 
-/==/ {
-  sub(/==/, "\\subsection*{");
+/^==/ {
+  sub(/^==/, "\\subsection*{");
   sub(/==/, "}");
   print;
   next;
 }
 
-/=/ {
-  sub(/=/, "\\section*{");
+/^=/ {
+  sub(/^=/, "\\section*{");
   sub(/=/, "}");
   print;
   print "";
@@ -83,7 +92,29 @@ itemizing && /^   *\*/ {
 }
 
 
-/^  / {
+## tracking code
+
+!coding && /^{{{/ {
+  print "\\begin{verbatim}";
+  coding = 1;
+  next;
+}
+
+coding && /^}}}/ {
+  print "\\end{verbatim}";
+  coding = 0;
+  next;
+}
+
+coding {
+  sub(/^/, "{\\small ");
+  print;
+  print "}";
+  next;
+}
+
+
+!coding && /^  / {
   print "\\begin{quotation}";
   quoting = 1;
   sub(/^  /, "");
