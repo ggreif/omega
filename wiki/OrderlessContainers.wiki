@@ -46,4 +46,4 @@ We need a new _type class_ `ConstructorLike` which has instances for all these t
 
 = Surface Language =
 
-Contrary to InductionPrinciples (see "Set and Bag-like Theorems") I now believe that we need a `deriving semantics Supply` clause for `data` declarations. These would instantiate the exotic constructors.
+Contrary to [InductionPrinciples#Set-_and_Bag-like_Theorems] (see "Set and Bag-like Theorems") I now believe that we need a `deriving semantics Supply` clause for `data` declarations. These would instantiate the exotic constructors.
