@@ -65,6 +65,8 @@ quoting && !/^  / {
   sub(/=/, "\\section*{");
   sub(/=/, "}");
   print;
+  print "";
+  print "\\label{f0}";
   next;
 }
 
