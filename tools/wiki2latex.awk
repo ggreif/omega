@@ -51,7 +51,7 @@ coding { print "###code???####"; next; }
 
 
 ## pragmas do not count
-/\#labels/ {
+/^\#labels/ {
   next;
 }
 
@@ -59,6 +59,11 @@ coding { print "###code???####"; next; }
 ## make sure that control sequences are always at the front
 / *=/ { sub(/ */, "") }
 
+quoting && /^ / {
+  sub(/^ /, "");
+  print;
+  next;
+}
 
 
 itemizing && !/^   *\*/ {
@@ -66,16 +71,13 @@ itemizing && !/^   *\*/ {
   itemizing = 0;
 }
 
-quoting && /^  / {
-  sub(/^  /, "");
-  print;
-  next;
-}
 
 
-
-quoting && !/^  / {
+## quoting stops when item appears
+## or not indented any more
+quoting && (/^   *\*/ || !/^ /) {
   print "\\end{quotation}";
+  print ""
   quoting = 0;
 }
 
@@ -120,10 +122,11 @@ itemizing && /^   *\*/ {
 }
 
 
-/^  / {
+/^ / {
+  print ""
   print "\\begin{quotation}";
   quoting = 1;
-  sub(/^  /, "");
+  sub(/^ /, "");
   print;
   next;
 }
