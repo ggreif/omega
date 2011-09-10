@@ -28,6 +28,13 @@ END {
 / *}}}/ { sub(/ */, "") }
 
 !coding && /^{{{/ {
+
+  if (quoting) {
+    print "\\end{quotation}";
+    print ""
+    quoting = 0;
+  }
+
   print "\\begin{verbatim}";
   coding = 1;
   next;
@@ -66,7 +73,7 @@ coding { print "###code???####"; next; }
   ## print " ########## ITEM"
 }
 
-itemizing && !/^   *\*/ {
+itemizing && !inItem {
   print "\\end{itemize}";
   itemizing = 0;
 }
@@ -115,12 +122,12 @@ quoting && /^ / {
   next;
 }
 
-!itemizing && /^   *\*/ {
+!itemizing && inItem {
   print "\\begin{itemize}";
   itemizing = 1;
 }
 
-itemizing && /^   *\*/ {
+itemizing && inItem {
   sub(/^   *\*/, "\\item");
   print;
   print "";
