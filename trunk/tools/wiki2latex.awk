@@ -22,6 +22,34 @@ END {
   print "%";
 }
 
+## HANDLE CODING
+## make sure that control sequences are always at the front
+/ *{{{/ { sub(/ */, "") }
+/ *}}}/ { sub(/ */, "") }
+
+!coding && /^{{{/ {
+  print "\\begin{verbatim}";
+  coding = 1;
+  next;
+}
+
+coding && /^}}}/ {
+  print "\\end{verbatim}";
+  coding = 0;
+  next;
+}
+
+coding {
+  sub(/^/, "{\\small ");
+  print;
+  print "}";
+  next;
+}
+
+## NO CODING BELOW THIS POINT
+coding { print "###code???####"; }
+
+
 ## pragmas do not count
 !coding && /\#labels/ {
   next;
@@ -29,8 +57,6 @@ END {
 
 
 ## make sure that control sequences are always at the front
-/ *{{{/ { sub(/ */, "") }
-/ *}}}/ { sub(/ */, "") }
 / *=/ { sub(/ */, "") }
 
 
@@ -45,6 +71,8 @@ quoting && /^  / {
   print;
   next;
 }
+
+
 
 quoting && !/^  / {
   print "\\end{quotation}";
@@ -88,28 +116,6 @@ itemizing && /^   *\*/ {
   sub(/^   *\*/, "\\item");
   print;
   print "";
-  next;
-}
-
-
-## tracking code
-
-!coding && /^{{{/ {
-  print "\\begin{verbatim}";
-  coding = 1;
-  next;
-}
-
-coding && /^}}}/ {
-  print "\\end{verbatim}";
-  coding = 0;
-  next;
-}
-
-coding {
-  sub(/^/, "{\\small ");
-  print;
-  print "}";
   next;
 }
 
