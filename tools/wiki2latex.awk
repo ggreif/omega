@@ -22,6 +22,8 @@ END {
   print "%";
 }
 
+{ origLine = $0; }
+
 ## HANDLE CODING
 ## make sure that control sequences are always at the front
 / *{{{/ { sub(/ */, "") }
@@ -41,7 +43,13 @@ END {
 }
 
 coding && /^}}}/ {
+  sub(/}}}.*$/, "", origLine);
+  if (origLine) {
+    print "{\\small " origLine
+    print "}"
+  }
   print "\\end{verbatim}";
+  print ""
   coding = 0;
   next;
 }
@@ -75,6 +83,7 @@ coding { print "###code???####"; next; }
 
 itemizing && !inItem {
   print "\\end{itemize}";
+  print "";
   itemizing = 0;
 }
 
