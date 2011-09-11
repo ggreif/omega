@@ -53,9 +53,11 @@ shorten {_; rest}s = rest
 }}}
 Here the suffixes `s` and `ts` mean value- and typesets respectively, with set-like semantics.
 
-An interesting case is when some of the values differ but have the same type, in this case the type level cannot be set-like. Hmmm. Yes, sets at some level would be typed by bag-like semantics one level up.
+An interesting case is when some of the values differ but have the same type, in this case the type level cannot be set-like. Hmmm. Yes, sets at some level would be typed by bag-like semantics one level up. Unless of course when at insertion time the value gets discarded, but the type would increase when bag-like. This is not good.
 
 Only for singleton types we would preserve the _set :: set_ relation.
+
+The _bag :: bag_ appears like a safe bet, but we have to track which particular element below has which element in the upwards.
 
 What about supplies?
 
