@@ -44,17 +44,17 @@ Let's think about how this stuff can be implemented...
 
 We need a new _type class_ `ConstructorLike` which has instances for all these types of strange consructors and the classical ones too. It needs an operation `null`, _membership test_ and _splitting_.
 
-== How do the types/kinds vary ==
+== How do the Types/Kinds Vary? ==
 
 Very important question is how the type of an object changes when we pattern-match on it. Clearly, the type will change when we have non-homogenous containers, i.e.
 {{{
 shorten :: {a; rest}ts -> rest
 shorten {_; rest}s = rest
 }}}
-Here the suffixes `s` and `ts` mean value- and type sets respectively with set-like semantics.
+Here the suffixes `s` and `ts` mean value- and typesets respectively, with set-like semantics.
 
 An interesting case is when some of the values differ but have the same type, in this case the type level cannot be set-like. Hmmm.
 
 = Surface Language =
 
-Contrary to [InductionPrinciples#Set-_and_Bag-like_Theorems] (see "Set and Bag-like Theorems") I now believe that we need a `deriving semantics Supply` clause for `data` declarations. These would instantiate the exotic constructors.
+Contrary to [InductionPrinciples#Set-_and_Bag-like_Theorems] I now believe that we need a `deriving semantics` clause for `data` declarations. These would instantiate the exotic constructors.
