@@ -53,7 +53,11 @@ shorten {_; rest}s = rest
 }}}
 Here the suffixes `s` and `ts` mean value- and typesets respectively, with set-like semantics.
 
-An interesting case is when some of the values differ but have the same type, in this case the type level cannot be set-like. Hmmm.
+An interesting case is when some of the values differ but have the same type, in this case the type level cannot be set-like. Hmmm. Yes, sets at some level would be typed by bag-like semantics one level up.
+
+Only for singleton types we would preserve the _set :: set_ relation.
+
+What about supplies?
 
 = Surface Language =
 
