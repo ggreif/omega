@@ -181,19 +181,19 @@ allBinders = [ BoundTv [x]          | x <- ['a'..'z'] ] ++
 getEnvTypes :: Tc [Type a]
   -- Get the types mentioned in the environment
 getEnvTypes = do { env <- getEnv;
-	         ; return (Map.elems env) }
+	               ; return (Map.elems env) }
 
 getMetaTyVars :: [Type a] -> Tc [MetaTv]
 -- This function takes account of zonking, and returns a set
 -- (no duplicates) of unbound meta-type variables
 getMetaTyVars tys = do { tys' <- mapM zonkType tys
-		    ; return (metaTvs tys') }
+		                   ; return (metaTvs tys') }
 
 getFreeTyVars :: [Type a] -> Tc [TyVar]
 -- This function takes account of zonking, and returns a set
 -- (no duplicates) of free type variables
 getFreeTyVars tys = do { tys' <- mapM zonkType tys
-		       ; return (freeTyVars tys') }
+		                   ; return (freeTyVars tys') }
 
 ------------------------------------------
 --      Zonking                         --
