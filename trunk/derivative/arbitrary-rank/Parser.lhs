@@ -138,14 +138,16 @@ sigma = do { reserved "forall"
            ; return (ForAll (map BoundTv tvs) rho) }
 
 --------------
-readRho :: Parser Rho        -- Not necessarily with parens
+readRho :: Parser (Rho a)    -- Not necessarily with parens
 readRho = choice [try rfun, atomRho]
 
-rfun :: Parser Rho
-rfun = do { arg <- atomSigma ; reservedOp "->"
-          ; res <- readRho; return (Fun arg res) }
+rfun :: Parser (Rho Notop)
+rfun = do { arg <- atomSigma
+          ; reservedOp "->"
+          ; res <- atomSigma
+          ; return $ Fun arg res }
 
-atomRho :: Parser Rho
+atomRho :: Parser (Rho a)
 atomRho = choice [try tvar, tcon, parens readRho]
 
 --------------
@@ -160,8 +162,10 @@ tvar = do { v <- identifier;
             if (v == "Int" || v == "Bool")
              then fail "" else return ();
             return (TyVar (BoundTv v)) }
-tfun = do { arg <- atomTau ; reservedOp "->";
-            res <- readTau; return (Fun arg res) }
+tfun = do { arg <- atomTau
+          ; reservedOp "->"
+          ; res <- readTau
+          ; return (Fun arg res) }
 tcon = choice [ try $ do { "Int"  <- identifier; return intType }
               , do { "Bool" <- identifier; return boolType }]
 
