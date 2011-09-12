@@ -98,10 +98,11 @@ boolType = TyCon BoolT
 ----------------------------------
 --        Free and bound variables
 
-metaTvs :: [Tau] -> [MetaTv]
+metaTvs :: [Type a] -> [MetaTv]
 -- Get the MetaTvs from a type; no duplicates in result
 metaTvs tys = foldr go [] tys
   where
+    go :: Type a -> [MetaTv] -> [MetaTv]
     go (MetaTv tv)   acc
         | tv `elem` acc  = acc
         | otherwise      = tv : acc
@@ -115,7 +116,7 @@ freeTyVars :: [Type a] -> [TyVar]
 freeTyVars tys = foldr (go []) [] tys
   where 
     go :: [TyVar]        -- Ignore occurrences of bound type variables
-       -> Tau            -- Type to look at
+       -> Type a         -- Type to look at
        -> [TyVar]        -- Accumulates result
        -> [TyVar]
     go bound (TyVar tv)      acc 
@@ -127,11 +128,12 @@ freeTyVars tys = foldr (go []) [] tys
     go bound (Fun arg res)   acc = go bound arg (go bound res acc)
     go bound (ForAll tvs ty) acc = go (tvs ++ bound) ty acc
 
-tyVarBndrs :: Rho -> [TyVar]
+tyVarBndrs :: Type a -> [TyVar]
 -- Get all the binders used in ForAlls in the type, so that
 -- when quantifying an outer for-all we can avoid these inner ones
 tyVarBndrs ty = nub (bndrs ty)
   where
+    bndrs :: Type a -> [TyVar]
     bndrs (ForAll tvs body) = tvs ++ bndrs body
     bndrs (Fun arg res)     = bndrs arg ++ bndrs res
     bndrs _                 = []
