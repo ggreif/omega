@@ -13,14 +13,14 @@ infixr 4 -->     -- The arrow type constructor
 infixl 4 `App`   -- Application
 
 -----------------------------------
---      Ubiquitous types        -- 
+--      Ubiquitous types         -- 
 -----------------------------------
 
 type Name = String      -- Names are very simple
 
 
 -----------------------------------
---      Expressions             -- 
+--      Expressions              -- 
 -----------------------------------
                                   -- Examples below
 data Term = Var Name              -- x
@@ -38,7 +38,7 @@ atomicTerm _       = False
 
 
 -----------------------------------
---      Types                   -- 
+--      Types                    -- 
 -----------------------------------
 
 -- Indexes
@@ -63,7 +63,7 @@ type Tau   = Type (RHO Nowhere)  -- No ForAlls anywhere
 
 data Type vrt where
   ForAll :: [TyVar] -> Rho a -> Sigma   -- Forall type
-  Fun :: {- Tau or sigma -} Type ts -> Type ts -> Type tr  -- Function type
+  Fun :: Type ts -> Type ts -> Rho a    -- Function type
   TyCon :: TyCon -> Tau                 -- Type constants
   TyVar :: TyVar -> Tau                 -- Always bound by a ForAll
   MetaTv :: MetaTv -> Tau               -- A meta type variable
@@ -95,14 +95,14 @@ data TyCon = IntT | BoolT
 --      Constructors
 
 (-->) :: Sigma -> Sigma -> Sigma
-arg --> res = Fun arg res
+arg --> res = ForAll [] $ Fun arg res
 
 intType, boolType :: Tau
 intType  = TyCon IntT
 boolType = TyCon BoolT
 
 ----------------------------------
---        Free and bound variables
+--      Free and bound variables
 
 metaTvs :: [Type a] -> [MetaTv]
 -- Get the MetaTvs from a type; no duplicates in result
@@ -172,7 +172,7 @@ subst_ty env (ForAll ns rho) = ForAll ns (subst_ty env' rho)
 
 
 -----------------------------------
---      Pretty printing class   -- 
+--      Pretty printing class    -- 
 -----------------------------------
 
 class Outputable a where
