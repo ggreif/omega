@@ -237,9 +237,11 @@ unify (Fun arg1 res1)
       (Fun arg2 res2)
   = do { (Just arg1, Just arg2, Just res1, Just res2) <- return confirm
        ; unify arg1 arg2; unify res1 res2 }
-        where confirm :: (Maybe Tau, Maybe Tau, Maybe Tau, Maybe Tau)
-              confirm = (confirmTau arg1, confirmTau arg2, confirmTau res1, confirmTau res2)
+        where confirm = (confirmTau arg1, confirmTau arg2, confirmTau res1, confirmTau res2)
               confirmTau :: forall a . Type a -> Maybe Tau
+              confirmTau (Fun a r) = do { a' <- confirmTau a
+                                        ; r' <- confirmTau r
+                                        ; return (Fun a' r') }
               confirmTau t@(TyCon _) = Just t
               confirmTau t@(TyVar _) = Just t
               confirmTau t@(MetaTv _) = Just t
