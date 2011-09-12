@@ -42,22 +42,21 @@ atomicTerm _       = False
 -----------------------------------
 
 type Sigma = Type
-type Rho   = Type	-- No top-level ForAll
-type Tau   = Type	-- No ForAlls anywhere
+type Rho   = Type        -- No top-level ForAll
+type Tau   = Type        -- No ForAlls anywhere
 
-data Type = ForAll [TyVar] Rho	  -- Forall type
-	  | Fun    Type Type 	  -- Function type
-	  | TyCon  TyCon      	  -- Type constants
-	  | TyVar  TyVar      	  -- Always bound by a ForAll
-	  | MetaTv MetaTv     	  -- A meta type variable
+data Type = ForAll [TyVar] Rho          -- Forall type
+          | Fun    Type Type            -- Function type
+          | TyCon  TyCon                -- Type constants
+          | TyVar  TyVar                -- Always bound by a ForAll
+          | MetaTv MetaTv               -- A meta type variable
 
 data TyVar
-  = BoundTv String		-- A type variable bound by a ForAll
+  = BoundTv String              -- A type variable bound by a ForAll
+  | SkolemTv String Uniq        -- A skolem constant; the String is 
+                                -- just to improve error messages
 
-  | SkolemTv String Uniq	-- A skolem constant; the String is 
-				-- just to improve error messages
-
-data MetaTv = Meta Uniq TyRef  -- Can unify with any tau-type
+data MetaTv = Meta Uniq TyRef   -- Can unify with any tau-type
 
 type TyRef = IORef (Maybe Tau)
         -- 'Nothing' means the type variable is not substituted
@@ -85,33 +84,33 @@ intType, boolType :: Tau
 intType  = TyCon IntT
 boolType = TyCon BoolT
 
----------------------------------
---	Free and bound variables
+----------------------------------
+--        Free and bound variables
 
 metaTvs :: [Type] -> [MetaTv]
 -- Get the MetaTvs from a type; no duplicates in result
 metaTvs tys = foldr go [] tys
   where
     go (MetaTv tv)   acc
-	| tv `elem` acc  = acc
-	| otherwise	 = tv : acc
+        | tv `elem` acc  = acc
+        | otherwise      = tv : acc
     go (TyVar _)     acc = acc
     go (TyCon _)     acc = acc
     go (Fun arg res) acc = go arg (go res acc)
-    go (ForAll _ ty) acc = go ty acc	-- ForAll binds TyVars only
+    go (ForAll _ ty) acc = go ty acc        -- ForAll binds TyVars only
 
 freeTyVars :: [Type] -> [TyVar]
 -- Get the free TyVars from a type; no duplicates in result
 freeTyVars tys = foldr (go []) [] tys
   where 
-    go :: [TyVar]	-- Ignore occurrences of bound type variables
-       -> Type		-- Type to look at
-       -> [TyVar]	-- Accumulates result
+    go :: [TyVar]        -- Ignore occurrences of bound type variables
+       -> Type           -- Type to look at
+       -> [TyVar]        -- Accumulates result
        -> [TyVar]
     go bound (TyVar tv)      acc 
-	| tv `elem` bound        = acc
-	| tv `elem` acc		 = acc
-	| otherwise		 = tv : acc
+        | tv `elem` bound        = acc
+        | tv `elem` acc                 = acc
+        | otherwise                 = tv : acc
     go bound (MetaTv _)      acc = acc
     go bound (TyCon _)       acc = acc
     go bound (Fun arg res)   acc = go bound arg (go bound res acc)
