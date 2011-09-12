@@ -104,9 +104,10 @@ quoting && (inItem || !/^ /) {
 
 /`/ {
   line = $0;
-  sub(/`/, "\\texttt{", line);
-  sub(/`/, "}", line);
-  $0 = line
+  #sub(/`/, "\\texttt{", line);
+  #sub(/`/, "}", line);
+  $0 = gensub(/`([^`]*)`/,"\\\\texttt{\\1}","g",line)
+  #$0 = line
   ## repeat!
 }
 
