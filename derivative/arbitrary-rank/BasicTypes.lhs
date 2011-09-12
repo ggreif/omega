@@ -59,6 +59,9 @@ type Sigma = Type SIGMA
 type Rho a = Type (RHO a)        -- No top-level ForAll
 type Tau   = Type (RHO Nowhere)  -- No ForAlls anywhere
 
+data ExRho where
+  Ex :: Rho a -> ExRho
+
 -- An important rule
 
 type family FunRule ts
