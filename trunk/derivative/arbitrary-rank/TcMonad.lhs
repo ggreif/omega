@@ -132,7 +132,7 @@ newUnique = Tc (\ (TcEnv {uniqs = ref}) ->
 --      Instantiation                   --
 ------------------------------------------
 
-instantiate :: Sigma -> Tc Rho
+instantiate :: Sigma -> Tc (Rho a)
 -- Instantiate the topmost for-alls of the argument type
 -- with flexible type variables
 instantiate (ForAll tvs ty) 
@@ -141,7 +141,7 @@ instantiate (ForAll tvs ty)
 instantiate ty
   = return ty
 
-skolemise :: Sigma -> Tc ([TyVar], Rho)
+skolemise :: Sigma -> Tc ([TyVar], (Rho a))
 -- Performs deep skolemisation, retuning the 
 -- skolem constants and the skolemised type
 skolemise (ForAll tvs ty)	-- Rule PRPOLY
@@ -158,7 +158,7 @@ skolemise ty        		-- Rule PRMONO
 --      Quantification                  --
 ------------------------------------------
 
-quantify :: [MetaTv] -> Rho -> Tc Sigma
+quantify :: [MetaTv] -> (Rho a) -> Tc Sigma
 -- Quantify over the specified type variables (all flexible)
 quantify tvs ty
   = do { mapM_ bind (tvs `zip` new_bndrs)   -- 'bind' is just a cunning way 
@@ -177,18 +177,18 @@ allBinders = [ BoundTv [x]          | x <- ['a'..'z'] ] ++
 --      Getting the free tyvars         --
 ------------------------------------------
 
-getEnvTypes :: Tc [Type]
+getEnvTypes :: Tc [Type a]
   -- Get the types mentioned in the environment
 getEnvTypes = do { env <- getEnv; 
 	         ; return (Map.elems env) }
 
-getMetaTyVars :: [Type] -> Tc [MetaTv]
+getMetaTyVars :: [Type a] -> Tc [MetaTv]
 -- This function takes account of zonking, and returns a set
 -- (no duplicates) of unbound meta-type variables
 getMetaTyVars tys = do { tys' <- mapM zonkType tys
 		    ; return (metaTvs tys') }
 
-getFreeTyVars :: [Type] -> Tc [TyVar]
+getFreeTyVars :: [Type a] -> Tc [TyVar]
 -- This function takes account of zonking, and returns a set
 -- (no duplicates) of free type variables
 getFreeTyVars tys = do { tys' <- mapM zonkType tys
@@ -199,7 +199,7 @@ getFreeTyVars tys = do { tys' <- mapM zonkType tys
 -- Eliminate any substitutions in the type
 ------------------------------------------
 
-zonkType :: Type -> Tc Type
+zonkType :: Type a -> Tc (Type a)
 zonkType (ForAll ns ty) = do { ty' <- zonkType ty 
                              ; return (ForAll ns ty') }
 zonkType (Fun arg res)  = do { arg' <- zonkType arg 
@@ -269,7 +269,7 @@ unifyUnboundVar tv1 ty2
             writeTv tv1 ty2 }
 
 -----------------------------------------
-unifyFun :: Rho -> Tc (Sigma, Rho)
+unifyFun :: Rho a -> Tc (Sigma, Rho a)
 --      (arg,res) <- unifyFunTy fun
 -- unifies 'fun' with '(arg -> res)'
 unifyFun (Fun arg res) = return (arg,res)
