@@ -41,15 +41,26 @@ atomicTerm _       = False
 --      Types                   -- 
 -----------------------------------
 
-type Sigma = Type
-type Rho   = Type        -- No top-level ForAll
-type Tau   = Type        -- No ForAlls anywhere
+-- Indexes
 
-data Type = ForAll [TyVar] Rho          -- Forall type
-          | Fun    Type Type            -- Function type
-          | TyCon  TyCon                -- Type constants
-          | TyVar  TyVar                -- Always bound by a ForAll
-          | MetaTv MetaTv               -- A meta type variable
+data TAU
+data RHO
+data SIGMA
+
+-- Abbreviations
+
+type Sigma = Type SIGMA
+type Rho   = Type RHO    -- No top-level ForAll
+type Tau   = Type TAU    -- No ForAlls anywhere
+
+-- The Type GADT
+
+data Type vrt where
+  ForAll :: [TyVar] -> Rho -> Sigma     -- Forall type
+  Fun :: {- Tau or sigma -} Type ts -> Type ts -> Type tr  -- Function type
+  TyCon :: TyCon -> Tau                 -- Type constants
+  TyVar :: TyVar -> Tau                 -- Always bound by a ForAll
+  MetaTv :: MetaTv -> Tau               -- A meta type variable
 
 data TyVar
   = BoundTv String              -- A type variable bound by a ForAll
@@ -87,7 +98,7 @@ boolType = TyCon BoolT
 ----------------------------------
 --        Free and bound variables
 
-metaTvs :: [Type] -> [MetaTv]
+metaTvs :: [Tau] -> [MetaTv]
 -- Get the MetaTvs from a type; no duplicates in result
 metaTvs tys = foldr go [] tys
   where
@@ -99,12 +110,12 @@ metaTvs tys = foldr go [] tys
     go (Fun arg res) acc = go arg (go res acc)
     go (ForAll _ ty) acc = go ty acc        -- ForAll binds TyVars only
 
-freeTyVars :: [Type] -> [TyVar]
+freeTyVars :: [Type a] -> [TyVar]
 -- Get the free TyVars from a type; no duplicates in result
 freeTyVars tys = foldr (go []) [] tys
   where 
     go :: [TyVar]        -- Ignore occurrences of bound type variables
-       -> Type           -- Type to look at
+       -> Tau            -- Type to look at
        -> [TyVar]        -- Accumulates result
        -> [TyVar]
     go bound (TyVar tv)      acc 
@@ -135,14 +146,14 @@ tyVarName (SkolemTv n _) = n
 
 type Env = [(TyVar, Tau)]
 
-substTy :: [TyVar] -> [Type] -> Type -> Type
+substTy :: [TyVar] -> [Tau] -> Type a -> Type a
 -- Replace the specified quantified type variables by
 -- given meta type variables
 -- No worries about capture, because the two kinds of type
 -- variable are distinct
 substTy tvs tys ty = subst_ty (tvs `zip` tys) ty
 
-subst_ty :: Env -> Type -> Type
+subst_ty :: Env -> Type a -> Type a
 subst_ty env (Fun arg res)   = Fun (subst_ty env arg) (subst_ty env res)
 subst_ty env (TyVar n)       = fromMaybe (TyVar n) (lookup n env)
 subst_ty env (MetaTv tv)     = MetaTv tv
@@ -200,7 +211,7 @@ pprName n = text n
 
 -------------- Pretty-printing types ---------------------
 
-instance Outputable Type where
+instance Outputable (Type a) where
    ppr ty = pprType topPrec ty
 
 instance Outputable MetaTv where
@@ -210,7 +221,7 @@ instance Outputable TyVar where
    ppr (BoundTv n)    = text n
    ppr (SkolemTv n u) = text n <+> int u
 
-instance Show Type where
+instance Show (Type a) where
    show t = docToString (ppr t)
 
 type Precedence = Int
@@ -220,22 +231,22 @@ arrPrec    = 1  -- Precedence of (a->b)
 tcPrec     = 2  -- Precedence of (T a b)
 atomicPrec = 3  -- Precedence of t
 
-precType :: Type -> Precedence
+precType :: Type a -> Precedence
 precType (ForAll _ _) = topPrec
 precType (Fun _ _)    = arrPrec
 precType _            = atomicPrec   
         -- All the types are be atomic
 
-pprParendType :: Type -> Doc
+pprParendType :: Type a -> Doc
 pprParendType ty = pprType tcPrec ty
 
 
-pprType :: Precedence -> Type -> Doc
+pprType :: Precedence -> Type a -> Doc
 -- Print with parens if precedence arg > precedence of type itself
 pprType p ty | p >= precType ty = parens (ppr_type ty)
              | otherwise        = ppr_type ty
 
-ppr_type :: Type -> Doc         -- No parens
+ppr_type :: Type a -> Doc         -- No parens
 ppr_type (ForAll ns ty) = sep [text "forall" <+> 
                                   hsep (map ppr ns) <> dot, 
                                ppr ty]
