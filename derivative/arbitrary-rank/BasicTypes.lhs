@@ -43,20 +43,26 @@ atomicTerm _       = False
 
 -- Indexes
 
-data TAU
-data RHO
+data Notop
+data Nowhere
+data RHO a       -- a from {Notop, Nowhere}
 data SIGMA
+
+{-
+kind Foralls = Notop | Nowhere
+kind Variant = RHO Foralls | SIGMA
+-}
 
 -- Abbreviations
 
 type Sigma = Type SIGMA
-type Rho   = Type RHO    -- No top-level ForAll
-type Tau   = Type TAU    -- No ForAlls anywhere
+type Rho a = Type (RHO a)        -- No top-level ForAll
+type Tau   = Type (RHO Nowhere)  -- No ForAlls anywhere
 
 -- The Type GADT
 
 data Type vrt where
-  ForAll :: [TyVar] -> Rho -> Sigma     -- Forall type
+  ForAll :: [TyVar] -> Rho a -> Sigma   -- Forall type
   Fun :: {- Tau or sigma -} Type ts -> Type ts -> Type tr  -- Function type
   TyCon :: TyCon -> Tau                 -- Type constants
   TyVar :: TyVar -> Tau                 -- Always bound by a ForAll
