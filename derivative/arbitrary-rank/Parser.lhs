@@ -66,13 +66,13 @@ parseTerm = do { whiteSpace
                ; return t }
 
 readTerm :: Parser Term
-readTerm = choice [try ann, non_ann]
+readTerm = try ann <|> non_ann
 
 non_ann :: Parser Term
-non_ann = choice [lam, rlet, app]
+non_ann = lam <|> rlet <|> app
 
 atom :: Parser Term
-atom = choice [parens readTerm, lit, var]
+atom = parens readTerm <|> lit <|> var
 
 lit :: Parser Term
 lit = do { i <- integer; return (Lit (fromInteger i)) }
@@ -128,12 +128,13 @@ exRho2Sigma bs (Ex r) = ForAll bs r
 
 
 readSigma :: Parser Sigma        -- Not necessarily with parens
-readSigma = choice [ try (parens readSigma)
-                   , sigma, fmap (exRho2Sigma []) readRho ]
+readSigma =     try (parens readSigma)
+            <|> sigma
+            <|> fmap (exRho2Sigma []) readRho
 
 atomSigma :: Parser Sigma
-atomSigma = choice [ try (parens sigma)
-                   , fmap (exRho2Sigma []) atomRho ]
+atomSigma =     try (parens sigma)
+            <|> fmap (exRho2Sigma []) atomRho
 
 sigma :: Parser Sigma
 sigma = do { reserved "forall"
@@ -160,10 +161,10 @@ atomRho = try (fmap Ex tvar) <|> (fmap Ex tcon) <|> parens readRho
 
 --------------
 readTau :: Parser Tau            -- Not necessarily with parens
-readTau = choice [try tfun, atomTau]
+readTau = try tfun <|> atomTau
 
 atomTau :: Parser Tau
-atomTau = choice [try tvar, tcon, parens readTau]
+atomTau = try tvar <|> tcon <|> parens readTau
 
 tvar, tfun, tcon :: Parser Tau
 tvar = do { v <- identifier;
@@ -174,8 +175,8 @@ tfun = do { arg <- atomTau
           ; reservedOp "->"
           ; res <- readTau
           ; return (Fun arg res) }
-tcon = choice [ try $ do { "Int"  <- identifier; return intType }
-              , do { "Bool" <- identifier; return boolType }]
+tcon =     try $ do { "Int"  <- identifier; return intType }
+       <|> do { "Bool" <- identifier; return boolType }
 
 --------------
 readTvs :: Parser [Name]
