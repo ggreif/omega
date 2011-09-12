@@ -144,9 +144,6 @@ sigma = do { reserved "forall"
            ; return $ exRho2Sigma (map BoundTv tvs) rho }
 
 --------------
-data ExRho where
-  Ex :: Rho a -> ExRho
-
 readRho :: Parser ExRho          -- Not necessarily with parens
 readRho = try rfun <|> atomRho
 
