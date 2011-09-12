@@ -6,7 +6,8 @@ Parser for the little language of the paper
         | let var = exp1 in exp2
         | exp :: sig
         | ( exp )
-        | \ ...       --- TODO
+        | \ var . exp
+        | \ ( var :: sig ) . exp
 
   sig = forall tv1 .. tvn . rho
   rho = tv  | Int | Bool | sig -> sig
@@ -54,7 +55,7 @@ parserToReadS p s = case parse (whiteSpace >> p) "" s of
 instance Read Term where
   readsPrec _ = parserToReadS readTerm
 
-instance Read Type where
+instance Read Sigma where
   readsPrec _ = parserToReadS readSigma
 
 -----------------------------
@@ -124,10 +125,10 @@ ann = do { term <- non_ann
 ---------------------------------
 
 readSigma :: Parser Sigma        -- Not necessarily with parens
-readSigma = choice [try (parens readSigma), sigma, readRho]
+readSigma = choice [try (parens readSigma), sigma, fmap (ForAll []) readRho]
 
 atomSigma :: Parser Sigma
-atomSigma = choice [try (parens sigma), atomRho]
+atomSigma = choice [try (parens sigma), fmap (ForAll []) atomRho]
 
 sigma :: Parser Sigma
 sigma = do { reserved "forall"
