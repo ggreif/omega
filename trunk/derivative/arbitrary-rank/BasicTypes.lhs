@@ -59,11 +59,18 @@ type Sigma = Type SIGMA
 type Rho a = Type (RHO a)        -- No top-level ForAll
 type Tau   = Type (RHO Nowhere)  -- No ForAlls anywhere
 
+-- An important rule
+
+type family FunRule ts
+
+type instance FunRule SIGMA = Notop
+type instance FunRule (RHO Nowhere) = Nowhere
+
 -- The Type GADT
 
 data Type vrt where
   ForAll :: [TyVar] -> Rho a -> Sigma   -- Forall type
-  Fun :: Type ts -> Type ts -> Rho a    -- Function type
+  Fun :: Type ts -> Type ts -> Rho (FunRule ts)    -- Function type
   TyCon :: TyCon -> Tau                 -- Type constants
   TyVar :: TyVar -> Tau                 -- Always bound by a ForAll
   MetaTv :: MetaTv -> Tau               -- A meta type variable
