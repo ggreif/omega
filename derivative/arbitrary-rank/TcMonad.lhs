@@ -131,28 +131,29 @@ newUnique = Tc (\ (TcEnv {uniqs = ref}) ->
 ------------------------------------------
 --      Instantiation                   --
 ------------------------------------------
+sig :: Rho a -> Sigma
+sig r = ForAll [] r
 
-instantiate :: Sigma -> Tc (Rho a)
+instantiate :: Sigma -> Tc ExRho
 -- Instantiate the topmost for-alls of the argument type
 -- with flexible type variables
+instantiate (ForAll [] ty) = return $ Ex ty
 instantiate (ForAll tvs ty)
   = do { tvs' <- mapM (\_ -> newMetaTyVar) tvs
-       ; return (substTy tvs (map MetaTv tvs') ty) }
-instantiate ty
-  = return ty
+       ; return $ Ex (substTy tvs (map MetaTv tvs') ty) }
 
-skolemise :: Sigma -> Tc ([TyVar], (Rho a))
+skolemise :: Sigma -> Tc ([TyVar], ExRho)
 -- Performs deep skolemisation, returning the
 -- skolem constants and the skolemised type
+skolemise (ForAll [] (Fun arg_ty@(ForAll _ _) res_ty@(ForAll _ _)))	-- Rule PRFUN
+  = do { (sks, Ex res_ty') <- skolemise res_ty
+       ; return (sks, Ex $ Fun arg_ty (sig res_ty')) }
+skolemise (ForAll [] ty)        		-- Rule PRMONO
+  = return ([], Ex ty)
 skolemise (ForAll tvs ty)	-- Rule PRPOLY
   = do { sks1 <- mapM newSkolemTyVar tvs
-       ; (sks2, ty') <- skolemise (substTy tvs (map TyVar sks1) ty)
+       ; (sks2, ty') <- skolemise (substTy tvs (map TyVar sks1) (sig ty))
        ; return (sks1 ++ sks2, ty') }
-skolemise (Fun arg_ty res_ty)	-- Rule PRFUN
-  = do { (sks, res_ty') <- skolemise res_ty
-       ; return (sks, Fun arg_ty res_ty') }
-skolemise ty        		-- Rule PRMONO
-  = return ([], ty)
 
 ------------------------------------------
 --      Quantification                  --
