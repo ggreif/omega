@@ -123,19 +123,24 @@ ann = do { term <- non_ann
 ---------------------------------
 --        Types
 ---------------------------------
+exRho2Sigma :: [TyVar] -> ExRho -> Sigma
+exRho2Sigma bs (Ex r) = ForAll bs r
+
 
 readSigma :: Parser Sigma        -- Not necessarily with parens
-readSigma = choice [try (parens readSigma), sigma, fmap (ForAll []) readRho]
+readSigma = choice [ try (parens readSigma)
+                   , sigma, fmap (exRho2Sigma []) readRho ]
 
 atomSigma :: Parser Sigma
-atomSigma = choice [try (parens sigma), fmap (ForAll []) atomRho]
+atomSigma = choice [ try (parens sigma)
+                   , fmap (exRho2Sigma []) atomRho ]
 
 sigma :: Parser Sigma
 sigma = do { reserved "forall"
            ; tvs <- readTvs
            ; dot
            ; rho <- readRho
-           ; return (ForAll (map BoundTv tvs) rho) }
+           ; return $ exRho2Sigma (map BoundTv tvs) rho }
 
 --------------
 data ExRho where
@@ -144,14 +149,14 @@ data ExRho where
 readRho :: Parser ExRho          -- Not necessarily with parens
 readRho = try rfun <|> atomRho
 
-rfun :: Parser (Rho Notop)
+rfun :: Parser ExRho
 rfun = do { arg <- atomSigma
           ; reservedOp "->"
           ; res <- atomSigma
-          ; return $ Fun arg res }
+          ; return $ Ex (Fun arg res) }
 
 atomRho :: Parser ExRho
-atomRho = try tvar <|> tcon <|> parens readRho
+atomRho = try (fmap Ex tvar) <|> (fmap Ex tcon) <|> parens readRho
 
 --------------
 readTau :: Parser Tau            -- Not necessarily with parens
