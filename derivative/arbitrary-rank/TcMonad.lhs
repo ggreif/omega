@@ -145,12 +145,12 @@ instantiate (ForAll tvs ty)
 skolemise :: Sigma -> Tc ([TyVar], ExRho)
 -- Performs deep skolemisation, returning the
 -- skolem constants and the skolemised type
-skolemise (ForAll [] (Fun arg_ty@(ForAll _ _) res_ty@(ForAll _ _)))	-- Rule PRFUN
+skolemise (ForAll [] (Fun arg_ty res_ty@(ForAll _ _)))	-- Rule PRFUN
   = do { (sks, Ex res_ty') <- skolemise res_ty
        ; return (sks, Ex $ Fun arg_ty (sig res_ty')) }
-skolemise (ForAll [] ty)        		-- Rule PRMONO
+skolemise (ForAll [] ty)        		                    -- Rule PRMONO
   = return ([], Ex ty)
-skolemise (ForAll tvs ty)	-- Rule PRPOLY
+skolemise (ForAll tvs ty)	                              -- Rule PRPOLY
   = do { sks1 <- mapM newSkolemTyVar tvs
        ; (sks2, ty') <- skolemise (substTy tvs (map TyVar sks1) (sig ty))
        ; return (sks1 ++ sks2, ty') }
