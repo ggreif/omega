@@ -138,8 +138,11 @@ sigma = do { reserved "forall"
            ; return (ForAll (map BoundTv tvs) rho) }
 
 --------------
+data ExRho where
+  Ex :: Rho a -> ExRho
+
 readRho :: Parser (Rho a)    -- Not necessarily with parens
-readRho = choice [try rfun, atomRho]
+readRho = try rfun <|> atomRho
 
 rfun :: Parser (Rho Notop)
 rfun = do { arg <- atomSigma
@@ -148,7 +151,7 @@ rfun = do { arg <- atomSigma
           ; return $ Fun arg res }
 
 atomRho :: Parser (Rho a)
-atomRho = choice [try tvar, tcon, parens readRho]
+atomRho = try tvar <|> tcon <|> parens readRho
 
 --------------
 readTau :: Parser Tau        -- Not necessarily with parens
