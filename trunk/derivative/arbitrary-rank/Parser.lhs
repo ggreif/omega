@@ -141,7 +141,7 @@ sigma = do { reserved "forall"
 data ExRho where
   Ex :: Rho a -> ExRho
 
-readRho :: Parser (Rho a)    -- Not necessarily with parens
+readRho :: Parser ExRho          -- Not necessarily with parens
 readRho = try rfun <|> atomRho
 
 rfun :: Parser (Rho Notop)
@@ -150,11 +150,11 @@ rfun = do { arg <- atomSigma
           ; res <- atomSigma
           ; return $ Fun arg res }
 
-atomRho :: Parser (Rho a)
+atomRho :: Parser ExRho
 atomRho = try tvar <|> tcon <|> parens readRho
 
 --------------
-readTau :: Parser Tau        -- Not necessarily with parens
+readTau :: Parser Tau            -- Not necessarily with parens
 readTau = choice [try tfun, atomTau]
 
 atomTau :: Parser Tau
