@@ -5,7 +5,7 @@ module TcMonad(
 
         -- Environment manipulation
         extendVarEnv, lookupVar, 
- 	getEnvTypes, getFreeTyVars, getMetaTyVars,
+        getEnvTypes, getFreeTyVars, getMetaTyVars,
 
         -- Types and unification
         newTyVarTy, 
@@ -151,7 +151,7 @@ skolemise (ForAll tvs ty)	-- Rule PRPOLY
 skolemise (Fun arg_ty res_ty)	-- Rule PRFUN
   = do { (sks, res_ty') <- skolemise res_ty
        ; return (sks, Fun arg_ty res_ty') }
-skolemise ty 			-- Rule PRMONO
+skolemise ty        		-- Rule PRMONO
   = return ([], ty)
 
 ------------------------------------------
@@ -288,5 +288,5 @@ occursCheckErr tv ty
 badType :: Tau -> Bool
 -- Tells which types should never be encountered during unification
 badType (TyVar (BoundTv _)) = True
-badType _         	    = False
+badType _                   = False
 \end{code}
