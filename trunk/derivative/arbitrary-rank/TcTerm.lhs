@@ -16,7 +16,7 @@ typecheck e = do { ty <- inferSigma e
                  ; zonkType ty }
 
 -----------------------------------
---      The expected type       -- 
+--      The expected type        --
 -----------------------------------
 
 data Expected a = Infer (IORef a) | Check a
@@ -31,7 +31,7 @@ checkRho :: Term -> Rho -> Tc ()
 checkRho expr ty = tcRho expr (Check ty)
 
 inferRho :: Term -> Tc Rho
-inferRho expr 
+inferRho expr
   = do { ref <- newTcRef (error "inferRho: empty result")
        ; tcRho expr (Infer ref)
        ; readTcRef ref }
@@ -42,8 +42,8 @@ tcRho :: Term -> Expected Rho -> Tc ()
 tcRho (Lit _) exp_ty
   = instSigma intType exp_ty
 
-tcRho (Var v) exp_ty 
-  = do { v_sigma <- lookupVar v 
+tcRho (Var v) exp_ty
+  = do { v_sigma <- lookupVar v
        ; instSigma v_sigma exp_ty }
 
 tcRho (App fun arg) exp_ty
@@ -53,7 +53,7 @@ tcRho (App fun arg) exp_ty
        ; instSigma res_ty exp_ty }
 
 tcRho (Lam var body) (Check exp_ty)
-  = do { (var_ty, body_ty) <- unifyFun exp_ty 
+  = do { (var_ty, body_ty) <- unifyFun exp_ty
        ; extendVarEnv var var_ty (checkRho body body_ty) }
 
 tcRho (Lam var body) (Infer ref)
@@ -62,7 +62,7 @@ tcRho (Lam var body) (Infer ref)
        ; writeTcRef ref (var_ty --> body_ty) }
 
 tcRho (ALam var var_ty body) (Check exp_ty)
-  = do { (arg_ty, body_ty) <- unifyFun exp_ty 
+  = do { (arg_ty, body_ty) <- unifyFun exp_ty
        ; subsCheck arg_ty var_ty
        ; extendVarEnv var var_ty (checkRho body body_ty) }
 
@@ -80,7 +80,7 @@ tcRho (Ann body ann_ty) exp_ty
 
 
 ------------------------------------------
---      inferSigma and checkSigma
+--      inferSigma and checkSigma       --
 ------------------------------------------
 
 inferSigma :: Term -> Tc Sigma
@@ -107,7 +107,7 @@ checkSigma expr sigma
 ------------------------------------------
 
 subsCheck :: Sigma -> Sigma -> Tc ()
--- (subsCheck args off exp) checks that 
+-- (subsCheck args off exp) checks that
 --     'off' is at least as polymorphic as 'args -> exp'
 
 subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
@@ -139,7 +139,7 @@ subsCheckRho tau1 tau2                   -- Rule MONO
   = unify tau1 tau2    -- Revert to ordinary unification
 
 subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
-subsCheckFun a1 r1 a2 r2 
+subsCheckFun a1 r1 a2 r2
   = do { subsCheck a2 a1 ; subsCheckRho r1 r2 }
 
 instSigma :: Sigma -> Expected Rho -> Tc ()
