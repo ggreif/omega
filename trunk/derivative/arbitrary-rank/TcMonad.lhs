@@ -98,7 +98,7 @@ lookupVar n = do { env <- getEnv
 
 
 --------------------------------------------------
---      Creating, reading, writing MetaTvs        --
+--      Creating, reading, writing MetaTvs      --
 --------------------------------------------------
 
 newTyVarTy :: Tc Tau
@@ -145,12 +145,12 @@ instantiate (ForAll tvs ty)
 skolemise :: Sigma -> Tc ([TyVar], ExRho)
 -- Performs deep skolemisation, returning the
 -- skolem constants and the skolemised type
-skolemise (ForAll [] (Fun arg_ty res_ty@(ForAll _ _)))	-- Rule PRFUN
+skolemise (ForAll [] (Fun arg_ty res_ty@(ForAll _ _)))  -- Rule PRFUN
   = do { (sks, Ex res_ty') <- skolemise res_ty
        ; return (sks, Ex $ Fun arg_ty (sig res_ty')) }
-skolemise (ForAll [] ty)        		                    -- Rule PRMONO
+skolemise (ForAll [] ty)                                -- Rule PRMONO
   = return ([], Ex ty)
-skolemise (ForAll tvs ty)	                              -- Rule PRPOLY
+skolemise (ForAll tvs ty)                                -- Rule PRPOLY
   = do { sks1 <- mapM newSkolemTyVar tvs
        ; (sks2, ty') <- skolemise (substTy tvs (map TyVar sks1) (sig ty))
        ; return (sks1 ++ sks2, ty') }
@@ -181,19 +181,19 @@ allBinders = [ BoundTv [x]          | x <- ['a'..'z'] ] ++
 getEnvTypes :: Tc [Type a]
   -- Get the types mentioned in the environment
 getEnvTypes = do { env <- getEnv;
-	               ; return (Map.elems env) }
+                 ; return (Map.elems env) }
 
 getMetaTyVars :: [Type a] -> Tc [MetaTv]
 -- This function takes account of zonking, and returns a set
 -- (no duplicates) of unbound meta-type variables
 getMetaTyVars tys = do { tys' <- mapM zonkType tys
-		                   ; return (metaTvs tys') }
+                       ; return (metaTvs tys') }
 
 getFreeTyVars :: [Type a] -> Tc [TyVar]
 -- This function takes account of zonking, and returns a set
 -- (no duplicates) of free type variables
 getFreeTyVars tys = do { tys' <- mapM zonkType tys
-		                   ; return (freeTyVars tys') }
+                       ; return (freeTyVars tys') }
 
 ------------------------------------------
 --      Zonking                         --
@@ -238,19 +238,23 @@ unify (Fun arg1 res1)
   = do { (Just arg1, Just arg2, Just res1, Just res2) <- return confirm
        ; unify arg1 arg2; unify res1 res2 }
         where confirm = (confirmTau arg1, confirmTau arg2, confirmTau res1, confirmTau res2)
-              confirmTau :: forall a . Type a -> Maybe Tau
-              confirmTau (Fun a r) = do { a' <- confirmTau a
-                                        ; r' <- confirmTau r
-                                        ; return (Fun a' r') }
-              confirmTau t@(TyCon _) = Just t
-              confirmTau t@(TyVar _) = Just t
-              confirmTau t@(MetaTv _) = Just t
 
 unify (TyCon tc1) (TyCon tc2)
   | tc1 == tc2
   = return ()
 
 unify ty1 ty2 = failTc (text "Cannot unify types:" <+> vcat [ppr ty1, ppr ty2])
+
+
+
+-----------------------------------------
+confirmTau :: forall a . Type a -> Maybe Tau
+confirmTau (Fun a r) = do { a' <- confirmTau a
+                          ; r' <- confirmTau r
+                          ; return (Fun a' r') }
+confirmTau t@(TyCon _) = Just t
+confirmTau t@(TyVar _) = Just t
+confirmTau t@(MetaTv _) = Just t
 
 -----------------------------------------
 unifyVar :: MetaTv -> Tau -> Tc ()
@@ -279,14 +283,14 @@ unifyUnboundVar tv1 ty2
             writeTv tv1 ty2 }
 
 -----------------------------------------
-unifyFun :: Rho a -> Tc (Sigma, Rho a)
---      (arg,res) <- unifyFunTy fun
+unifyFun :: Rho a -> Tc (Sigma, Sigma)
 -- unifies 'fun' with '(arg -> res)'
-unifyFun (Fun arg res) = return (arg,res)
-unifyFun tau           = do { arg_ty <- newTyVarTy
+unifyFun (Fun arg@(ForAll _ _) res) = return (arg, res)
+unifyFun tau'          = do { Just tau <- return (confirmTau tau')
+                            ; arg_ty <- newTyVarTy
                             ; res_ty <- newTyVarTy
-                            ; unify tau (arg_ty --> res_ty)
-                            ; return (arg_ty, res_ty) }
+                            ; unify tau (Fun arg_ty res_ty)
+                            ; return (sig arg_ty, sig res_ty) }
 
 -----------------------------------------
 occursCheckErr :: MetaTv -> Tau -> Tc ()
