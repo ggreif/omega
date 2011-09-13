@@ -26,17 +26,17 @@ data Expected a = Infer (IORef a) | Check a
 --      tcRho, and its variants         --
 ------------------------------------------
 
-checkRho :: Term -> Rho -> Tc ()
+checkRho :: Term -> Rho a -> Tc ()
 -- Invariant: the Rho is always in weak-prenex form
 checkRho expr ty = tcRho expr (Check ty)
 
-inferRho :: Term -> Tc Rho
+inferRho :: Term -> Tc ExRho
 inferRho expr
   = do { ref <- newTcRef (error "inferRho: empty result")
        ; tcRho expr (Infer ref)
        ; readTcRef ref }
 
-tcRho :: Term -> Expected Rho -> Tc ()
+tcRho :: Term -> Expected (Rho a) -> Tc ()
 -- Invariant: if the second argument is (Check rho),
 --            then rho is in weak-prenex form
 tcRho (Lit _) exp_ty
@@ -122,7 +122,7 @@ subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
                       nest 2 (ppr sigma2)])
     }
 
-subsCheckRho :: Sigma -> Rho -> Tc ()
+subsCheckRho :: Sigma -> Rho a -> Tc ()
 -- Invariant: the second argument is in weak-prenex form
 
 subsCheckRho sigma1@(ForAll _ _) rho2    -- Rule SPEC
@@ -138,11 +138,11 @@ subsCheckRho (Fun a1 r1) rho2            -- Rule FUN
 subsCheckRho tau1 tau2                   -- Rule MONO
   = unify tau1 tau2    -- Revert to ordinary unification
 
-subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Tc ()
+subsCheckFun :: Sigma -> Rho a -> Sigma -> Rho b -> Tc ()
 subsCheckFun a1 r1 a2 r2
   = do { subsCheck a2 a1 ; subsCheckRho r1 r2 }
 
-instSigma :: Sigma -> Expected Rho -> Tc ()
+instSigma :: Sigma -> Expected (Rho a) -> Tc ()
 -- Invariant: if the second argument is (Check rho),
 --               then rho is in weak-prenex form
 instSigma t1 (Check t2) = subsCheckRho t1 t2
