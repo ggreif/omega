@@ -38,7 +38,7 @@ inferRho expr
 
 tcRho :: Term -> Expected Rho -> Tc ()
 -- Invariant: if the second argument is (Check rho),
--- 	      then rho is in weak-prenex form
+--            then rho is in weak-prenex form
 tcRho (Lit _) exp_ty
   = instSigma intType exp_ty
 
@@ -75,8 +75,8 @@ tcRho (Let var rhs body) exp_ty
        ; extendVarEnv var var_ty (tcRho body exp_ty) }
 
 tcRho (Ann body ann_ty) exp_ty
-   = do { checkSigma body ann_ty
-        ; instSigma ann_ty exp_ty }
+  = do { checkSigma body ann_ty
+       ; instSigma ann_ty exp_ty }
 
 
 ------------------------------------------
@@ -85,12 +85,12 @@ tcRho (Ann body ann_ty) exp_ty
 
 inferSigma :: Term -> Tc Sigma
 inferSigma e
-   = do { exp_ty <- inferRho e
-        ; env_tys <- getEnvTypes
-	; env_tvs <- getMetaTyVars env_tys
-        ; res_tvs <- getMetaTyVars [exp_ty]
-        ; let forall_tvs = res_tvs \\ env_tvs
-        ; quantify forall_tvs exp_ty }
+  = do { exp_ty <- inferRho e
+       ; env_tys <- getEnvTypes
+       ; env_tvs <- getMetaTyVars env_tys
+       ; res_tvs <- getMetaTyVars [exp_ty]
+       ; let forall_tvs = res_tvs \\ env_tvs
+       ; quantify forall_tvs exp_ty }
 
 checkSigma :: Term -> Sigma -> Tc ()
 checkSigma expr sigma
@@ -125,7 +125,7 @@ subsCheck sigma1 sigma2        -- Rule DEEP-SKOL
 subsCheckRho :: Sigma -> Rho -> Tc ()
 -- Invariant: the second argument is in weak-prenex form
 
-subsCheckRho sigma1@(ForAll _ _) rho2	 -- Rule SPEC
+subsCheckRho sigma1@(ForAll _ _) rho2    -- Rule SPEC
   = do { rho1 <- instantiate sigma1
        ; subsCheckRho rho1 rho2 }
 
@@ -144,7 +144,7 @@ subsCheckFun a1 r1 a2 r2
 
 instSigma :: Sigma -> Expected Rho -> Tc ()
 -- Invariant: if the second argument is (Check rho),
--- 	      then rho is in weak-prenex form
+--               then rho is in weak-prenex form
 instSigma t1 (Check t2) = subsCheckRho t1 t2
 instSigma t1 (Infer r)  = do { t1' <- instantiate t1
                              ; writeTcRef r t1' }
