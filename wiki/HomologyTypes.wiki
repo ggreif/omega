@@ -43,7 +43,7 @@ its terms and types
   * vars: x, y
   * application: (x y)
   * value abstraction \x.y; value pairing <x,y>
-  * <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/ascii-gadget.xml" border="0" up_content="type abstraction `prod_(x text(::)D)R(x)`, type pairing `sum_(x text(::)T)U(x)`" height="15"/>
+  * <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/ascii-gadget.xml" border="0" up_content="type abstraction `prod_(x text(::)D)R(x)`, type pairing `sum_(x text(::)T)U(x)`" height="35"/>
 
 A little explanation to our nomenclature is due now. In most publications the domain and range of dependent products is written behind the product symbol, separated by dots. We put the domain under the product symbol and the range after it. Similarly for the pairing datatypes (dependent sums). When the range (resp. the second pair component) does not actually depend on the domain's name we will often omit the name part. This case is usually written as function type D->R (resp. pair (T, U)) in the literature.
 
