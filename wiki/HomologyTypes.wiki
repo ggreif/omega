@@ -43,7 +43,8 @@ its terms and types
  - vars: x, y
  - application: (x y)
  - value abstraction \x.y; value pairing <x,y>
- - type abstraction ∏x:T.R(x), type pairing ∑x:T.U(x)
+ - type abstraction <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="prod_(x text(::) T)R(x)" height="15"/>, type pairing <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="sum_(x text(::) T)U(x)" height="15"/>
+
 
 === Coloring our Ideas ===
 
@@ -345,14 +346,14 @@ Speculative: can we visualize the holes in the types?
 The holes introduce new boundaries. [I have a little sketch
 at work.]
 
-+ Dependent types
+-- Dependent types --
 
-++ pure type systems
+--- Pure type systems ---
 
-++ smart quantifiers: telescopes
+--- smart quantifiers: telescopes ---
 relating several levels
 
-++ "Pi in the Sky" Programming
+--- "Pi in the Sky" Programming ---
 
 directly below *∞
  - there is only one namespace, types and 'values' (their boundaries) appear at the same level (actually they are isomorphic)
@@ -360,7 +361,7 @@ directly below *∞
  - Z < Nat > S n, subtyping, Z :: Z, S n :: S n, S :: S [??? how can we show this, topologically? Simple: Mayer-Vietoris of tori
 with genus n]
 
-+ Other Work
+-- Other Work --
 
 Has somebody already embarked on visualizing (and/or topologizing) the lambda calculus?
 [yes, I have seen an animation of the (\a.aa)(\a.aa) reduction as a repetitive deformation]
@@ -368,26 +369,26 @@ Has somebody already embarked on visualizing (and/or topologizing) the lambda ca
 Visual canons in (molecular) chemistry
 Visual notations (UML?)
 
-++ n-Categories, string diagrams
+--- n-Categories, string diagrams ---
 
-++ Connections to String Theory
+--- Connections to String Theory ---
   world surface of strings (particles)
  - combinators: decay events, collisions
  - topological quantum field theories http://en.wikipedia.org/wiki/Topological_quantum_field_theory
 
-++ Combinatory Logic
+--- Combinatory Logic ---
 
-++ Homotopical Type Theory
+--- Homotopical Type Theory ---
 
-+ Acknowledgements
+-- Acknowledgements --
 to the blender guy --> artwork (+software)
 to the topologist (3-dim projective space)
 to the type theorist
 
-/// Bibliography
+- Bibliography -
 
 Awodey: Homotopy lambda calculus
 
-/// Appendix
+- Appendix -
 
 Blender models
