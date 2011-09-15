@@ -14,12 +14,11 @@ Bell Labs Technical Journal?
 What else?
 ]
 ----------------------------------------------------
-/// Document
-Pi-Sigma: A Topological Vision
+= Pi-Sigma: A Topological Vision =
 
--- A scenic journey through the world of pure type systems --
+_A scenic journey through the world of pure type systems_
 
-+ Abstract
+== Abstract ==
 
 We present a visual canon for the strongly typed dependent
 lambda calculus that is both expressive and appealing,
@@ -30,21 +29,23 @@ stellar levels of devotion to the subject. The exhibited plasticity
 and orientation of the objects serve the purpose of apprehension
 and memorability.
 
-+ Intro
+== Intro ==
 
 As computer science and real-world software installations are increasingly under pressure from security exploits, the necessity to harden software products, by proving their concordance with the specification, arises. The academical advances in the area of understanding and embracing sophisticated typing systems is starting to trickle into the practice of day-to-day programming. The last forty years have shown that the solutions offered by type systems represent all the mathematical rigor needed to make programs safe.
-In this educational pearl we set out to give forms to the abstract terms appearing in the typed formalisms and make suggestive
-pictures how a programmer can think about them and mentally connect the parts.
+
+In this educational pearl we set out to give forms to the abstract terms appearing in the typed formalisms and make suggestive pictures how a programmer can think about them and mentally connect the parts.
+
+We shall examine a type system not unlike to the programming language Ωmega [ref], its particulars and the ideas behind it.
 
 
-++ Typed lambda calculi
+=== Typed lambda calculi ===
 its terms and types
  - vars: x, y
  - application: (x y)
  - value abstraction \x.y; value pairing <x,y>
  - type abstraction ∏x:T.R(x), type pairing ∑x:T.U(x)
 
-++ Coloring our Ideas
+=== Coloring our Ideas ===
 
 The standard (string diagram) representation of a function
 is like this:
