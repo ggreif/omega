@@ -3639,21 +3639,21 @@ dPred xs (Equality x y) = (zs,text "Equal " <> PP.sep[a,b])
           (zs,b) = dPar ys y
 
 dKinding :: NameStore a => a -> Tau -> (a,Doc)
-dKinding d1 (Star LvZero) = (d1,text ":*0")
-dKinding d1 (t@(Star n)) = (d2,text(":*"++nstr))
+dKinding d1 (Star LvZero) = (d1,text "*0")
+dKinding d1 (t@(Star n)) = (d2,text("*"++nstr))
    where (d2,nstr) = exhibit d1 n
-dKinding d1 (TyVar nm (MK k)) = (d3,text (":"++nmStr) <> kStr)
+dKinding d1 (TyVar nm (MK k)) = (d3,text nmStr <> text "::" <> kStr)
    where (d2,nmStr) = useStoreName nm (MK k) f d1 where f s = "'"++s
          (d3,kStr) = dKinding d2 k
-dKinding d1 (TcTv (v@(Tv _ _ (MK k)))) = (d3,text (":"++nmStr) <> kStr)
+dKinding d1 (TcTv (v@(Tv _ _ (MK k)))) = (d3,text nmStr <> text "::" <> kStr)
    where (d2,nmStr) = exhibitTv d1 v
          (d3,kStr) = dKinding d2 k
-dKinding d1 (TyCon sx (LvSucc LvZero) s k) = (d1,text (":"++s))
-dKinding d1 (TyCon sx l s k) = (d2,text (":"++s++":") <> sorting)
+dKinding d1 (TyCon sx (LvSucc LvZero) s k) = (d1,text s)
+dKinding d1 (TyCon sx l s k) = (d2,text (s++"::") <> sorting)
   where (d2,sorting) = dPoly d1 k
-dKinding d1 (x@(Karr _ _)) = (d2,text ":" <> s) where (d2,s)= dDoc d1 x
-dKinding d1 (x@(TyApp _ _)) = (d2,text ":" <> s) where (d2,s)= dDoc d1 x
-dKinding d1 x = (d1,text (":"++show x))
+dKinding d1 (x@(Karr _ _)) = (d2,s) where (d2,s)= dDoc d1 x
+dKinding d1 (x@(TyApp _ _)) = (d2,s) where (d2,s)= dDoc d1 x
+dKinding d1 x = (d1,text (show x))
 
 dLdata:: (Swap t,DocReady t,NameStore d) =>
          Quant -> d -> L([Pred],t) -> (d,Doc)
@@ -3678,7 +3678,7 @@ dLdata quant d1 args = (d4,PP.cat [prefix, eqsS,indent rhoS])
             in case k of
                 (Star LvZero) -> (d3,text name)
                 _ -> let (d4,kind) = dKinding d3 k
-                     in (d4,PP.parens(text name <> kind))
+                     in (d4,PP.parens(text name <> text "::" <> kind))
 
 exSynListD :: forall t. (NameStore t) => t -> Tau -> (t,Doc)
 exSynListD d (t@(TyApp (TyApp (TyCon ext _ c1 _) x) y))

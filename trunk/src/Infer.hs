@@ -563,10 +563,10 @@ typeNames env = map f (type_env env)  where f (name,tau,polykind) = name
 -- Printing things in the Environment
 
 showAllVals n env = mapM f (take n (Map.toList(var_env env)))
-  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " : " ++alpha [] sigma)
+  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " :: " ++alpha [] sigma)
 
 showSomeVals p env = mapM f (filter p (Map.toList(var_env env)))
-  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " : " ++alpha [] sigma)
+  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " :: " ++alpha [] sigma)
 
 showVals vs = do { env <- getTCEnv
                     ; warnM [Dlf f (filter p (Map.toList env)) "\n  "]}

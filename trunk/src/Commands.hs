@@ -227,7 +227,7 @@ execExp tenv e =
       ; v <- (eval (runtime_env tenv) e')
       ; u <- runAction v
       ; verbose <- getM "kind" False
-      ; warnM [Ds "\n", docs[Dds (show u ++ " : "),Dx polyk]]
+      ; warnM [Ds "\n", docs[Dds (show u ++ " :: "),Dx polyk]]
       ; when verbose (mapM_ writeln subpairs)
       ; when verbose (writeln("\n\n"++ pv u))
       ; return (tenv) }
@@ -241,7 +241,7 @@ drawPatExp tenv p e =
     ; z <- mPatStrict Tick [] p' u
     ; case z of
        Just frag -> let rtenv = extendV frag (runtime_env env')
-                    in do { writeln ((show u)++ " : "++(pprint t))
+                    in do { writeln ((show u)++ " :: "++(pprint t))
                           ; return(env' { runtime_env = rtenv }) }
        Nothing -> do { writeln ("Pattern "++show p++" does not match "++show v)
                      ; return tenv }
