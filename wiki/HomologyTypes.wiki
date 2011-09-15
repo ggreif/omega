@@ -40,10 +40,12 @@ We shall examine a type system not unlike to the programming language Ωmega [re
 
 === Typed lambda calculi ===
 its terms and types
- - vars: x, y
- - application: (x y)
- - value abstraction \x.y; value pairing <x,y>
- - type abstraction <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="prod_(x text(::) T)R(x)" height="15"/>, type pairing <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="sum_(x text(::) T)U(x)" height="15"/>
+  * vars: x, y
+  * application: (x y)
+  * value abstraction \x.y; value pairing <x,y>
+  * type abstraction <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="prod_(x text(::)D)R(x)" height="15"/>, type pairing <wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="sum_(x text(::)T)U(x)" height="15"/>
+
+A little explanation to our nomenclature is due now. In most publications the domain and range of dependent products is written behind the product symbol, separated by dots. We put the domain under the product symbol and the range after it. Similarly for the pairing datatypes (dependent sums). When the range (resp. the second pair component) does not actually depend on the domain's name we will often omit the name part. This case is usually written as function type D->R (resp. pair (T, U)) in the literature.
 
 
 === Coloring our Ideas ===
@@ -59,7 +61,7 @@ Let's assume f = \ a -> not (not a), the identity function on booleans.
 But we are much more interested in the type of the value f. The
 dependent lambda calculus assigns a type ∏x:Bool.Bool to it,
 
-∏x:Bool.Bool corresponds to
+∏x:Bool.Bool<wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="prod_(ttBool)ttBool" height="15"/> corresponds to
 red  blue
 \         /
   \     /  red
@@ -77,30 +79,34 @@ We live in [one-point compactified?] 3-dimensional space: there is only 1 kind: 
 
 We need s small 'black hole' around the point where the self-intersection happens, because the 'implementation' of the function type is not available for inspection (existential). [should this be the case for the function value, or the type? Value sounds better]
 
-++ The Simplicial Complex
+=== The Simplicial Complex ===
 
-o  0-dimensional entities: (pointlike) combinators (named), constructors are shown as dense sets whose
+  * 0-dimensional entities: (pointlike) combinators (named), constructors are shown as dense sets whose
 
-o  1-dimensional entities: Values
+  * 1-dimensional entities: Values
 
-o  Surfaces: types (colored on the sides)
+  * Surfaces: types (colored on the sides)
 
-o  Volumes: kinds (e.g. type of gas filling it)
+  * Volumes: kinds (e.g. type of gas filling it)
 
 We will see that the zero-dimensional entities are the most crucial ones, as they are the connecting point for
  - values -- y = f(x) -- x travels on the cone towards combinator f and y leaves on the result cone.
  - types -- the incoming cone and result cone touch in the focal point, the combinator
  - kinds -- *, * ~> *, etc. -- the volume enclosed in the cones
 
-+++ Topology Redux
+==== Topology redux ====
 
 smooth manifolds
+
 deformability
+
 singularities
+
 homotopy, bordism
+
 classes, representants
 
-++ The Nat Datatype
+=== The Nat Datatype ===
 
 - Zero: as a type -- a (topologically open) unit disc with yellow on one side and green on the other;
 as a value -- the unit circle (S1). [The S1 is the same as the Zero/\Zero when those cover a S2 (sphere)]
@@ -131,7 +137,7 @@ using gases and flexible membranes to visualize (cones, spheres, ellipsoids, par
 depends on the type of gas inside
 ]
 
-++ Definitions/Uses and sharing
+=== Definitions/Uses and sharing ===
 
 We speak of the 'same value' (and at higher levels 'same type' same, 'same kind', etc.) if there is a bordism [in old parlance cobordism]
 which connects the manifolds at the same level. I.e. the lambda calculus term (let a = 5 in (a, a)) [do we want to write this with S-K combinators? -- NOT] contains a bordism between the 5 and the two mentions of a. [When we have a bordism with homotopy-equivalent boundaries, we can still say the value is used linearly.]
@@ -141,7 +147,7 @@ So definitions allow sharing.
 [My idea is that values of a singleton type can be 'shared' indefinitely, since there is only one member of the type anyway.
 This might be very interesting for the Equal type with its intensional proof machinery]
 
-++ Pairs (Sigma)
+=== Pairs (Sigma) ===
 
 We have already seen the pairing combinator in action above, we still have to picture the corresponding type ∑x:A.B.
 
@@ -159,7 +165,7 @@ red
       \
 green
 
-++ Constructors ++
+=== Constructors ===
 
 Constructors appear at every level, and contrary to functions (at any level) they do not transform information
 but accumulate/aggregate it [accumulate: may contain existentials whose type is not visible outside. Usually the values
@@ -175,19 +181,19 @@ works well for unary type constructors, but not for n-ary ones :-(  we need shri
 
 [could we say that constructors are just functions (i.e. one point)?; but then we lose the nice mushroom meme.]
 
-+++ pattern matching +++
+==== pattern matching ====
 
 Pattern matching is just the opposite of aggregation, anything new here?
 
-++ Quantifiers
+=== Quantifiers ===
 
 !!!TO BE TOLD
 
-+++ Universal quantification
+==== Universal quantification ====
 
 
 
-+++ Existential quantification
+==== Existential quantification ====
 
 black hole (no information can leave it)
 each black hole has its own category, namely
@@ -212,24 +218,26 @@ fathomable, but normally it can be scrutinized.
 When even the type is existential, then we have the black
 holes from above.
 
-+++ Higher ranks
+==== Higher ranks ====
 
 dynamic color scheme (varying), rainbow-like
 colors of cones locked together by type variables
 (or equality types)
 
-++ The Identity Type
+=== The Identity Type ===
 
 The identity type is one of the mightiest weapons in a typed
 programmer's arsenal. The identity type can be instantiated
 (at any level) with two type parameters at any level, but the
 the actual identity is proven at the value level:
 
+{{{
 data Equal a b :: * where
   Eq :: Equal c c
+}}}
 
-If the programmer succeeds to obtain an Eq value then he has
-a proof in his hands that the parameters to Equal are indeed
+If the programmer succeeds to obtain an `Eq` value then he has
+a proof in his hands that the parameters to `Equal` are indeed
 denoting the same type.
 
 !!! I have to read more on homotopy TT's Id type, which is subtly different.
@@ -239,13 +247,13 @@ since we can then present the equivalence algorithmically, by
 surgery on the manifold that connects the types.
 
 We have two levels here that are interesting
- * "Equal a b" -> type constructor with two type indices
- * the value "Eq" that witnesses the fact the two indices are bordant[/a homotopy?].
+  * `Equal a b` -> type constructor with two type indices
+  * the value `Eq` that witnesses the fact the two indices are bordant[/a homotopy?].
 The Eq value must be recursively built up if the indices are
 also complex types.
 
 
-+++ As a proof object showing that two types are indeed equal
+==== As a proof object showing that two types are indeed equal ====
 lemmata: theorems are hidden combinators that operate in
 a terminating fashion on values that represent types (kinds, etc.)
 
@@ -259,7 +267,7 @@ Perhaps polygons, i.e. singularities encode the type?
 
 Homotopies.
 
-++ Definitions
+=== Definitions ===
 
 these are simply naming the homotopy class (and a base boundary?)
 all mentions of the names are connected by identity types.
@@ -286,15 +294,15 @@ homotopy between the disjoint components
 of the boundary of the bordism.
 
 
-++ Dualities
+=== Dualities ===
 
-+++ Pi <-> Sigma duality
+==== Pi <-> Sigma duality ====
 
 Depending on the viewpoint we have
  o two joined cones
  o opposite cones
 
-+++ Existential <-> Universal
+==== Existential <-> Universal ====
 
 calling universally quantified function of arity 2 is
  - creating a copy of the still uncolored function (as value - a double-circle on the left single on the right, probably with 3 lines to the focus?)
@@ -309,24 +317,24 @@ from inside of the combinator
  - reduction rules are applied, until the last combinator
  - combinator (the point) disappears
 
-+++ Polarity, Co-Contravariance
+==== Polarity, co-/contravariance ====
 
 covariance: colors not flipped
 contravariance: colors flipped
 
-++++ Fixpoints of types
+===== Fixpoints of types =====
 
 We lose the variance, it becomes both colors at the same type.
 As if we pasted a moebius strip into a disk-shaped hole of the surface.
 
-+++ Inside-outside Duality
+==== Inside-outside duality ====
 
 Speculative!
 when we are in the projective plane there is no inside or outside
 but in normal space
 
 
-++ Type inference, Unification
+=== Type inference, Unification ===
 
 +++ inference rules, proof objects
 +++ bidirectionality
@@ -340,20 +348,20 @@ Is unification the process of verifying homotopies (of types)?
 What about type variables? Are Eq values just the inhabitants
 of (Equal a a) and together with transitivity allowing the path to extend?
 
-++ Conor's Derivatives of Datatypes
+=== Conor's derivatives of datatypes ===
 
 Speculative: can we visualize the holes in the types?
 The holes introduce new boundaries. [I have a little sketch
 at work.]
 
--- Dependent types --
+== Dependent types ==
 
---- Pure type systems ---
+=== Pure type systems ===
 
---- smart quantifiers: telescopes ---
+=== smart quantifiers: telescopes ===
 relating several levels
 
---- "Pi in the Sky" Programming ---
+=== "Pi in the Sky" Programming ===
 
 directly below *∞
  - there is only one namespace, types and 'values' (their boundaries) appear at the same level (actually they are isomorphic)
@@ -361,7 +369,7 @@ directly below *∞
  - Z < Nat > S n, subtyping, Z :: Z, S n :: S n, S :: S [??? how can we show this, topologically? Simple: Mayer-Vietoris of tori
 with genus n]
 
--- Other Work --
+== Other Work ==
 
 Has somebody already embarked on visualizing (and/or topologizing) the lambda calculus?
 [yes, I have seen an animation of the (\a.aa)(\a.aa) reduction as a repetitive deformation]
@@ -369,26 +377,27 @@ Has somebody already embarked on visualizing (and/or topologizing) the lambda ca
 Visual canons in (molecular) chemistry
 Visual notations (UML?)
 
---- n-Categories, string diagrams ---
+=== n-Categories, string diagrams ===
 
---- Connections to String Theory ---
+=== Connections to String Theory ===
   world surface of strings (particles)
- - combinators: decay events, collisions
- - topological quantum field theories http://en.wikipedia.org/wiki/Topological_quantum_field_theory
+  * combinators: decay events, collisions
+  * topological quantum field theories http://en.wikipedia.org/wiki/Topological_quantum_field_theory
 
---- Combinatory Logic ---
+=== Combinatory Logic ===
 
---- Homotopical Type Theory ---
+=== Homotopical Type Theory ===
 
--- Acknowledgements --
+== Acknowledgements ==
 to the blender guy --> artwork (+software)
 to the topologist (3-dim projective space)
 to the type theorist
 
-- Bibliography -
+= Bibliography =
 
 Awodey: Homotopy lambda calculus
+Baez: Rosetta Stone
 
-- Appendix -
+= Appendix =
 
 Blender models
