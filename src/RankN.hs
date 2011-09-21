@@ -2623,8 +2623,8 @@ okLevels declared found =
 
 --------------------------------------------------------
 
-pt s = case parse2 (typN) s of { Right(x,more) -> x; Left s -> error (show s) }
-parsePT = pt
+pt s = case parse2 (typN) s of { Right(x,more) -> return x; Left s -> fail s }
+parsePT s = pt s
 
 intThenTyp n = do { m <- try (possible natural); t <- typN; return (pick m,t)}
   where pick Nothing = (n::Int)

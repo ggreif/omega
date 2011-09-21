@@ -856,19 +856,22 @@ morePoly exp sigma expect =
 
 test :: String -> String -> IO ()
 test s1 s2 = runTC tcEnv0
-  ((case (parsePT s1,parsePT s2) of
-    (a@(Forallx All xs _ x),b@(Forallx All ys _ y)) ->
-        do { (t1,_) <- checkPT s1 Z a
-           ; (t2,_) <- checkPT s2 Z b
-           ; b <- morepoly "test" t1 t2; outputString (show b ++ "\n") }
-    (a@(Forallx All xs _ x),y) ->
-        do { (t1,_) <- checkPT s1 Z a
-           ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
-           ; b <- morepoly "test"  t1 t2; outputString (show b ++ "\n") }
-    (x,y) ->
-        do { t1 <- toRho (typeConstrEnv0,Z,[],[]) x
-           ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
-           ; b <- morepoly "test"  t1 t2; outputString (show b ++ "\n") }) :: TC ())
+  ((do { sp1 <- parsePT s1
+       ; sp2 <- parsePT s2
+       ; case (sp1,sp2) of
+           (a@(Forallx All xs _ x),b@(Forallx All ys _ y)) ->
+               do { (t1,_) <- checkPT s1 Z a
+                  ; (t2,_) <- checkPT s2 Z b
+                  ; b <- morepoly "test" t1 t2; outputString (show b ++ "\n") }
+           (a@(Forallx All xs _ x),y) ->
+               do { (t1,_) <- checkPT s1 Z a
+                  ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
+                  ; b <- morepoly "test"  t1 t2; outputString (show b ++ "\n") }
+           (x,y) ->
+               do { t1 <- toRho (typeConstrEnv0,Z,[],[]) x
+                  ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
+                  ; b <- morepoly "test"  t1 t2; outputString (show b ++ "\n") }
+       }) :: TC ())
 
 --------------------------------------------------------------
 -- fun Matches are Typeable  (Match [Pat] Exp Dec)
@@ -5029,7 +5032,8 @@ parseAndKind :: TcEnv -> [Char] -> FIO (Kind,Tau,[String])
 parseAndKind env s = tcInFIO env
     (
     do { map1 <- getTypeEnv
-       ; s <- toTau (map1,location env,syntaxExt env,[]) (parsePT s)
+       ; ppts <- parsePT s
+       ; s <- toTau (map1,location env,syntaxExt env,[]) ppts
        ; (tau::Tau,s2) <- infer s
        ; let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
        ; pairs <- mapM kind (subtermsTau tau [])
