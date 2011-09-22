@@ -12,8 +12,8 @@ import Bind
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 import Monads
-import Monad(when,foldM)
-import List((\\),nub,union,unionBy,sortBy,groupBy,partition,find)
+import Control.Monad(when,foldM)
+import Data.List((\\),nub,union,unionBy,sortBy,groupBy,partition,find)
 import Auxillary(Loc(..),plist,plistf,extendM,foldrM,makeNames
                 ,DispInfo(..),Display(..),useDisplay,initDI
                 ,disp2,disp3,disp4,disp5,dispL,DispElem(..),displays,dv,tryDisplay
@@ -21,7 +21,7 @@ import Auxillary(Loc(..),plist,plistf,extendM,foldrM,makeNames
 import ParserAll  -- This for defining the parser for types
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
-import Char(isLower,isUpper,ord,chr)
+import Data.Char(isLower,isUpper,ord,chr)
 
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)

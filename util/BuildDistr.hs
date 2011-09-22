@@ -1,12 +1,13 @@
 module BuildDistr  where
 
-import Directory ( doesFileExist, doesDirectoryExist, removeFile
+import System.Directory ( doesFileExist, doesDirectoryExist, removeFile
                  , getCurrentDirectory,setCurrentDirectory
                  , getDirectoryContents)
 import System.Directory (createDirectoryIfMissing)
-import System (system, getArgs)
-import Time (getClockTime, toCalendarTime, calendarTimeToString)
-import BuildSpecific ( distrDir, srcDir, utilDir, parseDir, libDir
+import System.Environment(getArgs)
+import System.Process(system)
+import System.Time (getClockTime, toCalendarTime, calendarTimeToString)
+import BuildSpecific ( defaultHome, distrDir, srcDir, utilDir, parseDir, libDir
                      , manualDir, testsDir, rootDir, extension, version)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -58,7 +59,7 @@ sources libDir parseDir srcDir testsDir rootDir utilDir =
    (srcDir, "LangPrelude", ".prg"),
    (rootDir, "LICENSE", ".txt"),
    (srcDir, "Makefile",""),
-   (utilDir, "omega",".cabal"), 
+   (utilDir, "Omega",".cabal"), 
    (utilDir, "Setup",".hs")
  ]
 
@@ -157,7 +158,10 @@ makeManual dir time distrDir manualDir =
 main =
   do { time <- getTime
      ; putStr time
-     ; [home] <- getArgs
+     ; home <- do { ans <- getArgs
+                  ; case ans of
+                     [x] -> return x
+                     [] -> return defaultHome }
      ; let libDir' = libDir home
            parseDir' = parseDir home
            srcDir' = srcDir home

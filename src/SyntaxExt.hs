@@ -1,11 +1,11 @@
 module SyntaxExt where
 
 import Auxillary
-import List(nub)
+import Data.List(nub)
 import ParserAll  -- This for defining parsers
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
-import Char(isLower)
+import Data.Char(isLower)
 
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
