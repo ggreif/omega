@@ -110,11 +110,11 @@ We live in [one-point compactified?] 3-dimensional space: there is only 1 kind: 
 
 We need s small 'black hole' around the point where the self-intersection happens, because the 'implementation' of the function type is not available for inspection (existential). [should this be the case for the function value, or the type? Value sounds better]
 
-= Types are Topological Objects =
+== Types are Topological Objects ==
 
 manyfolds
 
-== Our interpretation of types ==
+=== Our interpretation of types ===
 
 (topology)
 
