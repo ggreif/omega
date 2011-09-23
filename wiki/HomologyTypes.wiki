@@ -47,6 +47,33 @@ its terms and types
 
 A little explanation to our nomenclature is due now. In most publications the domain and range of dependent products is written behind the product symbol, separated by dots. We put the domain under the product symbol and the range after it. Similarly for the pairing datatypes (dependent sums). When the range (resp. the second pair component) does not actually depend on the domain's name we will often omit the name part. This case is usually written as function type D->R (resp. pair (T, U)) in the literature.
 
+=== Omega ===
+
+Omega provides an infinite hierarchy of types
+
+show picture
+
+the level below is typed by the level above
+
+
+=== Classical interpretation of types ===
+
+as sets
+
+  * 42 ∈ ZZ
+  * Int ∈ *
+
+=== Type theory interpretation ===
+
+This is also called the Curry-Howard correspondence
+
+(logic) types as propositions, values as proofs
+
+  * \x.x proves Int -> Int
+  * 42 proves Int
+  * Int proves *
+  * Eq proves Equal Int Int
+
 
 === Coloring our Ideas ===
 
@@ -72,12 +99,29 @@ red  blue
 
 We use colours to differentiate between the two sides of the surfaces. The figure shows how the ∏ combinator reverses 'inside' and 'outside'. This is the consequence of the well known contravariance of function types.
 
-[we could use Rational numbers too, with contravariance resulting in reciprocity, but then our picture would be less lively]
-[Klein bottle when pasted with IxS1, what when pasted with S0xB1?]
+[
+we could use Rational numbers too, with contravariance resulting in reciprocity, but then our picture would be less lively
+]
+[
+Klein bottle when pasted with IxS1, what when pasted with S0xB1?
+]
 
 We live in [one-point compactified?] 3-dimensional space: there is only 1 kind: * (and on the other side the same) [is this the projective space?]
 
 We need s small 'black hole' around the point where the self-intersection happens, because the 'implementation' of the function type is not available for inspection (existential). [should this be the case for the function value, or the type? Value sounds better]
+
+= Types are Topological Objects =
+
+manyfolds
+
+== Our interpretation of types ==
+
+(topology)
+
+42 is boundary of Int
+
+Equal Int Int is boundary of *
+
 
 === The Simplicial Complex ===
 
