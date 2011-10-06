@@ -27,6 +27,7 @@ import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 
 import SyntaxExt
+import Debug.Trace
 ------------------------------------------------------
 -- The Z type is used inside of Display objects as the index
 
@@ -373,11 +374,6 @@ substPred env xs = mapM f xs
    where f (Equality x y) = do { a<-(subst env x); b<-(subst env y); return(Equality a b)}
          f (Rel ts) = do { a <- (subst env ts); return(makeRel a)}
 
--- A pair of types can be in the subsumption class if we can
--- ask if one is more polymorphic than another.
-
-class TyCh m => Subsumption m x y where
-  morepoly :: String -> x -> y -> m ()
 
 -- a term type is Typable if one can check and infer types for it.
 -- This is really a binary relation since the sort of "ty"
@@ -1605,7 +1601,7 @@ instance TyCh m => Typable m  Tau Tau where
          ; y1 <- tc y expect
          ; checkLevelsDescend x1 y1
          ; return(Karr x1 y1) }
-    f t@(TyVar n (MK k)) expect = zap t k expect
+    f t@(TyVar n (MK k)) expect = zap2 t k expect
     f t@(TyFun nm (k@(K lvs sig)) xs) expect =
       do { (preds,rho) <- instanTy lvs sig
          ; when (not(null preds)) (failM 0 [Ds "Type functions can't have constrained kinds: ",Dd sig])
@@ -1711,7 +1707,7 @@ matchKind k [] = zonk k
 
 checkTyFun :: TyCh m => String -> Rho -> [Tau] -> Expected Tau -> m [Tau]
 checkTyFun nm (Rtau k) [] (Infer ref) = do { a <- zonk k; writeRef ref a; return[] }
-checkTyFun nm (Rtau k) [] (Check m) = do { morepoly nm k m; return [] }
+checkTyFun nm (Rtau k) [] (Check m) = do { morepolyTauTau nm k m; return [] }
 checkTyFun nm (Rtau k) (t:ts) expect =
   do { (dom,rng) <- unifyKindFun t k
      ; t2 <- check t dom
@@ -1742,8 +1738,11 @@ unifyKindFun term x = failM 1
          ,Dd x,Ds " instead"]
 
 -- zap :: (Show c,Subsumption m b b) => c -> b -> Expected b -> m c
-zap term rho (Check r) = do { morepoly (show term) rho r; return term }
+zap term rho (Check r) = do { morepolyRhoRho (show term) rho r; return term }
 zap term rho (Infer r) = do { a <- zonk rho; writeRef r a; return term }
+
+zap2 term tau (Check r) = do { morepolyTauTau (show term) tau r; return term }
+zap2 term tau (Infer r) = do { a <- zonk tau; writeRef r a; return term }
 
 zapPoly :: TyCh m => Tau -> PolyKind -> Expected Tau -> m Tau
 zapPoly (term@(TyCon sx level s k)) (K lvs sig) expect =
@@ -1843,27 +1842,56 @@ captured sig1 sig2 rho mess =
 
 
 ----------------------------------------------------------------
--- Subsumption instances
+-- Subsumption 
+
+-- A pair of types can be in the subsumption class if we can
+-- ask if one is more polymorphic than another.
+
+{-
+class TyCh m => Subsumption m x y where
+  morepoly :: String -> x -> y -> m ()
 
 instance TyCh m => Subsumption m Tau Tau where
-   morepoly s x y = -- warnM [Ds "In subsumption Tau Tau ",Dd x,Ds "=?=" ,Dd y] >>
-                    unify x y
-
+   morepoly s x y = morepolyTauTau s x y
 instance (TypeLike m b,Subsumption m b b) => Subsumption m b (Expected b) where
    morepoly s t1 (Check t2) = morepoly s t1 t2
    morepoly s t1 (Infer r)  = do { a <- zonk t1; writeRef r a }
 
-{-
+
 instance TyCh m => Subsumption m PolyKind PolyKind where
   morepoly s (K lvs x) (K lvs2 y) = morepoly s x y
--}
+
 
 instance TyCh m => Subsumption m Sigma Sigma where
-  morepoly s sigma1 sigma2 =
+  morepoly = morepolySigmaSigma
+instance (TyCh m) => Subsumption m PolyKind Sigma where
+  morepoly s (K lvs sig1) sig2 = do { sigma <- instanLevel lvs sig1; morepolySigmaSigma s sigma sig2}
+
+instance (TyCh m) => Subsumption m PolyKind (Expected Rho) where
+  morepoly = morepolyPolyExpectRho  
+
+instance TyCh m => Subsumption m Sigma (Expected Rho) where
+  morepoly = morepolySigmaExpectedRho
+
+instance (TyCh m) => Subsumption m Sigma Rho where
+  morepoly = morepolySigmaRho
+
+instance TyCh m => Subsumption m Rho Rho where
+ morepoly s x y = -- warnM [Ds "\n Subsumption Rho Rho: ",Dd x,Ds " =?= ",Dd y] >>
+                  morepolyRhoRho s x y where
+  
+  
+ 
+-}
+morepolyTauTau s x y = -- warnM [Ds "In subsumption Tau Tau ",Dd x,Ds "=?=" ,Dd y] >>
+                    unify x y
+                    
+
+morepolySigmaSigma s sigma1 sigma2 =
      do { (skol_tvs,assump,rho) <- skolTy sigma2
         ; (preds,(levelvars,unifier)) <- solveSomeEqs ("morepoly Sigma Sigma",starR) assump
         ; (_,residual::[Pred]) <-
-             extractAccum (handleM 1 (assume preds unifier (morepoly s sigma1 rho))
+             extractAccum (handleM 1 (assume preds unifier (morepolySigmaRho s sigma1 rho))
                                      (captured sigma1 sigma2 rho))
         ; (tv1, level_) <- get_tvs sigma1   -- TODO LEVEL
         ; (tv2, level_) <- get_tvs sigma2   -- TODO LEVEL
@@ -1875,38 +1903,35 @@ instance TyCh m => Subsumption m Sigma Sigma where
             zs -> failM 0 [Ds "Not more poly",Dl zs ", "]
         }
 
-instance TyCh m => Subsumption m Sigma (Expected Rho) where
-   morepoly s s1 (Check e2) = -- warnM [Ds "In subsumption Sigma ExpectedRho ",Dd s1,Ds "=?=" ,Dd e2] >>
-                              morepoly s s1 e2
-   morepoly s s1 (Infer ref) =
-      do { -- warnM [Ds "In subsumption Sigma ExpectedRho ",Dd s1,Ds "=?= Infer"];
+morepolySigmaExpectedRho s s1 (Check e2) = 
+    do { -- warnM [Ds "In subsumption Sigma ExpectedRho Check ",Dd s1,Ds "=?=" ,Dd e2];
+         morepolySigmaRho s s1 e2
+       }
+morepolySigmaExpectedRho s s1 (Infer ref) =
+      do { -- warnM [Ds "In subsumption Sigma ExpectedRho Infer ",Dd s1,Ds "=?= Infer"];
            (preds,rho1) <- instanTy [] s1
          ; injectA " morepoly Sigma (Expected Rho) " preds -- ## DO THIS WITH THE PREDS?
          ; writeRef ref rho1
          }
-
+         
 instanLevel lvs sig1 = do { env <- mapM f lvs; sub ([],[],[],env) sig1 }
   where f name = do { n <- newLevel; return(LvVar name,n)}
 
-instance (TyCh m) => Subsumption m PolyKind Sigma where
-  morepoly s (K lvs sig1) sig2 = do { sigma <- instanLevel lvs sig1; morepoly s sigma sig2}
+morepolyPolyExpectRho:: TyCh m => String -> PolyKind -> Expected Rho -> m ()  
+morepolyPolyExpectRho s (K lvs sig1) rho = 
+   do { sigma <- instanLevel lvs sig1
+      ; morepolySigmaExpectedRho s sigma rho}
 
-instance (TyCh m) => Subsumption m PolyKind (Expected Rho) where
-  morepoly s (K lvs sig1) rho = do { sigma <- instanLevel lvs sig1; morepoly s sigma rho}
-
-
-instance (TyCh m) => Subsumption m Sigma Rho where
-  morepoly = morepolySigmaRho
-
-morepolySigmaRho s (Forall(Nil([],rho1))) rho2 = morepoly s rho1 rho2
-morepolySigmaRho s (sigma1@(Forall sig)) rho2 =
-     do { ts <- getTruths
+morepolySigmaRho :: TyCh m => String -> Sigma -> Rho -> m ()
+morepolySigmaRho s (Forall(Nil([],rho1))) rho2 = morepolyRhoRho s rho1 rho2
+morepolySigmaRho s (sigma1@(Forall sig)) rho2 = 
+     do {  ts <- getTruths
         ; whenM False [Ds "Entering morepoly Sigma Rho \n Sigma = "
                ,Dd sigma1,Ds "\n Rho = ",Dd rho2
                ,Ds "\n truths = ",Dl ts ", "]
         ; (vs,preds,rho1) <- instanL [] sig
         ; injectA " morepoly Sigma Rho 1 " preds -- ## DO THIS WITH THE PREDS?
-        ; ((),oblig2) <- extract(morepoly s rho1 rho2)
+        ; ((),oblig2) <- extract(morepolyRhoRho s rho1 rho2)
         ; (local,general) <- localPreds vs oblig2
         -- ; warnM [Ds "\nlocal = ",Dd local,Ds ", general = ", Dd general]
         ; (preds2,(ls,unifier)) <- handleM 1 (solveSomeEqs ("morepoly Sigma Rho",rho2) local)
@@ -1914,7 +1939,7 @@ morepolySigmaRho s (sigma1@(Forall sig)) rho2 =
         ; gen2 <- sub ([],unifier,[],ls) general
         ; injectA " morepoly Sigma Rho 2 " (gen2++preds2)
         }
-
+ 
 localPreds vs [] = return ([],[])
 localPreds vs (p:ps) =
   do { (loc,gen) <- localPreds vs ps
@@ -1934,19 +1959,19 @@ no_solution sigma rho skoRho s = failM 1
 
 ----------------------------------------------------------------
 
-instance TyCh m => Subsumption m Rho Rho where
- morepoly s x y = -- warnM [Ds "\n Subsumption Rho Rho: ",Dd x,Ds " =?= ",Dd y] >>
-                  f x y where
-  f (Rarrow a b) x = do{(m,n) <- unifyFun x; morepoly s b n; morepoly s m a }
-  f x (Rarrow m n) = do{(a,b) <- unifyFun x; morepoly s b n; morepoly s m a }
-  f (Rpair m n) (Rpair a b) = do{ morepoly s m a; morepoly s n b }
-  f (Rpair m n) x = do{(a,b) <- checkPair x; morepoly s m a; morepoly s n b}
-  f x (Rpair a b) = do{(m,n) <- checkPair x; morepoly s m a; morepoly s n b}
-  f (Rsum m n) (Rsum a b) = do{ morepoly s m a; morepoly s n b }
-  f (Rsum m n) x = do{(a,b) <- checkSum x; morepoly s m a; morepoly s n b}
-  f x (Rsum a b) = do{(m,n) <- checkSum x; morepoly s m a; morepoly s n b}
-  f (Rtau x) (Rtau y) = (unify x y)
+  
+morepolyRhoRho s  (Rarrow a b) x = do{(m,n) <- unifyFun x; morepolyRhoRho s b n; morepolySigmaSigma s m a }
+morepolyRhoRho s  x (Rarrow m n) = do{(a,b) <- unifyFun x; morepolyRhoRho s b n; morepolySigmaSigma s m a }
+morepolyRhoRho s  (Rpair m n) (Rpair a b) = do{ morepolySigmaSigma s m a; morepolySigmaSigma s n b }
+morepolyRhoRho s  (Rpair m n) x = do{(a,b) <- checkPair x; morepolySigmaSigma s m a; morepolySigmaSigma s n b}
+morepolyRhoRho s  x (Rpair a b) = do{(m,n) <- checkPair x; morepolySigmaSigma s m a; morepolySigmaSigma s n b}
+morepolyRhoRho s  (Rsum m n) (Rsum a b) = do{ morepolySigmaSigma s m a; morepolySigmaSigma s n b }
+morepolyRhoRho s  (Rsum m n) x = do{(a,b) <- checkSum x; morepolySigmaSigma s m a; morepolySigmaSigma s n b}
+morepolyRhoRho s  x (Rsum a b) = do{(m,n) <- checkSum x; morepolySigmaSigma s m a; morepolySigmaSigma s n b}
+morepolyRhoRho s  (Rtau x) (Rtau y) = (unify x y)
 
+morepolyRhoExpectedRho s t1 (Check t2) = morepolyRhoRho s t1 t2
+morepolyRhoExpectedRho s t1 (Infer r)  = do { a <- zonk t1; writeRef r a }
 
 ---------------------------------------------------
 
