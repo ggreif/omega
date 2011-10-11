@@ -10,7 +10,7 @@ Should not be confused with _procedural_ programming.
 == Haskell ==
 
   * History (academical, _programming language research_ vehicle)
-  * Popularity
+  * Popularity ([http://www.haskell.org/wikiupload/a/a4/Nick-activity.png on IRC], [http://langpop.com/#reddit compared to others on reddit])
   * Resources ([http://haskell.reddit.com reddit], [http://haskell.org haskell.org])
   * Tutorials, Books ([http://nostarch.com/lyah.htm LYAH], [http://book.realworldhaskell.org/ RWH])
   * Search engine [http://www.haskell.org/hoogle/ Hoogle]
@@ -200,8 +200,10 @@ Software Transactional Memory `STM`
 Domain-specific Embedded Languages, _EDSLs_
 
   # Executable Specifications
+    * [http://ertos.nicta.com.au/research/sel4/tech.pml seL4 microkernel]
   # HW-Description
     * [http://www.ittc.ku.edu/csdl/fpg/Tools/KansasLava Kansas Lava]
+    * [http://www.cs.york.ac.uk/fp/reduceron/ Reduceron]
   # Embedded, realtime ([http://hackage.haskell.org/package/copilot Copilot], [http://hackage.haskell.org/package/atom Atom])
 
 = Demo =
@@ -211,6 +213,12 @@ Domain-specific Embedded Languages, _EDSLs_
 {{{
   foldr (*) 1 [42,13,22]
 }}}
+
+= Who uses Haskell/FP? ==
+
+A growing body of companies depend on functional programming
+  * in industry: http://www.haskell.org/haskellwiki/Haskell_in_industry
+  * at ALU: http://cufp.org/conference/sessions/2011/fourteen-days-haskell-real-time-programming-projec
 
 = Credits =
 
