@@ -11,7 +11,7 @@ Should not be confused with _procedural_ programming.
 
   * History (academical, _programming language research_ vehicle)
   * Popularity
-  * Resources (reddit, haskell.org)
+  * Resources ([http://haskell.reddit.com reddit], [http://haskell.org haskell.org])
   * Tutorials, Books ([http://nostarch.com/lyah.htm LYAH], [http://book.realworldhaskell.org/ RWH])
   * Search engine [http://www.haskell.org/hoogle/ Hoogle]
 
@@ -170,11 +170,28 @@ Built-in rules
 
 == What are side effects? ==
 
-  When the same expression results in different answers
+  When the same expression results in (potentially) different answers:
+  * mutable state (i.e. global variables)
+  * input/output
+  * (catching) exceptions
 
 == The world of `IO` ==
 
+_Imperative programmers_ mostly program in this world.
+
+In Haskell, input/output actions have a distinguished type:
+{{{
+getChar :: IO Char
+}}}
+
+This `IO` wrapper cannot be peeled off! Only by connecting an (elementary or complex) `IO` action to the `main` name can we run this action, and thus obtain its side effects.
+{{{
+main :: IO a
+}}}
+
 == Other side effects ==
+
+Stateful computations (e.g. many _graph algorithms_) `ST`
 
 Software Transactional Memory `STM`
 
