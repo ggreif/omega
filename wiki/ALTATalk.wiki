@@ -1,19 +1,19 @@
 #labels Deprecated
 = Functional Programming =
 
-Name: 'functional' means an operation receiving a function as an argument.
+Name: _functional_ means an operation receiving a function as an argument.
 
 Putting this paradigm/idiom to work for computing is a very old trick.
 
 Should not be confused with _procedural_ programming.
 
-= Haskell =
+== Haskell ==
 
   * History (academical, _programming language research_ vehicle)
   * Popularity
   * Resources (reddit, haskell.org)
-  * Tutorials, Books (LYAH, RWH)
-  * Search engine
+  * Tutorials, Books ([http://nostarch.com/lyah.htm LYAH], [http://book.realworldhaskell.org/ RWH])
+  * Search engine [http://www.haskell.org/hoogle/ Hoogle]
 
 = Equations =
 
@@ -31,7 +31,7 @@ Now we can ask for `fib 3`:
 
 = Types and Data =
 
-"sum of products" covers:
+_Sum of products_ covers:
   * enumerations: `data Weekday = Monday | Tuesday | ...`
   * named tuples: `data Student = Stud Int String`
   * a mixture of the above: `data Bandwidth = Odu0 Int | Odu1 Int Int | Odu2 ...`
@@ -64,8 +64,26 @@ http://upload.wikimedia.org/wikipedia/commons/3/3b/Function_machine2.svg
 
  Functions are first-class!
 
+They
   * can be passed, and
-  * can be returned from other functions
+  * can be returned
+from other functions.
+
+== Function types ==
+
+{{{
+foo :: Int -> Bool -> [Char]
+}}}
+
+This tells us that `foo` is a function that accepts an
+  # _integer_ (of machine word size, called `Int`)
+  # a _boolean_ (named `Bool`)
+in this order, and results in a _list of characters_ (written as `[Char]` or `String`).
+
+These are also called _arrow types_, and they associate to the right:
+{{{
+Int -> (Bool -> [Char])
+}}}
 
 == Partial application ==
 
@@ -118,9 +136,7 @@ foldr :: (a -> b -> b) -> b -> [a] -> b
 }}}
 http://upload.wikimedia.org/wikipedia/commons/3/3e/Right-fold-transformation.png
 
-== Partial application ==
-
-= Lazyness =
+= Laziness =
 
 By default expressions are evaluated the first time they are needed.
 
@@ -134,7 +150,7 @@ main = do { putStrLn pi; putStrLn pi }
 
 == Infinite data ==
 
-Lazyness makes it possible to create infinite lists
+Laziness makes it possible to create infinite lists
 and
   * only consume a finite prefix, or
   * create non-terminating programs around them.
@@ -164,18 +180,16 @@ Software Transactional Memory `STM`
 
 == Surprising uses ==
 
-Executable Specifications
+Domain-specific Embedded Languages, _EDSLs_
 
-HW-Description
-  * Kansas Lava
-
-Embedded (Copilot)
-
+  # Executable Specifications
+  # HW-Description
+    * [http://www.ittc.ku.edu/csdl/fpg/Tools/KansasLava Kansas Lava]
+  # Embedded, realtime ([http://hackage.haskell.org/package/copilot Copilot], [http://hackage.haskell.org/package/atom Atom])
 
 = Demo =
 
   # GHCi Demo
-
   # [http://tryhaskell.org/ TryHaskell]
 {{{
   foldr (*) 1 [42,13,22]
