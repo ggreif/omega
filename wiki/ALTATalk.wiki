@@ -108,9 +108,9 @@ May capture local variables in scope
 (##Visitor pattern?)
 
 == Combinators ==
-  * Parsing/Pretty-printing
-  * Software Transactional Memory (STM)
+  * Parsing/pretty-printing
   * Database queries
+  * SVG [http://pnyf.inf.elte.hu/fp/Diagrams_en.xml diagrams]
 
 === Typical combinators ===
 
