@@ -6,8 +6,9 @@ hunt && /class="section_anchor">/ {
     hier[heading] = $0
     sub(/<a name="[^"]*"><\/a>/, "", hier[heading])
     sub(/<a href=".*" class="section_anchor"><\/a>/, "", hier[heading])
-    print "#############" hier[heading]
+    print hier[heading]
     hunt = 0
+    next
 }
 
 /<h1>/ {
@@ -19,22 +20,26 @@ hunt && /class="section_anchor">/ {
 }
 
 /<\/h[1-9]>/ {
-    heading -= 1
+    heading = 0
     print
     next
 }
 
-/<h2>/ && heading == 1 {
+/<h2>/ && heading == 0 {
     print "</div>"
     print "<div class=\"slide\">"
-    print "<h1 style=\"display: none;\">" hier[heading] "</h1>"
+    print "<h1 style=\"display: none;\">" hier[1] "</h1>"
     heading = 2
     hunt = 1
     print
     next
 }
 
-/<h3>/ && heading == 2 {
+/<h3>/ && heading == 0 {
+    print "</div>"
+    print "<div class=\"slide\">"
+    print "<h1 style=\"display: none;\">" hier[1] "</h1>"
+    print "<h2 style=\"display: none;\">" hier[2] "</h2>"
     heading = 3
     hunt = 1
     print
