@@ -21,10 +21,8 @@ hunt && /class="section_anchor">/ {
 }
 
 /<h1>/ {
-    #print "<div class=\"slide\">"
     heading = 1
     hunt = 1
-    #print
     next
 }
 
@@ -35,29 +33,25 @@ hunt && /class="section_anchor">/ {
 }
 
 /<h2>/ && heading == 0 {
-    #print "</div>"
-    #print "<div class=\"slide\">"
-    #print "<h1 style=\"display: none;\">" hier[1] "</h1>"
     heading = 2
     hunt = 1
-    #print
     next
 }
 
 /<h3>/ && heading == 0 {
-    #print "</div>"
-    #print "<div class=\"slide\">"
-    #print "<h1 style=\"display: none;\">" hier[1] "</h1>"
-    #print "<h2 style=\"display: none;\">" hier[2] "</h2>"
     heading = 3
     hunt = 1
-    #print
     next
 }
 
-/<h4>/ && heading == 3 {
+/<h4>/ && heading == 0 {
     heading = 4
     hunt = 1
-    #print
     next
+}
+
+{ print }
+
+END {
+    if (slide) print "</div>"
 }
