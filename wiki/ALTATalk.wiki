@@ -32,9 +32,9 @@ Now we can ask for `fib 3`:
 = Types and Data =
 
 _Sum of products_ covers:
-  * enumerations: `data Weekday = Monday | Tuesday | ...`
-  * named tuples: `data Student = Stud Int String`
-  * a mixture of the above: `data Bandwidth = Odu0 Int | Odu1 Int Int | Odu2 ...`
+  * enumerations, alternatives: <code>data Weekday = Monday | Tuesday | ...</code>
+  * named tuples: <code>data Student = Stud Int String</code>
+  * a mixture of the above: <code>data Bandwidth = Odu0 Int | Odu1 Int Int | Odu2 ...</code>
 
 == Pattern Matching ==
 
@@ -164,11 +164,40 @@ take 10 [ (i,j) | i <- [1..], j <- [1..i-1], gcd i j == 1 ]
 
 = Types =
 
-Types determine which expressions are accepted
+Types determine which expressions are accepted.
+
+ [http://www.informatics.sussex.ac.uk/users/mfb21/interviews/milner/ Well-typed programs cannot go wrong]
+
+== Type annotation `::` ==
+
+The symbol `::` is pronounced as "has type".
 
 == Type inference ==
 
-Built-in rules
+The Haskell implementation collects all constraints and tries to solve them.
+
+In the process it assigns types to _identifiers_ and subexpressions:
+{{{
+if foo b then "GO!" else b
+}}}
+
+Constraints collected:
+  * `foo :: α -> β`, because it is applied to an argument, i.e. it must be a function
+  * `foo b :: Bool`, because it is the `if` condition
+  * `b :: α`, because it is argument to `foo`
+  * `foo b :: β`, because it is the result type of `foo`
+  * `b :: [Char]`, because the `else` leg must have the same type as the `then` leg
+
+So we can infer `α ≡ [Char]`, `β ≡ Bool` and `foo :: [Char] -> Bool`. The whole expression is `[Char]` typed.
+
+== Built-in rules ==
+
+Each `data` definition contributes to the built-in typing rules.
+
+All language constructs come with their obvious rules for deriving constraints:
+  * `if`
+  * `case`
+  * etc.
 
 = Side Effects and their Control =
   All expressions are built in a pure way, i.e. there are no side effects.
