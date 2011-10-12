@@ -17,7 +17,7 @@ Should not be confused with _procedural_ programming.
 
 = Equations =
 
-We can always _substitute equals for equals_. Just as in _mathematics_.
+We can always _substitute equals for equals_. Just as in _[http://www.jfsowa.com/logic/math.htm mathematics]_.
 
 A program contains *equations*
 {{{
