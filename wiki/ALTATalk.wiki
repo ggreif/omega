@@ -155,6 +155,13 @@ and
   * only consume a finite prefix, or
   * create non-terminating programs around them.
 
+== List comprehensions ==
+
+Several notational elements aid the manipulation of (infinite) lists
+{{{
+take 10 [ (i,j) | i <- [1..], j <- [1..i-1], gcd i j == 1 ]
+}}}
+
 = Types =
 
 Types determine which expressions are accepted
