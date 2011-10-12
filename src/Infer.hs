@@ -2847,7 +2847,7 @@ computeTypeFunEnv env xs =
 
 hasMonoTypeFun :: TcEnv -> [Dec] -> TC [(String,DefTree TcTv Tau)]
 hasMonoTypeFun env [] = return []
-hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) =
+hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) = newLoc loc $
   do { (nmSigmaType,monoKind,nmTypeKind,names) <- inferPolyPT [] pt
      ; let polyt@(K _ (sigma)) = K names (nmSigmaType)
      ; clauses <- mapM (checkLhsMatch (type_env env1) sigma) ms
