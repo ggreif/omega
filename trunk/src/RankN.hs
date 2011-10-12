@@ -2361,7 +2361,13 @@ readTau n env (t@(Forallx Ex xs eqs body)) =
       ; eqs2 <- toEqs env2 eqs
       ; return(TyEx(windup fargs (eqs2,r))) }
 readTau n env (Forallx All [] [] body) = readTau n env body
-readTau n (env@(_,loc,_,_)) (t@(Forallx q xs eqs body)) =
+readTau n (env@(zs,loc,_,_)) (t@(Forallx All xs [] body)) =
+  do { (env2@(ws,_,_,_)) <- generalizePTargs xs env
+     ; warnM [Ds ("\n\n"++ show loc),Ds "\n****** Just a warning ******\n\n",Ds "Sigma type in Tau context: ", Dd t]
+     ; warnM [Ds "is being generalized. This might not be what you expect."]
+     ; ans <- readTau n env2 body
+     ; zonk  ans }     
+readTau n (env@(_,loc,_,_)) (t@(Forallx q xs eqs body)) =     
   failM 1 [Ds ("\n\n"++ show loc),Ds "\nSigma type in Tau context: ", Dd t]
 readTau n (env@(_,loc,_,_)) (t@(PolyLevel _ _)) =
   failM 1 [Ds ("\n\n"++ show loc),Ds "\nLevel polymorphic type in Tau context: ", Dd t]
@@ -2386,6 +2392,14 @@ argsToEnv ((s,k,quant):xs) (env@(toenv,loc,exts,levels)) =
     ; (ns,zs,env2) <- argsToEnv xs ((s,TyVar nm k2,poly k2):toenv,loc,exts,levels)
     ; return ((s,nm):ns,(nm,k2,quant):zs,env2)
     }
+    
+generalizePTargs :: TyCh m => [(String,PT,Quant)] -> TransEnv -> m TransEnv
+generalizePTargs [] env = return env
+generalizePTargs ((s,k,quant):xs) (env@(toenv,locs,exts,levels)) =
+ do { kind <- toTau env k
+    ; let k2 = MK kind
+    ; tau <- newTau k2
+    ; generalizePTargs xs ((s,tau,poly k2):toenv,locs,exts,levels) }    
 
 ------------------------------------------------------
 tunit' = TyCon' "()" Nothing

@@ -61,3 +61,10 @@ sum3 x = [| \ w -> $(sum2 x [| w |]) |]
 
 r1 = Rpair Rint (Rsum Rint Runit)
 
+
+data Even:: Nat ~> *0
+  Base :: Even 0t
+  Ev :: Odd n -> Even (S n)
+data Odd:: Nat ~> *0
+  Od:: Even n -> Odd n
+
