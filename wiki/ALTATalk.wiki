@@ -101,9 +101,11 @@ not . null . filter (/= 0)
 
 == Lambda ==
 
-Anonymous functions
+Anonymous functions can be obtained
+  * as sections, e.g.  `(3 *)` or `(a -)`
+  * as _lambda expressions_, `\ a b -> a * c + b`
 
-May capture local variables in scope
+May capture local variables in scope.
 
 (##Visitor pattern?)
 
