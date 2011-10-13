@@ -252,6 +252,24 @@ can be defined.
 
 Sometimes this is already defined for you!
 
+== Example: `Maybe` ==
+
+{{{
+data Maybe a = Nothing | Just a
+}}}
+
+We overload `return` by
+{{{
+return :: a -> Maybe a
+return a = Just a
+}}}
+and `>>=`
+{{{
+(>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b
+Nothing >>= _ = Nothing
+Just a >>= transform = transform a
+}}}
+
 = Surprising uses =
 
 Domain-specific Embedded Languages, _EDSLs_
