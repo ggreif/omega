@@ -45,8 +45,9 @@ END {
 coding && /^}}}/ {
   sub(/}}}.*$/, "", origLine);
   if (origLine) {
-    print "{\\small " origLine
-    print "}"
+    print origLine
+    ##print "{\\small " origLine
+    ##print "}"
   }
   print "\\end{verbatim}";
   print ""
@@ -55,9 +56,9 @@ coding && /^}}}/ {
 }
 
 coding {
-  sub(/^/, "{\\small ");
+  ## sub(/^/, "{\\small ");
   print;
-  print "}";
+  ## print "}";
   next;
 }
 
@@ -103,12 +104,7 @@ quoting && (inItem || !/^ /) {
 }
 
 /`/ {
-  line = $0;
-  #sub(/`/, "\\texttt{", line);
-  #sub(/`/, "}", line);
-  $0 = gensub(/`([^`]*)`/,"\\\\texttt{\\1}","g",line)
-  #$0 = line
-  ## repeat!
+  $0 = gensub(/`([^`]*)`/, "\\\\texttt{\\1}", "g");
 }
 
 /.#/ {
