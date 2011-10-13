@@ -250,7 +250,9 @@ In Haskell, input/output actions have a distinguished type:
 getChar :: IO Char
 }}}
 
-This `IO` wrapper cannot be peeled off! Only by connecting an (elementary or complex) `IO` action to the `main` name can we run this action, and thus obtain its side effects.
+This `IO` wrapper cannot be peeled off!
+
+Only by connecting an (elementary or complex) `IO` action to the `main` name can we run this action, and thus obtain its side effects.
 {{{
 main :: IO a
 }}}
