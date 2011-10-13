@@ -129,7 +129,7 @@ not . null . filter (/= 0)
 
 Anonymous functions can be obtained
   * as sections, e.g.  `(3 *)` or `(a -)`
-  * as _lambda expressions_, `\ a b -> a * c + b`
+  * as _lambda expressions_, `\ a b → a * c + b`
 
 May capture local variables in scope.
 
@@ -196,9 +196,9 @@ Types determine which expressions are accepted.
 
  [http://www.informatics.sussex.ac.uk/users/mfb21/interviews/milner/ Well-typed programs cannot go wrong]
 
-== Type annotation by '`::`' ==
+== Type annotation by ‘`::`’ ==
 
-The symbol `::` is pronounced as "has type".
+The symbol `::` is pronounced as “has type”.
 
 == Type inference ==
 
@@ -210,13 +210,13 @@ if foo b then "GO!" else b
 }}}
 
 Constraints collected:
-  * `foo :: α -> β`, because it is applied to an argument, i.e. it must be a function
+  * `foo :: α → β`, because it is applied to an argument, i.e. it must be a function
   * `foo b :: Bool`, because it is the `if` condition
   * `b :: α`, because it is argument to `foo`
   * `foo b :: β`, because it is the result type of `foo`
   * `b :: [Char]`, because the `else` leg must have the same type as the `then` leg
 
-So we can infer `α ≡ [Char]`, `β ≡ Bool` and `foo :: [Char] -> Bool`. The whole expression is `[Char]` typed.
+So we can infer `α ≡ [Char]`, `β ≡ Bool` and `foo :: [Char] → Bool`. The whole expression is `[Char]` typed.
 
 == Built-in rules ==
 
