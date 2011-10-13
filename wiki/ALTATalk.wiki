@@ -27,8 +27,34 @@ fib n = fib (n - 2) + fib (n - 1)
 }}}
 
 Now we can ask for `fib 3`:
-####
-
+{{{
+fib (3 - 2) + fib (3 - 1)
+}}}
+≡
+{{{
+fib 1 + fib 2
+}}}
+≡
+{{{
+1 + fib 2
+}}}
+≡
+{{{
+1 + (fib (2 - 2) + fib (2 - 1))
+}}}
+≡
+{{{
+1 + (fib 0 + fib 1)
+}}}
+≡
+{{{
+1 + (1 + 1)
+}}}
+≡
+{{{
+1 + 2
+}}}
+≡ <code>3</code>
 = Types and Data =
 
 _Sum of products_ covers:
@@ -43,7 +69,7 @@ gives _names_ to enclosed data pieces:
 case stud of
   Stud jahre name | jahre > 30 -> name ++ ", du bist zu alt!"
   Stud jahre _    | jahre < 20 -> "ein Frischling"
-  Stud jahre name -> "mit " ++ show jahre ++ " hat man noch Traeume, " ++ name
+  Stud jahre name -> "mit " ++ show jahre ++ " hat man noch Träume, " ++ name
 }}}
 
 == Deriving ==
@@ -170,7 +196,7 @@ Types determine which expressions are accepted.
 
  [http://www.informatics.sussex.ac.uk/users/mfb21/interviews/milner/ Well-typed programs cannot go wrong]
 
-== Type annotation `::` ==
+== Type annotation by '`::`' ==
 
 The symbol `::` is pronounced as "has type".
 
