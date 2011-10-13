@@ -3,7 +3,10 @@ all: slides.html
 .PHONY: again clean
 
 clean:
-	- rm *.html.top *.html.content 
+	rm -f slides.html *.html.top *.html.content 
+
+cleaner: clean
+	rm -f wiki.html slidy.html
 
 again: clean
 	rm -f wiki.html
