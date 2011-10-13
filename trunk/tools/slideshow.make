@@ -6,6 +6,7 @@ clean:
 	- rm *.html.top *.html.content 
 
 again: clean
+	rm -f wiki.html
 	$(MAKE) -f slideshow.make all
 
 slidy.html:
