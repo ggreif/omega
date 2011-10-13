@@ -263,11 +263,24 @@ We overload `return` by
 return :: a -> Maybe a
 return a = Just a
 }}}
-and `>>=`
+and `>>=` like this
 {{{
 (>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b
 Nothing >>= _ = Nothing
 Just a >>= transform = transform a
+}}}
+
+[http://hackage.haskell.org/packages/archive/base/latest/doc/html/Prelude.html#t:Maybe Maybe] is defined in the _standard prelude_ and available as a very simple error reporting mechanism.
+
+== `do` notation ==
+
+Nicer way than sequencing in terms of `>>=` is writing semicolons :-)
+{{{
+do { subjekt <- versteheSubjekt
+   ; prädikat <- verstehePrädikat
+   ; objekt <- versteheObjekt
+   ; return (Satz subjekt prädikat objekt)
+   }
 }}}
 
 = Surprising uses =
