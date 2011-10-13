@@ -227,13 +227,32 @@ This `IO` wrapper cannot be peeled off! Only by connecting an (elementary or com
 main :: IO a
 }}}
 
+=== Best metaphor ever ===
+
+Wrapping a _payload type_ inside `IO` serves as a [http://upload.wikimedia.org/wikipedia/commons/0/04/Kondom.jpg barrier device].
+
 == Other side effects ==
 
 Stateful computations (e.g. many _graph algorithms_) `ST`
 
 Software Transactional Memory `STM`
 
-== Surprising uses ==
+= Sequencing =
+
+Formalization of _former_ and _latter_.
+
+Related, but not restricted to side effects.
+
+== Programmable semicolon ==
+
+For every _type wrapper_ (such as `IO`)
+  * an entering operation `return :: α → Θ α` and
+  * a sequencing operation `>>= :: Θ α → (α → Θ β) → Θ β`
+can be defined.
+
+Sometimes this is already defined for you!
+
+= Surprising uses =
 
 Domain-specific Embedded Languages, _EDSLs_
 
