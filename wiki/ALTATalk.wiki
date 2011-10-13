@@ -232,6 +232,8 @@ All language constructs come with their obvious rules for deriving constraints:
 
   Side effects may arise when expressions are `run`.
 
+  `run` encapsulates effects and does not let them escape.
+
 == What are side effects? ==
 
   When the same expression results in (potentially) different answers:
@@ -327,6 +329,20 @@ Domain-specific Embedded Languages, _EDSLs_
 {{{
   foldr (*) 1 [42,13,22]
 }}}
+
+= Where are the Benefits? =
+
+Security by
+  # static type discipline
+
+Efficiency by
+  # pureness, default immutability
+  # easier to parallelize to many cores
+  # no locking necessary
+
+Economy by
+  # powerful combinator libraries
+  # type inference, i.e. no type annotations required
 
 = Who uses Haskell/FP? ==
 
