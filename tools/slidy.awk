@@ -11,15 +11,25 @@ skipScript {
   next
 }
 
-### TODO:
-#  <link rel="stylesheet" type="text/css" media="screen, projection, print" href="http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" /> 
-
-
 /<script type="text\/javascript" charset="utf-8">/ {
   print "  <script src='http://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js' charset='utf-8' type='text/javascript'></script>"
   skipScript = 1
   next
 }
+
+/<style type="text\/css">/ {
+  styleEncountered++
+}
+
+styleEncountered == 2 && /<\/style>/ {
+  print "  <link rel='stylesheet' type='text/css' media='screen, projection, print' href='http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css' />"
+  styleEncountered = 3
+}
+
+styleEncountered == 2 {
+  next
+}
+
 
 {
     sub(/<title>Haskell: Functional Programming, Solid Code, Big Data<\/title>/, "<title>Intro \\&ldquo;Functional Programming\\&rdquo;</title>")
