@@ -25,5 +25,5 @@ wiki.html.content: wiki.html
 	awk -f wiki.awk < $(<) | awk -f hierarchy.awk > $@
 
 slides.html: slidy.html.top slides.html.cover wiki.html.content slides.html.tail
-	cat $(^) > $@
+	cat $(^) | awk -f backgrounds.awk > $@
 
