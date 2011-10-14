@@ -7,6 +7,11 @@ BEGIN {
   print ""
   print "<div class='background cover'>"
   print "  <img style='width: 100%; float:right' src='ALTA_Flower.png' alt='ALTA flower' />"
+  print "  <a href='mailto:gabor.greif@alcatel-lucent.com'>Gabor.Greif@alcatel-lucent.com</a>"
+  print "</div>"
+  print ""
+  print "<div class='background haskell'>"
+  print "  <img style='float:right' src='http://www.haskell.org/wikiupload/4/4a/HaskellLogoStyPreview-1.png' alt='Haskell logo' />"
   print "</div>"
   print ""
 }
@@ -15,12 +20,6 @@ BEGIN {
   slidecount++
   if (slidecount == 2)
   {
-    print ""
-    print "<div class='background haskell'>"
-    print "  <img style='float:right' src='http://www.haskell.org/wikiupload/4/4a/HaskellLogoStyPreview-1.png' alt='Haskell logo' />"
-    print "</div>"
-    print ""
-
     sub(/slide/, "slide haskell")
   }
 }
