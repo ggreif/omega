@@ -7,7 +7,7 @@ BEGIN {
   print ""
   print "<div class='background cover'>"
   print "  <img style='width: 100%; float:right' src='ALTA_Flower.png' alt='ALTA flower' />"
-  print "  <a href='mailto:gabor.greif@alcatel-lucent.com'>Gabor.Greif@alcatel-lucent.com</a>"
+  print "  <a href='mailto:Gabor.Greif@alcatel-lucent.com'>Gabor.Greif@alcatel-lucent.com</a>"
   print "</div>"
   print ""
   print "<div class='background haskell'>"
