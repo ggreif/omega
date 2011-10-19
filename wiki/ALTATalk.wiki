@@ -133,8 +133,6 @@ Anonymous functions can be obtained
 
 May capture local variables in scope.
 
-(##Visitor pattern?)
-
 == Combinators ==
   * Parsing/pretty-printing
   * Database queries
