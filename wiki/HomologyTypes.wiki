@@ -80,9 +80,7 @@ This is also called the Curry-Howard correspondence
 The standard (string diagram) representation of a function
 is like this:
 
-      +---+
-------| f |---->
-      +---+
+[http://omega.googlecode.com/svn/wiki/Arrow-f.svg]
 
 Let's assume f = \ a -> not (not a), the identity function on booleans.
 But we are much more interested in the type of the value f. The
