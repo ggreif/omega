@@ -88,7 +88,7 @@ Let's assume f = \ a -> not (not a), the identity function on booleans.
 But we are much more interested in the type of the value f. The
 dependent lambda calculus assigns a type ∏x:Bool.Bool to it,
 
-∏x:Bool.Bool<wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="prod_(tt"Bool")tt"Bool"" height="15"/> corresponds to
+∏x:Bool.Bool<wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content='prod_(tttext(Bool))tttext(Bool)' height="15"/> corresponds to
 
 [http://omega.googlecode.com/svn/wiki/Bool-cones.svg]
 
@@ -114,9 +114,9 @@ manyfolds
 
 (topology)
 
-42 is boundary of Int
+42 is boundary of `Int`
 
-Equal Int Int is boundary of *
+`Equal Int Int` is boundary of *
 
 
 === The Simplicial Complex ===
