@@ -61,7 +61,7 @@ the level below is typed by the level above
 as sets
 
   * 42 ∈ ℤ
-  * Int ∈ *
+  * Int ∈ `*`
 
 === Type theory interpretation ===
 
@@ -69,10 +69,10 @@ This is also called the Curry-Howard correspondence
 
 (logic) types as propositions, values as proofs
 
-  * \x.x proves Int -> Int
-  * 42 proves Int
-  * Int proves *
-  * Eq proves Equal Int Int
+  * `\x.x` proves `Int -> Int`
+  * 42 proves `Int`
+  * `Int` proves `*`
+  * `Eq` proves `Equal Int Int`
 
 
 === Coloring our Ideas ===
@@ -82,7 +82,7 @@ is like this:
 
 [http://omega.googlecode.com/svn/wiki/Arrow-f.svg]
 
-Let's assume f = \ a -> not (not a), the identity function on booleans.
+Let's assume `f = \ a -> not (not a)`, the identity function on booleans.
 But we are much more interested in the type of the value f. The
 dependent lambda calculus assigns a type ∏x:Bool.Bool to it,
 
@@ -130,7 +130,7 @@ manyfolds
 We will see that the zero-dimensional entities are the most crucial ones, as they are the connecting point for
  - values -- y = f(x) -- x travels on the cone towards combinator f and y leaves on the result cone.
  - types -- the incoming cone and result cone touch in the focal point, the combinator
- - kinds -- *, * ~> *, etc. -- the volume enclosed in the cones
+ - kinds -- `*`, `* ~> *`, etc. -- the volume enclosed in the cones
 
 ==== Topology redux ====
 
@@ -147,19 +147,20 @@ classes, representants
 === The Nat Datatype ===
 
 - Zero: as a type -- a (topologically open) unit disc with yellow on one side and green on the other;
-as a value -- the unit circle (S1). [The S1 is the same as the Zero/\Zero when those cover a S2 (sphere)]
+as a value -- the unit circle (S1). [The S1 is the same as the Zero∧Zero when those cover a S2 (sphere)]
 
 - Successor: as a value - A function with arity one; as a type - two cones meeting in the middle, one
 to the left (the argument type) and one to the right (the result type). The result cone flips the inside and
 outside colors and softens the hue of the colors (but any other progressive - i.e. 2-forward, one back -
 coloring scheme is feasible).
 
-Typing relation:   Boundary :: Manifold
- this can happen at any level
+ Typing relation: _Boundary_ :: _Manifold_
+
+this can happen at any level
 
 We get a homology theory when we have
 
-0 :: Values :: Types :: Kinds :: Sorts :: ...
+∅ :: Values :: Types :: Kinds :: Sorts :: ...
        <- ∂ --
 
 [actually we have to define a Value/Type/etc. at each level as a 'triad' (X; X0, X1)]
@@ -209,9 +210,7 @@ Constructors appear at every level, and contrary to functions (at any level) the
 but accumulate/aggregate it [accumulate: may contain existentials whose type is not visible outside. Usually the values
 themselves are existential, though.]
 
-We depict value constructors like a mushroom. the inner bubble joined on the top of a cylinder with a bigger bubble
-joining at the same place. The circle where everything joins is a dense set (compact) and its closure homeomorphic
-to a value. The dense set is still 0-dimensional [thus no value can pass through it].
+We depict value constructors like a mushroom. The inner bubble joined on the top of a cylinder with a bigger bubble joining at the same place. The circle where everything joins is a dense set (compact) and its closure homeomorphic to a value. The dense set is still 0-dimensional [thus no value can pass through it].
 
 Type constructors are harder to depict, as they join solids instead of surfaces, so the dense set that joins them has
 a 2-dimensional closure. We could place a B3 inside, and a hollow ball outside (the latter being * ~> *). [this idiom
