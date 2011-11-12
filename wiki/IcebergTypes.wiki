@@ -1,0 +1,25 @@
+#summary Different data types are just visible tips of the same iceberg.
+#labels Deprecated
+
+= Introduction =
+
+Usually programmers encounter data types as isolated or mutually recursive entities.
+
+{{{
+data Nat = Z | S Nat
+data Foo = F Bar
+data Bar = B Foo
+}}}
+
+
+= The Idea =
+
+We argue that actually the different data types are just the _apparent_ parts of a big data type, just like there might be visible tips of a great iceberg.
+{{{
+data Iceberg :: Tag ~> * where
+  Iceberg〈Nat〉Z :: Iceberg〈Nat〉
+  Iceberg〈Nat〉S :: Iceberg〈Nat〉-> Iceberg〈Nat〉
+  Iceberg〈Foo〉F :: Iceberg〈Bar〉-> Iceberg〈Foo〉
+  Iceberg〈Bar〉B :: Iceberg〈Foo〉-> Iceberg〈Bar〉
+}}}
+This idea is an old one. Sheard & Ahn 
