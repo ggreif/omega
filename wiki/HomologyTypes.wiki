@@ -51,9 +51,9 @@ A little explanation to our nomenclature is due now. In most publications the do
 
 Omega provides an infinite hierarchy of types
 
-show picture
+[http://omega.googlecode.com/svn/wiki/Kind-hierarchy.svg]
 
-the level below is typed by the level above
+where each level below is typed by the level above as highlighted by the arrows.
 
 
 === Classical interpretation of types ===
