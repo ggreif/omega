@@ -96,7 +96,7 @@ red  blue
     / \           two cones inside-out: Bool -> Bool
    /    \
  /        \
-[Bool-cones.svg]
+[http://omega.googlecode.com/svn/wiki/Bool-cones.svg]
 two cones inside-out: `Bool -> Bool`
 
 We use colours to differentiate between the two sides of the surfaces. The figure shows how the ∏ combinator reverses 'inside' and 'outside'. This is the consequence of the well known contravariance of function types.
