@@ -60,7 +60,7 @@ the level below is typed by the level above
 
 as sets
 
-  * 42 ∈ ZZ
+  * 42 ∈ ℤ
   * Int ∈ *
 
 === Type theory interpretation ===
@@ -88,17 +88,11 @@ Let's assume f = \ a -> not (not a), the identity function on booleans.
 But we are much more interested in the type of the value f. The
 dependent lambda calculus assigns a type ∏x:Bool.Bool to it,
 
-∏x:Bool.Bool<wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="prod_(ttBool)ttBool" height="15"/> corresponds to
-red  blue
-\         /
-  \     /  red
-    \ /
-    / \           two cones inside-out: Bool -> Bool
-   /    \
- /        \
-[http://omega.googlecode.com/svn/wiki/Bool-cones.svg]
-two cones inside-out: `Bool -> Bool`
+∏x:Bool.Bool<wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="prod_(tt"Bool")tt"Bool"" height="15"/> corresponds to
 
+[http://omega.googlecode.com/svn/wiki/Bool-cones.svg]
+
+two cones inside-out: `Bool -> Bool`.
 We use colours to differentiate between the two sides of the surfaces. The figure shows how the ∏ combinator reverses 'inside' and 'outside'. This is the consequence of the well known contravariance of function types.
 
 [
@@ -412,7 +406,7 @@ relating several levels
 directly below *∞
  - there is only one namespace, types and 'values' (their boundaries) appear at the same level (actually they are isomorphic)
  - the (::) typing relation is still possible
- - Z < Nat > S n, subtyping, Z :: Z, S n :: S n, S :: S [??? how can we show this, topologically? Simple: Mayer-Vietoris of tori
+ - Z < Nat > S n, subtyping, `Z :: Z`, `S n :: S n`, `S :: S` [??? how can we show this, topologically? Simple: Mayer-Vietoris of tori
 with genus n]
 
 == Other Work ==
