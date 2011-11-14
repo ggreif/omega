@@ -34,7 +34,7 @@ We can employ projections to get back our distinct surface types. We need two st
 
 == Parametrized Types? ==
 
-Can we integrate parametrized types into the iceberg? Probably yes, if we allow `Iceberg :: Tag ~> τ`.
+Can we integrate parametrized types into the iceberg? Probably yes, if we allow `Iceberg :: Tag ~> τ`. Of course `τ` must be variant on the tag. Also, `τ` must be extracted to build the projections.
 
 == Levels? ==
 
