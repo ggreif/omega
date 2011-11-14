@@ -17,9 +17,27 @@ data Bar = B Foo
 We argue that actually the different data types are just the _apparent_ parts of a big data type, just like there might be visible tips of a great iceberg.
 {{{
 data Iceberg :: Tag ~> * where
-  Iceberg〈Nat〉Z :: Iceberg〈Nat〉
-  Iceberg〈Nat〉S :: Iceberg〈Nat〉-> Iceberg〈Nat〉
-  Iceberg〈Foo〉F :: Iceberg〈Bar〉-> Iceberg〈Foo〉
-  Iceberg〈Bar〉B :: Iceberg〈Foo〉-> Iceberg〈Bar〉
+  Z :: Iceberg〈Nat〉
+  S :: Iceberg〈Nat〉-> Iceberg〈Nat〉
+  F :: Iceberg〈Bar〉-> Iceberg〈Foo〉
+  B :: Iceberg〈Foo〉-> Iceberg〈Bar〉
 }}}
-This idea is an old one. Sheard & Ahn 
+This idea is an old one. Sheard & Ahn use it in their [IcebergTypes#MendlerStyleRecursionCombinators paper] to model mutually recursive GADTs.
+
+= Projections =
+
+We can employ projections to get back our distinct surface types. We need two steps:
+  # partition the constructors by the `Iceberg〈TAG〉` in the result type.
+  # wrap each group with a `data` declaration, and drop all decorations.
+
+= Open Questions =
+
+== Parametrized Types? ==
+
+Can we integrate parametrized types into the iceberg? Probably yes, if we allow `Iceberg :: Tag ~> τ`.
+
+= Bibliography =
+
+== Mendler Style Recursion Combinators ==
+
+http://kyagrd.dyndns.org/wiki/MendlerStyleRecursionCombinators
