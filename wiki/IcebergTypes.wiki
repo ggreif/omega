@@ -22,7 +22,7 @@ data Iceberg :: Tag ~> * where
   F :: Iceberg〈Bar〉-> Iceberg〈Foo〉
   B :: Iceberg〈Foo〉-> Iceberg〈Bar〉
 }}}
-This idea is an old one. Sheard & Ahn use it in their [IcebergTypes#Mendler_Style_Recursion_Combinators paper] to model mutually recursive GADTs.
+This idea is an old one. Ahn & Sheard use it in their [IcebergTypes#Mendler_Style_Recursion_Combinators paper] to model mutually recursive GADTs.
 
 = Projections =
 
