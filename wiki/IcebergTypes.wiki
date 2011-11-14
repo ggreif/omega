@@ -1,5 +1,5 @@
 #summary Different data types are just visible tips of the same iceberg.
-#labels Deprecated
+#labels Deprecated,Phase-Design
 
 = Introduction =
 
@@ -35,6 +35,10 @@ We can employ projections to get back our distinct surface types. We need two st
 == Parametrized Types? ==
 
 Can we integrate parametrized types into the iceberg? Probably yes, if we allow `Iceberg :: Tag ~> τ`.
+
+== Levels? ==
+
+How do other levels (kinds, sorts, etc.) fit in? As `Iceberg :: Lvl ~> Tag ~> τ`, possibly? What are the consistency conditions for this scheme? Can we model level polymorphism too?
 
 = Bibliography =
 
