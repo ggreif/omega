@@ -18,7 +18,7 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,binop,opList,var,freshE,swp,dvars,evars,
              typeStrata,kindStrata,emptyF,Vars(..),boundBy
              ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
-import Data.List(partition)
+import List(partition)
 import Monads
 import RankN ( PT(..), typN, simpletyp, proposition, pt, allTyp
              , ptsub, getFree, parse_tag, props, typingHelp
@@ -26,7 +26,7 @@ import RankN ( PT(..), typN, simpletyp, proposition, pt, allTyp
 import SyntaxExt ( Extension(..), extP, SynExt(..)
                  , natP, SyntaxStyle(..) )
 import Auxillary(Loc(..),plistf,plist)
-import Data.Char(isLower,isUpper)
+import Char(isLower,isUpper)
 ---------------------------------------------------------
 
 loc p = SrcLoc (sourceName p) (sourceLine p) (sourceColumn p)

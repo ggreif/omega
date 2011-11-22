@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module Encoding where
 
-import Data.Maybe
+import Maybe
 import Monads
-import Control.Monad (liftM)
+import Monad (liftM)
 import RankN
 import Syntax
 import Value
-import Data.List(unionBy)
+import List(unionBy)
 import Bind
 import SyntaxExt(SynExt(..),listx,normalList)
 import Parser

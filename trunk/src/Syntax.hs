@@ -7,17 +7,17 @@
 module Syntax where
 
 import Bind
-import Control.Monad
+import Monad
 import Monads
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Auxillary
-import Data.List(elem,nub,union,(\\),partition,find)
+import List(elem,nub,union,(\\),partition,find)
 import RankN(PT(..),showp,getAll,getFree,getFreePredL,applyT',ptsub,ppredsub
             ,getMult,PPred(..),Pred(..),Quant(..)
             ,definesValueConstr,short)
 
 import SyntaxExt(Extension(..),extList,extKey,extM,ppExt,extThread,SynExt(..),synKey,synName)
-import Data.Char(isLower,isUpper,ord,chr)
+import Char(isLower,isUpper,ord,chr)
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
 

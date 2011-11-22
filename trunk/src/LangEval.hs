@@ -4,18 +4,18 @@ module LangEval(env0,vals,elaborate,Prefix(..),
 import Auxillary
 import Syntax
 import Encoding
-import Control.Monad(foldM)
+import Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..))
 import Value
 import RankN ( Sigma, runType, liftType, sigma4Eq, ToEnv, Z
              , star, star_star, poly, intT, short
              , Level(LvZero), PT(Rarrow', Karrow'), PolyKind(K), Tau(TyCon) )
-import Data.Char(chr,ord)
+import Char(chr,ord)
 
 import ParserDef(pe)
 import System.IO.Unsafe(unsafePerformIO)
-import Data.List(union,unionBy,(\\),find)
+import List(union,unionBy,(\\),find)
 import Bind
 import Parser( (<|>),(<?>),Parser, satisfy, char, string, many, many1
              , try, between, sepBy, symbol )
@@ -133,7 +133,7 @@ evalZ env (Do (bindE,failE) stmts) =
      ; evalDo bind fail stmts env }
 evalZ env (Bracket e) =
   do { e2 <- freshE e
-     ; e3 <- rebuild (1::Int) env e2
+     ; e3 <- rebuild 1 env e2
      ; return (Vcode e3 empty) }
 evalZ env (Escape e) = fail ("Escape not allowed at level 0" ++ show (Escape e))
 evalZ env (Reify s v) = return(push env v)
@@ -157,7 +157,7 @@ makeR env level perm = Par ext app inc esc
                 in case static name env of
                     Just v -> return(Reify (show name) v)
                     Nothing -> return(Var name)
-        inc = makeR env (level+ (1::Int)) perm
+        inc = makeR env (level+1) perm
         esc e = case level of
                  0 -> fail "Escape at level 0"
                  1 -> do { ww <- eval env (swaps perm e)
