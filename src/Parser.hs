@@ -71,9 +71,9 @@ module Parser(
 
 import ParseError
 import CommentDef
-import Control.Monad
-import Data.Char
-import Data.List(nub)
+import Monad
+import Char
+import List(nub)
 import System.IO(hGetContents,Handle)
 
 -----------------------------------------------------------

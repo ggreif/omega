@@ -8,7 +8,7 @@ module ParseExpr( Assoc(..), Operator(..), OperatorTable
                 , buildExpressionParser
                 ) where
 
-import Data.Char
+import Char
 import Parser
 
 

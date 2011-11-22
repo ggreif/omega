@@ -4,7 +4,7 @@
 module Value where
 import Auxillary(plist,plistf)
 import Monads(FIO,fio,HasNext(..))
-import Control.Monad
+import Monad
 import Syntax
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Bind

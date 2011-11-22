@@ -4,7 +4,7 @@
   #-}
 module Infer where
 
-import Data.Char(isAlpha,isUpper)
+import Char(isAlpha,isUpper)
 import qualified Data.Map as Map
 import Data.List(intersperse)
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
@@ -14,7 +14,7 @@ import System.Time(ClockTime)
 
 import PureReadline
 
-import Control.Monad(when,foldM,liftM,filterM)
+import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
              ,Exception(..), fixMtc
              ,FIO(..),fio,failP,fio2Mtc,runFIO,io2Mtc
@@ -63,7 +63,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,morepolyPolyExpectRho)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey
                 ,buildExt,listx,pairx,natx,wExt,duplicates,checkClause,checkMany,liftEither)
-import Data.List((\\),partition,sort,sortBy,nub,union,unionBy
+import List((\\),partition,sort,sortBy,nub,union,unionBy
            ,find,deleteFirstsBy,groupBy,intersect)
 import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix

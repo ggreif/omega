@@ -3,8 +3,8 @@
   #-}
 module Auxillary where
 
-import Data.Char(isAlpha)
-import Data.List(find,union)
+import Char(isAlpha)
+import List(find,union)
 
 
 whenM :: Monad m => m Bool -> m b -> [Char] -> m b
