@@ -1,12 +1,12 @@
 module BuildDistr  where
 
-import System.Directory ( doesFileExist, doesDirectoryExist, removeFile
+import Directory ( doesFileExist, doesDirectoryExist, removeFile
                  , getCurrentDirectory,setCurrentDirectory
                  , getDirectoryContents)
 import System.Directory (createDirectoryIfMissing)
-import System.Environment(getArgs)
-import System.Process(system)
-import System.Time (getClockTime, toCalendarTime, calendarTimeToString)
+import System.Environment (getArgs)
+import System.Process (system)
+import Time (getClockTime, toCalendarTime, calendarTimeToString)
 import BuildSpecific ( defaultHome, distrDir, srcDir, utilDir, parseDir, libDir
                      , manualDir, testsDir, rootDir, extension, version)
 import System.IO.Unsafe (unsafePerformIO)
@@ -59,7 +59,7 @@ sources libDir parseDir srcDir testsDir rootDir utilDir =
    (srcDir, "LangPrelude", ".prg"),
    (rootDir, "LICENSE", ".txt"),
    (srcDir, "Makefile",""),
-   (utilDir, "Omega",".cabal"), 
+   (utilDir, "omega",".cabal"), 
    (utilDir, "Setup",".hs")
  ]
 
