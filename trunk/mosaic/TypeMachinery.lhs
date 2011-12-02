@@ -35,6 +35,13 @@ Nat' addition
 > plus Z n = n
 > plus (S m) n = S (plus m n)
 
+Equality on Nat'
+
+> sameNat' :: Nat' a -> Nat' b -> Bool
+> sameNat' Z Z = True
+> sameNat' (S m) (S n) = sameNat' m n
+> sameNat' _ _ = False
+
 A data type for existentially hiding
 (e.g.) Nat' values
 
@@ -50,12 +57,26 @@ A data type for existentially hiding
 
 Now we are ready to make Hidden Nat' an Integral type
 
-> instance Eq (Hidden Nat')
+> instance Eq (Hidden Nat') where
+> Hide a == Hide b = sameNat' a b
+
 > instance Ord (Hidden Nat')
-> instance Enum (Hidden Nat')
-> instance Num (Hidden Nat')
-> instance Real (Hidden Nat')
+> instance Enum (Hidden Nat') where
+>   toEnum = toEnum . fromIntegral -- . toInteger
+>   fromEnum = fromIntegral
+
+> instance Num (Hidden Nat') where
+>   fromInteger = toNat'
+>   signum (Hide Z) = 0
+>   signum _ = 1
+>   abs n = n
+>   Hide a + Hide b = Hide $ plus a b
+>   a * b = fromInteger $ toInteger a * toInteger b
+
+> instance Real (Hidden Nat') where
+>   toRational = toRational . toInteger
 
 > instance Integral (Hidden Nat') where
-> toInteger (Hide Z) = 0
+>   toInteger (Hide Z) = 0
+>   toInteger (Hide (S n)) = 1 + toInteger (Hide n)
 
