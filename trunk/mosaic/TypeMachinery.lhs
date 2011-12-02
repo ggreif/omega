@@ -60,9 +60,14 @@ Now we are ready to make Hidden Nat' an Integral type
 > instance Eq (Hidden Nat') where
 > Hide a == Hide b = sameNat' a b
 
-> instance Ord (Hidden Nat')
+> instance Ord (Hidden Nat') where
+>   Hide Z `compare` Hide Z = EQ
+>   Hide Z `compare` Hide _ = LT
+>   Hide _ `compare` Hide Z = GT
+>   Hide (S m) `compare` Hide (S n) = Hide m `compare` Hide n
+
 > instance Enum (Hidden Nat') where
->   toEnum = toEnum . fromIntegral -- . toInteger
+>   toEnum = toEnum . fromIntegral
 >   fromEnum = fromIntegral
 
 > instance Num (Hidden Nat') where
@@ -79,4 +84,4 @@ Now we are ready to make Hidden Nat' an Integral type
 > instance Integral (Hidden Nat') where
 >   toInteger (Hide Z) = 0
 >   toInteger (Hide (S n)) = 1 + toInteger (Hide n)
-
+>   quotRem a b = let (a', b') = toInteger a `quotRem` toInteger b in (fromInteger a', fromInteger b')
