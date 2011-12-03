@@ -3,10 +3,12 @@ locations of the parsed stuff in the type of the stuff.
 
 See my blog post: http://heisenbug.blogspot.com/2011/11/pondering-about-foundations.html
 
+> {-# LANGUAGE GADTs, KindSignatures #-}
+
 > module BoundedParser where
 > import Text.Parsec
 > import Data.Thrist
-> import TypeMachinery (Z, S, Nat'(..))
+> import TypeMachinery (Z, S, Nat'(..), toNat')
 
 Our tokens coming from the underlying parser are
 outfitted with bounds. These become visible in the
@@ -24,5 +26,19 @@ world.
 > bounded p = do a <- getPosition
 >                t <- p
 >                e <- getPosition
->                return $ Bounded t undefined undefined
+>                return $ Bounded t undefined undefined -- (toNat' $ sourceColumn a) (toNat' $ sourceColumn e)
+
+We want to obtain a thrist as a result of parsing (see blog post)
+and we describe our Parser as a thrist (see paper:
+http://omega.googlecode.com/files/Thrist-draft-2011-11-20.pdf )
+
+> data Parse :: * -> * -> * where
+>  Atom :: Char -> Parse Char Char
+>  Sure :: (a -> b) -> Parse a b
+>  Try :: (a -> Maybe b) -> Parse a b
+>  Rep1 :: Parse a b -> Parse [a] ([b], [a])
+>  Rep :: Parse [a] (b, [a]) -> Parse [a] ([b], [a])
+>  Group :: [Parse a b] -> Parse [a] ([b], [a])
+>  Par :: Parse a b -> Parse c d -> Parse (a, c) (b, d)
+>  Wrap :: Thrist Parse a b -> Parse a b
 
