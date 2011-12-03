@@ -36,9 +36,21 @@ http://omega.googlecode.com/files/Thrist-draft-2011-11-20.pdf )
 >  Atom :: Char -> Parse Char Char
 >  Sure :: (a -> b) -> Parse a b
 >  Try :: (a -> Maybe b) -> Parse a b
+>  Or :: Parse a b -> Parse a b -> Parse a b
 >  Rep1 :: Parse a b -> Parse [a] ([b], [a])
 >  Rep :: Parse [a] (b, [a]) -> Parse [a] ([b], [a])
 >  Group :: [Parse a b] -> Parse [a] ([b], [a])
 >  Par :: Parse a b -> Parse c d -> Parse (a, c) (b, d)
 >  Wrap :: Thrist Parse a b -> Parse a b
 
+We need to translate Thrist Parse to Parsec, and the result
+of running the parser should be a BoundedToken thrist.
+
+> baz :: Stream s m a => Thrist Parse a b -> ParsecT s u m b
+> baz (Cons (Atom c) Nil) = do [c'] <- try $ string [c]
+>                              return c'
+
+Backup material
+---------------
+
+foldMThrist :: Monad m => (forall j k. (a +> j) -> (j ~> k) -> m (a +> k)) -> (a +> b) -> Thrist (~>) b c -> m (a +> c)
