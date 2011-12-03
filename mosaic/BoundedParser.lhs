@@ -47,8 +47,7 @@ We need to translate Thrist Parse to Parsec, and the result
 of running the parser should be a BoundedToken thrist.
 
 > baz :: Stream s m a => Thrist Parse a b -> ParsecT s u m b
-> baz (Cons (Atom c) Nil) = do [c'] <- try $ string [c]
->                              return c'
+> baz (Cons (Atom c) Nil) = char c
 
 Backup material
 ---------------
