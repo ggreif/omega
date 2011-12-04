@@ -49,7 +49,10 @@ of running the parser should be a BoundedToken thrist.
 > baz :: Stream s m a => Thrist Parse a b -> ParsecT s u m b
 > baz (Cons h rest) = do here <- baz' h
 >                        let cont = baz rest
->                        return $ runParser cont undefined "" here
+>                        st <- getParserState
+>                        case runParserT cont st "" [here] of
+>                          Right b -> return undefined
+>                          Left err -> fail "No way"
 >   where baz' :: Stream s m a => Parse a b -> ParsecT s u m b
 >         baz' (Or l r) = baz' l <|> baz' r
 >         baz' (Atom c) = char c
