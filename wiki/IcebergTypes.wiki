@@ -36,6 +36,8 @@ We can employ projections to get back our distinct surface types. We need two st
 
 Can we integrate parametrized types into the iceberg? Probably yes, if we allow `Iceberg :: Tag ~> τ`. Of course `τ` must be variant on the tag. Also, `τ` must be extracted to build the projections.
 
+Since we wish to integrate n-ary types into the iceberg, `τ` must actually be of `∫ ~> *`, where `∫` can be a telescope (i.e. a dependent context). The telescopes for each tag must unify in length and componentwise, so we should possibly pair it up with the tag as in `〈TAG, ∫〉`.
+
 == Levels? ==
 
 How do other levels (kinds, sorts, etc.) fit in? As `Iceberg :: Lvl ~> Tag ~> τ`, possibly? What are the consistency conditions for this scheme? Can we model level polymorphism too?
