@@ -146,13 +146,19 @@ classes, representants
 
 === The Nat Datatype ===
 
-- Zero: as a type -- a (topologically open) unit disc with yellow on one side and green on the other;
-as a value -- the unit circle (S1). [The S1 is the same as the Zero∧Zero when those cover a S2 (sphere)]
+The usual definition of natural numbers is
+{{{
+data Nat = Zero | Successor Nat
+}}}
 
-- Successor: as a value - A function with arity one; as a type - two cones meeting in the middle, one
-to the left (the argument type) and one to the right (the result type). The result cone flips the inside and
-outside colors and softens the hue of the colors (but any other progressive - i.e. 2-forward, one back -
-coloring scheme is feasible).
+We can assign some images to these data constructors:
+  * Zero:
+    * as a type — a (topologically open) unit disc with yellow on one side and green on the other;
+    * as a value — the unit circle (S1). [The S1 is the same as the Zero∧Zero when those cover a S2 (sphere)]
+
+  * Successor:
+    * as a value — a function with arity one
+    * as a type — two cones meeting in the middle, one to the left (the argument type) and one to the right (the result type). The result cone flips the inside and outside colors and softens the hue of the colors (but any other progressive - i.e. 2-forward, one back - coloring scheme is feasible).
 
  Typing relation: _Boundary_ :: _Manifold_
 
