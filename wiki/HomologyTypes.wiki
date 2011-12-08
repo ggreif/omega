@@ -160,8 +160,8 @@ this can happen at any level
 
 We get a homology theory when we have
 
-∅ :: Values :: Types :: Kinds :: Sorts :: ...
-       <- ∂ --
+∅ :: Values :: Types :: Kinds :: Sorts :: ⋯
+       ← ∂ ―
 
 [actually we have to define a Value/Type/etc. at each level as a 'triad' (X; X0, X1)]
 [Mayer-Vietoris sequences?]
@@ -333,13 +333,13 @@ of the boundary of the bordism.
 
 === Dualities ===
 
-==== Pi <-> Sigma duality ====
+==== Pi ↔ Sigma duality ====
 
 Depending on the viewpoint we have
  o two joined cones
  o opposite cones
 
-==== Existential <-> Universal ====
+==== Existential ↔ Universal ====
 
 calling universally quantified function of arity 2 is
  - creating a copy of the still uncolored function (as value - a double-circle on the left single on the right, probably with 3 lines to the focus?)
