@@ -28,6 +28,8 @@ prop Nat' :: Nat ~> *0 where
 }}}
 as defined in the Ωmega builtins. `prop` seems to project from `*` to `Prop`, the latter being the category of propositions.
 
+See also Robert Atkey's [http://personal.cis.strath.ac.uk/~raa/posts/2011-04-28-folds-and-induction.html blog].
+
 == Deriving Refinements ==
 
 Have to read this, but at first glance it tries to come up with the index types for non-indexed (G)ADTs.
