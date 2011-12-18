@@ -46,6 +46,8 @@ http://portal.acm.org/citation.cfm?id=1328438.1328475&coll=DL&dl=GUIDE&CFID=7492
 
 Interestingly I have been playing around with [http://svn.berlios.de/svnroot/repos/al4nin/trunk/purgatory/Sum.omg?p=1038 similar ideas]. See the `Equate` constructor of GADT `Free`.
 
+Recently Fiore and Hamana gave an initial algebra semantics to GADTs via [http://www.cl.cam.ac.uk/~mpf23/papers/Types/gadtif.pdf polynomial functors].
+
 == Set- and Bag-like Theorems ==
 
 Issue 6 describes an idea with _bagifying_ resp. _setifying_ type functions. These are suggested to be magic builtins, but there is another possibility of postulating _associativity_, _commutativity_ and _redundancy_ for list-like (or even tree-like) datatypes, with `theorem` declarations. The latter two theorem forms would correspond to _bags_, resp. _sets_, and could be implemented internally in a more efficient manner.
