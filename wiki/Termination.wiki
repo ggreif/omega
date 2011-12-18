@@ -17,6 +17,8 @@ Here comes a selection of references to some current ideas in type based termina
 
 _See also references at the end of above papers._
 
+There is a [http://personal.cis.strath.ac.uk/~raa/posts/2011-04-28-folds-and-induction.html very nice blog post] form Robert Atkey which explains structural induction (not coinduction) and references many interesting discussions and papers.
+
 = Slide Shows =
 
   * [http://www.tcs.informatik.uni-muenchen.de/~abel/talkITU07.pdf]
