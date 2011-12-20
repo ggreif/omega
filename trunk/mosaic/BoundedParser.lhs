@@ -8,6 +8,8 @@ See my blog post: http://heisenbug.blogspot.com/2011/11/pondering-about-foundati
 > module BoundedParser where
 > import Text.Parsec
 > import Data.Thrist
+> import Data.ByteString
+> import Char
 > import TypeMachinery (Z, S, Nat'(..), toNat')
 
 Our tokens coming from the underlying parser are
@@ -47,16 +49,26 @@ We need to translate Thrist Parse to Parsec, and the result
 of running the parser should be a BoundedToken thrist.
 
 > baz :: Stream s m a => Thrist Parse a b -> ParsecT s u m b
+> baz Nil = tokenPrim undefined nextPos Just
+>         where nextPos pos x xs = pos
 > baz (Cons h rest) = do here <- baz' h
 >                        let cont = baz rest
 >                        st <- getParserState
 >                        case runParserT cont st "" [here] of
->                          Right b -> return undefined
+>                          Right (Right b) -> return b
 >                          Left err -> fail "No way"
 >   where baz' :: Stream s m a => Parse a b -> ParsecT s u m b
 >         baz' (Or l r) = baz' l <|> baz' r
 >         baz' (Atom c) = char c
+>         baz' (Sure f) = tokenPrim undefined nextPos (Just . f)
+>              where nextPos pos x xs = pos
 > 
+
+Now some simple tests
+
+> t1 :: Parsec String m Int
+> t1 = baz (Cons (Or (Atom 's') (Atom 'S')) (Cons (Sure Char.ord) Nil))
+> t1' = parseTest t1 "S"
 
 Backup material
 ---------------
