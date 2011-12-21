@@ -25,14 +25,23 @@ Note: we do not yet require that e is strictly bigger than a.
 >   StringLit :: Nat' a -> Nat' e -> String -> BoundedToken String a e
 > deriving instance Show (BoundedToken t a e)
 
+> class Parsable t where
+>   dress :: Stream s m ba => Nat' a -> ParsecT s u m t -> ParsecT s u m (BoundedToken t a e)
+>
+> instance Parsable Int where
+>   dress a p = do a' <- getPosition
+>                  t <- p
+>                  e <- getPosition
+>                  return $ IntLit a undefined t
+
 We have to lift the parser operations into our bounded
 äworld.
 
-> bounded :: Monad m => ParsecT s u m Int -> ParsecT s u m (BoundedToken Int a e)
-> bounded p = do a <- getPosition
->                t <- p
->                e <- getPosition
->                return $ IntLit undefined undefined 42 -- (toNat' $ sourceColumn a) (toNat' $ sourceColumn e)
+> bounded :: Monad m => Nat' a -> ParsecT s u m Int -> ParsecT s u m (BoundedToken Int a e)
+> bounded strt p = do a <- getPosition
+>                     t <- p
+>                     e <- getPosition
+>                     return $ IntLit strt undefined 42 -- (toNat' $ sourceColumn a) (toNat' $ sourceColumn e)
 
 Classical approach, by having an Expr type
 
