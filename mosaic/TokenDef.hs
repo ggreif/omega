@@ -1,41 +1,33 @@
 module TokenDef ( tokenDef, omegaTokenParser
-                , TokenDef.identifier ) where
+                , TokenDef.identifier
+                , TokenDef.braces
+                , TokenDef.parens
+                , TokenDef.reserved ) where
 
 import Text.Parsec.Token
 import Text.Parsec.Language
---import StdTokenDef
---import CommentDef
 
--- Haskell Style Comments
+-- Reserved Stuff
 --
-cStart = "{-"   -- (commentStart tokenDef)
-cEnd   = "-}"   -- (commentEnd tokenDef)
-cLine  = "--"   -- (commentLine tokenDef)
-nestedC = True  -- (nestedComment tokenDef)
-
-omegaStyle = haskellStyle
-   { commentEnd = cEnd
-   , commentStart = cStart
-   , commentLine = cLine
-   , nestedComments = nestedC
-   , reservedNames = [ "let", "in", "case", "of", "data", "kind", "prop", "where"
+omegaDef = haskellStyle
+   { reservedNames = [ "let", "in", "case", "of", "data", "kind", "prop", "where"
                      , "type", "if", "then", "else", "deriving", "do"
                      , "circuit", "theorem"
                      , "forall", "exists", "Ex", "check", "lazy", "flag"
                      , "monad", "primitive", "unreachable", "import"
                      ]
-   , reservedOpNames = [ "=", "\\"
-                       , "[|", "|]"
+   , reservedOpNames = reservedOpNames haskellDef ++
+                       [ "[|", "|]"
                        , "[e|"
                        , "[d|"
                        , "[p|"
                        , "[t|"
-                       ]
+                       ] 
    }
 
-tokenDef = omegaStyle
+tokenDef = omegaDef
 
-omegaTokenParser = makeTokenParser tokenDef
+omegaTokenParser = makeTokenParser omegaDef
 
 parens = Text.Parsec.Token.parens omegaTokenParser
 braces = Text.Parsec.Token.braces omegaTokenParser
