@@ -3,7 +3,7 @@ locations of the parsed stuff in the type of the stuff.
 
 See my blog post: http://heisenbug.blogspot.com/2011/11/pondering-about-foundations.html
 
-> {-# LANGUAGE GADTs, KindSignatures #-}
+> {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving #-}
 
 > module BoundedParser where
 > import Text.Parsec
@@ -11,6 +11,7 @@ See my blog post: http://heisenbug.blogspot.com/2011/11/pondering-about-foundati
 > import Data.ByteString
 > import Char
 > import TypeMachinery (Z, S, Nat'(..), toNat')
+> import TokenDef
 
 Our tokens coming from the underlying parser are
 outfitted with bounds. These become visible in the
@@ -18,17 +19,20 @@ type of the token.
 
 Note: we do not yet require that e is strictly bigger than a.
 
-> data BoundedToken t a e = Bounded t (Nat' a) (Nat' e)
->  deriving Show
+> data BoundedToken t a e where
+>   IntLit :: Nat' a -> Nat' e -> Int -> BoundedToken Int a e
+>   CharLit :: Nat' a -> Nat' e -> Char -> BoundedToken Char a e
+>   StringLit :: Nat' a -> Nat' e -> String -> BoundedToken String a e
+> deriving instance Show (BoundedToken t a e)
 
 We have to lift the parser operations into our bounded
-world.
+äworld.
 
-> bounded :: Monad m => ParsecT s u m t -> ParsecT s u m (BoundedToken t a e)
+> bounded :: Monad m => ParsecT s u m Int -> ParsecT s u m (BoundedToken Int a e)
 > bounded p = do a <- getPosition
 >                t <- p
 >                e <- getPosition
->                return $ Bounded t undefined undefined -- (toNat' $ sourceColumn a) (toNat' $ sourceColumn e)
+>                return $ IntLit undefined undefined 42 -- (toNat' $ sourceColumn a) (toNat' $ sourceColumn e)
 
 We want to obtain a thrist as a result of parsing (see blog post)
 and we describe our Parser as a thrist (see paper:
@@ -39,7 +43,7 @@ http://omega.googlecode.com/files/Thrist-draft-2011-11-20.pdf )
 >  Sure :: (a -> b) -> Parse a b
 >  Try :: (a -> Maybe b) -> Parse a b
 >  Or :: Parse a b -> Parse a b -> Parse a b
->  Rep1 :: Parse a b -> Parse [a] ([b], [a])
+>  Rep' :: Parse a b -> Parse [a] ([b], [a])
 >  Rep :: Parse [a] (b, [a]) -> Parse [a] ([b], [a])
 >  Group :: [Parse a b] -> Parse [a] ([b], [a])
 >  Par :: Parse a b -> Parse c d -> Parse (a, c) (b, d)
@@ -63,6 +67,8 @@ of running the parser should be a BoundedToken thrist.
 >         baz' (Atom c) = char c
 >         baz' (Sure f) = tokenPrim undefined nextPos (Just . f)
 >              where nextPos pos x xs = pos
+>         --baz' (Rep' a) = do as <- many (baz' a) -- Parse [a] ([b], [a]) -> ParsecT s u m ([b], [a])
+>         --                   return (as, [])
 > 
 
 Now some simple tests
