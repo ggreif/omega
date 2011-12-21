@@ -54,8 +54,9 @@ of running the parser should be a BoundedToken thrist.
 > baz (Cons h rest) = do here <- baz' h
 >                        let cont = baz rest
 >                        st <- getParserState
->                        case runParserT cont st "" [here] of
->                          Right (Right b) -> return b
+>                        pd <- runParserT cont st "" [here]
+>                        case pd of
+>                          Right b -> return b
 >                          Left err -> fail "No way"
 >   where baz' :: Stream s m a => Parse a b -> ParsecT s u m b
 >         baz' (Or l r) = baz' l <|> baz' r
