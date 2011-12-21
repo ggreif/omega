@@ -34,6 +34,15 @@ We have to lift the parser operations into our bounded
 >                e <- getPosition
 >                return $ IntLit undefined undefined 42 -- (toNat' $ sourceColumn a) (toNat' $ sourceColumn e)
 
+Classical approach, by having an Expr type
+
+> data Expr t a e where
+>   Var :: BoundedToken t a e -> Expr t a e
+>   BinaryApp :: Expr a aa ae -> BoundedToken (a -> b -> c) ae ba -> Expr b ba be -> Expr c aa be
+>   App :: Expr (b -> c) aa ae -> Expr b ba be -> Expr c aa be
+>
+
+
 We want to obtain a thrist as a result of parsing (see blog post)
 and we describe our Parser as a thrist (see paper:
 http://omega.googlecode.com/files/Thrist-draft-2011-11-20.pdf )
