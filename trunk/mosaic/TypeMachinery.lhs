@@ -85,3 +85,13 @@ Now we are ready to make Hidden Nat' an Integral type
 >   toInteger (Hide Z) = 0
 >   toInteger (Hide (S n)) = 1 + toInteger (Hide n)
 >   quotRem a b = let (a', b') = toInteger a `quotRem` toInteger b in (fromInteger a', fromInteger b')
+
+McBride's Fin data type. By counting backwards from the
+result index, it only admits a fixed number of inhabitants.
+
+> data Fin :: * -> * where
+>   Stop :: Fin (S Z)
+>   Retreat :: Fin s -> Fin (S s)
+
+> deriving instance Show (Fin a)
+
