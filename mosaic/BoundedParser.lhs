@@ -85,6 +85,8 @@ of running the parser should be a BoundedToken thrist.
 >         baz' (Atom c) = char c
 >         baz' (Sure f) = tokenPrim undefined nextPos (Just . f)
 >              where nextPos pos x xs = pos
+>         baz' (Try f) = tokenPrim undefined nextPos f
+>              where nextPos pos x xs = pos
 >         --baz' (Rep' a) = do as <- many (baz' a) -- Parse [a] ([b], [a]) -> ParsecT s u m ([b], [a])
 >         --                   return (as, [])
 > 
