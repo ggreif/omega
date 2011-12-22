@@ -38,7 +38,8 @@ kind Whether = Yes | No
 
 kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Addressable No }
 --TODO--
-data Target; data Miss
+
+> data Target; data Miss
 
             Arity ---+    +---- Path to here
                      v    v
@@ -61,5 +62,21 @@ Now the Path type is still missing. Here we go:
 > data Path p where
 >   Root :: Path Root
 >   A1 :: Path p -> Path (A1 p)
->   A2 :: Path p -> Path (A1 p)
+>   A2 :: Path p -> Path (A2 p)
 > deriving instance Show (Path p)
+
+> grab :: Path here -> Path p -> Underlying a here -> Sub p
+> grab Root Root tree = Sub tree
+> {-
+> grab here (A1 p) tree = case grab p tree of
+>                         Sub (l `App` _) -> Sub l
+>                         _ -> Miss
+> grab here (A2 p) tree = case grab (A2p tree of
+>                         Sub (_ `App` r) -> Sub r
+>                         _ -> Miss
+> -}
+
+> data Sub p where
+>   Miss :: Sub p
+>   Sub :: Underlying a p -> Sub p
+> deriving instance Show (Sub p)
