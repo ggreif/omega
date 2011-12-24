@@ -1,4 +1,5 @@
-> {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, TypeFamilies #-}
+> {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, TypeFamilies
+>            , MultiParamTypeClasses, FlexibleContexts, FlexibleInstances #-}
 
 > module Unify where
 
@@ -59,15 +60,19 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 > data Underlying :: * -> * -> * where
 >   App :: Underlying (S a) (A1 r) -> Underlying n (A2 r) -> Underlying a r
 >   Ctor :: Nat' n -> Underlying n here
->   Pntr :: Nat' (S up) -> Path p -> Underlying noArity (Sink up (p, S up)) -- just tuple them up and sink, a = A1 or A2
+>   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here
 > deriving instance Show (Underlying a p)
+
+We actually need a third parameter, the tree shape. I prefer not to
+additionally model it right now.
 
 Above we compute the Arity and the effective Address of a pointer.
 Here come the type functions how it is done.
 
-> type family Sink n t :: *
-> type instance Sink Z t = a t
-> type instance Sink (S n) t = a (Sink n t)
+> class InTree up path
+> instance InTree Z path
+> instance InTree up path => InTree (S up) (A1 path)
+> instance InTree up path => InTree (S up) (A2 path)
 
 > type family EffPath a n r :: *
 > type instance EffPath (A1 a) (S n) r = EffPath a n r
@@ -116,8 +121,6 @@ Now the Path type is still missing. Here we go:
 >   Redirected :: Path pth -> Underlying a pth -> Sub p
 > deriving instance Show (Sub p)
 
-> {-
 > t0 = Ctor (S Z) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
 > t1 = grab Root (A1 $ A2 Root) t0
 > t2 = grab Root (A2 $ A2 Root) t0
-> -}
