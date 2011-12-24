@@ -1,5 +1,6 @@
 > {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, TypeFamilies
->            , MultiParamTypeClasses, FlexibleContexts, FlexibleInstances #-}
+>            , MultiParamTypeClasses, FlexibleContexts, FlexibleInstances
+>            , UndecidableInstances #-}
 
 > module Unify where
 
@@ -98,19 +99,38 @@ Now the Path type is still missing. Here we go:
 >   A2 :: Path p -> Path (A2 p)
 > deriving instance Show (Path p)
 
-> grab :: Path here -> Path p -> Underlying a here -> Sub p
-> grab Root Root tree = Sub tree
+Please note that Path will be used in two senses, relative
+and absolute. The two conceptually associate in opposite
+directions and have different base atoms:
+
+Root ) A1 ) A2 ) ... ) Ak | Ak ( ... ( A2 Here
+---- absolute part ------> <------ relative part
+
+In Omega I would use a different set of constructors
+and pretty print them as LeftList and RightList.
+
+We connect them by a type function to obtain one
+absolute path (undecidable instances!).
+
+> type family PathSum a r :: *
+> type instance PathSum a Here = a
+> type instance PathSum a (A1 r) = PathSum (A1 a) r
+> type instance PathSum a (A2 r) = PathSum (A2 a) r
+
+
+> grab :: Path here -> Path p -> Underlying a here -> Sub (PathSum here p)
+> grab here Here tree = Sub tree
 > grab here p (Pntr (S n) rel) = Chase n rel
 > grab here (A1 p) tree = case grab here p tree of
 >                         --Sub (l `App` _) -> Sub l
 >                         --Sub (Pntr Z Root) -> undefined -- Redirected (A1 p) tree -- Sub tree
 >                         _ -> Miss
 > grab here (A2 p) tree@(App _ r) = case grab (A2 here) p r of
->                                   Chase Z Here -> Redirected here tree
+>                                   Chase Z Here -> Redirected (A2 here) r
+>                                   Chase (S Z) Here -> Redirected here tree
 >                                   Chase (S go) p -> Chase go p
->                                   Chase Z p -> undefined --case grab' here p tree of
->                                                     --a -> a
->                                   Sub t -> undefined --Sub t
+>                                   Chase Z pth -> undefined -- grab (A2 here) pth r -- TODO: Redirected?
+>                                   Sub t -> Sub t
 >                                   _ -> Miss
 > 
 
@@ -122,5 +142,5 @@ Now the Path type is still missing. Here we go:
 > deriving instance Show (Sub p)
 
 > t0 = Ctor (S Z) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
-> t1 = grab Root (A1 $ A2 Root) t0
-> t2 = grab Root (A2 $ A2 Root) t0
+> t1 = grab Root (A1 $ A2 Here) t0
+> t2 = grab Root (A2 $ A2 Here) t0
