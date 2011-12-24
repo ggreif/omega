@@ -67,22 +67,19 @@ Now the Path type is still missing. Here we go:
 
 > grab :: Path here -> Path p -> Underlying a here -> Sub p
 > grab Root Root tree = Sub tree
+> grab here p (Pntr (S n) rel) = Sub $ Pntr n rel
 > grab here (A1 p) tree = case grab here p tree of
 >                         Sub (l `App` _) -> Sub l
+>                         Sub (Pntr Z Root) -> Redirected -- Sub tree
 >                         _ -> Miss
 > grab here (A2 p) tree = case grab here p tree of
 >                         Sub (_ `App` r) -> Sub r
+>                         --Sub (Pntr Z Root) -> Sub tree
 >                         _ -> Miss
-> {-
-> grab here (A1 p) tree = case grab p tree of
->                         Sub (l `App` _) -> Sub l
->                         _ -> Miss
-> grab here (A2 p) tree = case grab (A2p tree of
->                         Sub (_ `App` r) -> Sub r
->                         _ -> Miss
-> -}
+> 
 
 > data Sub p where
 >   Miss :: Sub p
 >   Sub :: Underlying a p -> Sub p
+>   Redirected :: Sub p
 > deriving instance Show (Sub p)
