@@ -59,15 +59,15 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 > data Underlying :: * -> * -> * where
 >   App :: Underlying (S a) (A1 r) -> Underlying n (A2 r) -> Underlying a r
 >   Ctor :: Nat' n -> Underlying n here
->   Pntr :: Nat' (S up) -> Path p -> Underlying noArity (Sink a up (p, S up)) -- just tuple them up and sink, a = A1 or A2
+>   Pntr :: Nat' (S up) -> Path p -> Underlying noArity (Sink up (p, S up)) -- just tuple them up and sink, a = A1 or A2
 > deriving instance Show (Underlying a p)
 
 Above we compute the Arity and the effective Address of a pointer.
 Here come the type functions how it is done.
 
-> type family Sink (a :: * -> *) n t :: *
-> type instance Sink a Z t = a t
-> type instance Sink a (S n) t = a (Sink a n t)
+> type family Sink n t :: *
+> type instance Sink Z t = a t
+> type instance Sink (S n) t = a (Sink n t)
 
 > type family EffPath a n r :: *
 > type instance EffPath (A1 a) (S n) r = EffPath a n r
