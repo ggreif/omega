@@ -228,11 +228,15 @@ Visualization by GraphViz
 > data TermGraph n e where
 >   NoTerm :: TermGraph n e
 >   Term :: Path p -> Underlying a p s -> TermGraph n e
+> deriving instance Show (TermGraph n e)
+
+> rootTerm = Term Root
 
 > instance IG.Graph TermGraph where
 >   empty = NoTerm
 >   isEmpty NoTerm = True
 >   isEmpty _ = False
+>   match 1 gr@(Term Root (l `App` r)) = (Just ([], 1, undefined, []), NoTerm)
 >   match node gr = (Just ([], node, undefined, []), gr) -- (Adj b,Node,a,Adj b)(MContext a b,g a b)
 >   mkGraph [n] [] = Term Root $ Ctor Z
 >   mkGraph [] [] = NoTerm
@@ -240,10 +244,11 @@ Visualization by GraphViz
 >   labNodes NoTerm = []
 >   labNodes term = [(1, undefined)]
 
-> g0 :: TermGraph Int Int --(Int, Int)
+> g0 :: TermGraph Int Int
 > g0 = IG.mkGraph [] []
 > g1 = GV.preview g0
-
+> g2 = rootTerm r0
+> g3 = defaultVis g2
 
 Example from the bindings...
 
