@@ -67,21 +67,16 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 We actually need a third parameter, the tree shape. I prefer not to
 additionally model it right now.
 
-Above we compute the Arity and the effective Address of a pointer.
-Here come the type functions how it is done.
+The Path in Pntr has an additional constraint that it must be Here
+or start A1.
+
+Above we declare an InTree constraint on Pntr,
+here come the instances how it is done.
 
 > class InTree up path
 > instance InTree Z path
 > instance InTree up path => InTree (S up) (A1 path)
 > instance InTree up path => InTree (S up) (A2 path)
-
-> type family EffPath a n r :: *
-> type instance EffPath (A1 a) (S n) r = EffPath a n r
-> type instance EffPath (A2 a) (S n) r = EffPath a n r
-> type instance EffPath a Z Here = a
-> type instance EffPath a Z (A1 r) = A1 (EffPath a Z r)
-> type instance EffPath a Z (A2 r) = A2 (EffPath a Z r)
-
 
 Please note that constructors do not have names, they have
 positions (addresses) in the tree. We refer to the same constructor
@@ -117,25 +112,24 @@ absolute path (undecidable instances!).
 > type instance PathSum a (A1 r) = PathSum (A1 a) r
 > type instance PathSum a (A2 r) = PathSum (A2 a) r
 
+Grab is a function to get a subtree at a relative path
 
 > grab :: Path here -> Path p -> Underlying a here -> Sub (PathSum here p)
 > grab here Here (Pntr (S n) rel) = Chase n rel
 > grab here Here tree = Sub tree
-> grab here (A1 p) tree@(App l _) = case grab (A1 here) p l of
->                                   Chase Z Here -> Redirected here tree
->                                   Chase Z pth -> case grab here pth tree of
->                                                  Sub t -> Redirected (addPath here pth) t
->                                                  _ -> Miss
->                                   Chase (S go) p -> Chase go p
->                                   sub -> sub
-> grab here (A2 p) tree@(App _ r) = case grab (A2 here) p r of
->                                   Chase Z Here -> Redirected here tree
->                                   Chase Z pth -> case grab here pth tree of
->                                                  Sub t -> Redirected (addPath here pth) t
->                                                  _ -> Miss
->                                   Chase (S go) p -> Chase go p
->                                   sub -> sub
-> 
+> grab here (A1 p) tree@(App l _) = grab' tree (A1 here) here p l
+> grab here (A2 p) tree@(App _ r) = grab' tree (A2 here) here p r
+> grab _ _ _ = Miss
+
+Helper function that can chase
+
+> grab' tree down here p r = case grab down p r of
+>                            Chase Z Here -> Redirected here tree
+>                            Chase Z pth -> case grab here pth tree of
+>                                           Sub t -> Redirected (addPath here pth) t
+>                                           _ -> Miss
+>                            Chase (S go) p -> Chase go p
+>                            sub -> sub
 
 > addPath :: Path a -> Path r -> Path (PathSum a r)
 > addPath a Here = a
@@ -145,7 +139,7 @@ absolute path (undecidable instances!).
 > data Sub p where
 >   Miss :: Sub p
 >   Sub :: Underlying a p -> Sub p
->   Chase :: Nat' n -> Path pth -> Sub p
+>   Chase :: Nat' n -> Path pth -> Sub p -- administrative
 >   Redirected :: Path pth -> Underlying a pth -> Sub p
 > deriving instance Show (Sub p)
 
@@ -157,3 +151,8 @@ absolute path (undecidable instances!).
 > t13 = grab Root (A2 $ A2 Here) t10
 > t20 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S $ S Z) Here)
 > t23 = grab Root (A2 $ A2 Here) t20
+> t30 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) Here)
+> t33 = grab Root (A2 $ A2 Here) t30
+> t34 = grab Root (A2 $ A2 (A1 Here)) t30 -- could work!
+
+TODO: unify
