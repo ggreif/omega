@@ -112,10 +112,16 @@ absolute path (undecidable instances!).
 > type instance PathSum a (A1 r) = PathSum (A1 a) r
 > type instance PathSum a (A2 r) = PathSum (A2 a) r
 
+> type family PathExt r r' :: *
+> type instance PathExt Here r = r
+> type instance PathExt (A1 r) r' = A1 (PathExt r r')
+> type instance PathExt (A2 r) r' = A2 (PathExt r r')
+
 Grab is a function to get a subtree at a relative path
 
 > grab :: Path here -> Path p -> Underlying a here -> Sub (PathSum here p)
-> grab here Here (Pntr (S n) rel) = Chase n rel
+> grab here Here (Pntr (S n) rel) = Chase n rel Here
+> grab here p (Pntr (S n) rel) = Chase n rel p
 > grab here Here tree = Sub tree
 > grab here (A1 p) tree@(App l _) = grab' tree (A1 here) here p l
 > grab here (A2 p) tree@(App _ r) = grab' tree (A2 here) here p r
@@ -124,22 +130,32 @@ Grab is a function to get a subtree at a relative path
 Helper function that can chase
 
 > grab' tree down here p r = case grab down p r of
->                            Chase Z Here -> Redirected here tree
->                            Chase Z pth -> case grab here pth tree of
->                                           Sub t -> Redirected (addPath here pth) t
->                                           _ -> Miss
->                            Chase (S go) p -> Chase go p
+>                            Chase Z Here Here -> Redirected here tree
+>                            Chase Z pth p -> case grab here ext tree of
+>                                             Sub t -> Redirected (addPath here ext) t
+>                                             _ -> Miss
+>                                        where ext = extendPath pth p
+>                            Chase (S go) pth p -> Chase go pth p
 >                            sub -> sub
+
+Combine an absolute and a relative path to an absolute one
 
 > addPath :: Path a -> Path r -> Path (PathSum a r)
 > addPath a Here = a
 > addPath a (A1 p) = addPath (A1 a) p
 > addPath a (A2 p) = addPath (A2 a) p
 
+Combine two relative paths to a longer one
+
+> extendPath :: Path a -> Path r -> Path (PathExt a r)
+> extendPath Here r = r
+> extendPath (A1 r) r' = A1 (extendPath r r')
+> extendPath (A2 r) r' = A2 (extendPath r r')
+
 > data Sub p where
 >   Miss :: Sub p
 >   Sub :: Underlying a p -> Sub p
->   Chase :: Nat' n -> Path pth -> Sub p -- administrative
+>   Chase :: Nat' n -> Path pth -> Path p' -> Sub p -- administrative
 >   Redirected :: Path pth -> Underlying a pth -> Sub p
 > deriving instance Show (Sub p)
 
@@ -153,6 +169,6 @@ Helper function that can chase
 > t23 = grab Root (A2 $ A2 Here) t20
 > t30 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) Here)
 > t33 = grab Root (A2 $ A2 Here) t30
-> t34 = grab Root (A2 $ A2 (A1 Here)) t30 -- could work!
+> t34 = grab Root (A2 $ A2 (A1 Here)) t30
 
 TODO: unify
