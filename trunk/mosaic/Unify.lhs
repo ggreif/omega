@@ -39,7 +39,8 @@ path from root so we can address any relevant (non-pointer)
 node.
 
 kind Overlying -- shape of Underlying
---TODO--
+
+> data Ctor; data App a b; data Pntr
 
 kind Turns -- the way to descend
 
@@ -55,14 +56,16 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 
 > data Target; data Miss
 
-            Arity ---+    +---- Path to here
-                     v    v
+                          +---- Path to here
+            Arity ---+    |
+                     |    |    +---- Shape
+                     v    v    v
 
-> data Underlying :: * -> * -> * where
->   App :: Underlying (S a) (A1 r) -> Underlying n (A2 r) -> Underlying a r
->   Ctor :: Nat' n -> Underlying n here
->   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here
-> deriving instance Show (Underlying a p)
+> data Underlying :: * -> * -> * -> * where
+>   App :: Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
+>   Ctor :: Nat' n -> Underlying n here Ctor
+>   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here Pntr
+> deriving instance Show (Underlying a p s)
 
 We actually need a third parameter, the tree shape. I prefer not to
 additionally model it right now.
@@ -94,9 +97,10 @@ Now the Path type is still missing. Here we go:
 >   A2 :: Path p -> Path (A2 p)
 > deriving instance Show (Path p)
 
-Please note that Path will be used in two senses, relative
-and absolute. The two conceptually associate in opposite
-directions and have different base atoms:
+It is important to point out that Path will be used in
+two senses, relative and absolute. The two conceptually
+associate in opposite directions and have different
+base atoms:
 
 Root ) A1 ) A2 ) ... ) Ak | Ak ( ... ( A2 Here
 ---- absolute part ------> <------ relative part
@@ -119,7 +123,7 @@ absolute path (undecidable instances!).
 
 Grab is a function to get a subtree at a relative path
 
-> grab :: Path here -> Path p -> Underlying a here -> Sub (PathSum here p)
+> grab :: Path here -> Path p -> Underlying a here s -> Sub (PathSum here p)
 > grab here p (Pntr (S n) rel) = Chase n rel p
 > grab here Here tree = Sub tree
 > grab here (A1 p) tree@(App l _) = grab' tree (A1 here) here p l
@@ -162,9 +166,9 @@ Are we having two equal paths?
 
 > data Sub p where
 >   Miss :: Sub p
->   Sub :: Underlying a p -> Sub p
+>   Sub :: Underlying a p s -> Sub p
 >   Chase :: Nat' n -> Path pth -> Path p' -> Sub p -- administrative
->   Redirected :: Path pth -> Underlying a pth -> Sub p
+>   Redirected :: Path pth -> Underlying a pth s -> Sub p
 > deriving instance Show (Sub p)
 
 > t0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
@@ -181,7 +185,7 @@ Are we having two equal paths?
 
 Unify (for now) checks whether two trees are unifiable
 
-> unify :: Path here -> Underlying a here -> Underlying b here -> Bool
+> unify :: Path here -> Underlying a here s -> Underlying b here u -> Bool
 > unify here (Ctor Z) (Ctor Z) = True
 > unify here (Ctor (S m)) (Ctor (S n)) = unify here (Ctor m) (Ctor n)
 > unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
