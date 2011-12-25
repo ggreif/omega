@@ -235,7 +235,7 @@ Visualization by GraphViz
 
 > data TermGraph n e where
 >   NoTerm :: TermGraph n e
->   Term :: Path p -> [IG.Node] -> Underlying a p s -> TermGraph n e
+>   Term :: Path p -> [IG.Node] -> Underlying a p s -> Int -> TermGraph n e
 > deriving instance Show (TermGraph n e)
 
 Given a natural number we can generate a relative path
@@ -263,6 +263,7 @@ by unfolding the binary representation:
 > pathToNode (Hide (A2 p)) = 2 * pathToNode (Hide p) + 1
 
 > rootTerm = Term Root
+> fullRootTerm t = Term Root [] t $ noTermNodes t
 
 Counting nodes (not the addressable subtrees)
 
@@ -273,30 +274,30 @@ Counting nodes (not the addressable subtrees)
 > instance IG.Graph TermGraph where
 >   empty = NoTerm
 >   isEmpty NoTerm = True
->   isEmpty (Term _ done _) = length done >= 3 -- TODO
->   match node gr@(Term p done t) | node `elem` done = (Nothing, gr)
->   match 1 gr@(Term Root _ (Ctor n)) = (Just ([], 1, undefined, []), NoTerm)
->   match node gr@(Term p done t) | Hide r <- nodeToPath node
+>   isEmpty (Term _ done _ max) = length done >= max
+>   match node gr@(Term p done t _) | node `elem` done = (Nothing, gr)
+>   match 1 gr@(Term Root _ (Ctor n) _) = (Just ([], 1, undefined, []), NoTerm)
+>   match node gr@(Term p done t max) | Hide r <- nodeToPath node
 >                            = case grab p r t of
 >                              Miss -> (Nothing, gr)
->                              Sub _ -> (Just ([], node, undefined, [(undefined, node)]), Term p (node:done) t)
->                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p p')]), Term p (node:done) t)
->   mkGraph [n] [] = Term Root [] $ Ctor Z
+>                              Sub _ -> (Just ([], node, undefined, [(undefined, node)]), Term p (node:done) t max)
+>                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p p')]), Term p (node:done) t max)
+>   mkGraph [n] [] = fullRootTerm $ Ctor Z --- TODO: this is a lie
 >   mkGraph [] [] = NoTerm
 >   labNodes NoTerm = []
->   labNodes term = [IG.labNode' ctx | n <- [1..10] -- TODO: noTermNodes
->                                    , let (present,_) = IG.match n term
->                                    , isJust present
->                                    , let Just ctx = present]
+>   labNodes term@(Term _ _ _ max) = [IG.labNode' ctx | n <- [1..max]
+>                                                     , let (present,_) = IG.match n term
+>                                                     , isJust present
+>                                                     , let Just ctx = present]
 
 > g0 :: TermGraph Int Int
 > g0 = IG.mkGraph [] []
 > g1 = GV.preview g0
 > g2 :: TermGraph Int Int
-> g2 = rootTerm [] r0
+> g2 = fullRootTerm r0
 > g3 = defaultVis g2
 > g4 = GV.preview g2
-> g5 = rootTerm [] $ Ctor (S Z)
+> g5 = fullRootTerm $ Ctor (S Z)
 > g6 = defaultVis g5
 
 
