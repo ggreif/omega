@@ -273,10 +273,10 @@ by unfolding the binary representation:
 >   mkGraph [] [] = NoTerm
 >   --mkGraph ns es = error $ "I should construct (nodes) " ++ show ns ++ " (edges) " ++ show es
 >   labNodes NoTerm = []
->   labNodes term = [(node, a) | n <- [1..]
->                         , let (present,_) = IG.match n term
->                         , isJust present
->                         , let Just (_, node, a, _) = present]
+>   labNodes term = [IG.labNode' ctx | n <- [1..10]
+>                                    , let (present,_) = IG.match n term
+>                                    , isJust present
+>                                    , let Just ctx = present]
 
 > g0 :: TermGraph Int Int
 > g0 = IG.mkGraph [] []
