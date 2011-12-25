@@ -119,20 +119,40 @@ absolute path (undecidable instances!).
 
 
 > grab :: Path here -> Path p -> Underlying a here -> Sub (PathSum here p)
+> grab here Here (Pntr (S n) rel) = Chase n rel
 > grab here Here tree = Sub tree
-> grab here p (Pntr (S n) rel) = Chase n rel
-> grab here (A1 p) tree = case grab here p tree of
->                         --Sub (l `App` _) -> Sub l
->                         --Sub (Pntr Z Root) -> undefined -- Redirected (A1 p) tree -- Sub tree
->                         _ -> Miss
+> grab here (A1 p) tree@(App l _) = case grab (A1 here) p l of
+>                                   Chase Z Here -> Redirected (A1 here) l
+>                                   Chase (S Z) Here -> Redirected here tree
+>                                   --Chase Z pth -> case grab (A1 here) pth l of
+>                                   ---               Sub t -> Redirected (addPath (A1 here) pth) t
+>                                   --               _ -> Miss
+>                                   Chase Z pth -> case grab here pth tree of
+>                                                  Sub t -> Redirected (addPath here pth) t
+>                                                  _ -> Miss
+>                                   Chase (S go) p -> Chase go p
+>                                   Sub t -> Sub t
+>                                   red@(Redirected _ _) -> red
+>                                   _ -> Miss
 > grab here (A2 p) tree@(App _ r) = case grab (A2 here) p r of
 >                                   Chase Z Here -> Redirected (A2 here) r
 >                                   Chase (S Z) Here -> Redirected here tree
+>                                   --Chase Z pth -> case grab (A2 here) pth r of
+>                                   --               Sub t -> Redirected (addPath (A2 here) pth) t
+>                                   --               _ -> Miss
+>                                   Chase Z pth -> case grab here pth tree of
+>                                                  Sub t -> Redirected (addPath here pth) t
+>                                                  _ -> Miss
 >                                   Chase (S go) p -> Chase go p
->                                   Chase Z pth -> undefined -- grab (A2 here) pth r -- TODO: Redirected?
 >                                   Sub t -> Sub t
+>                                   red@(Redirected _ _) -> red
 >                                   _ -> Miss
 > 
+
+> addPath :: Path a -> Path r -> Path (PathSum a r)
+> addPath a Here = a
+> addPath a (A1 p) = addPath (A1 a) p
+> addPath a (A2 p) = addPath (A2 a) p
 
 > data Sub p where
 >   Miss :: Sub p
@@ -141,6 +161,7 @@ absolute path (undecidable instances!).
 >   Redirected :: Path pth -> Underlying a pth -> Sub p
 > deriving instance Show (Sub p)
 
-> t0 = Ctor (S Z) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
-> t1 = grab Root (A1 $ A2 Here) t0
-> t2 = grab Root (A2 $ A2 Here) t0
+> t0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
+> t1 = grab Root (A1 Here) t0
+> t2 = grab Root (A2 $ A1 Here) t0
+> t3 = grab Root (A2 $ A2 Here) t0
