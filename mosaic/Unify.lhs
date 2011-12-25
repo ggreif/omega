@@ -40,7 +40,7 @@ node.
 
 kind Overlying -- shape of Underlying
 
-> data Ctor; data App a b; data Pntr
+> data Ctor; data App a b; data Pntr n
 
 kind Turns -- the way to descend
 
@@ -64,7 +64,7 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 > data Underlying :: * -> * -> * -> * where
 >   App :: NoDangling (App s u) (App s u) => Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
->   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here Pntr
+>   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here (Pntr (S up))
 > deriving instance Show (Underlying a p s)
 
 The Path in Pntr has an additional constraint that it must be Here
@@ -76,7 +76,9 @@ all Pntrs point into some App or Ctor below (or at) Root.
 > class NoDangling rootee tree
 > instance NoDangling rootee Ctor
 > instance (NoDangling (S rootee) l, NoDangling (S rootee) r) => NoDangling rootee (App l r)
-> instance NoDangling (S rootee) (Pntr)
+> instance NoDangling rootee (Pntr Z)
+> instance NoDangling (App l r) (Pntr (S Z))
+> instance NoDangling rootee (Pntr n) => NoDangling (S rootee) (Pntr (S n))
 
 Above we declare an InTree constraint on Pntr,
 here come the instances how it is done.
@@ -175,6 +177,8 @@ Are we having two equal paths?
 >   Chase :: Nat' n -> Path pth -> Path p' -> Sub p -- administrative
 >   Redirected :: Path pth -> Underlying a pth s -> Sub p
 > deriving instance Show (Sub p)
+
+> r0 = Ctor (S Z) `App` Pntr (S Z) (A1 Here)
 
 > t0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
 > t1 = grab Root (A1 Here) t0
