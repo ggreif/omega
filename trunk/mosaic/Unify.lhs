@@ -249,6 +249,11 @@ by unfolding the binary representation:
 >              , Hide tail <- nodeToPath $ n `div` 2
 >              = Hide $ A2 tail
 
+> pathToNode :: Hidden Path -> Int
+> pathToNode (Hide Here) = 1
+> pathToNode (Hide (A1 p)) = 2 * pathToNode (Hide p)
+> pathToNode (Hide (A2 p)) = 2 * pathToNode (Hide p) + 1
+
 > rootTerm = Term Root
 
 > instance IG.Graph TermGraph where
