@@ -179,6 +179,16 @@ Combine two relative paths to a longer one
 > extendPath (A1 r) r' = A1 (extendPath r r')
 > extendPath (A2 r) r' = A2 (extendPath r r')
 
+Relativize an absolute path
+--TODO: assumes relative to root, should get
+argument that signifies the absolute part
+to be gotten rid of
+
+> relativize :: Path r -> Path a -> Hidden Path
+> relativize acc Root = Hide acc
+> relativize acc (A1 a) = relativize (A1 acc) a
+> relativize acc (A2 a) = relativize (A2 acc) a
+
 Are we having two equal paths?
 
 > samePath :: Path p -> Path q -> Bool
@@ -267,13 +277,11 @@ by unfolding the binary representation:
 >                            = case grab p r t of
 >                              Miss -> (Nothing, gr)
 >                              Sub _ -> (Just ([], node, undefined, [(undefined, node)]), Term p (node:done) t)
->                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ Hide p')]), Term p (node:done) t)
->   match node gr = (Just ([], node, undefined, []), gr) -- (Adj b,Node,a,Adj b)(MContext a b,g a b)
+>                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p')]), Term p (node:done) t)
 >   mkGraph [n] [] = Term Root [] $ Ctor Z
 >   mkGraph [] [] = NoTerm
->   --mkGraph ns es = error $ "I should construct (nodes) " ++ show ns ++ " (edges) " ++ show es
 >   labNodes NoTerm = []
->   labNodes term = [IG.labNode' ctx | n <- [1..10]
+>   labNodes term = [IG.labNode' ctx | n <- [1..10] -- TODO: countNodes
 >                                    , let (present,_) = IG.match n term
 >                                    , isJust present
 >                                    , let Just ctx = present]
