@@ -122,11 +122,7 @@ absolute path (undecidable instances!).
 > grab here Here (Pntr (S n) rel) = Chase n rel
 > grab here Here tree = Sub tree
 > grab here (A1 p) tree@(App l _) = case grab (A1 here) p l of
->                                   Chase Z Here -> Redirected (A1 here) l
->                                   Chase (S Z) Here -> Redirected here tree
->                                   --Chase Z pth -> case grab (A1 here) pth l of
->                                   ---               Sub t -> Redirected (addPath (A1 here) pth) t
->                                   --               _ -> Miss
+>                                   Chase Z Here -> Redirected here tree
 >                                   Chase Z pth -> case grab here pth tree of
 >                                                  Sub t -> Redirected (addPath here pth) t
 >                                                  _ -> Miss
@@ -135,11 +131,7 @@ absolute path (undecidable instances!).
 >                                   red@(Redirected _ _) -> red
 >                                   _ -> Miss
 > grab here (A2 p) tree@(App _ r) = case grab (A2 here) p r of
->                                   Chase Z Here -> Redirected (A2 here) r
->                                   Chase (S Z) Here -> Redirected here tree
->                                   --Chase Z pth -> case grab (A2 here) pth r of
->                                   --               Sub t -> Redirected (addPath (A2 here) pth) t
->                                   --               _ -> Miss
+>                                   Chase Z Here -> Redirected here tree
 >                                   Chase Z pth -> case grab here pth tree of
 >                                                  Sub t -> Redirected (addPath here pth) t
 >                                                  _ -> Miss
@@ -165,3 +157,7 @@ absolute path (undecidable instances!).
 > t1 = grab Root (A1 Here) t0
 > t2 = grab Root (A2 $ A1 Here) t0
 > t3 = grab Root (A2 $ A2 Here) t0
+> t10 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S $ S Z) (A1 Here))
+> t13 = grab Root (A2 $ A2 Here) t10
+> t20 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S $ S Z) Here)
+> t23 = grab Root (A2 $ A2 Here) t20
