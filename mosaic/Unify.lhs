@@ -230,13 +230,33 @@ Visualization by GraphViz
 >   Term :: Path p -> Underlying a p s -> TermGraph n e
 > deriving instance Show (TermGraph n e)
 
+Given a natural number we can generate a relative path
+by unfolding the binary representation:
+ o 1 -> Here
+ o 2 -> A1 Here
+ o 3 -> A2 Here
+ o 4 -> A1 A1 Here
+ o 5 -> A2 A1 Here
+ o 6 -> A1 A2 Here
+ o ...
+
+> nodeToPath :: Int -> Hidden Path
+> nodeToPath 1 = Hide Here
+> nodeToPath n | 0 <- n `mod` 2
+>              , Hide tail <- nodeToPath $ n `div` 2
+>              = Hide $ A1 tail
+> nodeToPath n | 1 <- n `mod` 2
+>              , Hide tail <- nodeToPath $ n `div` 2
+>              = Hide $ A2 tail
+
 > rootTerm = Term Root
 
 > instance IG.Graph TermGraph where
 >   empty = NoTerm
 >   isEmpty NoTerm = True
 >   isEmpty _ = False
->   match 1 gr@(Term Root (l `App` r)) = (Just ([], 1, undefined, []), NoTerm)
+>   match node gr@(Term _ (Ctor n)) = (Just ([], node, undefined, []), NoTerm)
+>   match 1 gr@(Term Root (l `App` r)) = (Just ([], 1, undefined, [(undefined,1)]), NoTerm)
 >   match node gr = (Just ([], node, undefined, []), gr) -- (Adj b,Node,a,Adj b)(MContext a b,g a b)
 >   mkGraph [n] [] = Term Root $ Ctor Z
 >   mkGraph [] [] = NoTerm
@@ -247,8 +267,13 @@ Visualization by GraphViz
 > g0 :: TermGraph Int Int
 > g0 = IG.mkGraph [] []
 > g1 = GV.preview g0
+> g2 :: TermGraph Int Int
 > g2 = rootTerm r0
 > g3 = defaultVis g2
+> g4 = GV.preview g2
+> g5 = rootTerm $ Ctor (S Z)
+> g6 = defaultVis g5
+
 
 Example from the bindings...
 
