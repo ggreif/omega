@@ -264,6 +264,12 @@ by unfolding the binary representation:
 
 > rootTerm = Term Root
 
+Counting nodes (not the addressable subtrees)
+
+> noTermNodes :: Underlying a p s -> Int
+> noTermNodes (l `App` r) = 1 + noTermNodes l + noTermNodes r
+> noTermNodes _ = 1
+
 > instance IG.Graph TermGraph where
 >   empty = NoTerm
 >   isEmpty NoTerm = True
@@ -278,7 +284,7 @@ by unfolding the binary representation:
 >   mkGraph [n] [] = Term Root [] $ Ctor Z
 >   mkGraph [] [] = NoTerm
 >   labNodes NoTerm = []
->   labNodes term = [IG.labNode' ctx | n <- [1..10] -- TODO: countTermNodes
+>   labNodes term = [IG.labNode' ctx | n <- [1..10] -- TODO: noTermNodes
 >                                    , let (present,_) = IG.match n term
 >                                    , isJust present
 >                                    , let Just ctx = present]
