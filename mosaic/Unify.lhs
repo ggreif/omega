@@ -151,6 +151,15 @@ Combine two relative paths to a longer one
 > extendPath (A1 r) r' = A1 (extendPath r r')
 > extendPath (A2 r) r' = A2 (extendPath r r')
 
+Are we having two equal paths?
+
+> samePath :: Path p -> Path q -> Bool
+> samePath (A1 p) (A1 q) = samePath p q
+> samePath (A2 p) (A2 q) = samePath p q
+> samePath Here Here = True
+> samePath Root Root = True
+> samePath _ _ = False
+
 > data Sub p where
 >   Miss :: Sub p
 >   Sub :: Underlying a p -> Sub p
@@ -170,13 +179,20 @@ Combine two relative paths to a longer one
 > t33 = grab Root (A2 $ A2 Here) t30
 > t34 = grab Root (A2 $ A2 (A1 Here)) t30
 
-TODO: unify
+Unify (for now) checks whether two trees are unifiable
 
 > unify :: Path here -> Underlying a here -> Underlying b here -> Bool
 > unify here (Ctor Z) (Ctor Z) = True
 > unify here (Ctor (S m)) (Ctor (S n)) = unify here (Ctor m) (Ctor n)
 > unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
+> unify here (Pntr (S m) p) (Pntr (S n) q) = sameNat' m n && samePath p q
+> --unify here (Pntr (S m) Here) (Pntr (S n) Here) = unify here (Pntr m Here) (Pntr n Here)
+> --unify here (Pntr Z (A1 p1)) (Pntr Z (A1 p2)) = unify here (Pntr Z p1) (Pntr Z p2)
+> --unify here (Pntr Z (A2 p1)) (Pntr Z (A1 p2)) = unify here (Pntr Z p1) (Pntr Z p2)
 > unify _ _ _ = False
 
 > u0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Ctor Z)
+> u1 = unify Root u0 u0
+> u2 = unify Root u0 t0
+
 
