@@ -64,7 +64,7 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 > data Underlying :: * -> * -> * -> * where
 >   App :: NoDangling (App s u) (App s u) => Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
->   Pntr :: InTree up here => Nat' up -> Path p -> Underlying noArity here (Pntr up p)
+>   Pntr :: Nat' up -> Path p -> Underlying noArity here (Pntr up p)
 > deriving instance Show (Underlying a p s)
 
 The Path in Pntr has an additional constraint that it must be Here
@@ -76,20 +76,14 @@ all Pntrs point into some App or Ctor below (or at) Root.
 > class NoDangling rootee tree
 > instance NoDangling rootee Ctor
 > instance (NoDangling (S rootee) l, NoDangling (S rootee) r) => NoDangling rootee (App l r)
-> instance NoDangling (S rootee) (Pntr Z p) -- we cannot check this
+> instance NoDangling (S rootee) (Pntr Z Here)
+> instance NoDangling rootee (Pntr Z (A1 p)) => NoDangling (S rootee) (Pntr Z (A1 p))
+> instance NoDangling rootee (Pntr Z (A2 p)) => NoDangling (S rootee) (Pntr Z (A2 p))
 > instance NoDangling Ctor (Pntr Z Here)
 > instance NoDangling (App l r) (Pntr Z Here)
 > instance NoDangling l (Pntr Z p) => NoDangling (App l r) (Pntr Z (A1 p))
 > instance NoDangling r (Pntr Z p) => NoDangling (App l r) (Pntr Z (A2 p))
 > instance NoDangling rootee (Pntr n p) => NoDangling (S rootee) (Pntr (S n) p)
-
-Above we declare an InTree constraint on Pntr,
-here come the instances how it is done.
-
-> class InTree up path
-> instance InTree Z path
-> instance InTree up path => InTree (S up) (A1 path)
-> instance InTree up path => InTree (S up) (A2 path)
 
 Please note that constructors do not have names, they have
 positions (addresses) in the tree. We refer to the same constructor
