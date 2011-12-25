@@ -101,6 +101,22 @@ Now the Path type is still missing. Here we go:
 >   A2 :: Path p -> Path (A2 p)
 > deriving instance Show (Path p)
 
+> instance Eq (Hidden Path) where
+>   Hide p == Hide q = samePath p q
+
+> instance Ord (Hidden Path) where
+>   Hide Root `compare` Hide Root = EQ
+>   Hide Here `compare` Hide Here = EQ
+>   Hide Root `compare` Hide Here = LT
+>   Hide Root `compare` Hide (A1 _) = LT
+>   Hide Root `compare` Hide (A2 _) = LT
+>   Hide Here `compare` Hide (A1 _) = LT
+>   Hide Here `compare` Hide (A2 _) = LT
+>   Hide (A1 _) `compare` Hide (A2 _) = LT
+>   Hide (A1 m) `compare` Hide (A1 n) = Hide m `compare` Hide n
+>   Hide (A2 m) `compare` Hide (A2 n) = Hide m `compare` Hide n
+>   Hide _ `compare` Hide _ = GT
+
 It is important to point out that Path will be used in
 two senses, relative and absolute. The two conceptually
 associate in opposite directions and have different
