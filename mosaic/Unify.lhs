@@ -186,13 +186,11 @@ Unify (for now) checks whether two trees are unifiable
 > unify here (Ctor (S m)) (Ctor (S n)) = unify here (Ctor m) (Ctor n)
 > unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
 > unify here (Pntr (S m) p) (Pntr (S n) q) = sameNat' m n && samePath p q
-> --unify here (Pntr (S m) Here) (Pntr (S n) Here) = unify here (Pntr m Here) (Pntr n Here)
-> --unify here (Pntr Z (A1 p1)) (Pntr Z (A1 p2)) = unify here (Pntr Z p1) (Pntr Z p2)
-> --unify here (Pntr Z (A2 p1)) (Pntr Z (A1 p2)) = unify here (Pntr Z p1) (Pntr Z p2)
 > unify _ _ _ = False
 
 > u0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Ctor Z)
 > u1 = unify Root u0 u0
 > u2 = unify Root u0 t0
+> u3 = unify Root t0 t0
 
 
