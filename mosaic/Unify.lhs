@@ -171,3 +171,12 @@ Combine two relative paths to a longer one
 > t34 = grab Root (A2 $ A2 (A1 Here)) t30
 
 TODO: unify
+
+> unify :: Path here -> Underlying a here -> Underlying b here -> Bool
+> unify here (Ctor Z) (Ctor Z) = True
+> unify here (Ctor (S m)) (Ctor (S n)) = unify here (Ctor m) (Ctor n)
+> unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
+> unify _ _ _ = False
+
+> u0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Ctor Z)
+
