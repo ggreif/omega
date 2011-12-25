@@ -120,7 +120,6 @@ absolute path (undecidable instances!).
 Grab is a function to get a subtree at a relative path
 
 > grab :: Path here -> Path p -> Underlying a here -> Sub (PathSum here p)
-> grab here Here (Pntr (S n) rel) = Chase n rel Here
 > grab here p (Pntr (S n) rel) = Chase n rel p
 > grab here Here tree = Sub tree
 > grab here (A1 p) tree@(App l _) = grab' tree (A1 here) here p l
