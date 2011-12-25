@@ -260,8 +260,12 @@ by unfolding the binary representation:
 >   empty = NoTerm
 >   isEmpty NoTerm = True
 >   isEmpty _ = False
->   match node gr@(Term _ (Ctor n)) = (Just ([], node, undefined, []), NoTerm)
->   match 1 gr@(Term Root (l `App` r)) = (Just ([], 1, undefined, [(undefined,1)]), NoTerm)
+>   match 1 gr@(Term Root (Ctor n)) = (Just ([], 1, undefined, []), NoTerm)
+>   match node gr@(Term p t) | Hide r <- nodeToPath node
+>                            = case grab p r t of
+>                              Miss -> (Nothing, gr)
+>                              Sub t -> (Just ([], node, undefined, [(undefined, node)]), NoTerm)
+>                              Redirected p t -> (Just ([], node, undefined, [(undefined, pathToNode $ Hide p)]), NoTerm)
 >   match node gr = (Just ([], node, undefined, []), gr) -- (Adj b,Node,a,Adj b)(MContext a b,g a b)
 >   mkGraph [n] [] = Term Root $ Ctor Z
 >   mkGraph [] [] = NoTerm
