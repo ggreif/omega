@@ -5,6 +5,9 @@
 > module Unify where
 
 > import TypeMachinery
+> import qualified Data.GraphViz as GV
+> import Data.GraphViz.Types.Canonical
+> import qualified Data.Graph.Inductive.Graph as IG
 
 We have an underlying data model, which consists
 of
@@ -219,4 +222,39 @@ Unify (for now) checks whether two trees are unifiable
 > u2 = unify Root u0 t0
 > u3 = unify Root t0 t0
 
+
+Visualization by GraphViz
+
+> data TermGraph n e where
+>   Term :: Path p -> Underlying a p s -> TermGraph n e
+
+> instance IG.Graph TermGraph where
+>   empty = error "cannot create empty terms"
+>   isEmpty _ = False
+>   match = error "no match yet"
+>   mkGraph [] [] = Term Root $ Ctor Z
+>   labNodes term = [(1, undefined)]
+
+> g0 :: TermGraph Int Int --(Int, Int)
+> g0 = IG.mkGraph [] []
+> g1 = GV.preview g0
+
+
+Example from the bindings...
+
+> evenOdd :: (IG.Graph gr, Ord el) => gr Int el -> DotGraph IG.Node
+> evenOdd = GV.setDirectedness GV.graphToDot params
+>    where
+>      params = GV.blankParams { GV.globalAttributes = []
+>                              , GV.clusterBy        = clustBy
+>                              , GV.clusterID        = GV.Int
+>                              , GV.fmtCluster       = clFmt
+>                              , GV.fmtNode          = const []
+>                              , GV.fmtEdge          = const []
+>                              }
+>      clustBy (n,l) = GV.C (n `mod` 2) $ GV.N (n,l)
+>      clFmt m = [GV.GraphAttrs [GV.toLabel $ "n == " ++ show m ++ " (mod 2)"]]
+
+> defaultVis :: (IG.Graph gr) => gr nl el -> DotGraph IG.Node
+> defaultVis = GV.graphToDot GV.nonClusteredParams
 
