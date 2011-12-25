@@ -8,6 +8,7 @@
 > import qualified Data.GraphViz as GV
 > import Data.GraphViz.Types.Canonical
 > import qualified Data.Graph.Inductive.Graph as IG
+> import Data.Maybe
 
 We have an underlying data model, which consists
 of
@@ -227,7 +228,7 @@ Visualization by GraphViz
 
 > data TermGraph n e where
 >   NoTerm :: TermGraph n e
->   Term :: Path p -> Underlying a p s -> TermGraph n e
+>   Term :: Path p -> [IG.Node] -> Underlying a p s -> TermGraph n e
 > deriving instance Show (TermGraph n e)
 
 Given a natural number we can generate a relative path
@@ -260,27 +261,31 @@ by unfolding the binary representation:
 >   empty = NoTerm
 >   isEmpty NoTerm = True
 >   isEmpty _ = False
->   match 1 gr@(Term Root (Ctor n)) = (Just ([], 1, undefined, []), NoTerm)
->   match node gr@(Term p t) | Hide r <- nodeToPath node
+>   match node gr@(Term p done t) | node `elem` done = (Nothing, gr)
+>   match 1 gr@(Term Root _ (Ctor n)) = (Just ([], 1, undefined, []), NoTerm)
+>   match node gr@(Term p done t) | Hide r <- nodeToPath node
 >                            = case grab p r t of
 >                              Miss -> (Nothing, gr)
->                              Sub t -> (Just ([], node, undefined, [(undefined, node)]), NoTerm)
->                              Redirected p t -> (Just ([], node, undefined, [(undefined, pathToNode $ Hide p)]), NoTerm)
+>                              Sub _ -> (Just ([], node, undefined, [(undefined, node)]), Term p (node:done) t)
+>                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ Hide p')]), Term p (node:done) t)
 >   match node gr = (Just ([], node, undefined, []), gr) -- (Adj b,Node,a,Adj b)(MContext a b,g a b)
->   mkGraph [n] [] = Term Root $ Ctor Z
+>   mkGraph [n] [] = Term Root [] $ Ctor Z
 >   mkGraph [] [] = NoTerm
 >   --mkGraph ns es = error $ "I should construct (nodes) " ++ show ns ++ " (edges) " ++ show es
 >   labNodes NoTerm = []
->   labNodes term = [(1, undefined)]
+>   labNodes term = [(node, a) | n <- [1..]
+>                         , let (present,_) = IG.match n term
+>                         , isJust present
+>                         , let Just (_, node, a, _) = present]
 
 > g0 :: TermGraph Int Int
 > g0 = IG.mkGraph [] []
 > g1 = GV.preview g0
 > g2 :: TermGraph Int Int
-> g2 = rootTerm r0
+> g2 = rootTerm [] r0
 > g3 = defaultVis g2
 > g4 = GV.preview g2
-> g5 = rootTerm $ Ctor (S Z)
+> g5 = rootTerm [] $ Ctor (S Z)
 > g6 = defaultVis g5
 
 
