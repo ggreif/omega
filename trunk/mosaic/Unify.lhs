@@ -226,13 +226,18 @@ Unify (for now) checks whether two trees are unifiable
 Visualization by GraphViz
 
 > data TermGraph n e where
+>   NoTerm :: TermGraph n e
 >   Term :: Path p -> Underlying a p s -> TermGraph n e
 
 > instance IG.Graph TermGraph where
->   empty = error "cannot create empty terms"
+>   empty = NoTerm
+>   isEmpty NoTerm = True
 >   isEmpty _ = False
->   match = error "no match yet"
->   mkGraph [] [] = Term Root $ Ctor Z
+>   match node gr = (Just ([], node, undefined, []), gr) -- (Adj b,Node,a,Adj b)(MContext a b,g a b)
+>   mkGraph [n] [] = Term Root $ Ctor Z
+>   mkGraph [] [] = NoTerm
+>   --mkGraph ns es = error $ "I should construct (nodes) " ++ show ns ++ " (edges) " ++ show es
+>   labNodes NoTerm = []
 >   labNodes term = [(1, undefined)]
 
 > g0 :: TermGraph Int Int --(Int, Int)
