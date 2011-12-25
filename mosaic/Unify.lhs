@@ -267,7 +267,7 @@ by unfolding the binary representation:
 > instance IG.Graph TermGraph where
 >   empty = NoTerm
 >   isEmpty NoTerm = True
->   isEmpty _ = False
+>   isEmpty (Term _ done _) = length done >= 3 -- TODO
 >   match node gr@(Term p done t) | node `elem` done = (Nothing, gr)
 >   match 1 gr@(Term Root _ (Ctor n)) = (Just ([], 1, undefined, []), NoTerm)
 >   match node gr@(Term p done t) | Hide r <- nodeToPath node
@@ -278,7 +278,7 @@ by unfolding the binary representation:
 >   mkGraph [n] [] = Term Root [] $ Ctor Z
 >   mkGraph [] [] = NoTerm
 >   labNodes NoTerm = []
->   labNodes term = [IG.labNode' ctx | n <- [1..10] -- TODO: countNodes
+>   labNodes term = [IG.labNode' ctx | n <- [1..10] -- TODO: countTermNodes
 >                                    , let (present,_) = IG.match n term
 >                                    , isJust present
 >                                    , let Just ctx = present]
