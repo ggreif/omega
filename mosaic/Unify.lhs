@@ -62,7 +62,7 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
                      v    v    v
 
 > data Underlying :: * -> * -> * -> * where
->   App :: Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
+>   App :: NoDangling (App s u) (App s u) => Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
 >   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here Pntr
 > deriving instance Show (Underlying a p s)
