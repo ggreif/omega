@@ -67,11 +67,16 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 >   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here Pntr
 > deriving instance Show (Underlying a p s)
 
-We actually need a third parameter, the tree shape. I prefer not to
-additionally model it right now.
-
 The Path in Pntr has an additional constraint that it must be Here
 or start A1.
+
+Only Apps may home Pntrs, so the constraint on Root Apps is that
+all Pntrs point into some App or Ctor below (or at) Root.
+
+> class NoDangling rootee tree
+> instance NoDangling rootee Ctor
+> instance (NoDangling (S rootee) l, NoDangling (S rootee) r) => NoDangling rootee (App l r)
+> instance NoDangling (S rootee) (Pntr)
 
 Above we declare an InTree constraint on Pntr,
 here come the instances how it is done.
