@@ -64,7 +64,7 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 > data Underlying :: * -> * -> * -> * where
 >   App :: NoDangling (App s u) (App s u) => Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
->   Pntr :: InTree (S up) here => Nat' (S up) -> Path p -> Underlying noArity here (Pntr up p)
+>   Pntr :: InTree up here => Nat' up -> Path p -> Underlying noArity here (Pntr up p)
 > deriving instance Show (Underlying a p s)
 
 The Path in Pntr has an additional constraint that it must be Here
@@ -134,7 +134,7 @@ absolute path (undecidable instances!).
 Grab is a function to get a subtree at a relative path
 
 > grab :: Path here -> Path p -> Underlying a here s -> Sub (PathSum here p)
-> grab here p (Pntr (S n) rel) = Chase n rel p
+> grab here p (Pntr n rel) = Chase n rel p
 > grab here Here tree = Sub tree
 > grab here (A1 p) tree@(App l _) = grab' tree (A1 here) here p l
 > grab here (A2 p) tree@(App _ r) = grab' tree (A2 here) here p r
@@ -181,17 +181,17 @@ Are we having two equal paths?
 >   Redirected :: Path pth -> Underlying a pth s -> Sub p
 > deriving instance Show (Sub p)
 
-> r0 = Ctor (S Z) `App` Pntr (S Z) (A1 Here)
+> r0 = Ctor (S Z) `App` Pntr Z (A1 Here)
 
-> t0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
+> t0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr Z (A1 Here))
 > t1 = grab Root (A1 Here) t0
 > t2 = grab Root (A2 $ A1 Here) t0
 > t3 = grab Root (A2 $ A2 Here) t0
-> t10 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S $ S Z) (A1 Here))
+> t10 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) (A1 Here))
 > t13 = grab Root (A2 $ A2 Here) t10
-> t20 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S $ S Z) Here)
+> t20 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) Here)
 > t23 = grab Root (A2 $ A2 Here) t20
-> t30 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr (S Z) Here)
+> t30 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Pntr Z Here)
 > t33 = grab Root (A2 $ A2 Here) t30
 > t34 = grab Root (A2 $ A2 (A1 Here)) t30
 
@@ -201,7 +201,7 @@ Unify (for now) checks whether two trees are unifiable
 > unify here (Ctor Z) (Ctor Z) = True
 > unify here (Ctor (S m)) (Ctor (S n)) = unify here (Ctor m) (Ctor n)
 > unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
-> unify here (Pntr (S m) p) (Pntr (S n) q) = sameNat' m n && samePath p q
+> unify here (Pntr m p) (Pntr n q) = sameNat' m n && samePath p q
 > unify _ _ _ = False
 
 > u0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Ctor Z)
