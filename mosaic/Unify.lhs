@@ -179,15 +179,12 @@ Combine two relative paths to a longer one
 > extendPath (A1 r) r' = A1 (extendPath r r')
 > extendPath (A2 r) r' = A2 (extendPath r r')
 
-Relativize an absolute path
---TODO: assumes relative to root, should get
-argument that signifies the absolute part
-to be gotten rid of
+Relativize an absolute path, considering an absolute cutoff
 
-> relativize :: Path r -> Path a -> Hidden Path
-> relativize acc Root = Hide acc
-> relativize acc (A1 a) = relativize (A1 acc) a
-> relativize acc (A2 a) = relativize (A2 acc) a
+> relativize :: Path r -> Path a -> Path a' -> Hidden Path
+> relativize acc cutoff a | samePath cutoff a = Hide acc
+> relativize acc cutoff (A1 a) = relativize (A1 acc) cutoff a
+> relativize acc cutoff (A2 a) = relativize (A2 acc) cutoff a
 
 Are we having two equal paths?
 
@@ -277,7 +274,7 @@ by unfolding the binary representation:
 >                            = case grab p r t of
 >                              Miss -> (Nothing, gr)
 >                              Sub _ -> (Just ([], node, undefined, [(undefined, node)]), Term p (node:done) t)
->                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p')]), Term p (node:done) t)
+>                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p p')]), Term p (node:done) t)
 >   mkGraph [n] [] = Term Root [] $ Ctor Z
 >   mkGraph [] [] = NoTerm
 >   labNodes NoTerm = []
