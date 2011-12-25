@@ -127,18 +127,14 @@ absolute path (undecidable instances!).
 >                                                  Sub t -> Redirected (addPath here pth) t
 >                                                  _ -> Miss
 >                                   Chase (S go) p -> Chase go p
->                                   Sub t -> Sub t
->                                   red@(Redirected _ _) -> red
->                                   _ -> Miss
+>                                   sub -> sub
 > grab here (A2 p) tree@(App _ r) = case grab (A2 here) p r of
 >                                   Chase Z Here -> Redirected here tree
 >                                   Chase Z pth -> case grab here pth tree of
 >                                                  Sub t -> Redirected (addPath here pth) t
 >                                                  _ -> Miss
 >                                   Chase (S go) p -> Chase go p
->                                   Sub t -> Sub t
->                                   red@(Redirected _ _) -> red
->                                   _ -> Miss
+>                                   sub -> sub
 > 
 
 > addPath :: Path a -> Path r -> Path (PathSum a r)
