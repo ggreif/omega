@@ -280,8 +280,11 @@ Counting nodes (not the addressable subtrees)
 >   match node gr@(Term p done t max) | Hide r <- nodeToPath node
 >                            = case grab p r t of
 >                              Miss -> (Nothing, gr)
->                              Sub _ -> (Just ([], node, undefined, [(undefined, node)]), Term p (node:done) t max)
->                              Redirected p' t' -> (Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p p')]), Term p (node:done) t max)
+>                              Sub (_ `App` _) -> ( Just ([], node, undefined, [(undefined, node * 2), (undefined, node * 2 + 1)])
+>                                                 , Term p (node:done) t max)
+>                              Sub _ -> (Just ([], node, undefined, []), Term p (node:done) t max)
+>                              Redirected p' t' -> ( Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p p')])
+>                                                  , Term p (node:done) t max)
 >   mkGraph [n] [] = fullRootTerm $ Ctor Z --- TODO: this is a lie
 >   mkGraph [] [] = NoTerm
 >   labNodes NoTerm = []
@@ -302,19 +305,6 @@ Counting nodes (not the addressable subtrees)
 
 
 Example from the bindings...
-
-> evenOdd :: (IG.Graph gr, Ord el) => gr Int el -> DotGraph IG.Node
-> evenOdd = GV.setDirectedness GV.graphToDot params
->    where
->      params = GV.blankParams { GV.globalAttributes = []
->                              , GV.clusterBy        = clustBy
->                              , GV.clusterID        = GV.Int
->                              , GV.fmtCluster       = clFmt
->                              , GV.fmtNode          = const []
->                              , GV.fmtEdge          = const []
->                              }
->      clustBy (n,l) = GV.C (n `mod` 2) $ GV.N (n,l)
->      clFmt m = [GV.GraphAttrs [GV.toLabel $ "n == " ++ show m ++ " (mod 2)"]]
 
 > defaultVis :: (IG.Graph gr) => gr nl el -> DotGraph IG.Node
 > defaultVis = GV.graphToDot GV.nonClusteredParams
