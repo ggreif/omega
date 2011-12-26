@@ -293,16 +293,18 @@ Counting nodes (not the addressable subtrees)
 >                                                     , isJust present
 >                                                     , let Just ctx = present]
 
-> g0 :: TermGraph Int Int
+> g0 :: TermGraph () ()
 > g0 = IG.mkGraph [] []
 > g1 = GV.preview g0
-> g2 :: TermGraph Int Int
+> g2 :: TermGraph () ()
 > g2 = fullRootTerm r0
 > g3 = defaultVis g2
 > g4 = GV.preview g2
 > g5 = fullRootTerm $ Ctor (S Z)
 > g6 = defaultVis g5
 
+> instance GV.Labellable () where
+>   toLabelValue _ = GV.toLabelValue "H"
 
 Example from the bindings...
 
