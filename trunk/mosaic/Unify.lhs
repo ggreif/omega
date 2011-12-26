@@ -243,9 +243,9 @@ Visualization by GraphViz
 
 Given a natural number we can generate a relative path
 by unfolding the binary representation:
- o 1 -> Here
- o 2 -> A1 Here
- o 3 -> A2 Here
+ o 1 ->       Here
+ o 2 ->    A1 Here
+ o 3 ->    A2 Here
  o 4 -> A1 A1 Here
  o 5 -> A1 A2 Here
  o 6 -> A2 A1 Here
@@ -298,8 +298,7 @@ Obtaining the list of nodes
 >   mkGraph [n] [] = fullRootTerm $ Ctor Z --- TODO: this is a lie
 >   mkGraph [] [] = NoTerm
 >   labNodes NoTerm = []
->   labNodes term@(Term _ _ _ max) = labNodEs term
-> labNodEs   term@(Term _ _ t max) = [IG.labNode' ctx | n <- termNodes 1 t
+>   labNodes term@(Term _ _ t max) = [IG.labNode' ctx | n <- termNodes 1 t
 >                                                     , let (present,_) = IG.match n term
 >                                                     , isJust present
 >                                                     , let Just ctx = present]
@@ -314,10 +313,6 @@ Obtaining the list of nodes
 > g5 = fullRootTerm $ Ctor (S Z)
 > g6 = defaultVis g5
 > g10 = (Ctor (S $ S Z) `App` Ctor Z) `App` (Pntr (S Z) (A1 $ A2 Here) `App` Pntr (S Z) (A1 $ A1 Here))
-> {-g12 = GV.preview g11-}
-> --g10 = (Ctor $ S Z) `App` (Pntr (S Z) (A1 $ A2 Here) `App` Ctor Z)
-> --g10 = (Ctor $ S Z) `App` (Pntr (Z) (A1 Here) `App` Ctor Z)
-> --g10 = (Ctor $ S Z) `App` (Pntr (S Z) (A1 Here) `App` Ctor Z)
 > g11 :: TermGraph () ()
 > g11 = fullRootTerm g10
 > g12 = defaultVis g11
