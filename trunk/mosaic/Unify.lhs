@@ -10,6 +10,7 @@
 > import qualified Data.Graph.Inductive.Graph as IG
 > import Data.Maybe
 
+--------------------------------------------------------------------------------
 We have an underlying data model, which consists
 of
  o- n-ary constructors (here untyped)
@@ -60,6 +61,10 @@ kind Addressable :: Whether -> *1 where { Target :: Addressable Yes; Miss :: Add
 
 > data Target; data Miss
 
+
+--------------------------------------------------------------------------------
+Underlying data type
+====================
                           +---- Path to here
             Arity ---+    |
                      |    |    +---- Shape
@@ -91,6 +96,8 @@ all Pntrs point into some App or Ctor below (or at) Root.
 > instance NoDangling (S (App l r)) (Pntr (S n) p)     -- out of scope, cannot check
 > instance NoDangling (S Ctor) (Pntr (S n) p)          -- out of scope, cannot check
 > instance NoDangling (S (Pntr up dir)) (Pntr (S n) p) -- out of scope, cannot check
+
+-- FIXME: We need to bring back the "must not reach past Root" functionality
 
 Please note that constructors do not have names, they have
 positions (addresses) in the tree. We refer to the same constructor
@@ -233,8 +240,23 @@ Unify (for now) checks whether two trees are unifiable
 > u2 = unify Root u0 t0
 > u3 = unify Root t0 t0
 
+--------------------------------------------------------------------------------
+Parsing support
+===============
+TBI
 
+Parsec Haskellstyle
+
+--------------------------------------------------------------------------------
+Pretty-printing
+===============
+TBI
+
+given original dictionary (abspath <-> Ctor name)
+
+--------------------------------------------------------------------------------
 Visualization by GraphViz
+=========================
 
 > data TermGraph n e where
 >   NoTerm :: TermGraph n e
@@ -295,8 +317,7 @@ Obtaining the list of nodes
 >                              Sub _ -> (Just ([], node, undefined, []), Term p (node:done) t max)
 >                              Redirected p' t' -> ( Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p p')])
 >                                                  , Term p (node:done) t max)
->   mkGraph [n] [] = fullRootTerm $ Ctor Z --- TODO: this is a lie
->   mkGraph [] [] = NoTerm
+>   mkGraph _ _ = error "Cannot build graphs throught the 'mkGraph' interface"
 >   labNodes NoTerm = []
 >   labNodes term@(Term _ _ t max) = [IG.labNode' ctx | n <- termNodes 1 t
 >                                                     , let (present,_) = IG.match n term
@@ -317,6 +338,9 @@ Obtaining the list of nodes
 > g11 = fullRootTerm g10
 > g12 = defaultVis g11
 > g13 = GV.preview g11
+
+
+-- TODO: supply attributes to GV, Pntr: Rectangle, Ctor with name, App, MultiApp n, VAR triangle
 
 > instance GV.Labellable () where
 >   toLabelValue _ = GV.toLabelValue "H"
