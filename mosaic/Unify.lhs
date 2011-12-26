@@ -1,6 +1,6 @@
 > {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving, TypeFamilies
 >            , MultiParamTypeClasses, FlexibleContexts, FlexibleInstances
->            , UndecidableInstances #-}
+>            , UndecidableInstances, NoMonomorphismRestriction #-}
 
 > module Unify where
 
@@ -87,7 +87,10 @@ all Pntrs point into some App or Ctor below (or at) Root.
 > instance NoDangling (App l r) (Pntr Z Here)
 > instance NoDangling l (Pntr Z p) => NoDangling (App l r) (Pntr Z (A1 p))
 > instance NoDangling r (Pntr Z p) => NoDangling (App l r) (Pntr Z (A2 p))
-> instance NoDangling rootee (Pntr n p) => NoDangling (S rootee) (Pntr (S n) p)
+> instance NoDangling (S rootee) (Pntr n p) => NoDangling (S (S rootee)) (Pntr (S n) p)
+> instance NoDangling (S (App l r)) (Pntr (S n) p)     -- out of scope, cannot check
+> instance NoDangling (S Ctor) (Pntr (S n) p)          -- out of scope, cannot check
+> instance NoDangling (S (Pntr up dir)) (Pntr (S n) p) -- out of scope, cannot check
 
 Please note that constructors do not have names, they have
 positions (addresses) in the tree. We refer to the same constructor
@@ -235,7 +238,7 @@ Visualization by GraphViz
 
 > data TermGraph n e where
 >   NoTerm :: TermGraph n e
->   Term :: Path p -> [IG.Node] -> Underlying a p s -> Int -> TermGraph n e
+>   Term :: NoDangling s s => Path p -> [IG.Node] -> Underlying a p s -> Int -> TermGraph n e
 > deriving instance Show (TermGraph n e)
 
 Given a natural number we can generate a relative path
@@ -244,23 +247,24 @@ by unfolding the binary representation:
  o 2 -> A1 Here
  o 3 -> A2 Here
  o 4 -> A1 A1 Here
- o 5 -> A2 A1 Here
- o 6 -> A1 A2 Here
+ o 5 -> A1 A2 Here
+ o 6 -> A2 A1 Here
  o ...
 
+> nodeToPath' :: Path r -> Int -> Hidden Path
+> nodeToPath' acc 1 = Hide acc
+> nodeToPath' acc n | 0 <- n `mod` 2 = nodeToPath' (A1 acc) (n `div` 2)
+> nodeToPath' acc n | 1 <- n `mod` 2 = nodeToPath' (A2 acc) (n `div` 2)
 > nodeToPath :: Int -> Hidden Path
-> nodeToPath 1 = Hide Here
-> nodeToPath n | 0 <- n `mod` 2
->              , Hide tail <- nodeToPath $ n `div` 2
->              = Hide $ A1 tail
-> nodeToPath n | 1 <- n `mod` 2
->              , Hide tail <- nodeToPath $ n `div` 2
->              = Hide $ A2 tail
+> nodeToPath n = nodeToPath' Here n
 
+> pathToNode' :: Int -> Hidden Path -> Int
+> pathToNode' acc (Hide Here) = acc
+> pathToNode' acc (Hide (A1 p)) = pathToNode' (acc * 2) (Hide p)
+> pathToNode' acc (Hide (A2 p)) = pathToNode' (acc * 2 + 1) (Hide p)
 > pathToNode :: Hidden Path -> Int
-> pathToNode (Hide Here) = 1
-> pathToNode (Hide (A1 p)) = 2 * pathToNode (Hide p)
-> pathToNode (Hide (A2 p)) = 2 * pathToNode (Hide p) + 1
+> pathToNode p = pathToNode' 1 p
+
 
 > rootTerm = Term Root
 > fullRootTerm t = Term Root [] t $ noTermNodes t
@@ -270,6 +274,12 @@ Counting nodes (not the addressable subtrees)
 > noTermNodes :: Underlying a p s -> Int
 > noTermNodes (l `App` r) = 1 + noTermNodes l + noTermNodes r
 > noTermNodes _ = 1
+
+Obtaining the list of nodes
+
+> termNodes :: Int -> Underlying a p s -> [Int]
+> termNodes baseNode (l `App` r) = baseNode : (termNodes (baseNode * 2) l ++ termNodes (baseNode * 2 + 1) r)
+> termNodes baseNode _ = [baseNode]
 
 > instance IG.Graph TermGraph where
 >   empty = NoTerm
@@ -288,7 +298,8 @@ Counting nodes (not the addressable subtrees)
 >   mkGraph [n] [] = fullRootTerm $ Ctor Z --- TODO: this is a lie
 >   mkGraph [] [] = NoTerm
 >   labNodes NoTerm = []
->   labNodes term@(Term _ _ _ max) = [IG.labNode' ctx | n <- [1..max]
+>   labNodes term@(Term _ _ _ max) = labNodEs term
+> labNodEs   term@(Term _ _ t max) = [IG.labNode' ctx | n <- termNodes 1 t
 >                                                     , let (present,_) = IG.match n term
 >                                                     , isJust present
 >                                                     , let Just ctx = present]
@@ -302,6 +313,15 @@ Counting nodes (not the addressable subtrees)
 > g4 = GV.preview g2
 > g5 = fullRootTerm $ Ctor (S Z)
 > g6 = defaultVis g5
+> g10 = (Ctor (S $ S Z) `App` Ctor Z) `App` (Pntr (S Z) (A1 $ A2 Here) `App` Pntr (S Z) (A1 $ A1 Here))
+> {-g12 = GV.preview g11-}
+> --g10 = (Ctor $ S Z) `App` (Pntr (S Z) (A1 $ A2 Here) `App` Ctor Z)
+> --g10 = (Ctor $ S Z) `App` (Pntr (Z) (A1 Here) `App` Ctor Z)
+> --g10 = (Ctor $ S Z) `App` (Pntr (S Z) (A1 Here) `App` Ctor Z)
+> g11 :: TermGraph () ()
+> g11 = fullRootTerm g10
+> g12 = defaultVis g11
+> g13 = GV.preview g11
 
 > instance GV.Labellable () where
 >   toLabelValue _ = GV.toLabelValue "H"
