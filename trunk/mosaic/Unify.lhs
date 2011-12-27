@@ -7,8 +7,11 @@
 > import TypeMachinery
 > import qualified Data.GraphViz as GV
 > import Data.GraphViz.Types.Canonical
+> import qualified Data.GraphViz.Attributes.Complete as GA
+> import Data.GraphViz.Commands
 > import qualified Data.Graph.Inductive.Graph as IG
 > import Data.Maybe
+> import Control.Concurrent(forkIO)
 
 --------------------------------------------------------------------------------
 We have an underlying data model, which consists
@@ -317,7 +320,7 @@ Obtaining the list of nodes
 >                              Sub _ -> (Just ([], node, undefined, []), Term p (node:done) t max)
 >                              Redirected p' t' -> ( Just ([], node, undefined, [(undefined, pathToNode $ relativize Here p p')])
 >                                                  , Term p (node:done) t max)
->   mkGraph _ _ = error "Cannot build graphs throught the 'mkGraph' interface"
+>   mkGraph _ _ = error "Cannot build graphs through the 'mkGraph' interface"
 >   labNodes NoTerm = []
 >   labNodes term@(Term _ _ t max) = [IG.labNode' ctx | n <- termNodes 1 t
 >                                                     , let (present,_) = IG.match n term
@@ -337,7 +340,7 @@ Obtaining the list of nodes
 > g11 :: TermGraph () ()
 > g11 = fullRootTerm g10
 > g12 = defaultVis g11
-> g13 = GV.preview g11
+> g13 = preview' g12
 
 
 -- TODO: supply attributes to GV, Pntr: Rectangle, Ctor with name, App, MultiApp n, VAR triangle
@@ -348,5 +351,11 @@ Obtaining the list of nodes
 Example from the bindings...
 
 > defaultVis :: (IG.Graph gr) => gr nl el -> DotGraph IG.Node
-> defaultVis = GV.graphToDot GV.nonClusteredParams
-
+> defaultVis = GV.graphToDot params { GV.isDirected = True
+>                                   --, GV.fmtNode = \n -> GV.fmtNode params n ++ [GA.Shape GA.BoxShape]
+>                                   , GV.fmtEdge = \e -> GV.fmtEdge params e ++ [GV.toLabel "", GA.TailClip False] }
+>                                  where params = GV.nonClusteredParams
+> preview'   :: DotGraph IG.Node -> IO ()
+> preview' dg = ign $ forkIO (runGraphvizCanvas' dg Xlib)
+>   where
+>     ign = (>> return ())
