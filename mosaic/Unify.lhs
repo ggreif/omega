@@ -356,14 +356,13 @@ Example from the bindings...
 >                                      , GV.fmtNode = nodeShaper
 >                                      , GV.fmtEdge = edgeShaper } dg
 >      where params = GV.nonClusteredParams
->            edgeShaper ed@(f, t, _) = GV.toLabel "" : (GV.fmtEdge params ed ++ extraEdgeShape f dg)
+>            edgeShaper ed@(f, t, _) = GV.fmtEdge params ed ++ extraEdgeShape f dg
 >            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n dg
 >            extraEdgeShape f (Term p _ t _)
 >                           | Hide r <- nodeToPath f
 >                           , Redirected _ _ <- grab p r t
->                           = [GA.TailClip False, pointerTail]
+>                           = [GV.edgeEnds GV.Both, GA.TailClip False, pointerTail]
 >            extraEdgeShape _ _ = []
->            --pointerHead = GA.ArrowHead $ GA.AType [(GA.noMods, GA.DotArrow)]
 >            pointerTail = GA.ArrowTail $ GA.AType [(GA.noMods, GA.DotArrow)]
 >            extraNodeShape n (Term p _ t _)
 >                           | Hide r <- nodeToPath n
