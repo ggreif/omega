@@ -361,9 +361,9 @@ Example from the bindings...
 >            extraEdgeShape f (Term p _ t _)
 >                           | Hide r <- nodeToPath f
 >                           , Redirected _ _ <- grab p r t
->                           = [GV.edgeEnds GV.Both, GA.TailClip False, pointerTail]
+>                           = [GV.edgeEnds GV.Both, GA.TailClip False, pointerTail, GA.ArrowSize 0.7, GA.Color [GA.X11Color GA.Blue]]
 >            extraEdgeShape _ _ = []
->            pointerTail = GA.ArrowTail $ GA.AType [(GA.noMods, GA.DotArrow)]
+>            pointerTail = GV.arrowFrom GV.dotArrow
 >            extraNodeShape n (Term p _ t _)
 >                           | Hide r <- nodeToPath n
 >                           , Redirected _ _ <- grab p r t
