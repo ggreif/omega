@@ -352,16 +352,30 @@ Obtaining the list of nodes
 Example from the bindings...
 
 > defaultVis :: TermGraph nl el -> DotGraph IG.Node
-> defaultVis dg = GV.graphToDot params { GV.isDirected = True
->                                      , GV.fmtNode = nodeShaper
->                                      , GV.fmtEdge = edgeShaper } dg
+> defaultVis dg = uncluster $ GV.graphToDot params { GV.isDirected = True
+>                                                  , GV.fmtNode = nodeShaper
+>                                                  , GV.fmtEdge = edgeShaper
+>                                                  --, GV.clusterBy = clustBy
+>                                                  {-, GV.clusterID = GV.Int-} } dg
 >      where params = GV.nonClusteredParams
+>            uncluster g = g { strictGraph = True, graphStatements = uncluster' $ graphStatements g }
+>            --uncluster' stmts = stmts { subGraphs = map uncluster'' $ subGraphs stmts }
+>            uncluster' stmts = stmts { subGraphs = [mkSubgraph 0 [1], mkSubgraph 1 [2,3], mkSubgraph 2 [4,5,6,7]] }
+>            mkSubgraph id ns = DotSG {isCluster = False, subGraphID = Just (Int id), subGraphStmts = DotStmts {attrStmts = [GraphAttrs {attrs = [GA.Rank GA.SameRank]}], subGraphs = [], nodeStmts = map simpleNode ns, edgeStmts = []}}
+>            simpleNode n = DotNode {nodeID = n, nodeAttributes = []}
+>            --uncluster'' sg = sg { isCluster = False {-, subGraphID = Nothing-} }
+>            --clustBy (n,l) = GV.C (getStratum (-1) n) $ GV.N (n,l)
+>            getStratum acc 0 = acc
+>            getStratum acc n = getStratum (acc + 1) (n `div` 2)
+>            --clFmt m = [GraphAttrs [Rank ]]
 >            edgeShaper ed@(f, t, _) = GV.fmtEdge params ed ++ extraEdgeShape f dg
 >            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n dg
 >            extraEdgeShape f (Term p _ t _)
 >                           | Hide r <- nodeToPath f
 >                           , Redirected _ _ <- grab p r t
->                           = [GV.edgeEnds GV.Both, GA.TailClip False, pointerTail, GA.ArrowSize 0.7, GA.Color [GA.X11Color GA.Blue]]
+>                           = [ GV.edgeEnds GV.Both, GA.TailClip False, pointerTail
+>                             , GA.ArrowSize 0.7, GA.Color [GA.X11Color GA.Blue]
+>                             , GA.Weight 0.0 ]
 >            extraEdgeShape _ _ = []
 >            pointerTail = GV.arrowFrom GV.dotArrow
 >            extraNodeShape n (Term p _ t _)
