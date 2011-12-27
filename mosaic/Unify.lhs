@@ -337,7 +337,7 @@ Obtaining the list of nodes
 > g4 = GV.preview g2
 > g5 = fullRootTerm $ Ctor (S Z)
 > g6 = defaultVis g5
-> g10 = (Ctor (S $ S Z) `App` Ctor Z) `App` (Pntr (S Z) (A1 $ A2 Here) `App` Pntr (S Z) (A1 $ A1 Here))
+> g10 = (Ctor (S $ S Z) `App` Ctor Z) `App` (Pntr (S Z) (A1 $ A1 Here) `App` Pntr (S Z) (A1 $ A2 Here))
 > g11 :: TermGraph () ()
 > g11 = fullRootTerm g10
 > g12 = defaultVis g11
@@ -347,27 +347,23 @@ Obtaining the list of nodes
 -- TODO: supply attributes to GV, Pntr: Rectangle, Ctor with name, App, MultiApp n, VAR triangle
 
 > instance GV.Labellable () where
->   toLabelValue _ = GV.toLabelValue "H"
+>   toLabelValue _ = GV.toLabelValue "H" -- FIXME: unneeded cruft
 
 Example from the bindings...
 
 > defaultVis :: TermGraph nl el -> DotGraph IG.Node
-> defaultVis dg = uncluster $ GV.graphToDot params { GV.isDirected = True
+> defaultVis dg = rankNodes $ GV.graphToDot params { GV.isDirected = True
 >                                                  , GV.fmtNode = nodeShaper
->                                                  , GV.fmtEdge = edgeShaper
->                                                  --, GV.clusterBy = clustBy
->                                                  {-, GV.clusterID = GV.Int-} } dg
+>                                                  , GV.fmtEdge = edgeShaper } dg
 >      where params = GV.nonClusteredParams
->            uncluster g = g { strictGraph = True, graphStatements = uncluster' $ graphStatements g }
->            --uncluster' stmts = stmts { subGraphs = map uncluster'' $ subGraphs stmts }
->            uncluster' stmts = stmts { subGraphs = [mkSubgraph 0 [1], mkSubgraph 1 [2,3], mkSubgraph 2 [4,5,6,7]] }
->            mkSubgraph id ns = DotSG {isCluster = False, subGraphID = Just (Int id), subGraphStmts = DotStmts {attrStmts = [GraphAttrs {attrs = [GA.Rank GA.SameRank]}], subGraphs = [], nodeStmts = map simpleNode ns, edgeStmts = []}}
->            simpleNode n = DotNode {nodeID = n, nodeAttributes = []}
->            --uncluster'' sg = sg { isCluster = False {-, subGraphID = Nothing-} }
->            --clustBy (n,l) = GV.C (getStratum (-1) n) $ GV.N (n,l)
+>            rankNodes g = g { strictGraph = True, graphStatements = rankNodes' $ graphStatements g }
+>            rankNodes' stmts = stmts { subGraphs = [mkSubgraph 0 [1], mkSubgraph 1 [2,3], mkSubgraph 2 [4,5,6,7]] } -- FIXME: adhoc
+>            mkSubgraph id ns = DotSG { isCluster = False, subGraphID = Just (Int id)
+>                                     , subGraphStmts = DotStmts { attrStmts = [GraphAttrs {attrs = [GA.Rank GA.SameRank]}], subGraphs = []
+>                                                                , nodeStmts = map simpleNode ns, edgeStmts = [] } }
+>            simpleNode n = DotNode { nodeID = n, nodeAttributes = [] }
 >            getStratum acc 0 = acc
 >            getStratum acc n = getStratum (acc + 1) (n `div` 2)
->            --clFmt m = [GraphAttrs [Rank ]]
 >            edgeShaper ed@(f, t, _) = GV.fmtEdge params ed ++ extraEdgeShape f dg
 >            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n dg
 >            extraEdgeShape f (Term p _ t _)
