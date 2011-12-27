@@ -9,6 +9,7 @@
 > import Data.GraphViz.Types.Canonical
 > import qualified Data.GraphViz.Attributes.Complete as GA
 > import Data.GraphViz.Commands
+> import Data.GraphViz.Commands.IO
 > import qualified Data.Graph.Inductive.Graph as IG
 > import Data.Maybe
 > import Control.Concurrent(forkIO)
@@ -350,11 +351,27 @@ Obtaining the list of nodes
 
 Example from the bindings...
 
-> defaultVis :: (IG.Graph gr) => gr nl el -> DotGraph IG.Node
-> defaultVis = GV.graphToDot params { GV.isDirected = True
->                                   --, GV.fmtNode = \n -> GV.fmtNode params n ++ [GA.Shape GA.BoxShape]
->                                   , GV.fmtEdge = \e -> GV.fmtEdge params e ++ [GV.toLabel "", GA.TailClip False] }
->                                  where params = GV.nonClusteredParams
+> defaultVis :: TermGraph nl el -> DotGraph IG.Node
+> defaultVis dg = GV.graphToDot params { GV.isDirected = True
+>                                      , GV.fmtNode = nodeShaper
+>                                      , GV.fmtEdge = edgeShaper } dg
+>      where params = GV.nonClusteredParams
+>            edgeShaper ed@(f, t, _) = GV.toLabel "" : (GV.fmtEdge params ed ++ extraEdgeShape f dg)
+>            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n dg
+>            extraEdgeShape f (Term p _ t _)
+>                           | Hide r <- nodeToPath f
+>                           , Redirected _ _ <- grab p r t
+>                           = [GA.TailClip False, pointerTail]
+>            extraEdgeShape _ _ = []
+>            --pointerHead = GA.ArrowHead $ GA.AType [(GA.noMods, GA.DotArrow)]
+>            pointerTail = GA.ArrowTail $ GA.AType [(GA.noMods, GA.DotArrow)]
+>            extraNodeShape n (Term p _ t _)
+>                           | Hide r <- nodeToPath n
+>                           , Redirected _ _ <- grab p r t
+>                           = [GA.Width 0.2, GA.Height 0.2, GV.toLabel "", GA.Shape GA.BoxShape]
+>            extraNodeShape _ _ = []
+
+
 > preview'   :: DotGraph IG.Node -> IO ()
 > preview' dg = ign $ forkIO (runGraphvizCanvas' dg Xlib)
 >   where
