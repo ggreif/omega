@@ -77,7 +77,7 @@ Underlying data type
                      v    v    v
 
 > data Underlying :: * -> * -> * -> * where
->   App :: {-NoDangling r (App s u) (App s u) => -}Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
+>   App :: Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
 >   Pntr :: Nat' up -> Path p -> Underlying noArity here (Pntr up p)
 > deriving instance Show (Underlying a p s)
@@ -88,25 +88,17 @@ or start A1.
 Only Apps may home Pntrs, so the constraint on Root Apps is that
 all Pntrs point into some App or Ctor below (or at) Root.
 
-> data C r0 r1 -- to build rootee lists
-> data N
+> data N; data C r0 r1 -- to build rootee lists
 
 > class NoDangling rootee tree
 > instance NoDangling rootee Ctor
 > instance (NoDangling (C (App l r) rootee) l, NoDangling (C (App l r) rootee) r) => NoDangling rootee (App l r)
-> --instance NoDangling (C (App l r) rootee) (Pntr Z Here)
-> --instance NoDangling rootee (Pntr Z (A1 p)) => NoDangling (S rootee) (Pntr Z (A1 p))
-> --instance NoDangling rootee (Pntr Z (A2 p)) => NoDangling (S rootee) (Pntr Z (A2 p))
 > instance NoDangling (C Ctor N) (Pntr Z Here)
 > instance NoDangling (C (App l r) rootee) (Pntr Z Here)
 > instance NoDangling (C l N) (Pntr Z p) => NoDangling (C (App l r) rootee) (Pntr Z (A1 p))
 > instance NoDangling (C r N) (Pntr Z p) => NoDangling (C (App l r) rootee) (Pntr Z (A2 p))
-> instance NoDangling (C (App l r) rootee) (Pntr n p) => NoDangling (C app0 (C (App l r) rootee)) (Pntr (S n) p)
-> --instance NoDangling (S (App l r)) (Pntr (S n) p)     -- out of scope, cannot check
-> --instance NoDangling (S Ctor) (Pntr (S n) p)          -- out of scope, cannot check
-> --instance NoDangling (S (Pntr up dir)) (Pntr (S n) p) -- out of scope, cannot check
+> instance NoDangling rootee (Pntr n p) => NoDangling (C app0 rootee) (Pntr (S n) p)
 
--- FIXME: We need to bring back the "must not reach past Root" functionality
 
 Please note that constructors do not have names, they have
 positions (addresses) in the tree. We refer to the same constructor
