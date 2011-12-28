@@ -20,7 +20,7 @@
 We have an underlying data model, which consists
 of
  o- n-ary constructors (here untyped)
- o- application
+ o- application (future: repeated)
  o- shared or cyclic references
 
 See Hamana's paper on "Initial Algebra Semantics for Cyclic Sharing Structures"
@@ -337,9 +337,6 @@ Base node for an absolute path
 >                                                     , isJust present
 >                                                     , let Just ctx = present]
 
-> g0 :: TermGraph () ()
-> g0 = IG.mkGraph [] []
-> g1 = GV.preview g0
 > g2 :: TermGraph () ()
 > g2 = fullRootTerm r0
 > g3 = termVisualizer g2
@@ -354,9 +351,6 @@ Base node for an absolute path
 
 
 -- TODO: supply attributes to GV, Ctor with name, App, MultiApp n, VAR triangle
-
-> instance GV.Labellable () where
->   toLabelValue _ = GV.toLabelValue "H" -- FIXME: unneeded cruft
 
 Finding a hierarchical structure for terms
 
@@ -385,7 +379,6 @@ Visualization of TermGraphs as DotGraphs
 >                                                                , nodeStmts = map simpleNode ns, edgeStmts = [] } }
 >            simpleNode n = DotNode { nodeID = n, nodeAttributes = [] }
 >            edgeShaper ed@(f, t, _) = GV.fmtEdge params ed ++ extraEdgeShape f tg
->            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n tg
 >            extraEdgeShape f (Term p _ t _)
 >                           | Hide r <- nodeToPath f
 >                           , Redirected _ _ <- grab p r t
@@ -394,6 +387,7 @@ Visualization of TermGraphs as DotGraphs
 >                             , GA.Weight 0.0 ]
 >            extraEdgeShape _ _ = []
 >            pointerTail = GV.arrowFrom GV.dotArrow
+>            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n tg
 >            extraNodeShape n (Term p _ t _)
 >                           | Hide r <- nodeToPath n
 >                           , Redirected _ _ <- grab p r t
