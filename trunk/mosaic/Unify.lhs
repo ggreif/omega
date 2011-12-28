@@ -12,6 +12,8 @@
 > import Data.GraphViz.Commands.IO
 > import qualified Data.Graph.Inductive.Graph as IG
 > import Data.Maybe
+> import Data.List
+> import Data.Function
 > import Control.Concurrent(forkIO)
 
 --------------------------------------------------------------------------------
@@ -333,39 +335,49 @@ Obtaining the list of nodes
 > g1 = GV.preview g0
 > g2 :: TermGraph () ()
 > g2 = fullRootTerm r0
-> g3 = defaultVis g2
-> g4 = GV.preview g2
+> g3 = termVisualizer g2
+> g4 = preview' g3
 > g5 = fullRootTerm $ Ctor (S Z)
-> g6 = defaultVis g5
+> g6 = termVisualizer g5
 > g10 = (Ctor (S $ S Z) `App` Ctor Z) `App` (Pntr (S Z) (A1 $ A1 Here) `App` Pntr (S Z) (A1 $ A2 Here))
 > g11 :: TermGraph () ()
 > g11 = fullRootTerm g10
-> g12 = defaultVis g11
+> g12 = termVisualizer g11
 > g13 = preview' g12
 
 
--- TODO: supply attributes to GV, Pntr: Rectangle, Ctor with name, App, MultiApp n, VAR triangle
+-- TODO: supply attributes to GV, Ctor with name, App, MultiApp n, VAR triangle
 
 > instance GV.Labellable () where
 >   toLabelValue _ = GV.toLabelValue "H" -- FIXME: unneeded cruft
 
-Example from the bindings...
+Finding a hierarchical structure for terms
 
-> defaultVis :: TermGraph nl el -> DotGraph IG.Node
-> defaultVis dg = rankNodes $ GV.graphToDot params { GV.isDirected = True
->                                                  , GV.fmtNode = nodeShaper
->                                                  , GV.fmtEdge = edgeShaper } dg
+> ranks :: [IG.Node] -> [(GV.GraphID, [IG.Node])]
+> ranks ns = clusters
+>       where groups = groupBy ((Prelude.==) `on` fst) $ map (\n->(getStratum 0 n, n)) (sort ns)
+>             clusters = map (\g@((r,_):_) -> (Int r, map snd g)) groups
+>             getStratum acc 0 = acc
+>             getStratum acc n = getStratum (acc + 1) (n `div` 2)
+
+
+Visualization of TermGraphs as DotGraphs
+
+> termVisualizer :: TermGraph nl el -> DotGraph IG.Node
+> termVisualizer tg = rankNodes $ GV.graphToDot params { GV.isDirected = True
+>                                                      , GV.fmtNode = nodeShaper
+>                                                      , GV.fmtEdge = edgeShaper } tg
 >      where params = GV.nonClusteredParams
+>            nodeRanks (Term _ _ t _) = ranks $ termNodes 1 t
+>            nodeRanks _ = []
 >            rankNodes g = g { strictGraph = True, graphStatements = rankNodes' $ graphStatements g }
->            rankNodes' stmts = stmts { subGraphs = [mkSubgraph 0 [1], mkSubgraph 1 [2,3], mkSubgraph 2 [4,5,6,7]] } -- FIXME: adhoc
->            mkSubgraph id ns = DotSG { isCluster = False, subGraphID = Just (Int id)
+>            rankNodes' stmts = stmts { subGraphs = map (uncurry mkSubgraph) (nodeRanks tg) }
+>            mkSubgraph id ns = DotSG { isCluster = False, subGraphID = Just id
 >                                     , subGraphStmts = DotStmts { attrStmts = [GraphAttrs {attrs = [GA.Rank GA.SameRank]}], subGraphs = []
 >                                                                , nodeStmts = map simpleNode ns, edgeStmts = [] } }
 >            simpleNode n = DotNode { nodeID = n, nodeAttributes = [] }
->            getStratum acc 0 = acc
->            getStratum acc n = getStratum (acc + 1) (n `div` 2)
->            edgeShaper ed@(f, t, _) = GV.fmtEdge params ed ++ extraEdgeShape f dg
->            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n dg
+>            edgeShaper ed@(f, t, _) = GV.fmtEdge params ed ++ extraEdgeShape f tg
+>            nodeShaper nd@(n, _) = GV.fmtNode params nd ++ extraNodeShape n tg
 >            extraEdgeShape f (Term p _ t _)
 >                           | Hide r <- nodeToPath f
 >                           , Redirected _ _ <- grab p r t
