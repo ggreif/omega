@@ -372,7 +372,7 @@ Visualization of TermGraphs as DotGraphs
 >            nodeRanks _ = []
 >            rankNodes g = g { strictGraph = True, graphStatements = rankNodes' $ graphStatements g }
 >            rankNodes' stmts = stmts { subGraphs = map (uncurry mkSubgraph) (nodeRanks tg) }
->            mkSubgraph id ns = DotSG { isCluster = False, subGraphID = Just id
+>            mkSubgraph _ ns = DotSG { isCluster = False, subGraphID = Nothing
 >                                     , subGraphStmts = DotStmts { attrStmts = [GraphAttrs {attrs = [GA.Rank GA.SameRank]}], subGraphs = []
 >                                                                , nodeStmts = map simpleNode ns, edgeStmts = [] } }
 >            simpleNode n = DotNode { nodeID = n, nodeAttributes = [] }
