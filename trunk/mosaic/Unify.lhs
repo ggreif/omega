@@ -305,9 +305,16 @@ Counting nodes (not the addressable subtrees)
 
 Obtaining the list of nodes
 
-> termNodes :: Int -> Underlying a p s -> [Int]
+> termNodes :: IG.Node -> Underlying a p s -> [IG.Node]
 > termNodes baseNode (l `App` r) = baseNode : (termNodes (baseNode * 2) l ++ termNodes (baseNode * 2 + 1) r)
 > termNodes baseNode _ = [baseNode]
+
+Base node for an absolute path
+
+> nodeForPath :: Path a -> IG.Node
+> nodeForPath Root = 1
+> nodeForPath (A1 p) = 2 * nodeForPath p
+> nodeForPath (A2 p) = 2 * nodeForPath p + 1
 
 > instance IG.Graph TermGraph where
 >   empty = NoTerm
@@ -325,7 +332,7 @@ Obtaining the list of nodes
 >                                                  , Term p (node:done) t max)
 >   mkGraph _ _ = error "Cannot build graphs through the 'mkGraph' interface"
 >   labNodes NoTerm = []
->   labNodes term@(Term _ _ t max) = [IG.labNode' ctx | n <- termNodes 1 t
+>   labNodes term@(Term p _ t max) = [IG.labNode' ctx | n <- termNodes (nodeForPath p) t
 >                                                     , let (present,_) = IG.match n term
 >                                                     , isJust present
 >                                                     , let Just ctx = present]
@@ -368,12 +375,13 @@ Visualization of TermGraphs as DotGraphs
 >                                                      , GV.fmtNode = nodeShaper
 >                                                      , GV.fmtEdge = edgeShaper } tg
 >      where params = GV.nonClusteredParams
->            nodeRanks (Term _ _ t _) = ranks $ termNodes 1 t
+>            nodeRanks (Term p done t _) = ranks $ termNodes (nodeForPath p) t \\ done
 >            nodeRanks _ = []
 >            rankNodes g = g { strictGraph = True, graphStatements = rankNodes' $ graphStatements g }
 >            rankNodes' stmts = stmts { subGraphs = map (uncurry mkSubgraph) (nodeRanks tg) }
 >            mkSubgraph _ ns = DotSG { isCluster = False, subGraphID = Nothing
->                                     , subGraphStmts = DotStmts { attrStmts = [GraphAttrs {attrs = [GA.Rank GA.SameRank]}], subGraphs = []
+>                                     , subGraphStmts = DotStmts { attrStmts = [GraphAttrs {attrs = [GA.Rank GA.SameRank]}]
+>                                                                , subGraphs = []
 >                                                                , nodeStmts = map simpleNode ns, edgeStmts = [] } }
 >            simpleNode n = DotNode { nodeID = n, nodeAttributes = [] }
 >            edgeShaper ed@(f, t, _) = GV.fmtEdge params ed ++ extraEdgeShape f tg
