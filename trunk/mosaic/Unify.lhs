@@ -77,7 +77,7 @@ Underlying data type
                      v    v    v
 
 > data Underlying :: * -> * -> * -> * where
->   App :: NoDangling (App s u) (App s u) => Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
+>   App :: {-NoDangling r (App s u) (App s u) => -}Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
 >   Pntr :: Nat' up -> Path p -> Underlying noArity here (Pntr up p)
 > deriving instance Show (Underlying a p s)
@@ -88,20 +88,23 @@ or start A1.
 Only Apps may home Pntrs, so the constraint on Root Apps is that
 all Pntrs point into some App or Ctor below (or at) Root.
 
+> data C r0 r1 -- to build rootee lists
+> data N
+
 > class NoDangling rootee tree
 > instance NoDangling rootee Ctor
-> instance (NoDangling (S rootee) l, NoDangling (S rootee) r) => NoDangling rootee (App l r)
-> instance NoDangling (S rootee) (Pntr Z Here)
-> instance NoDangling rootee (Pntr Z (A1 p)) => NoDangling (S rootee) (Pntr Z (A1 p))
-> instance NoDangling rootee (Pntr Z (A2 p)) => NoDangling (S rootee) (Pntr Z (A2 p))
-> instance NoDangling Ctor (Pntr Z Here)
-> instance NoDangling (App l r) (Pntr Z Here)
-> instance NoDangling l (Pntr Z p) => NoDangling (App l r) (Pntr Z (A1 p))
-> instance NoDangling r (Pntr Z p) => NoDangling (App l r) (Pntr Z (A2 p))
-> instance NoDangling (S rootee) (Pntr n p) => NoDangling (S (S rootee)) (Pntr (S n) p)
-> instance NoDangling (S (App l r)) (Pntr (S n) p)     -- out of scope, cannot check
-> instance NoDangling (S Ctor) (Pntr (S n) p)          -- out of scope, cannot check
-> instance NoDangling (S (Pntr up dir)) (Pntr (S n) p) -- out of scope, cannot check
+> instance (NoDangling (C (App l r) rootee) l, NoDangling (C (App l r) rootee) r) => NoDangling rootee (App l r)
+> --instance NoDangling (C (App l r) rootee) (Pntr Z Here)
+> --instance NoDangling rootee (Pntr Z (A1 p)) => NoDangling (S rootee) (Pntr Z (A1 p))
+> --instance NoDangling rootee (Pntr Z (A2 p)) => NoDangling (S rootee) (Pntr Z (A2 p))
+> instance NoDangling (C Ctor N) (Pntr Z Here)
+> instance NoDangling (C (App l r) rootee) (Pntr Z Here)
+> instance NoDangling (C l N) (Pntr Z p) => NoDangling (C (App l r) rootee) (Pntr Z (A1 p))
+> instance NoDangling (C r N) (Pntr Z p) => NoDangling (C (App l r) rootee) (Pntr Z (A2 p))
+> instance NoDangling (C (App l r) rootee) (Pntr n p) => NoDangling (C app0 (C (App l r) rootee)) (Pntr (S n) p)
+> --instance NoDangling (S (App l r)) (Pntr (S n) p)     -- out of scope, cannot check
+> --instance NoDangling (S Ctor) (Pntr (S n) p)          -- out of scope, cannot check
+> --instance NoDangling (S (Pntr up dir)) (Pntr (S n) p) -- out of scope, cannot check
 
 -- FIXME: We need to bring back the "must not reach past Root" functionality
 
@@ -266,7 +269,7 @@ Visualization by GraphViz
 
 > data TermGraph n e where
 >   NoTerm :: TermGraph n e
->   Term :: NoDangling s s => Path p -> [IG.Node] -> Underlying a p s -> Int -> TermGraph n e
+>   Term :: NoDangling N s => Path p -> [IG.Node] -> Underlying a p s -> Int -> TermGraph n e
 > deriving instance Show (TermGraph n e)
 
 Given a natural number we can generate a relative path
@@ -337,6 +340,9 @@ Base node for an absolute path
 >                                                     , isJust present
 >                                                     , let Just ctx = present]
 
+> g0 = (Ctor (S Z)) `App` Pntr Z (A1 Here)
+> g1 :: TermGraph () ()
+> g1 = fullRootTerm g0
 > g2 :: TermGraph () ()
 > g2 = fullRootTerm r0
 > g3 = termVisualizer g2
