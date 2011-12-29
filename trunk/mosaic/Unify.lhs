@@ -422,17 +422,11 @@ Visualization of TermGraphs as DotGraphs
 >                           = [GA.Width 0.2, GA.Height 0.2, GV.toLabel "", GA.Shape GA.BoxShape]
 >            extraNodeShape n (Term p _ t _)
 >                           | Hide r <- nodeToPath n
->                           , Sub Var <- grab p r t
->                           = [GV.toLabel "", GA.Shape GA.DiamondShape]
->            extraNodeShape n (Term p _ t _)
->                           | Hide r <- nodeToPath n
->                           , Sub (Ctor n) <- grab p r t
->                           = [GV.toLabel $ arity n, GA.Shape GA.Triangle]
->            extraNodeShape n (Term p _ t _)
->                           | Hide r <- nodeToPath n
->                           , Sub (_ `Qnt` _) <- grab p r t
->                           = [GV.toLabel "", GA.Shape GA.House]
->            extraNodeShape _ _ = []
+>                           = case grab p r t of
+>                             Sub Var -> [GV.toLabel "", GA.Shape GA.DiamondShape]
+>                             Sub (Ctor n) -> [GV.toLabel $ arity n, GA.Shape GA.Triangle]
+>                             Sub (_ `Qnt` _) -> [GV.toLabel "", GA.Shape GA.House]
+>                             _ -> []
 >            arity :: Nat' n -> String
 >            arity Z = ""
 >            arity n = '/' : show (fromIntegral $ Hide n)
