@@ -51,7 +51,7 @@ node.
 
 kind Overlying -- shape of Underlying
 
-> data Var; data Ctor; data App a b; data Pntr n p
+> data Var; data Ctor; data App a b; data Pntr n p; data Qnt h t
 
 kind Turns -- the way to descend
 
@@ -81,6 +81,7 @@ Underlying data type
 >   App :: Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
 >   Pntr :: Nat' up -> Path p -> Underlying noArity here (Pntr up p)
+>   Qnt :: Underlying a' (A1 r) h -> Underlying a (A2 r) t -> Underlying a r (Qnt h t) -- let a = b in c, ∀a.c, ∃a.c
 > deriving instance Show (Underlying a p s)
 
 The Path in Pntr has an additional constraint that it must be Here
@@ -95,9 +96,11 @@ all Pntrs point into some Var, App or Ctor below (or at) Root.
 > instance NoDangling rootee Var
 > instance NoDangling rootee Ctor
 > instance (NoDangling (C (App l r) rootee) l, NoDangling (C (App l r) rootee) r) => NoDangling rootee (App l r)
+> instance NoDangling (C (Qnt Ctor r) rootee) r => NoDangling rootee (Qnt Ctor r)
 > instance NoDangling (C Var N) (Pntr Z Here)
 > instance NoDangling (C Ctor N) (Pntr Z Here)
 > instance NoDangling (C (App l r) rootee) (Pntr Z Here)
+> instance NoDangling (C (Qnt Ctor r) rootee) (Pntr Z (A1 Here))
 > instance NoDangling (C l N) (Pntr Z p) => NoDangling (C (App l r) rootee) (Pntr Z (A1 p))
 > instance NoDangling (C r N) (Pntr Z p) => NoDangling (C (App l r) rootee) (Pntr Z (A2 p))
 > instance NoDangling rootee (Pntr n p) => NoDangling (C app0 rootee) (Pntr (S n) p)
@@ -165,6 +168,8 @@ Grab is a function to get a subtree at a relative path
 > grab here Here tree = Sub tree
 > grab here (A1 p) tree@(App l _) = grab' tree (A1 here) here p l
 > grab here (A2 p) tree@(App _ r) = grab' tree (A2 here) here p r
+> grab here (A1 p) tree@(Qnt d _) = grab (A1 here) p d
+> grab here (A2 p) tree@(Qnt _ r) = grab' tree (A2 here) here p r
 > grab _ _ _ = Miss
 
 Helper function that can chase
@@ -308,12 +313,14 @@ by unfolding the binary representation:
 Counting nodes (not the addressable subtrees)
 
 > noTermNodes :: Underlying a p s -> Int
+> noTermNodes (d `Qnt` r) = 1 + noTermNodes d + noTermNodes r
 > noTermNodes (l `App` r) = 1 + noTermNodes l + noTermNodes r
 > noTermNodes _ = 1
 
 Obtaining the list of nodes
 
 > termNodes :: IG.Node -> Underlying a p s -> [IG.Node]
+> termNodes baseNode (d `Qnt` r) = baseNode : (termNodes (baseNode * 2) d ++ termNodes (baseNode * 2 + 1) r)
 > termNodes baseNode (l `App` r) = baseNode : (termNodes (baseNode * 2) l ++ termNodes (baseNode * 2 + 1) r)
 > termNodes baseNode _ = [baseNode]
 
@@ -333,6 +340,8 @@ Base node for an absolute path
 >   match node gr@(Term p done t max) | Hide r <- nodeToPath node
 >                            = case grab p r t of
 >                              Miss -> (Nothing, gr)
+>                              Sub (_ `Qnt` _) -> ( Just ([], node, undefined, [(undefined, node * 2), (undefined, node * 2 + 1)])
+>                                                 , Term p (node:done) t max)
 >                              Sub (_ `App` _) -> ( Just ([], node, undefined, [(undefined, node * 2), (undefined, node * 2 + 1)])
 >                                                 , Term p (node:done) t max)
 >                              Sub _ -> (Just ([], node, undefined, []), Term p (node:done) t max)
@@ -363,6 +372,10 @@ Base node for an absolute path
 > g21 = fullRootTerm g20
 > g22 = termVisualizer g21
 > g23 = preview' g22
+> g30 = Ctor (S Z) `Qnt` ((Pntr (S Z) (A1 Here)) `App` Ctor Z)
+> g31 = fullRootTerm g30
+> g32 = termVisualizer g31
+> g33 = preview' g32
 
 
 -- TODO: supply attributes to GV, Ctor with name, App, MultiApp n
@@ -415,6 +428,10 @@ Visualization of TermGraphs as DotGraphs
 >                           | Hide r <- nodeToPath n
 >                           , Sub (Ctor n) <- grab p r t
 >                           = [GV.toLabel $ arity n, GA.Shape GA.Triangle]
+>            extraNodeShape n (Term p _ t _)
+>                           | Hide r <- nodeToPath n
+>                           , Sub (_ `Qnt` _) <- grab p r t
+>                           = [GV.toLabel "", GA.Shape GA.House]
 >            extraNodeShape _ _ = []
 >            arity :: Nat' n -> String
 >            arity Z = ""
