@@ -436,3 +436,28 @@ Visualization of TermGraphs as DotGraphs
 > preview' dg = ign $ forkIO (runGraphvizCanvas' dg Xlib)
 >   where
 >     ign = (>> return ())
+
+--------------------------------------------------------------------------------
+Laundry list:
+=============
+
+ - we need a way to "break out" a part of the global graph to a smaller
+   local (but rooted) one so we can benefit from our fast unification
+   algorithm. When we are done we can "merge back" the results. Otherwise
+   we have a high Pntr/Ctor ratio, which causes many deferrals of Pntr
+   lookups.
+
+ - narrowing. Primarily needed for dealing with type functions:
+    o unify from left with args and from right with result
+    o find the remaining equations, and
+    o connect left with right for each of them by lazily diagonalizing
+      over the type variables inside. The generators would be n (> 0) paths
+      into a tree addressing n variables. Each path needs to be accompanied
+      with a set of applicable constructors based on the variable's type.
+
+ - Can we come up with a clever scheme to identify (views?)
+   thrist of trees and tree of thrists? Rebuilding is probably too
+   expensive. Are these commutative functors (-> Andy Gill) ?
+   Could we convince the compiler to add the extra pointers to these
+   structures so we can travel in either direction? Tree-wise or thrist-
+   wise at will?
