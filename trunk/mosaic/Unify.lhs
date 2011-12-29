@@ -242,6 +242,11 @@ and tracks the deferrals.
 > unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
 > unify here (Pntr m p) (Pntr n q) = sameNat' m n && samePath p q
 > -- FIXME: pointers to (potential) variables must be deferred
+> -- FIXME: we can also catch some types of App cycles here
+> -- FIXME: due to variables the same constructor may appear at different paths
+> --        in the lhs and rhs graphs. So a pre-pass is assumed that ensured
+> --        this already. But since Ctor symbols tend to be defined globally,
+> --        this probably won't be a problem.
 > unify _ _ _ = False
 
 > u0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Ctor Z)
@@ -406,7 +411,14 @@ Visualization of TermGraphs as DotGraphs
 >                           | Hide r <- nodeToPath n
 >                           , Sub Var <- grab p r t
 >                           = [GV.toLabel "", GA.Shape GA.DiamondShape]
+>            extraNodeShape n (Term p _ t _)
+>                           | Hide r <- nodeToPath n
+>                           , Sub (Ctor n) <- grab p r t
+>                           = [GV.toLabel $ arity n, GA.Shape GA.Triangle]
 >            extraNodeShape _ _ = []
+>            arity :: Nat' n -> String
+>            arity Z = ""
+>            arity n = '/' : show (fromIntegral $ Hide n)
 
 
 > preview'   :: DotGraph IG.Node -> IO ()
