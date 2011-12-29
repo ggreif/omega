@@ -106,9 +106,8 @@ all Pntrs point into some Var, App or Ctor below (or at) Root.
 Please note that constructors do not have names, they have
 positions (addresses) in the tree. We refer to the same constructor
 by sharing. A constructor in a different position is a distinct
-one and they cannot unify.
-
-We should also have holes, corresponding to unification variables. --TODO--
+one and they cannot unify. Variables behave accordingly w.r.t.
+positionality, but unify with everything.
 
 Now the Path type is still missing. Here we go:
 
@@ -231,6 +230,8 @@ Are we having two equal paths?
 > t34 = grab Root (A2 $ A2 (A1 Here)) t30
 
 Unify (for now) checks whether two trees are unifiable
+We need to define a monad that provides the associations
+and tracks the deferrals.
 
 > unify :: Path here -> Underlying a here s -> Underlying b here u -> Bool
 > unify here Var Var = True
@@ -240,6 +241,7 @@ Unify (for now) checks whether two trees are unifiable
 > unify here (Ctor (S m)) (Ctor (S n)) = unify here (Ctor m) (Ctor n)
 > unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
 > unify here (Pntr m p) (Pntr n q) = sameNat' m n && samePath p q
+> -- FIXME: pointers to (potential) variables must be deferred
 > unify _ _ _ = False
 
 > u0 = Ctor (S (S Z)) `App` (Ctor (S Z) `App` Ctor Z)
@@ -358,7 +360,7 @@ Base node for an absolute path
 > g23 = preview' g22
 
 
--- TODO: supply attributes to GV, Ctor with name, App, MultiApp n, VAR triangle
+-- TODO: supply attributes to GV, Ctor with name, App, MultiApp n
 
 Finding a hierarchical structure for terms
 
