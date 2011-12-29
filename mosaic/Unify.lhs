@@ -51,7 +51,7 @@ node.
 
 kind Overlying -- shape of Underlying
 
-> data Ctor; data App a b; data Pntr n p
+> data Var; data Ctor; data App a b; data Pntr n p
 
 kind Turns -- the way to descend
 
@@ -77,6 +77,7 @@ Underlying data type
                      v    v    v
 
 > data Underlying :: * -> * -> * -> * where
+>   Var :: Underlying noArity here Var
 >   App :: Underlying (S a) (A1 r) s -> Underlying n (A2 r) u -> Underlying a r (App s u)
 >   Ctor :: Nat' n -> Underlying n here Ctor
 >   Pntr :: Nat' up -> Path p -> Underlying noArity here (Pntr up p)
@@ -86,13 +87,15 @@ The Path in Pntr has an additional constraint that it must be Here
 or start A1.
 
 Only Apps may home Pntrs, so the constraint on Root Apps is that
-all Pntrs point into some App or Ctor below (or at) Root.
+all Pntrs point into some Var, App or Ctor below (or at) Root.
 
 > data N; data C r0 r1 -- to build rootee lists
 
 > class NoDangling rootee tree
+> instance NoDangling rootee Var
 > instance NoDangling rootee Ctor
 > instance (NoDangling (C (App l r) rootee) l, NoDangling (C (App l r) rootee) r) => NoDangling rootee (App l r)
+> instance NoDangling (C Var N) (Pntr Z Here)
 > instance NoDangling (C Ctor N) (Pntr Z Here)
 > instance NoDangling (C (App l r) rootee) (Pntr Z Here)
 > instance NoDangling (C l N) (Pntr Z p) => NoDangling (C (App l r) rootee) (Pntr Z (A1 p))
@@ -230,6 +233,9 @@ Are we having two equal paths?
 Unify (for now) checks whether two trees are unifiable
 
 > unify :: Path here -> Underlying a here s -> Underlying b here u -> Bool
+> unify here Var Var = True
+> unify here Var x = True -- FIXME: create association
+> unify here x Var = True -- FIXME: create association
 > unify here (Ctor Z) (Ctor Z) = True
 > unify here (Ctor (S m)) (Ctor (S n)) = unify here (Ctor m) (Ctor n)
 > unify here (l1 `App` r1) (l2 `App` r2) = unify (A1 here) l1 l2 && unify (A2 here) r1 r2
@@ -346,6 +352,10 @@ Base node for an absolute path
 > g11 = fullRootTerm g10
 > g12 = termVisualizer g11
 > g13 = preview' g12
+> g20 = Ctor (S Z) `App` Var
+> g21 = fullRootTerm g20
+> g22 = termVisualizer g21
+> g23 = preview' g22
 
 
 -- TODO: supply attributes to GV, Ctor with name, App, MultiApp n, VAR triangle
@@ -390,6 +400,10 @@ Visualization of TermGraphs as DotGraphs
 >                           | Hide r <- nodeToPath n
 >                           , Redirected _ _ <- grab p r t
 >                           = [GA.Width 0.2, GA.Height 0.2, GV.toLabel "", GA.Shape GA.BoxShape]
+>            extraNodeShape n (Term p _ t _)
+>                           | Hide r <- nodeToPath n
+>                           , Sub Var <- grab p r t
+>                           = [GV.toLabel "", GA.Shape GA.DiamondShape]
 >            extraNodeShape _ _ = []
 
 
