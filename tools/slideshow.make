@@ -1,6 +1,6 @@
 all: slides.html
 
-.PHONY: again clean
+.PHONY: again clean cleaner
 
 clean:
 	rm -f slides.html *.html.top *.html.content 
