@@ -27,3 +27,12 @@ wiki.html.content: wiki.html
 slides.html: slidy.html.top slides.html.cover wiki.html.content slides.html.tail
 	cat $(^) | awk -f backgrounds.awk > $@
 
+twiki.html:
+	curl "http://twiki.org/cgi-bin/view/TWiki/TextFormattingRules" > $@
+
+twiki.html.content: twiki.html
+	awk -f twiki.awk < $(<) | awk -f hierarchy.awk > $@
+
+tslides.html: slidy.html.top slides.html.cover twiki.html.content slides.html.tail
+	cat $(^) > $@
+
