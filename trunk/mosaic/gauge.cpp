@@ -68,9 +68,15 @@ struct Foo
   Foo& foo1(int*);
   void foo2(int*, Foo*);*/
   char* foo3(int, Foo&, const Foo*);
+  char* foo3(int, char, unsigned);
   virtual const char* foo3c(int, char, unsigned) const;
   //static char* bar3(int, Foo&, const char*);
 };
+
+char* Foo::foo3(int, char, unsigned)
+{
+  return 0;
+}
 
 char* Foo::foo3(int, Foo&, const Foo*)
 {
@@ -88,7 +94,8 @@ const char* Foo::foo3c(int, char, unsigned) const
     /*    gauge(&Foo::foo0);
     gauge(&Foo::foo1);
     gauge(&Foo::foo2);*/
-    gauge(&Foo::foo3).regauge<&Foo::foo3>();
+    gauge(static_cast<char* (Foo::*)(int, char, unsigned)>(&Foo::foo3)).regauge<&Foo::foo3>();
+    gauge(static_cast<char* (Foo::*)(int, Foo&, const Foo*)>(&Foo::foo3)).regauge<&Foo::foo3>();
     gauge(&Foo::foo3c).regauge<&Foo::foo3c>();
     //    gauge(&Foo::bar3);
     gauge(&Foo::bla).regauge<&Foo::bla>();
@@ -103,5 +110,4 @@ int main(void)
   Foo foo;
   printf("%s\n", _ZN17gauge_member_cfunIPKc3FooicjE1_IXadL_ZNKS2_5foo3cEicjEEE4callERKS2_icj(&foo, 1, 2, 3));
 }
-
 
