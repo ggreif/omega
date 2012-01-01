@@ -10,43 +10,46 @@ void gauge(RETURN (RECEIVER::*)(ARG1, ARG2));
 template <typename RETURN, class RECEIVER, typename ARG1, typename ARG2, typename ARG3>
 struct gauge_member_fun
 {
-  typedef RETURN (*ref)(RECEIVER&, ARG1, ARG2, ARG3);
+  typedef RETURN (*call)(RECEIVER&, ARG1, ARG2, ARG3);
 
   template <RETURN (RECEIVER::*MEMBER_FUN)(ARG1, ARG2, ARG3)>
   struct regauge2
   {
-    static RETURN ref(RECEIVER& r, ARG1 a1, ARG2 a2, ARG3 a3) { return (r.*MEMBER_FUN)(a1, a2, a3); }
+    static RETURN call(RECEIVER& r, ARG1 a1, ARG2 a2, ARG3 a3) { return (r.*MEMBER_FUN)(a1, a2, a3); }
   };
 
   template <RETURN (RECEIVER::*MEMBER_FUN)(ARG1, ARG2, ARG3)>
-  ref regauge(void) const
+  call regauge(void) const
   {
-    return regauge2<MEMBER_FUN>::ref;
+    return regauge2<MEMBER_FUN>::call;
   }
 };
 
 template <typename RETURN, class RECEIVER, typename ARG1, typename ARG2, typename ARG3>
 struct gauge_member_cfun
 {
-  typedef RETURN (*ref)(const RECEIVER&, ARG1, ARG2, ARG3);
+  typedef RETURN (*call)(const RECEIVER&, ARG1, ARG2, ARG3);
 
   template <RETURN (RECEIVER::*MEMBER_FUN)(ARG1, ARG2, ARG3) const>
   struct regauge2
   {
-    static RETURN ref(const RECEIVER& r, ARG1 a1, ARG2 a2, ARG3 a3) { return (r.*MEMBER_FUN)(a1, a2, a3); }
+    static RETURN call(const RECEIVER& r, ARG1 a1, ARG2 a2, ARG3 a3) { return (r.*MEMBER_FUN)(a1, a2, a3); }
   };
 
   template <RETURN (RECEIVER::*MEMBER_FUN)(ARG1, ARG2, ARG3) const>
-  ref regauge(void) const
+  call regauge(void) const
   {
-    return regauge2<MEMBER_FUN>::ref;
+    return regauge2<MEMBER_FUN>::call;
   }
 };
 
 template <typename RETURN, class RECEIVER, typename ARG1, typename ARG2, typename ARG3>
-gauge_member_fun<RETURN, RECEIVER, ARG1, ARG2, ARG3> gauge(RETURN (RECEIVER::*)(ARG1, ARG2, ARG3));
+gauge_member_fun<RETURN, RECEIVER, ARG1, ARG2, ARG3> gauge(RETURN (RECEIVER::*)(ARG1, ARG2, ARG3))
+{ return gauge_member_fun<RETURN, RECEIVER, ARG1, ARG2, ARG3>(); }
+
 template <typename RETURN, class RECEIVER, typename ARG1, typename ARG2, typename ARG3>
-gauge_member_cfun<RETURN, RECEIVER, ARG1, ARG2, ARG3> gauge(RETURN (RECEIVER::*)(ARG1, ARG2, ARG3) const);
+gauge_member_cfun<RETURN, RECEIVER, ARG1, ARG2, ARG3> gauge(RETURN (RECEIVER::*)(ARG1, ARG2, ARG3) const)
+{ return gauge_member_cfun<RETURN, RECEIVER, ARG1, ARG2, ARG3>(); }
 
 
 template <typename RETURN, typename ARG1, typename ARG2, typename ARG3>
@@ -78,24 +81,39 @@ gauge_member<RETURN, RECEIVER> gauge(RETURN RECEIVER::*member)
 
 struct Foo
 {
-  const int bla;
+  /*  const int bla;
   void foo0();
   Foo& foo1(int*);
   void foo2(int*, Foo*);
-  char* foo3(int, Foo&, const Foo*);
-  char* foo3c(int, Foo&, const Foo*) const;
-  static char* bar3(int, Foo&, const char*);
+  char* foo3(int, Foo&, const Foo*);*/
+  const char* foo3c(int, char, unsigned) const;
+  //static char* bar3(int, Foo&, const char*);
 };
+
+const char* Foo::foo3c(int, char, unsigned) const
+{
+  return "Hello gauge!";
+}
 
 //namespace {
   void gaugers(void)
   {
-    gauge(&Foo::foo0);
+    /*    gauge(&Foo::foo0);
     gauge(&Foo::foo1);
     gauge(&Foo::foo2);
-    gauge(&Foo::foo3).regauge<&Foo::foo3>();
+    gauge(&Foo::foo3).regauge<&Foo::foo3>();*/
     gauge(&Foo::foo3c).regauge<&Foo::foo3c>();
-    gauge(&Foo::bar3);
-    gauge(&Foo::bla).regauge<&Foo::bla>();
+    /*    gauge(&Foo::bar3);
+	  gauge(&Foo::bla).regauge<&Foo::bla>();*/
   }
 //}
+
+extern "C" char* _ZN17gauge_member_cfunIPKc3FooicjE8regauge2IXadL_ZNKS2_5foo3cEicjEEE4callERKS2_icj(const Foo*, int, char, unsigned);
+
+#include <cstdio>
+int main(void)
+{
+  printf("%s\n", _ZN17gauge_member_cfunIPKc3FooicjE8regauge2IXadL_ZNKS2_5foo3cEicjEEE4callERKS2_icj(NULL, 1, 2, 3));
+}
+
+
