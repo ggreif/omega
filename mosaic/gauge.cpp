@@ -55,12 +55,12 @@ void gauge(RETURN (*)(ARG1, ARG2, ARG3));
 template <typename RETURN, class RECEIVER>
 struct gauge_member
 {
-  typedef const RETURN& (*ref)(const RECEIVER&);
+  typedef RETURN& (*ref)(RECEIVER&);
 
   template <RETURN RECEIVER::*MEMBER>
   struct regauge2
   {
-    static const RETURN& ref(const RECEIVER& r) { return r.*MEMBER; }
+    static RETURN& ref(RECEIVER& r) { return r.*MEMBER; }
   };
 
   template <RETURN RECEIVER::*MEMBER>
@@ -78,7 +78,7 @@ gauge_member<RETURN, RECEIVER> gauge(RETURN RECEIVER::*member)
 
 struct Foo
 {
-  int bla;
+  const int bla;
   void foo0();
   Foo& foo1(int*);
   void foo2(int*, Foo*);
