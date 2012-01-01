@@ -86,7 +86,7 @@ struct Foo
   Foo& foo1(int*);
   void foo2(int*, Foo*);
   char* foo3(int, Foo&, const Foo*);*/
-  const char* foo3c(int, char, unsigned) const;
+  virtual const char* foo3c(int, char, unsigned) const;
   //static char* bar3(int, Foo&, const char*);
 };
 
@@ -113,7 +113,8 @@ extern "C" char* _ZN17gauge_member_cfunIPKc3FooicjE8regauge2IXadL_ZNKS2_5foo3cEi
 #include <cstdio>
 int main(void)
 {
-  printf("%s\n", _ZN17gauge_member_cfunIPKc3FooicjE8regauge2IXadL_ZNKS2_5foo3cEicjEEE4callERKS2_icj(NULL, 1, 2, 3));
+  Foo foo;
+  printf("%s\n", _ZN17gauge_member_cfunIPKc3FooicjE8regauge2IXadL_ZNKS2_5foo3cEicjEEE4callERKS2_icj(&foo, 1, 2, 3));
 }
 
 
