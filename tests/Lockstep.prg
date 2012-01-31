@@ -1,6 +1,6 @@
 -- some infrastructure
 
-kind Invariant = Pair a b deriving Pair(ip)
+kind Invariant = Pair a b deriving Pair(i)
 
 -- invariants
 --
@@ -39,17 +39,17 @@ data Sig :: Signature ~> * where
 --
 data Transition :: Invariant ~> Invariant ~> * where
   -- message primitives
-  Send :: Sig s' -> Transition (t, NotFlying, s)ip (t, Flying, s)ip
-  Received :: Sig s -> Transition (t, h, s)ip (t, h, s')ip
+  Send :: Sig s' -> Transition (t, NotFlying, s)i (t, Flying, s)i
+  Received :: Sig s -> Transition (t, h, s)i (t, h, s')i
   -- timer primitives
-  StartTimer :: Int -> Transition (Stopped, f, s)ip (Running, f, s)ip
-  StopTimer :: Transition (Running, f, s)ip (Stopped, f, s)ip
-  Expired :: Transition (Running, f, s)ip (Stopped, f, s)ip
+  StartTimer :: Int -> Transition (Stopped, f, s)i (Running, f, s)i
+  StopTimer :: Transition (Running, f, s)i (Stopped, f, s)i
+  Expired :: Transition (Running, f, s)i (Stopped, f, s)i
   -- landing
-  Land :: statelike t h s -> Transition (t, h, s)ip (t, h, s)ip
+  Land :: statelike t h s -> Transition (t, h, s)i (t, h, s)i
   -- building longer transition arrows
-  Compose :: Transition (t, f, s)ip (t', f', s')ip -> Transition (t', f', s')ip (t'', f'', s'')ip
-          -> Transition (t, f, s)ip (t'', f'', s'')ip
+  Compose :: Transition (t, f, s)i (t', f', s')i -> Transition (t', f', s')i (t'', f'', s'')i
+          -> Transition (t, f, s)i (t'', f'', s'')i
 
 
 t1 = (Send B) `Compose` (StartTimer 4) `Compose` (Land StateA')
