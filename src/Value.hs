@@ -485,10 +485,10 @@ instance Show (Equal a b) where
   show (Eq _) = "Eq"
 
 instance Eq (Equal a b) where
-  (Eq _) == (Eq _)= True
+  Eq _ == Eq _ = True
 
 leftEqual :: Equal a b -> a
-leftEqual x = error "Someone pulled on leftEqual"
+leftEqual _ = error "Someone pulled on leftEqual"
 
 rightEqual :: Equal a b -> b
-rightEqual x = error "Someone pulled on leftEqual"
+rightEqual _ = error "Someone pulled on rightEqual"
