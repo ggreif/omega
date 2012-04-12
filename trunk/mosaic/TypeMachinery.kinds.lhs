@@ -1,33 +1,34 @@
 Here we define all the stuff that is needed for our singleton
 types:
- - phantom types (when GHC 7.4 arrives, the user-defined kinds)
+ - types of user-defined kinds
  - corresponding singleton types
 
 These are basically the constructs from Omega,
 reimplemented in Haskell for our purposes.
 
 > {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving,
->              RankNTypes, TypeFamilies, FlexibleInstances #-}
+>              RankNTypes, TypeFamilies, FlexibleInstances,
+>              PolyKinds, DataKinds #-}
 > module TypeMachinery where
 
 The natural numbers:
  o first the phantom types
 
-> data Z; data S n
+> data Nat = Zt | St Nat
 
- o the using the above the singleton type Nat'
+ o then (using the above) the singleton type Nat'
 
-> data Nat' :: * -> * where
->   Z :: Nat' Z
->   S :: Nat' n -> Nat' (S n)
+> data Nat' :: Nat -> * where
+>   Z :: Nat' Zt
+>   S :: Nat' n -> Nat' (St n)
 
 > deriving instance Show (Nat' a)
 
 Type-level addition
 
-> type family Plus m n :: *
-> type instance Plus Z n = n
-> type instance Plus (S m) n = S (Plus m n)
+> type family Plus (m :: Nat) (n :: Nat) :: Nat
+> type instance Plus Zt n = n
+> type instance Plus (St m) n = St (Plus m n)
 
 Nat' addition
 
@@ -45,10 +46,10 @@ Equality on Nat'
 A data type for existentially hiding
 (e.g.) Nat' values
 
-> data Hidden :: (* -> *) -> * where
->   Hide :: Show (a n) => a n -> Hidden a
+> data Hidden :: (k -> *) -> * where
+>   Hide :: {-Show (a n) =>-} a n -> Hidden a
 
-> deriving instance Show (Hidden t)
+> -- deriving instance Show (Hidden t)
 
 > toNat' :: Integral i => i -> Hidden Nat'
 > toNat' 0 = Hide Z
@@ -89,9 +90,9 @@ Now we are ready to make Hidden Nat' an Integral type
 McBride's Fin data type. By counting backwards from the
 result index, it only admits a fixed number of inhabitants.
 
-> data Fin :: * -> * where
->   Stop :: Fin (S Z)
->   Retreat :: Fin s -> Fin (S s)
+> data Fin :: Nat -> * where
+>   Stop :: Fin (St Zt)
+>   Retreat :: Fin s -> Fin (St s)
 
 > deriving instance Show (Fin a)
 
