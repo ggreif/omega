@@ -35,7 +35,7 @@ Note: we do not yet require that e is strictly bigger than a.
 >                  return $ IntLit a undefined t
 
 We have to lift the parser operations into our bounded
-äworld.
+world.
 
 > bounded :: Monad m => Nat' a -> ParsecT s u m Int -> ParsecT s u m (BoundedToken Int a e)
 > bounded strt p = do a <- getPosition
