@@ -58,3 +58,9 @@ Try this now
  > $(dullness [| cid 1 |])
 
 Alas, "cid 1" is typechecked before it gets passed to us :-(
+
+Am I about to reimplement heterogenous metaprogramming?
+See:
+http://www.cs.berkeley.edu/~megacz/garrows/megacz-pop-talk.pdf
+
+Anyway, can we try to conjure up an Apply instance?
