@@ -25,9 +25,8 @@ And then execute
 > dullness :: ExpQ -> Q Exp
 > dullness e = e >>= return P.. walkAST
 
-> kk = (<$>) :: (a -> b) -> a -> b
-
 > walkAST :: Exp -> Exp
 > walkAST l@(LitE {}) = l
-> walkAST (AppE f a) = AppE (AppE (VarE (mkName "kk")) f) a
+> walkAST v@(VarE {}) = v
+> walkAST (AppE f a) = AppE (AppE (VarE (mkName "<$>")) (walkAST f)) (walkAST a)
 
