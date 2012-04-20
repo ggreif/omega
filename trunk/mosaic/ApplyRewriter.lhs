@@ -17,6 +17,7 @@ And then execute
 > import Control.Category
 > import Prelude hiding ((.))
 > import qualified Prelude ((.))
+> import Language.Haskell.TH.Syntax
 
 > class Category c => Apply c where
 >   (<$>) :: c a b -> a -> b
@@ -30,7 +31,7 @@ And then execute
 > walkAST :: Exp -> Exp
 > walkAST l@(LitE {}) = l
 > walkAST v@(VarE {}) = v
-> walkAST (AppE f a) = AppE (AppE (VarE (mkName "<$>")) (walkAST f)) (walkAST a)
+> walkAST (AppE f a) = f  -- AppE (AppE (VarE (mkName "<$>")) (walkAST f)) (walkAST a)
 
 Now that we can perform the transformation, it would be interesting
 to give a different instance.
@@ -64,3 +65,6 @@ See:
 http://www.cs.berkeley.edu/~megacz/garrows/megacz-pop-talk.pdf
 
 Anyway, can we try to conjure up an Apply instance?
+
+> instance Lift (LC' a b) where
+>   lift _ = [| negate |]
