@@ -15,5 +15,6 @@ And then execute
 > import Language.Haskell.TH
 
 > dullness :: ExpQ -> Q Exp
-> dullness e = [| 1 |]
+> dullness e = do LitE (IntegerL 1) <- e
+>                 return $ LitE (IntegerL 2)
 
