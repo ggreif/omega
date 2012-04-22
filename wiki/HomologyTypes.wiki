@@ -417,10 +417,13 @@ with genus n]
 Has somebody already embarked on visualizing (and/or topologizing) the lambda calculus?
 [yes, I have seen an animation of the (\a.aa)(\a.aa) reduction as a repetitive deformation]
 
-Visual canons in (molecular) chemistry
-Visual notations (UML?)
+Visual canons in
+  * (molecular) chemistry
+  * visual notations (UML?)
 
 Diagrams of moving 'particles/waves' in [https://www.cs.indiana.edu/~sabry/papers/rational.pdf negative and reciprocal types].
+
+Feynman diagrams. (Strings, Worldsheet)
 
 === n-Categories, string diagrams ===
 
