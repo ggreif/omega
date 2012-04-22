@@ -420,6 +420,8 @@ Has somebody already embarked on visualizing (and/or topologizing) the lambda ca
 Visual canons in (molecular) chemistry
 Visual notations (UML?)
 
+Diagrams of moving 'particles/waves' in [https://www.cs.indiana.edu/~sabry/papers/rational.pdf negative and reciprocal types].
+
 === n-Categories, string diagrams ===
 
 === Connections to String Theory ===
