@@ -27,11 +27,15 @@ And then execute
 >   type Domain c a b -- = a
 >   type Codomain c a b -- = b
 >   (<$>) :: c a b -> Domain c a b -> Codomain c a b
+>   cry :: c (a, b) d -> c a (c b d)
+>   ucr :: c a (c b d) -> c (a, b) d
 
 > instance Apply (->) a b where
 >   type Domain (->) a b = a
 >   type Codomain (->) a b = b
 >   (<$>) = ($)
+>   cry = curry
+>   ucr = uncurry
 
 > dullness :: ExpQ -> Q Exp
 > dullness e = e >>= return Prelude.. walkAST
@@ -52,6 +56,8 @@ to give a different instance.
 >   COMP :: LC b c -> LC a b -> LC a c
 >   PLUS :: LC (Int, Int) Int
 >   PAIR :: LC Void Int -> LC Void Int -> LC Void (Int, Int)
+>   CURRY :: LC (a, b) d -> LC a (LC b d)
+>   UNCURRY :: LC a (LC b d) -> LC (a, b) d
 
 > deriving instance Show (LC a b)
 
@@ -77,6 +83,8 @@ Anyway, can we try to conjure up an Apply instance?
 >   type Domain LC a b = LC Void a
 >   type Codomain LC a b = LC Void b
 >   (<$>) = APP
+>   cry = CURRY
+>   ucr = UNCURRY
 
 
 > -- instance Lift (LC' a b) where
