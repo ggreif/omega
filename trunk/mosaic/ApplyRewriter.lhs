@@ -10,8 +10,9 @@ And then execute
 
 
 
-> {-# LANGUAGE TemplateHaskell, GADTs, KindSignatures,
->              TypeSynonymInstances, StandaloneDeriving #-}
+> {-# LANGUAGE TypeFamilies, TemplateHaskell, GADTs, KindSignatures,
+>              TypeSynonymInstances, StandaloneDeriving,
+>              MultiParamTypeClasses, FlexibleInstances #-}
 
 > import Language.Haskell.TH
 > import Control.Category
@@ -19,10 +20,14 @@ And then execute
 > import qualified Prelude ((.))
 > import Language.Haskell.TH.Syntax
 
-> class Category c => Apply c where
->   (<$>) :: c a b -> a -> b
+> class Category c => Apply c a b where
+>   type Domain a -- = a
+>   type Codomain b -- = b
+>   (<$>) :: c a b -> Domain a -> Codomain b
 
-> instance Apply (->) where
+> instance Apply (->) a b where
+>   type Domain a = a
+>   type Codomain b = b
 >   (<$>) = ($)
 
 > dullness :: ExpQ -> Q Exp
@@ -66,5 +71,10 @@ http://www.cs.berkeley.edu/~megacz/garrows/megacz-pop-talk.pdf
 
 Anyway, can we try to conjure up an Apply instance?
 
+
+
+
 > instance Lift (LC' a b) where
 >   lift _ = [| negate |]
+
+
