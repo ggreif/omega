@@ -45,23 +45,22 @@ Now that we can perform the transformation, it would be interesting
 to give a different instance.
 
 > data LC :: * -> * -> * where
+>   RAW :: Show a => a -> LC Void a
 >   V :: LC Void Int
 >   APP :: LC a b -> LC Void a -> LC Void b
 >   ID :: LC a a
 >   COMP :: LC b c -> LC a b -> LC a c
+>   PLUS :: LC (Int, Int) Int
+>   PAIR :: LC Void Int -> LC Void Int -> LC Void (Int, Int)
 
-> -- deriving instance Show (LC a)
-
-> -- newtype LC' a b = CLC (LC (a -> b)) deriving Show
+> deriving instance Show (LC a b)
 
 > instance Category LC where
 >   id = ID
 >   (.) = COMP
 
 We can do this now:
- > CLC ID Control.Category.. CLC ID
-
-> -- cid = CLC ID
+ > ID . ID
 
 Try this now
  > $(dullness [| cid 1 |])
