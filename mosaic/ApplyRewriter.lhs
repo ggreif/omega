@@ -21,13 +21,13 @@ And then execute
 > import Language.Haskell.TH.Syntax
 
 > class Category c => Apply c a b where
->   type Domain a -- = a
->   type Codomain b -- = b
->   (<$>) :: c a b -> Domain a -> Codomain b
+>   type Domain c a b -- = a
+>   type Codomain c a b -- = b
+>   (<$>) :: c a b -> Domain c a b -> Codomain c a b
 
 > instance Apply (->) a b where
->   type Domain a = a
->   type Codomain b = b
+>   type Domain (->) a b = a
+>   type Codomain (->) a b = b
 >   (<$>) = ($)
 
 > dullness :: ExpQ -> Q Exp
