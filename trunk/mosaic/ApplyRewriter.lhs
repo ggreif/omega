@@ -24,15 +24,15 @@ And then execute
 > data Void where
 
 > class Category c => Apply c a b where
->   type Domain c a b -- = a
->   type Codomain c a b -- = b
+>   type Domain c a b :: *
+>   type Codomain c a b :: *
+>   type Domain c a b = a
+>   type Codomain c a b = b
 >   (<$>) :: c a b -> Domain c a b -> Codomain c a b
 >   cry :: c (a, b) d -> c a (c b d)
 >   ucr :: c a (c b d) -> c (a, b) d
 
 > instance Apply (->) a b where
->   type Domain (->) a b = a
->   type Codomain (->) a b = b
 >   (<$>) = ($)
 >   cry = curry
 >   ucr = uncurry
