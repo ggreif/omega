@@ -1,6 +1,8 @@
 > {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving #-}
 
-> data Z; data S n
+> import TypeMachinery (Z, S)
+> import Data.Thrist
+
 > data Or m n
 
 > data P :: * -> * -> * where
