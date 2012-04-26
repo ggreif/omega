@@ -24,7 +24,6 @@ As a warm-up exercise we convert a String to a Thrist P consisting of Chs only
 > thristize m (c:cs) | ExP (l, t) <- thristize (S m) cs = ExP (l, Cons (Ch c) t)
 
 Match a Ch Thrist by a more complex structure
-TODO!
 
 > match :: P m n -> ExP m -> Maybe (Thrist P m n, ExP n)
 > match Eo e@(ExP (l, Nil)) = Just (Nil, e)
@@ -34,11 +33,17 @@ TODO!
 >                               (t', rest') <- match snd rest
 >                               return (appendThrist t t', rest')
 > {- match p@(Or l r) inp = case match l inp of
->                        Just (got1, l, rest1) -> Just (got1, p, rest1)
+>                        Just (t1, rest1) -> Just (got1, p, rest1)
 >                        Nothing -> case match r inp of
 >                                   Just (got2, r, rest2) -> Just (got2, p, rest2)
->                                   Nothing -> Nothing
-> -}
+>                                   Nothing -> Nothing -}
+
+> data Possibly m n
+>    = Exact (Thrist P m n, ExP n)
+>    | forall n' . Fuzzy (Thrist P m n', ExP n')
+>    | NoWay
+
+> -- instance Monad Possibly
 
 > tZ = thristize Z
 
