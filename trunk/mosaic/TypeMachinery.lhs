@@ -7,7 +7,8 @@ These are basically the constructs from Omega,
 reimplemented in Haskell for our purposes.
 
 > {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving,
->              RankNTypes, TypeFamilies, FlexibleInstances #-}
+>              RankNTypes, TypeFamilies, FlexibleInstances,
+>              IncoherentInstances #-}
 > module TypeMachinery where
 
 The natural numbers:
