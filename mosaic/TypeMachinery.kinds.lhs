@@ -8,11 +8,11 @@ reimplemented in Haskell for our purposes.
 
 > {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving,
 >              RankNTypes, TypeFamilies, FlexibleInstances,
->              PolyKinds, DataKinds #-}
+>              PolyKinds, DataKinds, IncoherentInstances #-}
 > module TypeMachinery where
 
 The natural numbers:
- o first the phantom types
+ o first the type level
 
 > data Nat = Zt | St Nat
 
@@ -47,9 +47,9 @@ A data type for existentially hiding
 (e.g.) Nat' values
 
 > data Hidden :: (k -> *) -> * where
->   Hide :: {-Show (a n) =>-} a n -> Hidden a
+>   Hide :: Show (a n) => a n -> Hidden a
 
-> -- deriving instance Show (Hidden t)
+> deriving instance Show (Hidden t)
 
 > toNat' :: Integral i => i -> Hidden Nat'
 > toNat' 0 = Hide Z
