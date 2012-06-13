@@ -2,8 +2,7 @@ module ParserDef ( pp, pe, pd, name, getExp, getInt, getBounds
                  , pattern, expr, decl
                  , program, parse2, parse, parseString, parseFile
                  , parseHandle, Handle
-                 , Command(..), pCommand
-                 )
+                 , Command(..), pCommand )
                 where
 
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
@@ -239,9 +238,9 @@ asPattern =
 infixPattern =
   do { p1 <- try conApp <|> simplePattern
                     --  E.g. "(L x : xs)" should parse as ((L x) : xs) rather than (L(x:xs))
-     ; x <- constrOper
+     ; x <- fmap Global constrOper <|> backQuoted constructor
      ; p2 <- pattern
-     ; return (Pcon (Global x) [p1,p2])
+     ; return $ Pcon x [p1,p2]
      }
 
 simplePattern :: Parser Pat
@@ -261,7 +260,7 @@ simplePattern =
                                   ++ "' used where a nullary one is expected (did you mean '("
                                   ++ con ++ " p)'?)")
 
-conApp = try quotedInfix <|> regular
+conApp = {- try quotedInfix <|> -} regular
   where regular = do { name <- constructor
                      ; ps <- many simplePattern
                      ; return $ pcon name ps }
