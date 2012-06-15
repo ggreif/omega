@@ -45,5 +45,5 @@ join :: NatList i -> LeftThrist Elem []i i -> NatList j -> Maybe (LeftThrist Ele
 join i thr j = do { ij <- mergeNL i j
                   ; return ([thr; Single j]lt, ij) }
 
-Just (t1, e1) = join [0v, 2v, 4v]nl [Single [0v, 2v, 4v]nl]lt [3v]nl
+Just (t1, e1) = let start = [0v, 2v, 4v]nl in join start [Single start]lt [3v]nl
 Just (t2, e2) = join e1 t1 [1v, 5v]nl
