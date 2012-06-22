@@ -3,10 +3,10 @@
   #-}
 module Narrow(narr,defTree,Check(..),matches) where
 
-import List(union,find,partition)
+import Data.List(union,find,partition)
 import Auxillary(maybeM,plistf,plist,DispElem(..),displays
                 ,Display(..),DispInfo,initDI)
-import Monad(when)
+import Control.Monad(when)
 import Monads
 import Bind(Name)
 import RankN
