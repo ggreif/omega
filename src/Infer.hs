@@ -4,8 +4,9 @@
   #-}
 module Infer where
 
-import Data.Char(isAlpha,isUpper)
+import Char(isAlpha,isUpper)
 import qualified Data.Map as Map
+import Data.List(intersperse)
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
 import System.Time(getClockTime)
@@ -13,7 +14,7 @@ import System.Time(ClockTime)
 
 import PureReadline
 
-import Control.Monad(when,foldM,liftM,filterM)
+import Monad(when,foldM,liftM,filterM)
 import Monads(Mtc(..),runTC,testTC,unTc,handleTC,TracksLoc(..)
              ,Exception(..), fixMtc
              ,FIO(..),fio,failP,fio2Mtc,runFIO,io2Mtc
@@ -31,15 +32,14 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,ForAllArgs,ToEnv,PPred,PT(..),arityPT, MGU,Unifier,Unifier2,Z(..),Expected(..),L(..)
             ,Pred(..),PPred(..),Flavor(..),Level(..),TcLv(..)
             ,newLevel,unifyLevel,pruneLv,freshLevels,incLev,zonkLv,unifyLev,substLevel,instanLevel
-            , morepolyTauTau, morepolyRhoRho, morepolySigmaRho, morepolySigmaSigma, morepolySigmaExpectedRho, morepolyRhoExpectedRho
-            ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Zonk(..)
+            ,TyCh(..),TypeLike(..),Typable(..),Exhibit(..),Subsumption(..),Zonk(..)
             ,zonkRho,zonkSigma,zonkTau
             ,NameStore(..),useStoreName,showMdisp
             ,makeRel,equalPartsM
             ,failD,failK,failM,warnM,handleM,whenM
             ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
             ,extendref, failIfInConsistent
-            ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv
+            ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv  -- splitU,split3,
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newFlexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
             ,instanTy,instanPatConstr,checkArgs,nameOf
@@ -58,18 +58,17 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,parsePT,mutVarSolve,compose,o,composeTwo,parseIntThenType,parseType,showPred
             ,prune,pprint,readName,exhibit2,injectA, showKinds,showKinds2, showKinds3
             ,subtermsTau,subtermsSigma,kindOfM,extToTpatLift
-            ,Docs(..),docs,dPoly
-            ,morepolyPolyExpectRho)
+            ,Docs(..),docs,dPoly)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey
                 ,buildExt,listx,pairx,natx,wExt,duplicates,checkClause,checkMany,liftEither)
-import Data.List((\\),partition,sort,sortBy,nub,union,unionBy
-                ,find,deleteFirstsBy,groupBy,intersect,intersperse)
+import List((\\),partition,sort,sortBy,nub,union,unionBy
+           ,find,deleteFirstsBy,groupBy,intersect)
 import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns
                 ,initDI)
-import LangEval(vals,env0,Prefix(..),elaborate,eval,typeForImportableVal)
+import LangEval(vals,env0,Prefix(..),elaborate,eval)
 import ParserDef(pCommand,parseString,Command(..),getExp,parse2, program,pd)
 import SCC(topSortR)
 import Cooper(Formula(TrueF,FalseF),Fol,Term,toFormula,integer_qelim,Formula)
@@ -247,9 +246,7 @@ initTcEnv = addFrag frag0 tcEnv0
 
 frag0 = Frag (map f vals) [] [] [] [] [] []
   where f (nm,maker) = g (nm,maker nm)
-        g (nm,(_,sigma)) = (global, (K [] sigma, Rig, 0, var), LetBnd)
-                              where global = Global nm
-                                    var = Var global
+        g (nm,(v,sigma)) = (Global nm,(K [] sigma,Rig,0,Var (Global nm)),LetBnd)
 
 -- Used for adding simple Frags, where we don't expect things like theorems etc.
 addFrag (Frag pairs rigid tenv eqs theta rs exts) env =
@@ -564,10 +561,10 @@ typeNames env = map f (type_env env)  where f (name,tau,polykind) = name
 -- Printing things in the Environment
 
 showAllVals n env = mapM f (take n (Map.toList(var_env env)))
-  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " :: " ++alpha [] sigma)
+  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " : " ++alpha [] sigma)
 
 showSomeVals p env = mapM f (filter p (Map.toList(var_env env)))
-  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " :: " ++alpha [] sigma)
+  where f (nm,(sigma,mod,level,exp)) = outputString (show nm ++ " : " ++alpha [] sigma)
 
 showVals vs = do { env <- getTCEnv
                     ; warnM [Dlf f (filter p (Map.toList env)) "\n  "]}
@@ -623,23 +620,12 @@ inferExp :: Exp -> TC(Rho,Exp)
 inferExp = infer
 
 typeExp :: Mod -> Exp -> Expected Rho -> TC Exp
-typeExp a b c = typeExpX a b c
-{-
-   do { warnM [Ds "Enter typeExp ", Dd b]
-      ; ans <- typeExpX a b c
-      ; warnM [Ds "Exit  typeExp ",Dd b]
-      ; return ans}
--}
-
-typeExpX mod (Lit x) expect = 
-     do { -- warnM [Ds "Checking literal ",Dd x];
-          x' <- tc x expect; return (Lit x') }
-typeExpX mod (x@(Var v)) expectRho =
-     do { -- warnM [Ds "Checking Var ",Dd x];
-          m <- getLevel
+typeExp mod (Lit x) expect = do { x' <- tc x expect; return (Lit x') }
+typeExp mod (Var v) expectRho =
+     do { m <- getLevel
         ; (polyk,mod,n,exp) <- lookupVar v
         ; when (n > m) (failD 2 [Ds (show v++" used at level "++show m++" but defined at level "++show n)])
-        ; when False -- True -- (show v=="[]") 
+        ; when False -- (show v=="f99") -- False
             (do { truths <- getTruths
                 ; showKinds (varsOfPair varsOfPoly varsOfExpectRho) (polyk,expectRho)
 
@@ -649,45 +635,42 @@ typeExpX mod (x@(Var v)) expectRho =
                         ,Ds "\nTruths = ",Dl truths ", "
                         ,Ds "\nmod = ",Dd mod]
                 ; return ()})
-        ; ans <- (morepolyPolyExpectRho (show (Var v)) polyk expectRho)
-        ; handleM 2 (morepolyPolyExpectRho (show (Var v)) polyk expectRho) (resulterr (Var v) polyk expectRho)
+
+        ; handleM 2 (morepoly (show (Var v)) polyk expectRho) (resulterr (Var v) polyk expectRho)
         ; return exp }
 
-typeExpX mod e@(Sum inj x) (Check (Rsum t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
+typeExp mod e@(Sum inj x) (Check (Rsum t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
      do { (sig::Sigma,e) <- infer x
-        ; case inj of { L -> morepolySigmaSigma(show e) sig t1
-                      ; R -> morepolySigmaSigma (show e) sig t2 }
+        ; case inj of { L -> morepoly (show e) sig t1
+                      ; R -> morepoly (show e) sig t2 }
         ; return (Sum inj e) }
-typeExpX mod (Sum inj x) expect =
+typeExp mod (Sum inj x) expect =
      do { (a,b) <- expecting "Sum" tsum expect
         ; e <- typeExp mod x (Check(case inj of { L -> a; R -> b }))
         ; return(Sum inj e) }
 
-typeExpX mod e@(Prod x y) (Check (Rpair t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
+typeExp mod e@(Prod x y) (Check (Rpair t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
      do { (s1::Sigma,e1) <- infer x
         ; (s2::Sigma,e2) <- infer y
-        ; morepolySigmaSigma (show e) s1 t1
-        ; morepolySigmaSigma (show e) s2 t2
+        ; morepoly (show e) s1 t1
+        ; morepoly (show e) s2 t2
         ; return (Prod e1 e2) }
-typeExpX mod (Prod x y) expect =
+typeExp mod (Prod x y) expect =
      do { (a,b) <- expecting "Pair" tpair expect
         ; e1 <- typeExp mod x (Check a)
         ; e2 <- typeExp mod y (Check b)
         ; return (Prod e1 e2) }
 
-typeExpX mod (e@(App fun arg)) expect =
+typeExp mod (e@(App fun arg)) expect =
      do { (fun_ty,f) <- infer fun
-        ; (arg_ty, res_ty) <- handleM 2 (unifyFun fun_ty) (notfun e fun_ty)                  
+        ; (arg_ty, res_ty) <- handleM 2 (unifyFun fun_ty) (notfun e fun_ty)
         ; x <- handleM 2 (check arg arg_ty) (badarg e arg arg_ty)
-          {-
         ; zz <- zonk arg_ty
         ; fz <- zonk fun_ty
         ; ww <- zonk res_ty
-       
         ; d <- getDisplay
-        
-      
-        ; whenM (show fun == "Constr")
+        {-
+        ; whenM False --(show arg == "ex1")
             [Ds ("\nChecking application: "++show e)
             ,Ds "\nfun type = ",Dd fun_ty
             ,Ds "\nzonked fun type = ",Dd fz
@@ -695,42 +678,41 @@ typeExpX mod (e@(App fun arg)) expect =
             ,Ds "\nresult type = ",Dd ww
             ,Ds "\n expected type = ",Dd expect]
         -}
-        ; ns4 <- handleM 2 (morepolyRhoExpectedRho (show e) res_ty expect)
-                           (resulterr e res_ty expect)
+        ; ns4 <- morePoly e res_ty expect
         ; return(App f x) }
-typeExpX mod (exp@(Lam ps e _)) (Check t) =
+typeExp mod (exp@(Lam ps e _)) (Check t) =
      do { (frag,ps2,ts,result) <- checkBndrs localRename mod nullFrag ps t
         ; e2 <- underFrag (show ps,result) (markLambda frag) (typeExp mod e (Check result))
         ; escapeCheck exp t frag
         ; return(Lam ps2 e2 []) }
-typeExpX mod (exp@(Lam ps e _)) (Infer ref) =
+typeExp mod (exp@(Lam ps e _)) (Infer ref) =
      do { (ts2,frag,ps2) <- inferBndrs localRename nullFrag ps
         ; (t,e2) <-  underFrag (show ps,starR) (markLambda  frag) (infer e)
         -- ESCAPE CHECK
         ; escapeCheck exp t frag
         ; writeRef ref (foldr arrow t ts2)
         ; return(Lam ps2 e2 []) }
-typeExpX mod term@(Ann body pt) exp_ty =
+typeExp mod term@(Ann body pt) exp_ty =
      do { loc <- getLoc
         ; (ann_ty,_) <- checkPT (show body) loc pt
         ; exp <- check body ann_ty
         ; morePoly term ann_ty exp_ty
         ; return (Ann exp pt) }
-typeExpX mod (Let ds e) expect =
+typeExp mod (Let ds e) expect =
      do { (frag,ds2) <- inferBndrForDecs "let" localRename ds
         ; let pickRho (Check r) = r
               pickRho (Infer _) = starR
               message = bindingGroupNames "let" ds
         ; e2 <- underFrag (message,pickRho expect) (markLet frag) (typeExp mod e expect)
         ; return(Let ds2 e2)}
-typeExpX mod (Circ vs e ds) expect = tcCircuit vs e ds expect
-typeExpX mod (Case exp ms) (Check rng) =
+typeExp mod (Circ vs e ds) expect = tcCircuit vs e ds expect
+typeExp mod (Case exp ms) (Check rng) =
      do { dom <- newTau star
         ; (e2,oblig) <- peek (typeExp Wob exp (Check(Rtau dom)))
         ; dom2 <- zonk dom
         ; ms2 <- checkL oblig mod ms dom2 rng
         ; return(Case e2 ms2) }
-typeExpX mod (Case exp ms) (Infer ref) =
+typeExp mod (Case exp ms) (Infer ref) =
      do { rng <- newRho star
         ; ((domain,e2),oblig) <- peek (infer exp)
         ; dom <- case domain of
@@ -740,17 +722,17 @@ typeExpX mod (Case exp ms) (Infer ref) =
         ; ms2 <- checkL oblig mod ms dom rng
         ; writeRef ref rng
         ; return(Case e2 ms2) }
-typeExpX mod (Do es ss) expect =
+typeExp mod (Do es ss) expect =
       do { (m,b) <- unifyMonad expect
          ; (K _ bindSig,_,_,_) <- lookupVar (Global "bind")
          ; (K _ failSig,_,_,_) <- lookupVar (Global "fail")
          ; bindt <- bindtype m
          ; failt <- failtype m
-         ; morepolySigmaSigma "bind" bindSig bindt
-         ; morepolySigmaSigma "fail" failSig failt
+         ; morepoly "bind" bindSig bindt
+         ; morepoly "fail" failSig failt
          ; ss2 <- tcStmts mod m b ss
          ; return(Do es ss2)}
-typeExpX mod (CheckT e) expect =
+typeExp mod (CheckT e) expect =
      do { ts <- getBindings
         ; refinement <- zonk ts
         ; assumptions <- getAssume
@@ -767,21 +749,21 @@ typeExpX mod (CheckT e) expect =
         ; checkLoop typ env
         ; x <- typeExp mod e expect
         ; return(CheckT x)}
-typeExpX mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
-typeExpX mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
+typeExp mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
+typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
      do { (vs,preds,tau) <- instanL [] xs  -- ## WHAT DO WE DO WITH THE PREDS?
         ; x <- typeExp mod e (Check (Rtau tau))
         ; return(Exists x)}
-typeExpX mod (p@(Exists e)) expect =
+typeExp mod (p@(Exists e)) expect =
     failD 2 [Ds "Existential expressions cannot have their type inferred:\n   ", Dd p
             ,Ds "\n   The type expected is:\n   ", Dd expect
             ,Ds "\n   which does not have form (exists s . type_exp)."
             ,Ds "\n   Probable fix: Remove the 'Ex' packing operator, or add 'exists' to the prototype."]
-typeExpX mod (Bracket exp) expect =
+typeExp mod (Bracket exp) expect =
      do { a <- unifyCode expect
         ; e <- levelInc (typeExp mod exp (Check a))
         ; return(Bracket e)}
-typeExpX mod (Escape exp) expect =
+typeExp mod (Escape exp) expect =
      do { n <- getLevel
         ; case (n,expect) of
            (0,_) -> failD 2 [Ds ("Esc at level 0: "++show (Escape exp))]
@@ -793,10 +775,9 @@ typeExpX mod (Escape exp) expect =
                  ; e <- levelDec (typeExp mod exp (Check (tcode t)))
                  ; writeRef ref t
                  ; return(Escape e) }}
-typeExpX mod (Reify s v) expect = error ("Unexpected reified value: "++s)
-typeExpX mod (e@(ExtE x)) expect =
-  do { -- warnM [Ds "A Syntax extention ",Dd e];
-       new <- elabExtensionExp x
+typeExp mod (Reify s v) expect = error ("Unexpected reified value: "++s)
+typeExp mod (ExtE x) expect =
+  do { new <- elabExtensionExp x
      ; typeExp mod new expect
      }
 
@@ -864,8 +845,7 @@ morePoly::(Show a,Exhibit (DispInfo Z) a,Exhibit (DispInfo Z) b
 -}
 
 morePoly exp sigma expect =
-   handleM 2 (morepolySigmaExpectedRho (show exp) sigma expect) (resulterr exp sigma expect)
-
+   handleM 2 (morepoly (show exp) sigma expect) (resulterr exp sigma expect)
 
 -- ===============================================================================
 -- testing morepoly
@@ -874,22 +854,19 @@ morePoly exp sigma expect =
 
 test :: String -> String -> IO ()
 test s1 s2 = runTC tcEnv0
-  ((do { sp1 <- parsePT s1
-       ; sp2 <- parsePT s2
-       ; case (sp1,sp2) of
-           (a@(Forallx All xs _ x),b@(Forallx All ys _ y)) ->
-               do { (t1,_) <- checkPT s1 Z a
-                  ; (t2,_) <- checkPT s2 Z b
-                  ; b <- morepolySigmaSigma "test" t1 t2; outputString (show b ++ "\n") }
-           (a@(Forallx All xs _ x),y) ->
-               do { (t1,_) <- checkPT s1 Z a
-                  ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
-                  ; b <- morepolySigmaRho "test"  t1 t2; outputString (show b ++ "\n") }
-           (x,y) ->
-               do { t1 <- toRho (typeConstrEnv0,Z,[],[]) x
-                  ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
-                  ; b <- morepolyRhoRho "test"  t1 t2; outputString (show b ++ "\n") }
-       }) :: TC ())
+  ((case (parsePT s1,parsePT s2) of
+    (a@(Forallx All xs _ x),b@(Forallx All ys _ y)) ->
+        do { (t1,_) <- checkPT s1 Z a
+           ; (t2,_) <- checkPT s2 Z b
+           ; b <- morepoly "test" t1 t2; outputString (show b ++ "\n") }
+    (a@(Forallx All xs _ x),y) ->
+        do { (t1,_) <- checkPT s1 Z a
+           ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
+           ; b <- morepoly "test"  t1 t2; outputString (show b ++ "\n") }
+    (x,y) ->
+        do { t1 <- toRho (typeConstrEnv0,Z,[],[]) x
+           ; t2 <- toRho (typeConstrEnv0,Z,[],[]) y
+           ; b <- morepoly "test"  t1 t2; outputString (show b ++ "\n") }) :: TC ())
 
 --------------------------------------------------------------
 -- fun Matches are Typeable  (Match [Pat] Exp Dec)
@@ -1159,14 +1136,14 @@ instance Typable (Mtc TcEnv Pred) Pat Rho where
   tc (Plit l) expect = do { l2 <- tc l expect; return(Plit l2) }
   tc (Pvar v) expect =
      do { (polyk,mod,n,Var u) <- lookupVar v
-        ; handleM 2 (morepolyPolyExpectRho (show (Pvar v)) polyk expect) (resulterr (Pvar v) polyk expect)
+        ; handleM 2 (morepoly (show (Pvar v)) polyk expect) (resulterr (Pvar v) polyk expect)
         ; return(Pvar u)}
   tc (z@(Pexists p)) _ =
      failD 1 [Ds "No exist patterns in pattern decls: ",Dd z]
   tc pat@(Psum inj x) (Check (Rsum t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
      do { (sig::Sigma,e) <- infer x
-        ; case inj of { L -> morepolySigmaSigma (show pat) t1 sig
-                      ; R -> morepolySigmaSigma (show pat) t2 sig }
+        ; case inj of { L -> morepoly (show pat) t1 sig
+                      ; R -> morepoly (show pat) t2 sig }
         ; return (Psum inj e) }
   tc (Psum inj x) expect =
      do { (a,b) <- expecting "Sum" tsum expect
@@ -1176,8 +1153,8 @@ instance Typable (Mtc TcEnv Pred) Pat Rho where
   tc p@(Pprod x y) (Check (Rpair t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
      do { (s1::Sigma,e1) <- infer x
         ; (s2::Sigma,e2) <- infer y
-        ; morepolySigmaSigma (show p) t1 s1
-        ; morepolySigmaSigma (show p) t2 s2
+        ; morepoly (show p) t1 s1
+        ; morepoly (show p) t2 s2
         ; return (Pprod e1 e2) }
   tc (Pprod x y) expect =
      do { (a,b) <- expecting "Pair" tpair expect
@@ -1251,7 +1228,7 @@ tcStmts mod m b [NoBindSt loc e] =
      App (rexp@(Var (Global "return"))) x ->
       do { (K _ retSig,rmod,rn,rexp) <- lookupVar (Global "return")
          ; retT <- returntype m
-         ; morepolySigmaSigma "return" retSig retT
+         ; morepoly "return" retSig retT
          ; e2 <- newLoc loc (typeExp mod x (Check (Rtau b)))
          ; return([NoBindSt loc (App rexp e2)])}
      other ->
@@ -1632,7 +1609,7 @@ getDecTyp rename (d:ds) =
 -- set of decls are already in the frag passed as input (See Step 1).
 
 checkDec :: Frag -> (Mod,Rho,Dec,[TcTv]) -> TC Dec
-checkDec frag (mod,_,prim@(Prim loc _),skols) = newLoc loc $ return prim
+checkDec frag (mod,_,Prim loc nm t,skols) = newLoc loc $ return(Prim loc nm t)
 checkDec frag (mod,rho,Fun loc nm hint ms,skols) | unequalArities ms =
   failD 3 [Ds ("\n\nThe equations for function: "++show nm++", give different arities.")]
 checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
@@ -1668,7 +1645,7 @@ checkDec mutRecFrag (mod,rho,Pat loc nm vs p,skols) = newLoc loc $
 
      ; argtys <- compareL vs (map projBindMode xs)
      ; let arr (K _ sig) rho = arrow sig rho
-     ; morepolyRhoRho (show nm) (foldr arr ty argtys) rho
+     ; morepoly (show nm) (foldr arr ty argtys) rho
      ; return(Pat loc nm vs p)}
 checkDec frag (mod,rho,Reject s ds,skols) =
    handleM 7 (do { let message = bindingGroupNames "a where clause that binds" ds
@@ -2375,7 +2352,7 @@ isValFunPat (Fun _ _ _ _) = True
 isValFunPat (Pat _ _ _ _) = True
 isValFunPat (TypeSig _ [_] _) = True
 isValFunPat (Reject s d) = True
-isValFunPat (Prim _ _) = True
+isValFunPat (Prim l n t) = True
 isValFunPat _ = False
 
 -- We assume ds are all "where" or "let" declarations, such as
@@ -2437,16 +2414,9 @@ frag4OneDeclsNames rename (Pat loc nm vs p) = newLoc loc $
      ; (rigid,assump,rho) <- rigidTy Ex loc (show nm) sigma
      ; return(addPred assump frag,Wob,rho,Pat loc nm2 vs p,[])}
 frag4OneDeclsNames rename (Reject s ds) = return (nullFrag,Wob,Rtau unitT,Reject s ds,[])
-frag4OneDeclsNames rename prim@(Prim l binders) =
-  do { let inferBinders (Explicit nm t) = do { (_,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
-                                             ; return frag }
-           inferBinders (Implicit vs) = do { vs' <- mapM f vs
-                                           ; return $ Frag vs' [] [] [] [] [] [] }
-             where f gl@(Global nm) = case typeForImportableVal nm of
-                                      Just sigma -> return (gl, (K [] sigma, Rig, 0, Var gl), LetBnd)
-                                      Nothing -> fail $ "primitive binding not importable: " ++ nm
-     ; frag <- inferBinders binders
-     ; return(frag,Wob,error "Shouldn't Check Prim type",prim,[]) }
+frag4OneDeclsNames rename (Prim l nm t) =
+  do { (sigma,frag,_) <- inferBndr rename nullFrag (Pann (Pvar nm) t)
+     ; return(frag,Wob,error "Shouldn't Check Prim type",Prim l nm t,[]) }
 frag4OneDeclsNames rename d = failD 2 [Ds "Illegal dec in value binding group: ",Ds (show d)]
 
 
@@ -2846,7 +2816,7 @@ computeTypeFunEnv env xs =
 
 hasMonoTypeFun :: TcEnv -> [Dec] -> TC [(String,DefTree TcTv Tau)]
 hasMonoTypeFun env [] = return []
-hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) = newLoc loc $
+hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) =
   do { (nmSigmaType,monoKind,nmTypeKind,names) <- inferPolyPT [] pt
      ; let polyt@(K _ (sigma)) = K names (nmSigmaType)
      ; clauses <- mapM (checkLhsMatch (type_env env1) sigma) ms
@@ -4849,11 +4819,8 @@ checkDecs env ds =
 -- and the only constraints that get passed upwards are ones with
 -- no variables (we hope). Here is where we try and solve them.
 
-writ x = fromIO(putStrLn x)
-
 checkAndCatchGroundPred ds =
-  do { ((ds2,env),ground::[Pred]) <- extractAccum(checkBndGroup ds)
-     
+  do {((ds2,env),ground::[Pred]) <- extractAccum(checkBndGroup ds)
      ; let message = "Solving toplevel ground terms"
      ; (u,unsolved,_,_) <- solveConstraints (message,starR) env ground
      ; injectA " checkAndCatch " unsolved
@@ -4930,17 +4897,11 @@ partByFree oblig = do { ps <- mapM free oblig; return(foldr acc ([],[],[]) ps)}
 
 wellTyped :: TcEnv -> Exp -> FIO (String,PolyKind,Exp,[String])
 wellTyped env e = tcInFIO env
-  (do { -- warnM [Ds "\nEntering welltyped\n"] ; 
-      ; (rhoX,expX) <- (inferExp e)
-      -- ; warnM [Ds "\nPast inferExp\n",Dd expX,Ds "\n",Dd rhoX] ;       
-      ; ((t::Rho,term),oblig) <- collectPred(inferExp e)
-      -- ; warnM [Ds "\nPast Infer Exp\n"] ; 
+  (do { ((t::Rho,term),oblig) <- collectPred(inferExp e)
       ; truths <- getAssume
       ; (vs,passOn,solvePs) <- partByFree oblig
-      
       -- ; warnM [Ds "Vars in Toplevel term: ",Dl vs ", " ]
       -- ; warnM [Ds "Obligations at top level are: ",Dd oblig]
-
       ; (oblig2,_,_) <- liftNf norm2PredL solvePs
       ; env <- tcEnv
       ; (u,oblig3,_,_) <- solveConstraints (show e,t) env oblig2
@@ -5059,8 +5020,7 @@ parseAndKind :: TcEnv -> [Char] -> FIO (Kind,Tau,[String])
 parseAndKind env s = tcInFIO env
     (
     do { map1 <- getTypeEnv
-       ; ppts <- parsePT s
-       ; s <- toTau (map1,location env,syntaxExt env,[]) ppts
+       ; s <- toTau (map1,location env,syntaxExt env,[]) (parsePT s)
        ; (tau::Tau,s2) <- infer s
        ; let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
        ; pairs <- mapM kind (subtermsTau tau [])

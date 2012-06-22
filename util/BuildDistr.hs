@@ -4,10 +4,9 @@ import Directory ( doesFileExist, doesDirectoryExist, removeFile
                  , getCurrentDirectory,setCurrentDirectory
                  , getDirectoryContents)
 import System.Directory (createDirectoryIfMissing)
-import System.Environment (getArgs)
-import System.Process (system)
+import System (system, getArgs)
 import Time (getClockTime, toCalendarTime, calendarTimeToString)
-import BuildSpecific ( defaultHome, distrDir, srcDir, utilDir, parseDir, libDir
+import BuildSpecific ( distrDir, srcDir, utilDir, parseDir, libDir
                      , manualDir, testsDir, rootDir, extension, version)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -158,10 +157,7 @@ makeManual dir time distrDir manualDir =
 main =
   do { time <- getTime
      ; putStr time
-     ; home <- do { ans <- getArgs
-                  ; case ans of
-                     [x] -> return x
-                     [] -> return defaultHome }
+     ; [home] <- getArgs
      ; let libDir' = libDir home
            parseDir' = parseDir home
            srcDir' = srcDir home

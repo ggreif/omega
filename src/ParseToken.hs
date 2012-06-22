@@ -18,8 +18,8 @@ module ParseToken( identifier, ident, reserved, prefixIdentifier
                  , layout
                  ) where
 
-import Data.Char    (isSpace,digitToInt,isAlpha,toLower,toUpper)
-import Data.List    (nub,sort)
+import Char         (isSpace,digitToInt,isAlpha,toLower,toUpper)
+import List         (nub,sort)
 import Parser
 import StdTokenDef  (TokenDef(..))
 import TokenDef     (tokenDef)

@@ -1,4 +1,4 @@
-import "../src/Parsing.prg" (parseM, parseChar, parseInt, runParser)
+import "../src/LangPrelude.prg" (parseM)
 
 monad parseM
 

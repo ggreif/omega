@@ -8,7 +8,7 @@
 module DepthFirstSearch where
 import Control.Monad.ST
 import Data.Array.ST
-import qualified Data.Array as A
+import qualified Array as A
 
 type Vertex  = Int
 

@@ -47,8 +47,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 -}
 
-import Data.Char(isDigit)
-import Data.List(sortBy,nub)
+import Char(isDigit)
+import List(sortBy,nub)
 import Auxillary(plist,plistf,DispElem(..))
 import RankN(Tau(..),Pred(..),warnM,TcTv)
 import Monads(fio,fio2Mtc)

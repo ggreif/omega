@@ -1,10 +1,10 @@
 {-# LANGUAGE RankNTypes #-}
 module Toplevel where
 
-import Data.Char(isAlpha,isDigit)
-import Data.List(partition,(\\),nub,find,deleteBy,sort)
+import Char(isAlpha,isDigit)
+import List(partition,(\\),nub,find,deleteBy,sort)
 import Data.Map(Map,toList)
-import System.IO
+import IO
 
 import Version(version,buildtime)
 import Syntax
@@ -16,7 +16,7 @@ import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,errF,report,writeRef)
 import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
-import Control.Monad(when)
+import Monad(when)
 import Infer(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
              ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
              ,var_env,type_env,rules,runtime_env,syntaxExt)
@@ -26,7 +26,7 @@ import Manual(makeManual)
 import Commands
 import SyntaxExt(synName,synKey)
 
-import System.Environment(getArgs)
+import System(getArgs)
 import System.Time(ClockTime,getClockTime)
 import System.IO(hClose)
 import System.IO.Error(try,ioeGetErrorString)

@@ -10,7 +10,7 @@ import Control.Exception(IOException,try)
 import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
 import Auxillary(Loc(..),displays)
-import System.IO(hFlush,stdout)
+import IO(hFlush,stdout)
 import ParserAll
 
 -------------------------------------------------------------

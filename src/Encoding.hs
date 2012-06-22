@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module Encoding where
 
-import Data.Maybe
+import Maybe
 import Monads
-import Control.Monad(liftM)
+import Monad (liftM)
 import RankN
 import Syntax
 import Value
-import Data.List(unionBy)
+import List(unionBy)
 import Bind
 import SyntaxExt(SynExt(..),listx,normalList)
 import Parser
@@ -21,9 +21,6 @@ instance Generic () where
   typeOf x = unitT
 
 instance Generic Int where
-  typeOf x = intT
-
-instance Generic Integer where
   typeOf x = intT
 
 instance Generic Char where
@@ -212,15 +209,6 @@ instance Encoding Symbol where
 instance Encoding Int where
     to n = Vlit(Int n)
     from (Vlit(Int n)) = n
-    from v = error ("Value not an Int: "++(show v))
-
-instance Encoding Integer where
-    to n = Vlit(Int n')
-      where n' = check $ fromIntegral n
-            check m | n /= fromIntegral m =
-               error $ "sorry Omega cannot represent integal number: " ++ show n
-            check m = m
-    from (Vlit(Int n)) = fromIntegral n
     from v = error ("Value not an Int: "++(show v))
 
 instance Encoding Float where

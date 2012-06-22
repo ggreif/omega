@@ -2,7 +2,7 @@
 module SCC where
 
 import DepthFirstSearch
-import Data.List(findIndex)
+import List(findIndex)
  
 
 topSort :: (Show a,Eq a) => (d -> [a]) -> [(a,d)] -> [[(a,d)]]

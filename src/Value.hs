@@ -4,7 +4,7 @@
 module Value where
 import Auxillary(plist,plistf)
 import Monads(FIO,fio,HasNext(..))
-import Control.Monad
+import Monad
 import Syntax
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Bind
@@ -149,7 +149,7 @@ instance Swap Dec where
   swaps cs (Val loc p b ds) = Val loc (swaps cs p) (swaps cs b) (swaps cs ds)
   swaps cs (Pat loc v vs p) = Pat loc (swaps cs v) (swaps cs vs) (swaps cs p)
   swaps cs (TypeSig loc v t) = TypeSig loc v t -- What do we do here?
-  swaps cs (Prim loc (Explicit nm t)) = Prim loc (Explicit nm t)
+  swaps cs (Prim loc nm t) = Prim loc nm t
   swaps cs (Data loc b n v sig vs cons ds ) = Data loc b n v sig vs cons ds
   swaps cs (GADT x1 x2 x3 x4 x5 x6 x7) = (GADT x1 x2 x3 x4 x5 x6 x7)
   swaps cs (TypeSyn loc nm args ty) = TypeSyn loc nm args ty
@@ -485,10 +485,10 @@ instance Show (Equal a b) where
   show (Eq _) = "Eq"
 
 instance Eq (Equal a b) where
-  Eq _ == Eq _ = True
+  (Eq _) == (Eq _)= True
 
 leftEqual :: Equal a b -> a
-leftEqual _ = error "Someone pulled on leftEqual"
+leftEqual x = error "Someone pulled on leftEqual"
 
 rightEqual :: Equal a b -> b
-rightEqual _ = error "Someone pulled on rightEqual"
+rightEqual x = error "Someone pulled on leftEqual"

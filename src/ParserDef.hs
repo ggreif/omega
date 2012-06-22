@@ -1,8 +1,9 @@
-module ParserDef ( pp, pe, pd, name, getExp, getInt, getBounds
-                 , pattern, expr, decl
-                 , program, parse2, parse, parseString, parseFile
-                 , parseHandle, Handle
-                 , Command(..), pCommand )
+module ParserDef (pp,pe,pd,name,getExp,getInt,getBounds,
+                pattern,expr,decl,
+                program,parse2,parse,parseString,parseFile
+                ,parseHandle, Handle
+                ,Command(..),pCommand
+                ,d1)
                 where
 
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
@@ -12,20 +13,18 @@ import System.IO.Unsafe(unsafePerformIO)
 
 import ParserAll
 import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
-             ,Dec(..),PrimBindings(..),Constr(..),Stmt(..),Var(..)
+             ,Dec(..),Constr(..),Stmt(..),Var(..)
              ,listExp,listExp2,patTuple,ifExp,mergeFun,consExp,expTuple
              ,binop,opList,var,freshE,swp,dvars,evars,
              typeStrata,kindStrata,emptyF,Vars(..),boundBy
              ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
-import Data.List(partition)
+import List(partition)
 import Monads
-import RankN ( PT(..), typN, simpletyp, proposition, pt, allTyp
-             , ptsub, getFree, parse_tag, props, typingHelp
-             , typing, conName, arityPT,  backQuoted )
-import SyntaxExt ( Extension(..), extP, SynExt(..)
-                 , natP, SyntaxStyle(..) )
+import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
+            ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName,arityPT)
+import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
 import Auxillary(Loc(..),plistf,plist)
-import Data.Char(isLower,isUpper)
+import Char(isLower,isUpper)
 ---------------------------------------------------------
 
 loc p = SrcLoc (sourceName p) (sourceLine p) (sourceColumn p)
@@ -238,18 +237,18 @@ asPattern =
 infixPattern =
   do { p1 <- try conApp <|> simplePattern
                     --  E.g. "(L x : xs)" should parse as ((L x) : xs) rather than (L(x:xs))
-     ; x <- fmap Global constrOper <|> backQuoted constructor
+     ; x <- constrOper
      ; p2 <- pattern
-     ; return $ Pcon x [p1,p2]
+     ; return (Pcon (Global x) [p1,p2])
      }
 
 simplePattern :: Parser Pat
 simplePattern =
         literalP
-    <|> do { p <- extP pattern; return(extToPat p)}
-    <|> try (fmap lit2Pat (parens signedNumLiteral))
-    <|> do { symbol "_"; return Pwild}
-    <|> do { nm <- constructor; nullaryPcon nm }
+    <|> (do { p <- extP pattern; return(extToPat p)})
+    <|> (try (fmap lit2Pat (parens signedNumLiteral)))
+    <|> (do { symbol "_"; return Pwild})
+    <|> (do { nm <- constructor; nullaryPcon nm })
     <|> patvariable
     <?> "simple pattern"
   where nullaryPcon (Global "L") = failUnaryPcon "L"
@@ -260,22 +259,14 @@ simplePattern =
                                   ++ "' used where a nullary one is expected (did you mean '("
                                   ++ con ++ " p)'?)")
 
-conApp = {- try quotedInfix <|> -} regular
-  where regular = do { name <- constructor
-                     ; ps <- many simplePattern
-                     ; return $ pcon name ps }
-        quotedInfix = do { p1 <- simplePattern
-                         ; n <- backQuoted constructor
-                         ; ps <- many1 simplePattern
-                         ; case ps of
-                           [_] -> return $ Pcon n (p1:ps)
-                           _ -> fail "bad right hand side of quoted operator pattern" }
-                      <?> "quoted infix Constructor"
-        pcon (Global "L") [p] = Psum L p
-        pcon (Global "R") [p] = Psum R p
-        pcon (Global "Ex") [p] = Pexists p
-        pcon n ps = Pcon n ps
-
+conApp =
+   do { name <- constructor
+      ; ps <- many simplePattern
+      ; return (pcon name ps)}
+     where pcon (Global "L") [p] = Psum L p
+           pcon (Global "R") [p] = Psum R p
+           pcon (Global "Ex") [p] = Pexists p
+           pcon n ps = Pcon n ps
 
 resOp x = reservedOp x >> return ""
 
@@ -504,10 +495,15 @@ applyExpression =
            reservedFun name = reserved name >> return name
            reservedFuns = reservedFun "Ex" <|> reservedFun "check" <|> reservedFun "lazy"
 
+
 -- `mem`  `elem`
 quotedInfix = try
-  (do { v <- backQuoted name
-      ; return (\x y -> App (App (Var  v) x) y) } <?> "quoted infix operator")
+ ((do { whiteSpace
+      ; (char '`')
+      ; v <- name
+      ; (char '`')
+      ; whiteSpace;
+      ; return (\x y -> App (App (Var  v) x) y) }) <?> "quoted infix operator")
 
 -----------------------------------------------------------------------
 -- Syntax for building code
@@ -672,27 +668,15 @@ typeFunDec =
                   ; zs <- many1 simpletyp
                   ; return(f,TyVar' f : zs) }
 
-
 primDec =
-  do { pos <- getPosition
+   do{ pos <- getPosition
      ; reserved "primitive"
-     ; bindings <- primImported <|> primTypedDec
-     ; return $ Prim (loc pos) bindings }
-
-primName = name <|> parens operator
-  where operator =
-          do { cs <- many1 (opLetter tokenDef)
-             ; return $ Global cs }
-
-primTypedDec = 
-  do { n <- primName
-     ; (levels, t) <- typing
-     ; return $ Explicit n (polyLevel levels t) }
-
-primImported =
-  do { reserved "import"
-     ; fmap Implicit $ parens (sepBy primName comma) }
-
+     ; n <- (name <|> parens operator)
+     ; (levels,t) <- typing
+     ; return $ Prim (loc pos) n (polyLevel levels t) }
+ where operator =
+          do { cs <- many (opLetter tokenDef)
+             ; return(Global cs) }
 
 patterndecl =
   do { pos <- getPosition

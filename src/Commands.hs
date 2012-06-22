@@ -9,12 +9,12 @@ import Syntax
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,report,readRef,tryAndReport,fio,writeRef)
 import Version(version,buildtime)
-import Data.List(find)
+import List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
-import Data.Char(isAlpha,isDigit)
+import Char(isAlpha,isDigit)
 import ParserDef(getInt,getBounds,expr,parseString)
 import Auxillary(plist,plistf,DispElem(..),prefix,maybeM,anyM,ifM,foldrM,initDI)
-import Control.Monad(when)
+import Monad(when)
 import Value(pv)
 import SCC(topSortR)
 import System.Directory(getModificationTime)
@@ -224,12 +224,10 @@ commands = concat ([
 -- 5 + 2
 execExp tenv e =
    do { (t,polyk,e',subpairs) <- wellTyped tenv e
-      -- ; warnM [Ds "\nJust Before Evaluation\n"]
       ; v <- (eval (runtime_env tenv) e')
-      -- ; warnM [Ds "\nDONE with Evaluation\n"]
       ; u <- runAction v
       ; verbose <- getM "kind" False
-      ; warnM [Ds "\n", docs[Dds (show u ++ " :: "),Dx polyk]]
+      ; warnM [Ds "\n", docs[Dds (show u ++ " : "),Dx polyk]]
       ; when verbose (mapM_ writeln subpairs)
       ; when verbose (writeln("\n\n"++ pv u))
       ; return (tenv) }
@@ -243,7 +241,7 @@ drawPatExp tenv p e =
     ; z <- mPatStrict Tick [] p' u
     ; case z of
        Just frag -> let rtenv = extendV frag (runtime_env env')
-                    in do { writeln ((show u)++ " :: "++(pprint t))
+                    in do { writeln ((show u)++ " : "++(pprint t))
                           ; return(env' { runtime_env = rtenv }) }
        Nothing -> do { writeln ("Pattern "++show p++" does not match "++show v)
                      ; return tenv }
@@ -253,8 +251,7 @@ drawPatExp tenv p e =
 -- let x = 5
 letDec elabDs tenv d =
   do { mapM (notDup tenv "Keyboard input") (fst (freeOfDec d))
-     ; writeln ("IN letDec with\n   "++show d)
-     ; ans <- elabDs [d] tenv -- foldF elabDs (tenv) [[d]]
+     ; ans <- foldF elabDs (tenv) [[d]]
      ; writeln ""
      ; return ans
      }

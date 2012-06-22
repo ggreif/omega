@@ -5,7 +5,7 @@
 -- Research and development on Omega is supported by a grant
 -- from the National Science Foundation.
 
--- import "Library.prg" (mapP)
+import "Library.prg" (mapP)
 
 {-
 kind Nat = Z | S Nat
@@ -63,13 +63,11 @@ leToEq Base_LE Base_LE = Base_EQ
 -- leEq2 (Step_LE z) Base_LE = unreachable
 leToEq (Step_LE x) (Step_LE y) = Step_EQ (leToEq x y)
 
-{-
 -- Tests for ordering between two naturals..
 compareN :: Nat' a -> Nat' b -> (LE a b + LE b a)
 compareN Z _ = L Base_LE
 compareN (S x) Z = R Base_LE
 compareN (S x) (S y) = mapP Step_LE Step_LE (compareN x y)
--}
 
 -- Tests for equality or inequality between two naturals.
 eqOrNe :: Nat' x -> Nat' y -> (EQNat x y + NE x y)
@@ -98,39 +96,3 @@ times :: (Nat ~> Nat ~> Nat)
 --{times x #2} = {plus x x}
 
 
-data LT:: Nat ~> Nat ~> *0  where
-  BLT:: LT Z (S a)
-  SLT:: LT a b -> LT (S a) (S b)
-  
-data LT' :: Nat ~> Nat ~> *0  where
-  BLT':: LT' a (S a)
-  SLT':: LT' a b -> LT' a (S b)
-
-h:: Nat' m -> LT' Z (S m)
-h Z = BLT'
-h (S m) = SLT'(h m)
-
-k:: Nat' b -> LT' a b -> LT' (S a) (S b)
-k Z BLT' = unreachable
-k Z (SLT' p) = unreachable
-k (S m) BLT' = BLT'
-k (S m) (SLT' p) = SLT'(k m p)
-
-m:: Nat' b -> LT a b -> LT a (S b)
-m Z BLT = unreachable
-m Z (SLT p) = unreachable
-m (S n) BLT = BLT
-m (S n) (SLT p) = SLT(m n p)
-
-f:: Nat' (S m) -> LT n (S m) -> LT' n (S m)
-f Z     BLT = unreachable 
-f Z (SLT p) = unreachable
-f (S Z) BLT = h Z
-f (S (S n)) (SLT p) = k (S n) (f (S n) p)
-
-g:: Nat' (S m) -> LT' n (S m) -> LT n (S m)
-g Z BLT' = unreachable
-g Z (SLT' p) = unreachable
-g (S Z) BLT' = BLT
-g (S (S n)) (SLT' p) = m (S n) (g (S n) p)
-  
