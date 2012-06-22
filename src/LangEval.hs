@@ -4,18 +4,18 @@ module LangEval(env0,vals,elaborate,Prefix(..),
 import Auxillary
 import Syntax
 import Encoding
-import Monad(foldM)
+import Control.Monad(foldM)
 import Monads(Exception(..), FIO(..),unFIO,handle,runFIO,fixFIO,fio,
               write,writeln,HasNext(..),HasOutput(..))
 import Value
 import RankN ( Sigma, runType, liftType, sigma4Eq, ToEnv, Z
              , star, star_star, poly, intT, short
              , Level(LvZero), PT(Rarrow', Karrow'), PolyKind(K), Tau(TyCon) )
-import Char(chr,ord)
+import Data.Char(chr,ord)
 
 import ParserDef(pe)
 import System.IO.Unsafe(unsafePerformIO)
-import List(union,unionBy,(\\),find)
+import Data.List(union,unionBy,(\\),find)
 import Bind
 import Parser( (<|>),(<?>),Parser, satisfy, char, string, many, many1
              , try, between, sepBy, symbol )

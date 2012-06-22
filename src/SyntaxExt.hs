@@ -1,11 +1,11 @@
 module SyntaxExt where
 
 import Auxillary
-import List(nub)
-import ParserAll  -- This for defining parsers
+import Data.List(nub)
+import ParserAll -- This for defining parsers
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
-import Char(isLower)
+import Data.Char(isLower)
 
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ(Doc,text,int,(<>),(<+>),($$),($+$),render)
@@ -328,7 +328,7 @@ buildExt loc (lift0,lift1,lift2,lift3) x ys =
         (Pairx (Left xs) _,Ix(tag,_,_,Just(Left pair),_,_,_,_)) -> return(buildTuple (flip $ lift2 pair) (reverse xs))                
         _ -> fail ("\nSyntax extension: "++extKey x++" doesn't match use, at "++loc)}
 
-buildNat :: Num a => b -> (b -> b) -> a -> b
+buildNat :: (Eq a, Num a) => b -> (b -> b) -> a -> b
 buildNat z s 0 = z
 buildNat z s n = s(buildNat z s (n-1))
 
