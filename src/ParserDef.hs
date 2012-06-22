@@ -18,13 +18,13 @@ import Syntax(Exp(..),Pat(..),Body(..),Lit(..),Inj(..),Program(..)
              ,binop,opList,var,freshE,swp,dvars,evars,
              typeStrata,kindStrata,emptyF,Vars(..),boundBy
              ,monadDec,Derivation(..),ImportItem(..),FX(..),typVar)
-import List(partition)
+import Data.List(partition)
 import Monads
 import RankN(PT(..),typN,simpletyp,proposition,pt,allTyp
             ,ptsub,getFree,parse_tag,props,typingHelp,typing,conName,arityPT)
 import SyntaxExt  -- (Extension(..),extP,SynExt(..),buildNat,pairP)
 import Auxillary(Loc(..),plistf,plist)
-import Char(isLower,isUpper)
+import Data.Char(isLower,isUpper)
 ---------------------------------------------------------
 
 loc p = SrcLoc (sourceName p) (sourceLine p) (sourceColumn p)
