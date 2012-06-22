@@ -1,7 +1,7 @@
 module Manual where
 
-import IO (openFile,hClose,IOMode(..),hPutStr,stdout)
-import Char(isAlpha,isDigit)
+import System.IO(openFile,hClose,IOMode(..),hPutStr,stdout)
+import Data.Char(isAlpha,isDigit)
 
 -- Parts of the manual are generated automatically from the
 -- sources, by generating LaTex files by observing the
