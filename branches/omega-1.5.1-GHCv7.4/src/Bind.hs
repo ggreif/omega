@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances, DatatypeContexts #-}
+{-# LANGUAGE FlexibleInstances, UndecidableInstances, GADTs #-}
 module Bind(Fresh(..),Freshen(..),Swap(..),Name,Perm
            ,Bind,bind
            ,swapM, swapsM, swapsMf
@@ -75,7 +75,8 @@ name2Int (Nm x) = x
 integer2Name = Nm
 
 ----------------------------------------------
-data (Freshen a,Swap b) => Bind a b = B a b
+data Bind a b where
+  B :: (Freshen a,Swap b) => a -> b -> Bind a b
 
 bind :: (Freshen a,Swap b) => a -> b -> Bind a b
 bind a b = B a b
