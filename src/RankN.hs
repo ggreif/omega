@@ -1111,6 +1111,7 @@ unify x y =
         f (TyEx x) (TyEx y) = unifyEx x y
         f s t = matchErr "\nDifferent types" s t
 
+emit :: TyCh m => Tau -> Tau -> m ()
 emit x y =
   do {  a <- zonk x
      ; let f (TcTv(tv@(Tv _ (Flexi _) _))) =
@@ -1130,6 +1131,7 @@ emit x y =
      ; f y}
 
 
+unifyEx :: TyCh m => L ([Pred],Tau) -> L ([Pred],Tau) -> m ()
 unifyEx x y =
  do { (tripsX,(eqn1,x1)) <- unwind x
     ; (tripsY,(eqn2,y1)) <- unwind y
@@ -1149,6 +1151,7 @@ unifyEx x y =
 
 predsEq xs ys = (all (`elem` xs) ys) && (all (`elem` ys) xs)
 
+unifyVar :: TyCh m => TcTv -> Tau -> m ()
 unifyVar (x@(Tv u1 r1 k1)) (t@(TcTv (Tv u2 r2 k2))) | u1==u2 = return ()
 -- Always bind newer vars to older ones, this way
 -- makes the pretty printing work better
@@ -1701,7 +1704,7 @@ kindOfM x = do { -- verbose <- getIoMode "verbose";
   f (TyEx xs) = do { (_,_,t) <- instanL [] xs; kindOfM t}
 
 
-
+matchKind :: TyCh m => Tau -> [Tau] -> m Tau
 matchKind (Karr a b) (t:ts) =
   do { k <- kindOfM t
      ; unify a k
@@ -1741,7 +1744,6 @@ unifyKindFun term x = failM 1
          ,Ds "\nWe expected a kind arrow (_ ~> _),\n but inferred: "
          ,Dd x,Ds " instead"]
 
--- zap :: (Show c,Subsumption m b b) => c -> b -> Expected b -> m c
 zap term rho (Check r) = do { morepoly (show term) rho r; return term }
 zap term rho (Infer r) = do { a <- zonk rho; writeRef r a; return term }
 
@@ -1857,7 +1859,6 @@ instance (TypeLike m b,Subsumption m b b) => Subsumption m b (Expected b) where
 instance TyCh m => Subsumption m PolyKind PolyKind where
   morepoly s (K lvs x) (K lvs2 y) = morepoly s x y
 -}
-
 instance TyCh m => Subsumption m Sigma Sigma where
   morepoly s sigma1 sigma2 =
      do { (skol_tvs,assump,rho) <- skolTy sigma2
@@ -2239,7 +2240,7 @@ toEqs env ((Rel' nm ts):xs) =
      ; ys <- toEqs env xs
      ; return((makeRel zs):ys) }
 
-
+toRho :: TyCh m => TransEnv -> PT -> m Rho
 toRho env (Rarrow' x y) =
   do { (s,_) <- toSigma env x; r <- toRho env y; return(arrow s r)}
 toRho env (TyApp' (TyApp' (TyCon' "(,)" _) x) y) =
@@ -2277,6 +2278,7 @@ readName mess ((x,tau,k):xs,loc,exts,levels) s =
              ; instanLevel free tau }
      else readName mess (xs,loc,exts,levels) s
 
+toTau :: TyCh m => TransEnv -> PT -> m Tau
 toTau env x = readTau 0 env x
 
 readTau :: TyCh m => Int -> TransEnv -> PT -> m Tau
@@ -3167,11 +3169,13 @@ match2 env ((TySyn nm n fs as x,y):xs) = match2 env ((x,y):xs)
 match2 env ((y,TySyn nm n fs as x):xs) = match2 env ((y,x):xs)
 match2 env ((x,y):xs) = fail "No Match"
 
+match2Var :: Monad m => ([(TcLv, Level)], [(TcTv, Tau)]) -> TcTv -> Tau -> [(Tau, Tau)] -> m Unifier2
 match2Var (env@(ls,vs)) x tau xs =
     case find (\ (v,t) -> v==x) vs of
       Just (v,t) -> if t==tau then match2 env xs else fail "Duplicate"
       Nothing -> match2 (ls,(x,tau):vs) xs
 
+matchLevel :: Monad m => Unifier2 -> Level -> Level -> [(Tau, Tau)] -> m Unifier2
 matchLevel env LvZero LvZero xs = match2 env xs
 matchLevel env (LvSucc x) (LvSucc y) xs = matchLevel env x y xs
 matchLevel (env@(ls,vs)) (TcLv x) l xs =
@@ -3526,6 +3530,7 @@ thread f sep d (x:xs) = (d2,y<>sep:ys)
   where (d1,y) = f d x
         (d2,ys) = thread f sep d1 xs
 
+arrowTau :: NameStore t => t -> Tau -> (t, [Doc])
 arrowTau d (TyApp (TyApp (TyCon sx _ "(->)" _) x) y) = (d3, (contra x doc <> text " -> "):docs)
   where (d2,doc) = dTau d x
         (d3,docs) = arrowTau d2 y
@@ -3534,6 +3539,7 @@ arrowTau d (TyApp (TyApp (TyCon sx _ "(->)" _) x) y) = (d3, (contra x doc <> tex
 arrowTau d x = (d2,[doc])
   where (d2,doc) = dTau d x
 
+arrowRho :: NameStore t => t -> Rho -> (t, [Doc])
 arrowRho d (Rarrow s r) = (d3,lhs : docs)
   where (d2,doc) = dSigma d s
         (d3,docs) = arrowRho d2 r
@@ -3760,7 +3766,7 @@ exSynItemD d (t@(TyApp (TyCon ext _ c1 _) x)) | itemItem c1 ext
      = (d1, PP.lparen <> x' <> text (")"++postscript (synKey ext)))
   where (d1,x') = dTau d x
 
-
+dPar :: NameStore t => t -> Tau -> (t, Doc)
 dPar xs z@(TyApp (TyCon sx _ "[]" _) x) = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon sx _ "(,)" _) x) y) = dTau xs z
 dPar xs z@(TyApp (TyApp (TyCon sx _ "(+)" _) x) y) = dTau xs z
@@ -3781,7 +3787,7 @@ dPar xs x@(TyEx _) = (ys, PP.parens ans)
   where (ys,ans) = dTau xs x
 dPar xs x = dTau xs x
 
-
+dArrow :: NameStore t => t -> Tau -> (t, Doc)
 dArrow xs (t@(TyApp (TyApp (TyCon sx _ "(->)" _) x) y)) = (ys, PP.parens z)
   where (ys,z) = dTau xs t
 dArrow xs (t@(Karr _ _)) = (ys, PP.parens z)
@@ -3793,7 +3799,7 @@ dArrow xs t = dTau xs t
 -- =======================================
 
 -- Exhibit Tau
-instance (NameStore d) => Exhibit d Tau where
+instance NameStore d => Exhibit d Tau where
   exhibit xs t = docToString (dTau xs t)
 
 -- Exhibit Rho
@@ -3898,11 +3904,13 @@ toPT d (TyEx ys) = (dn,Forallx Ex vs preds body)
         (d2,preds) = toL toPPred d1 ps
         (dn,vs) = toL toTrip d2 args
 
+toPPred :: NameStore t => t -> Pred -> (t, PPred)
 toPPred d (Equality x y) = (d2,Equality' a b)
   where (d1,a) = toPT d x
         (d2,b) = toPT d1 y
 toPPred d (Rel x) = (d1,Rel' "" a) where (d1,a) = toPT d x
 
+toTrip :: NameStore t => t -> (Name, Kind, Quant) -> (t, (String, PT, Quant))
 toTrip d (nm,MK k,q) = (d2,(s,a,q))
    where (d1,s) = useStoreName nm (MK k) ("'"++) d
          (d2,a) = toPT d1 k
@@ -4171,6 +4179,12 @@ emitStar pair (Right x) = Right x
 
 -- mguStarVar is only called from mguStar
 --
+mguStarVar :: TyCh m => (IO String, Loc)
+                    -> [TcTv]
+                    -> TcTv
+                    -> Tau
+                    -> [(Tau, Tau)]
+                    -> m (Either ([(TcTv, Tau)], [Pred]) (String, Tau, Tau))
 mguStarVar str beta (x@(Tv n _ _)) (tau@(TyFun _ _ _)) xs | elem x (tvsTau tau)  =
   do { norm <- normTyFun tau
      ; case norm of
