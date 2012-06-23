@@ -29,7 +29,7 @@ import SyntaxExt(synName,synKey)
 import System.Environment(getArgs)
 import System.Time(ClockTime,getClockTime)
 import System.IO(hClose)
-import System.IO.Error(try,ioeGetErrorString)
+import Control.Exception(try,IOException)
 import System.FilePath(splitFileName)
 import System.Directory(setCurrentDirectory,getDirectoryContents,getModificationTime)
 
@@ -174,7 +174,7 @@ display ss = plistf id "(" ss " " ")"
 parseDecs :: String -> FIO [Dec]
 parseDecs file =
   do { hndl <- eitherM (fio (try(openFile file ReadMode)))
-                 (\ err -> fail ("\nProblem opening file: "++file))
+                 (\ err -> fail ("\nProblem opening file: "++file++"  ("++show (err :: IOException)++")"))
                  return
      ; let err mess = fio((hClose hndl) >> fail mess)
            -- if parsing fails, we should close the file
