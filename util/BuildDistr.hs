@@ -1,17 +1,16 @@
 module BuildDistr  where
 
-import Directory ( doesFileExist, doesDirectoryExist, removeFile
-                 , getCurrentDirectory,setCurrentDirectory
-                 , getDirectoryContents)
-import System.Directory (createDirectoryIfMissing)
-import System (system, getArgs)
-import Time (getClockTime, toCalendarTime, calendarTimeToString)
+import System.Directory ( doesFileExist, doesDirectoryExist, removeFile
+                        , getCurrentDirectory, setCurrentDirectory
+                        , getDirectoryContents, createDirectoryIfMissing)
+import System.Environment (getArgs)
+import System.Process (system)
+import System.Time (getClockTime, toCalendarTime, calendarTimeToString)
 import BuildSpecific ( distrDir, srcDir, utilDir, parseDir, libDir
                      , manualDir, testsDir, rootDir, extension, version)
-import System.IO.Unsafe (unsafePerformIO)
 
 license =
- "-- Copyright (c) 2002-2011, Tim Sheard\n" ++
+ "-- Copyright (c) 2002-2012, Tim Sheard\n" ++
  "-- OGI School of Science & Engineering, Oregon Health & Science University\n" ++
  "-- Maseeh College of Engineering, Portland State University\n" ++
  "-- Subject to conditions of distribution and use; see LICENSE.txt for details.\n"
