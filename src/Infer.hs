@@ -3960,10 +3960,10 @@ splitR' ((Rel t):ps) (eqs,rels) = splitR' ps (eqs,Rel t:rels)
 
 --               Truths Quest Rules
 solv :: Int -> [([Tau],[Tau],[String],Unifier2)] -> TC ([([Tau],[Tau],[String],Unifier2)])
-solv n [] = return ([])
-solv 0 xs = warnM [Ds "\nThe 'backchain' bounds have been exceeded."] >> return ([])
+solv n [] = return []
+solv 0 xs = warnM [Ds "\nThe 'backchain' bounds have been exceeded."] >> return []
 solv n ((ts,[],nms,u):xs) =
-  do { (ys) <- solv (n-1) xs
+  do { ys <- solv (n-1) xs
      ; return ((ts,[],nms,u):ys) }
 solv n ((x@(ts,qs,nms,u)):xs) =
   do { ans <- truthStep2 x
@@ -4917,7 +4917,7 @@ wellTyped env e = tcInFIO env
                         ; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]
                         ; return s}
       ; let subterms = subtermsSigma sigma2 []
-      ; pairs <-  handleM 2  (mapM kind subterms) (\ _ -> return[])
+      ; pairs <- handleM 2  (mapM kind subterms) (\_ -> return[])
       ; (_,typeString) <- showThruDisplay [Dd polyk,Ds "\n"]
       ; return(typeString,polyk,term,pairs)})
 
