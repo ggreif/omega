@@ -3850,7 +3850,7 @@ truthStep2 (truths,questions,open,u0) =
 ---------------------------------------------------------------
 
 ruleStep :: ([Tau],[Tau],[String],Unifier2) -> TC(Maybe[([Tau],[Tau],[String],Unifier2)])
-ruleStep (truths,[],open,u0) = return (Nothing)
+ruleStep (truths,[],open,u0) = return Nothing
 ruleStep (truths,q:questions,open,u0) =
    do { s <- predNameFromTau q q
       ; rules <- getMatchingRules isBackChain s
@@ -3891,7 +3891,7 @@ exploreD n = length n > 3
 
 
 -- Does any rule match term?
-matchR ::[Tau] -> [String] -> [RWrule] -> Tau -> TC[([Tau],[Pred],[Pred],[String],Unifier2)]
+matchR :: [Tau] -> [String] -> [RWrule] -> Tau -> TC[([Tau],[Pred],[Pred],[String],Unifier2)]
 matchR truths openRules [] term = return []
 matchR truths open ((r@(RW nm key BackChain _ _ _ _)):rs) term
   | elem nm open = matchR truths open rs term
@@ -3901,16 +3901,16 @@ matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
   do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newFlexi r
      ; ys <- matchR truths open rs term
      ; maybeM (mostGenUnify [(lhs,term)])
-        (\ sub ->    do { let pre2 = sub2Pred sub precond
-                              rhs2 = sub2Pred sub rhs
-                        ; verbose <- getMode "solving"
-                        ; whenM verbose
-                            [Ds "\nRule : ",Ds nm
-                            ,Ds "\nMatched term: ",Dd term
-                            ,Ds "\n Rewrites to: ",Dd rhs2
-                            ,Ds "\n Under subst: ",Dd sub
-                            ,Ds "\nPrerequisite: ",Dd pre2]
-                        ; return((map (sub2Tau sub) truths,pre2,rhs2,nm:open,sub):ys) })
+        (\ sub -> do { let pre2 = sub2Pred sub precond
+                           rhs2 = sub2Pred sub rhs
+                     ; verbose <- getMode "solving"
+                     ; whenM verbose
+                         [Ds "\nRule : ",Ds nm
+                         ,Ds "\nMatched term: ",Dd term
+                         ,Ds "\n Rewrites to: ",Dd rhs2
+                         ,Ds "\n Under subst: ",Dd sub
+                         ,Ds "\nPrerequisite: ",Dd pre2]
+                     ; return((map (sub2Tau sub) truths,pre2,rhs2,nm:open,sub):ys) })
         (return ys)
      }
 
@@ -3971,7 +3971,7 @@ solv n ((x@(ts,qs,nms,u)):xs) =
         [] -> do { m <- ruleStep x
                  ; case m of
                      Nothing -> do { (ys) <- solv (n-1) xs; return(x:ys)}
-                     Just ws ->  solv n (xs++ws) }
+                     Just ws -> solv n (xs++ws) }
         zs -> do { whenM False [Ds "Truth Steps\n  ",Dlf f15 zs "\n  "
                                ,Ds "\n questions = ",Dl qs "; "
                                ,Ds "\ntruths = ",Dl ts "; "]
@@ -3993,7 +3993,7 @@ solvP truths questions =
                                  ,Dlf (showOneAmbig questions) preds ""]
            nosols = failD 3 [Ds "No solution to [",Dl truths ", ",Ds "] => [", Dl questions ",",Ds "]"]
      ; unique ans
-         (nosols)                                        -- None
+         nosols                                          -- None
          (\ (ts,qs,nms,u) -> return(map makeRel qs,u))   -- Exactly One
          (eitherM (allRefutable ans)                     -- Many
                   (\good -> case (find aMostGeneral good) of
