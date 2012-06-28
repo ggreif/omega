@@ -103,6 +103,7 @@ commands =
      ("\ESC[H",  Move Home),     -- Home
      ("\ENQ",    Move End),      -- C-e
      ("\ESC[F",  Move End),      -- End
+     ("\b",      DeletePrev),    -- Backspace
      ("\DEL",    DeletePrev),    -- Backspace
      ("\ESC[3~", DeleteCurr),    -- Del
      ("\v",      DeleteToEnd),   -- C-k
