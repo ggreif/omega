@@ -1,4 +1,5 @@
 import "../src/LangPrelude.prg" (maybeM)
+import "Inventory.prg"
 
 monad maybeM
 
@@ -30,11 +31,6 @@ data Fin' :: Nat ~> Nat ~> *0 where
   Fz' :: Fin' (S m) Z
   Fs' :: Fin' m n -> Fin' (S m) (S n)
  deriving Nat(fp)
-
-data Inventory :: *1 ~> *1 where
-  Empty :: Inventory a
-  More :: Inventory a ~> a ~> Inventory a
- deriving LeftList(i)
 
 data DigitList' :: Nat ~> Inventory Nat ~> *0 where
   None' :: DigitList' a []i
