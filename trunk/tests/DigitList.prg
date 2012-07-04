@@ -31,12 +31,12 @@ data Fin' :: Nat ~> Nat ~> *0 where
   Fs' :: Fin' m n -> Fin' (S m) (S n)
  deriving Nat(fp)
 
-data NatInv :: *1 where
-  Empty :: NatInv
-  More :: NatInv ~> Nat ~> NatInv
+data Inventory :: *1 ~> *1 where
+  Empty :: Inventory a
+  More :: Inventory a ~> a ~> Inventory a
  deriving LeftList(i)
 
-data DigitList' :: Nat ~> NatInv ~> *0 where
+data DigitList' :: Nat ~> Inventory Nat ~> *0 where
   None' :: DigitList' a []i
   Longer' :: DigitList' a inv -> Fin' a t -> DigitList' a [inv; t]i
  deriving LeftList(dlp)
