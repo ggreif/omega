@@ -17,22 +17,12 @@ data Elem :: Inventory Nat ~> Inventory Nat ~> * where
 
 monad maybeM
 
-merge :: Inventory Nat ~> Inventory Nat ~> Inventory Nat
-{merge []i i} = i
-{merge [as; a]i []i} = [as; a]i
-{merge [as; a]i [bs; b]i} = {arrange as bs a b a b}
-
 mergeNL :: NatList i -> NatList j -> Maybe (NatList {merge i j})
 mergeNL []nl j = Just j
 mergeNL (i@[as; a]nl) []nl = Just i
 mergeNL [as; a]nl [bs; b]nl = arrNL as bs a b a b
 mergeNL _ _ = Nothing
 
-
-arrange :: Inventory Nat ~> Inventory Nat ~> Nat ~> Nat ~> Nat ~> Nat ~> Inventory Nat
-{arrange i j 0t (1+b')t a b} = [{merge [i; a]i j}; b]i
-{arrange i j (1+a')t 0t a b} = [{merge i [j; b]i}; a]i
-{arrange i j (1+a')t (1+b')t a b} = {arrange i j a' b' a b}
 
 arrNL :: NatList i -> NatList j -> Nat' a' -> Nat' b' -> Nat' a -> Nat' b -> Maybe (NatList {arrange i j a' b' a b})
 arrNL i j 0v (1+b')v a b = do { iaj <- mergeNL [i; a]nl j; return [iaj; b]nl }
