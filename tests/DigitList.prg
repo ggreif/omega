@@ -26,3 +26,18 @@ tryIncr (2+v)v 0f = Just 1f
 tryIncr (3+v)v 1f = Just 2f
 tryIncr (3+v)v (1+f)f = do { i <- tryIncr (2+v)v f; return (1+i)f }
 
+data Fin' :: Nat ~> Nat ~> *0 where
+  Fz' :: Fin' (S m) Z
+  Fs' :: Fin' m n -> Fin' (S m) (S n)
+ deriving Nat(fp)
+
+data NatInv :: *1 where
+  Empty :: NatInv
+  More :: NatInv ~> Nat ~> NatInv
+ deriving LeftList(i)
+
+data DigitList' :: Nat ~> NatInv ~> *0 where
+  None' :: DigitList' a []i
+  Longer' :: DigitList' a inv -> Fin' a t -> DigitList' a [inv; t]i
+ deriving LeftList(dlp)
+
