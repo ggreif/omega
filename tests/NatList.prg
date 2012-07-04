@@ -1,8 +1,7 @@
 import "../src/LangPrelude.prg" (maybeM)
+import "Inventory.prg"
 
-kind Inventory = Empty | More Inventory Nat deriving LeftList(i)
-
-data NatList :: Inventory ~> * where
+data NatList :: Inventory Nat ~> * where
   Nope :: NatList []i
   Augment :: NatList i -> Nat' n -> NatList [i; n]i
  deriving LeftList(nl)
@@ -13,12 +12,12 @@ data LeftThrist :: forall (l :: *1) . (l ~> l ~> *)  ~> l ~> l ~> * where
   LCons :: LeftThrist k a b -> k b c -> LeftThrist k a c
  deriving LeftList(lt)
 
-data Elem :: Inventory ~> Inventory ~> * where
+data Elem :: Inventory Nat ~> Inventory Nat ~> * where
   Single :: NatList nl -> Elem i {merge i nl}
 
 monad maybeM
 
-merge :: Inventory ~> Inventory ~> Inventory
+merge :: Inventory Nat ~> Inventory Nat ~> Inventory Nat
 {merge []i i} = i
 {merge [as; a]i []i} = [as; a]i
 {merge [as; a]i [bs; b]i} = {arrange as bs a b a b}
@@ -30,7 +29,7 @@ mergeNL [as; a]nl [bs; b]nl = arrNL as bs a b a b
 mergeNL _ _ = Nothing
 
 
-arrange :: Inventory ~> Inventory ~> Nat ~> Nat ~> Nat ~> Nat ~> Inventory
+arrange :: Inventory Nat ~> Inventory Nat ~> Nat ~> Nat ~> Nat ~> Nat ~> Inventory Nat
 {arrange i j 0t (1+b')t a b} = [{merge [i; a]i j}; b]i
 {arrange i j (1+a')t 0t a b} = [{merge i [j; b]i}; a]i
 {arrange i j (1+a')t (1+b')t a b} = {arrange i j a' b' a b}
