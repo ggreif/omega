@@ -4001,7 +4001,7 @@ solv n ((x@(ts,qs,nms,u)):xs) =
      ; case ans of
         [] -> do { m <- ruleStep x
                  ; case m of
-                     Nothing -> do { (ys) <- solv (n-1) xs; return(x:ys)}
+                     Nothing -> do { ys <- solv (n-1) xs; return(x:ys)}
                      Just ws -> solv n (xs++ws) }
         zs -> do { whenM False [Ds "Truth Steps\n  ",Dlf f15 zs "\n  "
                                ,Ds "\n questions = ",Dl qs "; "
@@ -4027,17 +4027,16 @@ solvP truths questions =
          nosols                                          -- None
          (\ (ts,qs,nms,u) -> return(map makeRel qs,u))   -- Exactly One
          (eitherM (allRefutable ans)                     -- Many
-                  (\good -> case (find aMostGeneral good) of
+                  (\good -> case find aMostGeneral good of
                              Just(ts,qs,nms,u) -> return(map makeRel qs,u)
-                             Nothing ->
-                                 (unique (filter axiomOnlySolution good)
-                                         (ambig good)                  -- NONE
-                                         (\ (ts,qs,nms,u) ->
-                                            return(map makeRel qs,u))  -- Exactly One
-                                         (ambig good)))                -- MANY
-                  (\ elem -> failM 2 [Ds "\nThere is no solution to ["
-                                     ,Dl questions ", ",Ds "] because"
-                                     , elem]))
+                             Nothing -> unique (filter axiomOnlySolution good)
+                                          (ambig good)                   -- NONE
+                                          (\ (ts,qs,nms,u) ->
+                                              return(map makeRel qs,u))  -- Exactly One
+                                          (ambig good))                  -- MANY
+                  (\elem -> failM 2 [Ds "\nThere is no solution to ["
+                                    ,Dl questions ", ",Ds "] because"
+                                    , elem]))
      }
 
 unique x none onef many =
@@ -4059,7 +4058,6 @@ allRefutable sols = do { xs <- mapM test1 sols; check xs sols []}
 
 
 showOneAmbig term d (ts,ps,nms,(levelu,u)) = displays d [Ds "\n   ",Dd (subPred u (map Rel term))]
-g45 d (ts,ps,nms,u) = displays d [Ds "questions [",Dl ps ",",Ds "] unifier ",Dd u,Ds " rules used ",Dl nms ","]
 
 
 expandTruths2 truths =
