@@ -623,12 +623,10 @@ inferExp :: Exp -> TC(Rho,Exp)
 inferExp = infer
 
 typeExp :: Mod -> Exp -> Expected Rho -> TC Exp
-typeExp a b c = typeExpX a b c
-
-typeExpX mod (Lit x) expect = 
+typeExp mod (Lit x) expect = 
      do { -- warnM [Ds "Checking literal ",Dd x];
           x' <- tc x expect; return (Lit x') }
-typeExpX mod (x@(Var v)) expectRho =
+typeExp mod (x@(Var v)) expectRho =
      do { -- warnM [Ds "Checking Var ",Dd x];
           m <- getLevel
         ; (polyk,mod,n,exp) <- lookupVar v
@@ -646,68 +644,68 @@ typeExpX mod (x@(Var v)) expectRho =
         ; handleM 2 (morepolyPolyExpectRho (show (Var v)) polyk expectRho) (resulterr (Var v) polyk expectRho)
         ; return exp }
 
-typeExpX mod e@(Sum inj x) (Check (Rsum t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
+typeExp mod e@(Sum inj x) (Check (Rsum t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
      do { (sig::Sigma,e) <- infer x
         ; case inj of { L -> morepolySigmaSigma(show e) sig t1
                       ; R -> morepolySigmaSigma (show e) sig t2 }
         ; return (Sum inj e) }
-typeExpX mod (Sum inj x) expect =
+typeExp mod (Sum inj x) expect =
      do { (a,b) <- expecting "Sum" tsum expect
         ; e <- typeExp mod x (Check(case inj of { L -> a; R -> b }))
         ; return(Sum inj e) }
 
-typeExpX mod e@(Prod x y) (Check (Rpair t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
+typeExp mod e@(Prod x y) (Check (Rpair t1 t2)) = -- t1 or t2 or both are non-trivial Sigmas
      do { (s1::Sigma,e1) <- infer x
         ; (s2::Sigma,e2) <- infer y
         ; morepolySigmaSigma (show e) s1 t1
         ; morepolySigmaSigma (show e) s2 t2
         ; return (Prod e1 e2) }
-typeExpX mod (Prod x y) expect =
+typeExp mod (Prod x y) expect =
      do { (a,b) <- expecting "Pair" tpair expect
         ; e1 <- typeExp mod x (Check a)
         ; e2 <- typeExp mod y (Check b)
         ; return (Prod e1 e2) }
 
-typeExpX mod (e@(App fun arg)) expect =
+typeExp mod (e@(App fun arg)) expect =
      do { (fun_ty,f) <- infer fun
         ; (arg_ty, res_ty) <- handleM 2 (unifyFun fun_ty) (notfun e fun_ty)                  
         ; x <- handleM 2 (check arg arg_ty) (badarg e arg arg_ty)
         ; ns4 <- handleM 2 (morepolyRhoExpectedRho (show e) res_ty expect)
                            (resulterr e res_ty expect)
         ; return(App f x) }
-typeExpX mod (exp@(Lam ps e _)) (Check t) =
+typeExp mod (exp@(Lam ps e _)) (Check t) =
      do { (frag,ps2,ts,result) <- checkBndrs localRename mod nullFrag ps t
         ; e2 <- underFrag (show ps,result) (markLambda frag) (typeExp mod e (Check result))
         ; escapeCheck exp t frag
         ; return(Lam ps2 e2 []) }
-typeExpX mod (exp@(Lam ps e _)) (Infer ref) =
+typeExp mod (exp@(Lam ps e _)) (Infer ref) =
      do { (ts2,frag,ps2) <- inferBndrs localRename nullFrag ps
         ; (t,e2) <-  underFrag (show ps,starR) (markLambda  frag) (infer e)
         -- ESCAPE CHECK
         ; escapeCheck exp t frag
         ; writeRef ref (foldr arrow t ts2)
         ; return(Lam ps2 e2 []) }
-typeExpX mod term@(Ann body pt) exp_ty =
+typeExp mod term@(Ann body pt) exp_ty =
      do { loc <- getLoc
         ; (ann_ty,_) <- checkPT (show body) loc pt
         ; exp <- check body ann_ty
         ; morePoly term ann_ty exp_ty
         ; return (Ann exp pt) }
-typeExpX mod (Let ds e) expect =
+typeExp mod (Let ds e) expect =
      do { (frag,ds2) <- inferBndrForDecs "let" localRename ds
         ; let pickRho (Check r) = r
               pickRho (Infer _) = starR
               message = bindingGroupNames "let" ds
         ; e2 <- underFrag (message,pickRho expect) (markLet frag) (typeExp mod e expect)
         ; return(Let ds2 e2)}
-typeExpX mod (Circ vs e ds) expect = tcCircuit vs e ds expect
-typeExpX mod (Case exp ms) (Check rng) =
+typeExp mod (Circ vs e ds) expect = tcCircuit vs e ds expect
+typeExp mod (Case exp ms) (Check rng) =
      do { dom <- newTau star
         ; (e2,oblig) <- peek (typeExp Wob exp (Check(Rtau dom)))
         ; dom2 <- zonk dom
         ; ms2 <- checkL oblig mod ms dom2 rng
         ; return(Case e2 ms2) }
-typeExpX mod (Case exp ms) (Infer ref) =
+typeExp mod (Case exp ms) (Infer ref) =
      do { rng <- newRho star
         ; ((domain,e2),oblig) <- peek (infer exp)
         ; dom <- case domain of
@@ -717,7 +715,7 @@ typeExpX mod (Case exp ms) (Infer ref) =
         ; ms2 <- checkL oblig mod ms dom rng
         ; writeRef ref rng
         ; return(Case e2 ms2) }
-typeExpX mod (Do es ss) expect =
+typeExp mod (Do es ss) expect =
       do { (m,b) <- unifyMonad expect
          ; (K _ bindSig,_,_,_) <- lookupVar (Global "bind")
          ; (K _ failSig,_,_,_) <- lookupVar (Global "fail")
@@ -727,7 +725,7 @@ typeExpX mod (Do es ss) expect =
          ; morepolySigmaSigma "fail" failSig failt
          ; ss2 <- tcStmts mod m b ss
          ; return(Do es ss2)}
-typeExpX mod (CheckT e) expect =
+typeExp mod (CheckT e) expect =
      do { ts <- getBindings
         ; refinement <- zonk ts
         ; assumptions <- getAssume
@@ -744,21 +742,21 @@ typeExpX mod (CheckT e) expect =
         ; checkLoop typ env
         ; x <- typeExp mod e expect
         ; return(CheckT x)}
-typeExpX mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
-typeExpX mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
+typeExp mod (Lazy e) expect = do { x <- typeExp mod e expect; return(Lazy x)}
+typeExp mod (Exists e) (Check (tt@(Rtau (TyEx xs)))) =
      do { (vs,preds,tau) <- instanL [] xs  -- ## WHAT DO WE DO WITH THE PREDS?
         ; x <- typeExp mod e (Check (Rtau tau))
         ; return(Exists x)}
-typeExpX mod (p@(Exists e)) expect =
+typeExp mod (p@(Exists e)) expect =
     failD 2 [Ds "Existential expressions cannot have their type inferred:\n   ", Dd p
             ,Ds "\n   The type expected is:\n   ", Dd expect
             ,Ds "\n   which does not have form (exists s . type_exp)."
             ,Ds "\n   Probable fix: Remove the 'Ex' packing operator, or add 'exists' to the prototype."]
-typeExpX mod (Bracket exp) expect =
+typeExp mod (Bracket exp) expect =
      do { a <- unifyCode expect
         ; e <- levelInc (typeExp mod exp (Check a))
         ; return(Bracket e)}
-typeExpX mod (Escape exp) expect =
+typeExp mod (Escape exp) expect =
      do { n <- getLevel
         ; case (n,expect) of
            (0,_) -> failD 2 [Ds ("Esc at level 0: "++show (Escape exp))]
@@ -770,8 +768,8 @@ typeExpX mod (Escape exp) expect =
                  ; e <- levelDec (typeExp mod exp (Check (tcode t)))
                  ; writeRef ref t
                  ; return(Escape e) }}
-typeExpX mod (Reify s v) expect = error ("Unexpected reified value: "++s)
-typeExpX mod (e@(ExtE x)) expect =
+typeExp mod (Reify s v) expect = error ("Unexpected reified value: "++s)
+typeExp mod (e@(ExtE x)) expect =
   do { -- warnM [Ds "A Syntax extension ",Dd e];
        new <- elabExtensionExp x
      ; typeExp mod new expect
