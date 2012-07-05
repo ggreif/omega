@@ -649,7 +649,6 @@ typeExpX mod (x@(Var v)) expectRho =
                         ,Ds "\nTruths = ",Dl truths ", "
                         ,Ds "\nmod = ",Dd mod]
                 ; return ()})
-        ; ans <- (morepolyPolyExpectRho (show (Var v)) polyk expectRho)
         ; handleM 2 (morepolyPolyExpectRho (show (Var v)) polyk expectRho) (resulterr (Var v) polyk expectRho)
         ; return exp }
 
