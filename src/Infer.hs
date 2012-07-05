@@ -624,12 +624,6 @@ inferExp = infer
 
 typeExp :: Mod -> Exp -> Expected Rho -> TC Exp
 typeExp a b c = typeExpX a b c
-{-
-   do { warnM [Ds "Enter typeExp ", Dd b]
-      ; ans <- typeExpX a b c
-      ; warnM [Ds "Exit  typeExp ",Dd b]
-      ; return ans}
--}
 
 typeExpX mod (Lit x) expect = 
      do { -- warnM [Ds "Checking literal ",Dd x];
@@ -678,22 +672,6 @@ typeExpX mod (e@(App fun arg)) expect =
      do { (fun_ty,f) <- infer fun
         ; (arg_ty, res_ty) <- handleM 2 (unifyFun fun_ty) (notfun e fun_ty)                  
         ; x <- handleM 2 (check arg arg_ty) (badarg e arg arg_ty)
-          {-
-        ; zz <- zonk arg_ty
-        ; fz <- zonk fun_ty
-        ; ww <- zonk res_ty
-       
-        ; d <- getDisplay
-        
-      
-        ; whenM (show fun == "Constr")
-            [Ds ("\nChecking application: "++show e)
-            ,Ds "\nfun type = ",Dd fun_ty
-            ,Ds "\nzonked fun type = ",Dd fz
-            ,Ds "\narg type = ",Dd zz
-            ,Ds "\nresult type = ",Dd ww
-            ,Ds "\n expected type = ",Dd expect]
-        -}
         ; ns4 <- handleM 2 (morepolyRhoExpectedRho (show e) res_ty expect)
                            (resulterr e res_ty expect)
         ; return(App f x) }
@@ -794,7 +772,7 @@ typeExpX mod (Escape exp) expect =
                  ; return(Escape e) }}
 typeExpX mod (Reify s v) expect = error ("Unexpected reified value: "++s)
 typeExpX mod (e@(ExtE x)) expect =
-  do { -- warnM [Ds "A Syntax extention ",Dd e];
+  do { -- warnM [Ds "A Syntax extension ",Dd e];
        new <- elabExtensionExp x
      ; typeExp mod new expect
      }
@@ -854,13 +832,6 @@ resulterr e res_ty expect s =
          ,Ds ("\n"++s)
          -- ,Ds ("\n"++(shtt rt)++" =/= "++shtt ex)
          ]}
-
-{-
-morePoly::(Show a,Exhibit (DispInfo Z) a,Exhibit (DispInfo Z) b
-          ,Exhibit (DispInfo Z) c,Subsumption m b(Expected c)
-          ,TypeLike m b,TypeLike m c)
-          => a -> b -> Expected c -> m ()
--}
 
 morePoly exp sigma expect =
    handleM 2 (morepolySigmaExpectedRho (show exp) sigma expect) (resulterr exp sigma expect)
@@ -4846,8 +4817,6 @@ checkDecs env ds =
 -- and the only constraints that get passed upwards are ones with
 -- no variables (we hope). Here is where we try and solve them.
 
-writ x = fromIO(putStrLn x)
-
 checkAndCatchGroundPred ds =
   do { ((ds2,env),ground::[Pred]) <- extractAccum(checkBndGroup ds)
      
@@ -4927,17 +4896,11 @@ partByFree oblig = do { ps <- mapM free oblig; return(foldr acc ([],[],[]) ps)}
 
 wellTyped :: TcEnv -> Exp -> FIO (String,PolyKind,Exp,[String])
 wellTyped env e = tcInFIO env
-  (do { -- warnM [Ds "\nEntering welltyped\n"] ; 
-      ; (rhoX,expX) <- (inferExp e)
-      -- ; warnM [Ds "\nPast inferExp\n",Dd expX,Ds "\n",Dd rhoX] ;       
-      ; ((t::Rho,term),oblig) <- collectPred(inferExp e)
-      -- ; warnM [Ds "\nPast Infer Exp\n"] ; 
+  (do { ((t::Rho,term),oblig) <- collectPred(inferExp e)
       ; truths <- getAssume
       ; (vs,passOn,solvePs) <- partByFree oblig
-      
       -- ; warnM [Ds "Vars in Toplevel term: ",Dl vs ", " ]
       -- ; warnM [Ds "Obligations at top level are: ",Dd oblig]
-
       ; (oblig2,_,_) <- liftNf norm2PredL solvePs
       ; env <- tcEnv
       ; (u,oblig3,_,_) <- solveConstraints (show e,t) env oblig2

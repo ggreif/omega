@@ -1691,7 +1691,7 @@ kindOfM x = do { -- verbose <- getIoMode "verbose";
    do { info <- instanTy lvs sigma
       ; case info of
         ([],Rtau k) -> matchKind k ts
-        other -> failM 0 [Ds "An illegal kind in a Type Funtion was found while computing the kind of a type: ",Dd sigma] }
+        other -> failM 0 [Ds "An illegal kind in a Type Function was found while computing the kind of a type: ",Dd sigma] }
   f (ty@(TyApp ff x)) =
    do { let (f,ts) = rootTau ty []
       ; k <- kindOfM f
@@ -1733,7 +1733,7 @@ unifyKindFun term x@(TcTv (Tv unq _ k)) =
       ; unify x (Karr a b)
       ; a1 <- zonk a
       ; b1 <- zonk b
-      --; outputString "IN UNifyKindFun"
+      --; outputString "IN unifyKindFun"
       ; return (a1,b1) }
 unifyKindFun term x = failM 1
          [Ds "\nWhile inferring the kind of the type\n   ",Dd term
@@ -1811,8 +1811,8 @@ instance TyCh m => Typable m (L([Pred],Tau)) Tau where
 typkind (t@(Tv un f k)) = (t,k)
 
 
---kindPred :: TyCh m => Pred -> m Pred
-kindPred(Equality a b) =
+kindPred :: TyCh m => Pred -> m Pred
+kindPred (Equality a b) =
   handleM 1 (do{(k1::Tau,t1) <- infer a; t2 <- check b k1; return(Equality t1 t2)})
     (\ s -> failM 0 [Ds "While checking equality constraint: "
                     ,Dd a,Ds " = ",Dd b,Ds ("\nkinds do not match"++s)])
@@ -1846,48 +1846,12 @@ captured sig1 sig2 rho mess =
 ----------------------------------------------------------------
 -- Subsumption 
 
--- A pair of types can be in the subsumption class if we can
+-- A pair of types can be in subsumption relation if we can
 -- ask if one is more polymorphic than another.
 
-{-
-class TyCh m => Subsumption m x y where
-  morepoly :: String -> x -> y -> m ()
-
-instance TyCh m => Subsumption m Tau Tau where
-   morepoly s x y = morepolyTauTau s x y
-instance (TypeLike m b,Subsumption m b b) => Subsumption m b (Expected b) where
-   morepoly s t1 (Check t2) = morepoly s t1 t2
-   morepoly s t1 (Infer r)  = do { a <- zonk t1; writeRef r a }
-
-
-instance TyCh m => Subsumption m PolyKind PolyKind where
-  morepoly s (K lvs x) (K lvs2 y) = morepoly s x y
-
-
-instance TyCh m => Subsumption m Sigma Sigma where
-  morepoly = morepolySigmaSigma
-instance (TyCh m) => Subsumption m PolyKind Sigma where
-  morepoly s (K lvs sig1) sig2 = do { sigma <- instanLevel lvs sig1; morepolySigmaSigma s sigma sig2}
-
-instance (TyCh m) => Subsumption m PolyKind (Expected Rho) where
-  morepoly = morepolyPolyExpectRho  
-
-instance TyCh m => Subsumption m Sigma (Expected Rho) where
-  morepoly = morepolySigmaExpectedRho
-
-instance (TyCh m) => Subsumption m Sigma Rho where
-  morepoly = morepolySigmaRho
-
-instance TyCh m => Subsumption m Rho Rho where
- morepoly s x y = -- warnM [Ds "\n Subsumption Rho Rho: ",Dd x,Ds " =?= ",Dd y] >>
-                  morepolyRhoRho s x y where
-  
-  
- 
--}
 morepolyTauTau s x y = -- warnM [Ds "In subsumption Tau Tau ",Dd x,Ds "=?=" ,Dd y] >>
                     unify x y
-                    
+
 morepolySigmaSigma :: TyCh m => String -> Sigma -> Sigma -> m ()
 morepolySigmaSigma s sigma1 sigma2 =
      do { (skol_tvs,assump,rho) <- skolTy sigma2
