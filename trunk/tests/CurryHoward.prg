@@ -1,7 +1,8 @@
-kind Color  = Red | Black
-kind State = Locked | Unlocked | Error
+import "../src/LangPrelude.prg" (maybeM)
 
--- kind Nat = Z | Succ Nat
+kind Color  = Red | Black
+
+kind State = Locked | Unlocked | Error
 
 kind Degree = Kelvin | Fahrenheit | Celsius
 
@@ -14,7 +15,13 @@ data Odd :: Nat ~> *0  where
 
 prop LE :: Nat ~> Nat ~> *0  where
   Base:: LE Z x
-  Step:: LE x y -> LE (S x) (S y) 
+  Step:: LE x y -> LE (S x) (S y)
+
+tryLE :: Nat' a -> Nat' b -> Maybe (LE a b)
+tryLE 0v b = Just Base
+tryLE (1+a)v 0v = Nothing
+tryLE (1+a)v (1+b)v = do { le <- tryLE a b; return (Step le) } where monad maybeM
+
 
 even2 :: Even #2
 even2 = EvenS(OddS EvenZ)
