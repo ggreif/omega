@@ -53,7 +53,7 @@ up' _ []dlp = [1fp]dlp
 up' b [bla; f]dlp = case tryIncr b f of
                     L Eq -> [up' b bla; 0fp]dlp
                     R d -> [bla; d]dlp
-  where tryIncr :: Nat' (1+b)t -> Fin' (1+b)t a -> (Equal (1+b)t (1+a)t + Fin' (1+b)t (1+a)t)
+  where tryIncr :: Nat' (1+b)t -> Fin' (1+b)t a -> (Equal b a + Fin' (1+b)t (1+a)t)
         tryIncr 2v 1fp = L Eq
         tryIncr (2+v)v 0fp = R 1fp
         tryIncr (2+v)v (1+f)fp = case tryIncr (1+v)v f of
