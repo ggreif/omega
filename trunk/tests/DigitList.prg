@@ -43,14 +43,6 @@ data DigitList' :: Nat ~> Inventory Nat ~> *0 where
  deriving LeftList(dlp)
 
 
-tryIncr' :: Nat' (2+b)t -> Fin' (2+b)t a -> (Equal (2+b)t (1+a)t + Fin' (2+b)t (1+a)t)
-tryIncr' 2v 1fp = L Eq
-tryIncr' (2+v)v 0fp = R 1fp
-tryIncr' (3+v)v 1fp = R 2fp
-tryIncr' (3+v)v (1+f)fp = case tryIncr' (2+v)v f of
-                          L Eq -> L Eq
-                          R i -> R (1+i)fp
-
 upInv :: Nat ~> Inventory Nat ~> Inventory Nat
 {upInv b []i} = [1t]i
 {upInv (1+b)t [rest; b]i} = [{upInv (1+b)t rest}; 0t]i
@@ -58,6 +50,12 @@ upInv :: Nat ~> Inventory Nat ~> Inventory Nat
 
 up' :: Nat' (2+b)t -> DigitList' (2+b)t i -> DigitList' (2+b)t {upInv (2+b)t i}
 up' _ []dlp = [1fp]dlp
-up' b [bla; f]dlp = case tryIncr' b f of
+up' b [bla; f]dlp = case tryIncr b f of
                     L Eq -> [up' b bla; 0fp]dlp
                     R d -> [bla; d]dlp
+  where tryIncr :: Nat' (1+b)t -> Fin' (1+b)t a -> (Equal (1+b)t (1+a)t + Fin' (1+b)t (1+a)t)
+        tryIncr 2v 1fp = L Eq
+        tryIncr (2+v)v 0fp = R 1fp
+        tryIncr (2+v)v (1+f)fp = case tryIncr (1+v)v f of
+                                  L Eq -> L Eq
+                                  R i -> R (1+i)fp
