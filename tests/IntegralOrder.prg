@@ -25,3 +25,12 @@ tryLEI (a@Minus a') (b@Minus b') = do le <- tryLE b' a'
 tryLEI (a@Plus a') (b@Plus b') = do le <- tryLE a' b'
                                     return (PP le a b)
 tryLEI _ _ = Nothing
+
+
+testLEI :: LEI a b => Integral a -> Integral b -> Integral b
+testLEI a b = b
+
+t1 = testLEI (Minus 4v) (Plus 0v)
+
+##test "-4 is more than -6"
+  t2 = testLEI (Minus 4v) (Minus 6v)
