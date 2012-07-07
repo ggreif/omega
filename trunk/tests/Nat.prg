@@ -1,9 +1,4 @@
--- Copyright (c) 2006 Portland State University.
--- This is an example program for the Omega programming language;
--- for more information, see:
---   http://www.cs.pdx.edu/~sheard/Omega/index.html
--- Research and development on Omega is supported by a grant
--- from the National Science Foundation.
+import "Library.prg" (mapP)
 
 -- Ordering property.
 prop LE :: Nat ~> Nat ~> *0 where
@@ -53,13 +48,12 @@ leToEq Base_LE Base_LE = Base_EQ
 -- leEq2 (Step_LE z) Base_LE = unreachable
 leToEq (Step_LE x) (Step_LE y) = Step_EQ (leToEq x y)
 
-{-
--- Tests for ordering between two naturals..
+-- Tests for ordering between two naturals.
 compareN :: Nat' a -> Nat' b -> (LE a b + LE b a)
 compareN Z _ = L Base_LE
 compareN (S x) Z = R Base_LE
 compareN (S x) (S y) = mapP Step_LE Step_LE (compareN x y)
--}
+
 
 -- Tests for equality or inequality between two naturals.
 eqOrNe :: Nat' x -> Nat' y -> (EQNat x y + NE x y)
@@ -76,16 +70,10 @@ plus :: Nat ~> Nat ~> Nat
 {plus Z y} = y
 {plus (S x) y} = S {plus x y}
 
---comm_plus :: Nat' {plus x y} -> Nat' {plus y x}
---comm_plus Z = Z
---comm_plus (S x) = S (comm_plus x)
 
 times :: (Nat ~> Nat ~> Nat)
 {times (S x) y} = {plus y {times x y}}
 {times Z y} = Z
---Again, the original example included the following line, but the current
---inductiveness checker chokes on it -- this time with better reason.
---{times x #2} = {plus x x}
 
 
 data LT:: Nat ~> Nat ~> *0  where
