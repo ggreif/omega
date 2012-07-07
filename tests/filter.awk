@@ -4,4 +4,8 @@
 /^->Loading import/ {next}
 /^loading / {next}
 
+# empty lines are dull
+#
+/^ *$/ {next}
+
 {print}
