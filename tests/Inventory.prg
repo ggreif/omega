@@ -1,5 +1,5 @@
 
-kind Inventory a = Empty | More (Inventory a) Nat deriving LeftList(i)
+kind Inventory a = Empty | More (Inventory a) a deriving LeftList(i)
 
 merge :: Inventory Nat ~> Inventory Nat ~> Inventory Nat
 {merge []i i} = i
