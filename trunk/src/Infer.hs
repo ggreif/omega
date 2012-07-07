@@ -3817,15 +3817,15 @@ elim 0 (x:xs) = xs
 elim n (x:xs) = x : (elim (n-1) xs)
 
 
-truthStep2 :: TyCh m => ([Tau],[Tau],[String],Unifier2) -> m[([Tau],[Tau],[String],Unifier2)]
-truthStep2 (truths,questions,open,u0) =
+truthStep2 :: TyCh m => ([Tau],[Tau],Unifier2) -> m[([Tau],[Tau],Unifier2)]
+truthStep2 (truths,questions,u0) =
      do { pairs <- mapM run pairsM
         ; return $ sortBy moreGeneral
                  $ relevant
                  $ sortBy samePred
                  [ (map (sub2Tau u) truths
                    , map (sub2Tau u) (elim n questions)
-                   , open,composeTwo u u0
+                   , composeTwo u u0
                    ,n)
                  | (n,[u]) <- pairs ]
        }
@@ -3836,69 +3836,68 @@ truthStep2 (truths,questions,open,u0) =
                  | t <- truths
                  , (q,n) <- zip questions [(0::Int)..]
                  ]
-        samePred (ts1,ps1,_,(_,u1),i) (ts2,ps2,_,(_,u2),j) = compare (i,length u1)(j,length u2)
+        samePred (ts1,ps1,(_,u1),i) (ts2,ps2,(_,u2),j) = compare (i,length u1)(j,length u2)
         relevant [] = []
-        relevant [(t,p,s,u,i)] = [(t,p,s,u)]
-        relevant (x@(_,_,_,(_,[]),i):y@(_,_,_,_,j):zs) | i==j = relevant (x:zs)
-        relevant ((t,p,s,u,i):zs) = (t,p,s,u):relevant zs
-        moreGeneral (ts1,ps1,_,(_,u1)) (ts2,ps2,_,(_,u2)) = compare (length u1)(length u2)
+        relevant [(t,p,u,i)] = [(t,p,u)]
+        relevant (x@(_,_,(_,[]),i):y@(_,_,_,j):zs) | i==j = relevant (x:zs)
+        relevant ((t,p,u,i):zs) = (t,p,u):relevant zs
+        moreGeneral (ts1,ps1,(_,u1)) (ts2,ps2,(_,u2)) = compare (length u1)(length u2)
 
 
 
 
 ---------------------------------------------------------------
 
-ruleStep :: ([Tau],[Tau],[String],Unifier2) -> TC(Maybe[([Tau],[Tau],[String],Unifier2)])
-ruleStep (truths,[],open,u0) = return Nothing
-ruleStep (truths,q:questions,open,u0) =
+ruleStep :: ([Tau],[Tau],Unifier2) -> TC(Maybe[([Tau],[Tau],Unifier2)])
+ruleStep (truths,[],u0) = return Nothing
+ruleStep (truths,q:questions,u0) =
    do { s <- predNameFromTau q q
       ; rules <- getMatchingRules isBackChain s
       ; verbose <- getMode "solving"
       ; when verbose
           (do { warnM [Ds "\nTrying to find evidence for the predicate:\n   ",Dd q
                       ,Ds "\nUnder assumptions:\n   [",Dl truths ", ",Ds "]"
-                      ,Ds "\nCurrently solving subproblems from the rules: ",Dl open ","
                       ,Ds "\nPossibly matching rules are\n  ", Dl rules ",\n  ", Ds "\n"]
               ; waitN "solving"
               ; return ()})
-      ; infoList <- matchR truths open rules q
+      ; infoList <- matchR truths rules q
       ; whenM verbose
            [Ds "\nExactly ",Dd (length infoList)
            ,Ds " rules match:\n  ",Ds "\n"]
       ; case infoList of
-         [] -> do { zs <- ruleStep (truths,questions,open,u0)
-                  ; let f13 q (ts,qs,nms,u) = (ts,(sub2Tau u q):qs,nms,u)
+         [] -> do { zs <- ruleStep (truths,questions,u0)
+                  ; let f13 q (ts,qs,u) = (ts,(sub2Tau u q):qs,u)
                   ; return(fmap (map (f13 q)) zs)}
          ws -> do { good <- foldM goodMatch [] ws
-                  ; let fixform (newtruths,rhs,nms,u) =
-                          (newtruths,rhs ++ fix questions,nms,composeTwo u u0)
+                  ; let fixform (newtruths,rhs,u) =
+                          (newtruths,rhs ++ fix questions,composeTwo u u0)
                            where fix x = map (sub2Tau u) x
                   ; return(Just(map fixform good))}}
 
 
 
-goodMatch good (truths,precond,result,open,unifier) =
-  do { ans <- solv 4 [(truths,map (unRel 5) precond,open,unifier)]
+goodMatch good (truths,precond,result,unifier) =
+  do { ans <- solv 4 [(truths,map (unRel 5) precond,unifier)]
      ; case ans of
-         [(truths2,[],nms,u)] -> return((truths2,map (sub2Tau u) (map (unRel 6) result),open,u):good)
+         [(truths2,[],u)] -> return((truths2,map (sub2Tau u) (map (unRel 6) result),u):good)
          _ -> return good}
 
 unRel n (Rel x) = x
 unRel n x = error ("\nunRel applied to non Rel: "++show x++" "++show n)
 
-exploreD n = length n > 3
+--exploreD n = length n > 3
 
 
 -- Does any rule match term?
-matchR :: [Tau] -> [String] -> [RWrule] -> Tau -> TC[([Tau],[Pred],[Pred],[String],Unifier2)]
-matchR truths openRules [] term = return []
-matchR truths open ((r@(RW nm key BackChain _ _ _ _)):rs) term
-  | elem nm open = matchR truths open rs term
-matchR truths open ((r@(RW nm key _ _ _ _ _)):rs) term
-  | exploreD (filter (nm==) open) = matchR truths open rs term
-matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
+matchR :: [Tau] -> [RWrule] -> Tau -> TC[([Tau],[Pred],[Pred],Unifier2)]
+matchR truths [] term = return []
+matchR truths ((r@(RW nm key BackChain _ _ _ _)):rs) term
+  | True{- elem nm open FIXME -}= matchR truths rs term
+--matchR truths open ((r@(RW nm key _ _ _ _ _)):rs) term
+--  | exploreD (filter (nm==) open) = matchR truths open rs term
+matchR truths ((r@(RW nm key cl _ _ _ _)):rs) term =
   do { (commutes,vars,precond,Rel lhs,rhs) <- freshRule newFlexi r
-     ; ys <- matchR truths open rs term
+     ; ys <- matchR truths rs term
      ; maybeM (mostGenUnify [(lhs,term)])
         (\ sub -> do { let pre2 = sub2Pred sub precond
                            rhs2 = sub2Pred sub rhs
@@ -3909,7 +3908,7 @@ matchR truths open ((r@(RW nm key cl _ _ _ _)):rs) term =
                          ,Ds "\n Rewrites to: ",Dd rhs2
                          ,Ds "\n Under subst: ",Dd sub
                          ,Ds "\nPrerequisite: ",Dd pre2]
-                     ; return((map (sub2Tau sub) truths,pre2,rhs2,nm:open,sub):ys) })
+                     ; return((map (sub2Tau sub) truths,pre2,rhs2,sub):ys) })
         (return ys)
      }
 
@@ -3958,13 +3957,13 @@ splitR' ((p@(Equality x y)):ps) (eqs,rels) = splitR' ps ((x,y):eqs,rels)
 splitR' ((Rel t):ps) (eqs,rels) = splitR' ps (eqs,Rel t:rels)
 
 --               Truths Quest Rules
-solv :: Int -> [([Tau],[Tau],[String],Unifier2)] -> TC ([([Tau],[Tau],[String],Unifier2)])
+solv :: Int -> [([Tau],[Tau],Unifier2)] -> TC ([([Tau],[Tau],Unifier2)])
 solv n [] = return []
 solv 0 xs = warnM [Ds "\nThe 'backchain' bounds have been exceeded."] >> return []
-solv n ((ts,[],nms,u):xs) =
+solv n ((ts,[],u):xs) =
   do { ys <- solv (n-1) xs
-     ; return ((ts,[],nms,u):ys) }
-solv n ((x@(ts,qs,nms,u)):xs) =
+     ; return ((ts,[],u):ys) }
+solv n ((x@(ts,qs,u)):xs) =
   do { ans <- truthStep2 x
      ; case ans of
         [] -> do { m <- ruleStep x
@@ -3976,16 +3975,16 @@ solv n ((x@(ts,qs,nms,u)):xs) =
                                ,Ds "\ntruths = ",Dl ts "; "]
                  ; solv n (zs++xs)}}
 
-f15 d (ts,qs,_,u) = displays d [Ds "[",Dl ts ",",Ds "] => [",Dl qs ",",Ds"]", Ds " where ",Dd u]
+f15 d (ts,qs,u) = displays d [Ds "[",Dl ts ",",Ds "] => [",Dl qs ",",Ds"]", Ds " where ",Dd u]
 
 solvP :: [Tau] -> [Tau] -> TC([Pred],Unifier2)
 solvP truths questions =
   do { steps <- getBound "backchain" 4
-     ; ans <- solv steps [(truths,questions,[],([],[]))]
-     ; let aMostGeneral (ts,qs,nms,(levelu,u)) = null u
+     ; ans <- solv steps [(truths,questions,([],[]))]
+     ; let aMostGeneral (ts,qs,(levelu,u)) = null u
            axiom [] = False
            axiom (c:cs) = isUpper c
-           axiomOnlySolution (ts,qs,nms,u) = all axiom nms
+           axiomOnlySolution (ts,qs,u) = True --all axiom nms FIXME
            ambig preds = failM 2 [Ds "Ambiguous solutions to: ["
                                  ,Dl truths ",",Ds "] => ["
                                  ,Dl questions ",",Ds "]\n   "
@@ -3993,13 +3992,13 @@ solvP truths questions =
            nosols = failD 3 [Ds "No solution to [",Dl truths ", ",Ds "] => [", Dl questions ",",Ds "]"]
      ; unique ans
          nosols                                          -- None
-         (\ (ts,qs,nms,u) -> return(map makeRel qs,u))   -- Exactly One
+         (\ (ts,qs,u) -> return(map makeRel qs,u))       -- Exactly One
          (eitherM (allRefutable ans)                     -- Many
                   (\good -> case find aMostGeneral good of
-                             Just(ts,qs,nms,u) -> return(map makeRel qs,u)
+                             Just(ts,qs,u) -> return(map makeRel qs,u)
                              Nothing -> unique (filter axiomOnlySolution good)
                                           (ambig good)                   -- NONE
-                                          (\ (ts,qs,nms,u) ->
+                                          (\ (ts,qs,u) ->
                                               return(map makeRel qs,u))  -- Exactly One
                                           (ambig good))                  -- MANY
                   (\elem -> failM 2 [Ds "\nThere is no solution to ["
@@ -4017,15 +4016,15 @@ unique x none onef many =
 -- refutable, so we should filter them out. If all are refutable, then
 -- the questions themselves are refutable.
 
-allRefutable :: [([Tau],[Tau],[String],Unifier2)] -> TC(Either [([Tau],[Tau],[String],Unifier2)] (DispElem Z))
+allRefutable :: [([Tau],[Tau],Unifier2)] -> TC(Either [([Tau],[Tau],Unifier2)] (DispElem Z))
 allRefutable sols = do { xs <- mapM test1 sols; check xs sols []}
- where test1 (truths,quests,names,unifier) = refutable (map Rel quests)
+ where test1 (truths,quests,unifier) = refutable (map Rel quests)
        check [] sols good = return(Left good)
        check (Nothing : xs) (s:sols) good = check xs sols (s:good)
        check (Just dispElem : xs) sols good = return(Right dispElem)
 
 
-showOneAmbig term d (ts,ps,nms,(levelu,u)) = displays d [Ds "\n   ",Dd (subPred u (map Rel term))]
+showOneAmbig term d (ts,ps,(levelu,u)) = displays d [Ds "\n   ",Dd (subPred u (map Rel term))]
 
 
 expandTruths2 truths =
