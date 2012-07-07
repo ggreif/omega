@@ -5,16 +5,6 @@
 -- Research and development on Omega is supported by a grant
 -- from the National Science Foundation.
 
--- import "Library.prg" (mapP)
-
-{-
-kind Nat = Z | S Nat
-
-data Nat' x 
-  = Z where x=Z
-  | exist m . S (Nat' m) where x=S m
--}
-
 -- Ordering property.
 prop LE :: Nat ~> Nat ~> *0 where
   Base_LE:: LE Z a
