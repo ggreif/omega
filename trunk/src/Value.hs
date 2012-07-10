@@ -325,7 +325,7 @@ boolV _ = fail "Not a Bool"
 
 
 showVlist [] = "[]"
-showVlist (cs @ (Vlit (Char _):_)) = --Its a String
+showVlist (cs @ (Vlit (Char _):_)) = -- It's a String
           show (map (\ (Vlit (Char c)) -> c) cs)
 showVlist vs = "[" ++ f vs
   where f [] = "]"
