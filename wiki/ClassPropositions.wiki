@@ -27,7 +27,7 @@ A type class constraint (e.g. `Monad m`) is of kind `Constraint`. This functiona
 
 = Transfer to Ωmega =
 
-We propose a family of kind (and higher) level classifiers `§n :: *(1+n)`. When `n` is 0 it can be omitted (similarly to the {{{*0 == *}}} identity). We reuse the general `data` syntax to define type classes:
+We propose a family of kind (and higher) level classifiers `§n :: *(1+n)`. When `n` is 0 it can be omitted (similarly to the {{{*0 ≡ *}}} identity). We reuse the general `data` syntax to define type classes:
 
 {{{
 data Monad :: * ~> § where
@@ -80,6 +80,6 @@ dict(Monoid).One :: Monoid a -> Bool
 The pattern matching on class constructors boils down to the rewrite rule
 {{{
 foo One = ...
-    ==>
+    ⇒
 foo m | dict(Monoid).One m = ...
 }}}
