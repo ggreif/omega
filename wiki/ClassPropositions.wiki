@@ -73,6 +73,8 @@ instance Monoid (List a) where
 
 Class constructors must be defined in terms of instance constructors.
 
+== Implementation details ==
+
 Class constructors are added to the runtime dictionary for `§` as predicates on the value, i.e.
 {{{
 dict(Monoid).One :: Monoid a -> Bool
@@ -83,3 +85,7 @@ foo One = ...
     ⇒
 foo m | dict(Monoid).One m = ...
 }}}
+
+Logically, `dict(Monoid (List a)).One` is implemented just like `isNeutral` above.
+
+Open issue: How can I implement type-level dictionaries (i.e. `§n` with n > 0)? Open type functions? Can narrowing be applied here at all?
