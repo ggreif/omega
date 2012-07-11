@@ -5,7 +5,7 @@
 
 Section ??? of the User's Manual mentions that static propositions are propagated and discharged in the same way as class constraints in Haskell. This gives me the idea to actually *implement* type classes as `prop`.
 
-But there is a dynamic (i.e. _value_) aspect to type classes too, namely the _dictionary_. C.f. the `Monad` datatype which carries the `return`, `bind`and `fail` functionalities for monads.
+But there is a dynamic (i.e. _value_) aspect to type classes too, namely the _dictionary_. C.f. the `Monad` datatype which carries the `return`, `bind` and `fail` functionalities for monads.
 
 = Details =
 
@@ -20,3 +20,17 @@ Now we have to define Instance as prop too and hook up
 the (plus, negate, mul, div) tuple to the mix.
 
 Superclass constraints?
+
+= How Haskell Classifies Type Classes =
+
+A type class constraint (e.g. `Monad m`) is of kind `Constraint`. This functionality is available as of GHC v7.4.1 with the activated `ConstraintKinds` feature.
+
+= Transfer to Ωmega =
+
+We propose a family of kind (and higher) level classifiers `§n :: *(1+n)`. When `n` is 0 the 0 can be omitted (similarly to the `*0 == *` identity. We reuse the general `data` syntax to define type classes:
+
+{{{
+data Monad :: * ~> § where
+  return :: a -> Monad a
+  bind :: Monad a -> (a -> Monad b) -> Monad b
+}}}
