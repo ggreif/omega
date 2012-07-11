@@ -1,3 +1,9 @@
+-- see also http://cs.ioc.ee/~james/papers/Relative_Monads.pdf
+-- "Monads Need Not Be Endofunctors"
+-- which references Fiore, Plotkin and Turi's work
+-- Hamana also has much to say (http://www.cs.gunma-u.ac.jp/~hamana/)
+--
+
 import "Inventory.prg"
 
 data Tm :: Inventory Tag ~> * where
