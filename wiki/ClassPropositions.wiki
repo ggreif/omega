@@ -58,9 +58,9 @@ isNeutral One = True;
 isNeutral _ = False;
 }}}
 
-== Constraints that contribute to `Prop`
+== Constraints that contribute to `Prop` ==
 
-When the general syntax is used then the `class` keyword can be substituted by `prop`. In this case the constructors are checked for being valid reasoning rules and in the case of success they are added to the set of truths. 
+When the general syntax is used then the `class` keyword can be substituted by `prop`. In this case the constructors are checked for being valid reasoning rules, and in the case of success they are added to the set of truths. 
 
 == Instance definitions ==
 
