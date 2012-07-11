@@ -71,4 +71,15 @@ instance Monoid (List a) where
   mult = append
 }}}
 
-Class constructors must be defined as constructors.
+Class constructors must be defined in terms of instance constructors.
+
+Class constructors are added to the runtime dictionary for `§` as predicates on the value, i.e.
+{{{
+dict(Monoid).One :: Monoid a -> Bool
+}}}
+The pattern matching on class constructors boils down to the rewrite rule
+{{{
+foo One = ...
+    ==>
+foo m | dict(Monoid).One m = ...
+}}}
