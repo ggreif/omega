@@ -3,7 +3,7 @@
 
 = Introduction =
 
-Section ??? of the User's Manual mentions that static propositions are propagated and discharged in the same way as class constraints in Haskell. This gives me the idea to actually *implement* type classes as `prop`.
+Section 20 (Types as Propositions) of the User's Manual mentions that static propositions are propagated and discharged in the same way as class constraints in Haskell. This gives me the idea to actually *implement* type classes as `prop`.
 
 But there is a dynamic (i.e. _value_) aspect to type classes too, namely the _dictionary_. C.f. the `Monad` datatype which carries the `return`, `bind` and `fail` functionalities for monads.
 
