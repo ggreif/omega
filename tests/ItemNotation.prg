@@ -24,3 +24,19 @@ iota (App f a) = AppW (iota a) (iota f)
 
 slide1 = iota (Lm `x (Lm `y (1tm,0tm)tm), 0tm)tm  -- assuming `z = 0tm
 
+
+-- ok now, lets drift to thrists
+
+data Wagon :: Inventory Tag ~> Inventory Tag ~> * where
+  AppI :: Wagon inv inv -> Wagon inv inv
+  AbsI :: Label n -> Wagon [inv; n]i inv
+  ArgI :: Wagon [ups; t]i [ups; t]i
+  UpI :: Wagon [ups; t]i [ups; t]i -> Wagon [ups; t, t']i [ups; t, t']i
+ deriving syntax (w) Nat(ArgI, UpI) Item(AppI)
+
+
+data Thrist :: forall (l :: *1) . (l ~> l ~> *)  ~> l ~> l ~> * where
+  Nil :: Thrist k a a
+  Cons :: k a b -> Thrist k b c -> Thrist k a c
+ deriving List(l)
+
