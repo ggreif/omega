@@ -3,6 +3,7 @@
 -- basic: http://www.cedar-forest.org/forest/talks/talks2001/talkPPDP2001.ps
 -- extended: http://www.cedar-forest.org/forest/talks/talks2001/microsoft.ps
 
+import "../src/LangPrelude.prg" (maybeM)
 import "LabeledDeBruijn.prg"
 
 data Itm :: Inventory Tag ~> * where
@@ -24,7 +25,7 @@ iota (App f a) = IApp (iota a) (iota f)
 slide1 = iota (Lm `x (Lm `y (1tm,0tm)tm), 0tm)tm  -- assuming `z = 0tm
 
 
--- ok now, lets drift to thrists
+-- ok now, let's drift to thrists
 
 data Wagon :: Inventory Tag ~> Inventory Tag ~> * where
   AppW :: Wagon inv inv -> Wagon inv inv
@@ -39,13 +40,18 @@ data Thrist :: forall (l :: *1) . (l ~> l ~> *)  ~> l ~> l ~> * where
   Cons :: k a b -> Thrist k b c -> Thrist k a c
  deriving List(t)
 
-
 theta :: Tm inv -> exists inv' . Thrist Wagon inv inv'
 theta Arg = Ex [ArgW]t
-{-
-theta (Up m) = Ex [UpW  m']t
+theta (Up m) = case ensureVar m' of
+               Just Eq -> Ex [UpW  m']t
     where (Ex thr) = theta m
     	  [m']t = thr
+          ensureVar :: Wagon i j -> Maybe (Equal i j)
+          ensureVar ArgW = Just Eq
+          ensureVar (UpW v) = do { Eq <- ensureVar v; return Eq }
+          monad maybeM
+
+{-
 theta (Lm n b) = AbsW n (theta b)
 theta (App f a) = AppW (theta a) (theta f)
 -}
