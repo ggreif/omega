@@ -21,8 +21,8 @@ data Tm :: Inventory Tag ~> * where
 
 -- identity function
 --
-id :: Tm []i
-id = Lm `a 0tm
+identity :: Tm []i
+identity = Lm `a 0tm
 
 -- ($) = \f . \a . f a
 --
