@@ -28,8 +28,8 @@ slide1 = iota (Lm `x (Lm `y (1tm,0tm)tm), 0tm)tm  -- assuming `z = 0tm
 -- ok now, let's drift to thrists
 
 data Wagon :: Inventory Tag ~> Inventory Tag ~> * where
-  AppW :: Wagon inv inv -> Wagon inv inv
-  AbsW :: Label n -> Wagon [inv; n]i inv
+  AppW :: Thrist Wagon inv inv'' -> Wagon inv' inv
+  AbsW :: Label n -> Wagon inv [inv; n]i
   ArgW :: Wagon [ups; t]i [ups; t]i
   UpW :: Wagon [ups; t]i [ups; t]i -> Wagon [ups; t, t']i [ups; t, t']i
  deriving syntax (w) Nat(ArgW, UpW) Item(AppW)
@@ -42,7 +42,7 @@ data Thrist :: forall (l :: *1) . (l ~> l ~> *)  ~> l ~> l ~> * where
 
 theta :: Tm inv -> exists inv' . Thrist Wagon inv inv'
 theta Arg = Ex [ArgW]t
-theta (Up m) = case ensureVar m' of
+theta (Up m) = case ensureVar m' of -- Note: NOT TOTAL!
                Just Eq -> Ex [UpW  m']t
     where (Ex thr) = theta m
     	  [m']t = thr
@@ -51,7 +51,7 @@ theta (Up m) = case ensureVar m' of
           ensureVar (UpW v) = do { Eq <- ensureVar v; return Eq }
           monad maybeM
 
-{-
-theta (Lm n b) = AbsW n (theta b)
-theta (App f a) = AppW (theta a) (theta f)
--}
+theta (Lm n b) = Ex [AbsW n; thr]t where (Ex thr) = theta b
+theta (App f a) = Ex [(a')w; f']t
+    where (Ex a') = theta a
+          (Ex f') = theta f
