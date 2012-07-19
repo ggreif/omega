@@ -61,10 +61,18 @@ mergeNL' i j = let Just m = mergeNL i j in m
 --
 tryExcluded :: Nat' n -> NatList i -> Maybe (Excluded n i)
 tryExcluded n []nl = Just NotInEmpty
-tryExcluded 0v [x; (1+y)v]nl = do ev <- tryExcluded 0v x
+tryExcluded 0v [x; (1+_)v]nl = do ev <- tryExcluded 0v x
                                   return (NoZero ev)
-tryExcluded (1+n)v [x; 0v]nl = do ev <- tryExcluded (1+n)v x
-                                  return (NoHigher ev)
+tryExcluded (n@(1+_)v) [x; 0v]nl = do ev <- tryExcluded n x
+                                      return (NoHigher ev)
 tryExcluded (1+n)v [x; (1+y)v]nl = do ev1 <- tryExcluded (1+n)v x
                                       ev2 <- tryExcluded  n [y]nl
                                       return (ReduceToLower ev1 ev2)
+tryExcluded _ _ = Nothing
+
+tryDisjoint :: NatList i -> NatList j -> Maybe (Disjoint i j)
+tryDisjoint []nl _ = Just WithEmpty
+tryDisjoint [j; n]nl i = do ev1 <- tryExcluded n i
+                            ev2 <- tryDisjoint j i
+                            return (WithLastAndRest ev1 ev2)
+tryDisjoint _ _ = Nothing
