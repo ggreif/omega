@@ -1,0 +1,29 @@
+#summary Strictness/demand analysis can be formulated in terms of singleton types.
+#labels Phase-Design,speculative
+
+= Introduction =
+
+Imagine that the programmer defines this:
+{{{
+data List a = Nil | Cons a (List a)
+
+starts4 (Cons 4 _) = True
+starts4 _ = False
+}}}
+
+The compiler would internally use a form of singleton types:
+{{{
+data List° :: List a ~> * where
+  ...
+
+starts4 :: List° shape -> { Bool°: True ~> List° (Cons° 4° rest); False° ~> unknown }
+starts4 ...
+}}}
+
+So the return type would be enriched with the demanded shape of the argument.
+
+= Details =
+
+[http://omega.googlecode.com/svn/wiki/Singleton-strictness.svg]
+
+The above image represents the dynamic value of the argument as passed to `starts4`. The opaque part is not demanded, the cloud represents a thunk (unevaluated value).
