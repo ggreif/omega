@@ -36,3 +36,23 @@ join i thr j = do { ij <- mergeNL i j
 
 Just (t1, e1) = let start = [0v, 2v, 4v]nl in join start [Single start]lt [3v]nl
 Just (t2, e2) = join e1 t1 [1v, 5v]nl
+
+
+-- proposition for mergability
+--
+prop Disjoint :: Inventory Nat ~> Inventory Nat ~> * where
+  WithEmpty :: Disjoint []i i
+  WithLastAndRest :: NotIncluded n i -> Disjoint j i -> Disjoint [j; n]i i
+
+-- exclusivity
+--
+prop NotIncluded :: Nat ~> Inventory Nat ~> * where
+  NotInEmpty :: NotIncluded n []i
+  NoZero :: NotIncluded 0t x -> NotIncluded 0t [x; (1+y)t]i
+  NoHigher :: NotIncluded (1+n)t x -> NotIncluded (1+n)t [x; 0t]i
+  ReduceToLower :: NotIncluded (1+n)t x -> NotIncluded n [y]i -> NotIncluded (1+n)t [x; (1+y)t]i
+
+-- the total version of mergeNL
+--
+mergeNL' :: Disjoint i j => NatList i -> NatList j -> NatList {merge i j}
+mergeNL' i j = let Just m = mergeNL i j in m
