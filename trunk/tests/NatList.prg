@@ -42,15 +42,15 @@ Just (t2, e2) = join e1 t1 [1v, 5v]nl
 --
 prop Disjoint :: Inventory Nat ~> Inventory Nat ~> * where
   WithEmpty :: Disjoint []i i
-  WithLastAndRest :: NotIncluded n i -> Disjoint j i -> Disjoint [j; n]i i
+  WithLastAndRest :: Excluded n i -> Disjoint j i -> Disjoint [j; n]i i
 
 -- exclusivity
 --
-prop NotIncluded :: Nat ~> Inventory Nat ~> * where
-  NotInEmpty :: NotIncluded n []i
-  NoZero :: NotIncluded 0t x -> NotIncluded 0t [x; (1+y)t]i
-  NoHigher :: NotIncluded (1+n)t x -> NotIncluded (1+n)t [x; 0t]i
-  ReduceToLower :: NotIncluded (1+n)t x -> NotIncluded n [y]i -> NotIncluded (1+n)t [x; (1+y)t]i
+prop Excluded :: Nat ~> Inventory Nat ~> * where
+  NotInEmpty :: Excluded n []i
+  NoZero :: Excluded 0t x -> Excluded 0t [x; (1+y)t]i
+  NoHigher :: Excluded (1+n)t x -> Excluded (1+n)t [x; 0t]i
+  ReduceToLower :: Excluded (1+n)t x -> Excluded n [y]i -> Excluded (1+n)t [x; (1+y)t]i
 
 -- the total version of mergeNL
 --
