@@ -1,5 +1,5 @@
 import "../src/LangPrelude.prg" (maybeM)
-import "Inventory.prg"
+import "../tests/Inventory.prg"
 
 data NatList :: Inventory Nat ~> * where
   Nope :: NatList []i
