@@ -42,15 +42,15 @@ Just (t2, e2) = join e1 t1 [1v, 5v]nl
 --
 prop Disjoint :: Inventory Nat ~> Inventory Nat ~> * where
   WithEmpty :: Disjoint []i i
-  WithLastAndRest :: Excluded n i -> Disjoint j i -> Disjoint [j; n]i i
+  WithLastAndRest :: Excluded i n -> Disjoint j i -> Disjoint [j; n]i i
 
 -- exclusivity
 --
-prop Excluded :: Nat ~> Inventory Nat ~> * where
-  NotInEmpty :: Excluded n []i
-  NoZero :: Excluded 0t x -> Excluded 0t [x; (1+y)t]i
-  NoHigher :: Excluded (1+n)t x -> Excluded (1+n)t [x; 0t]i
-  ReduceToLower :: Excluded (1+n)t x -> Excluded n [y]i -> Excluded (1+n)t [x; (1+y)t]i
+prop Excluded :: Inventory Nat ~> Nat ~> * where
+  NotInEmpty :: Excluded []i n
+  NoZero :: Excluded x 0t -> Excluded [x; (1+y)t]i 0t
+  NoHigher :: Excluded x (1+n)t -> Excluded [x; 0t]i (1+n)t
+  ReduceToLower :: Excluded x (1+n)t -> Excluded [y]i n -> Excluded [x; (1+y)t]i (1+n)t
 
 -- the total version of mergeNL
 --
@@ -59,20 +59,20 @@ mergeNL' i j = let Just m = mergeNL i j in m
 
 -- creating disjointness evidence
 --
-tryExcluded :: Nat' n -> NatList i -> Maybe (Excluded n i)
-tryExcluded n []nl = Just NotInEmpty
-tryExcluded 0v [x; (1+_)v]nl = do ev <- tryExcluded 0v x
+tryExcluded :: NatList i -> Nat' n -> Maybe (Excluded i n)
+tryExcluded []nl n = Just NotInEmpty
+tryExcluded [x; (1+_)v]nl 0v = do ev <- tryExcluded x 0v
                                   return (NoZero ev)
-tryExcluded (n@(1+_)v) [x; 0v]nl = do ev <- tryExcluded n x
+tryExcluded [x; 0v]nl (n@(1+_)v) = do ev <- tryExcluded x n
                                       return (NoHigher ev)
-tryExcluded (1+n)v [x; (1+y)v]nl = do ev1 <- tryExcluded (1+n)v x
-                                      ev2 <- tryExcluded  n [y]nl
+tryExcluded [x; (1+y)v]nl (1+n)v = do ev1 <- tryExcluded x (1+n)v
+                                      ev2 <- tryExcluded [y]nl n
                                       return (ReduceToLower ev1 ev2)
 tryExcluded _ _ = Nothing
 
 tryDisjoint :: NatList i -> NatList j -> Maybe (Disjoint i j)
 tryDisjoint []nl _ = Just WithEmpty
-tryDisjoint [j; n]nl i = do ev1 <- tryExcluded n i
+tryDisjoint [j; n]nl i = do ev1 <- tryExcluded i n
                             ev2 <- tryDisjoint j i
                             return (WithLastAndRest ev1 ev2)
 tryDisjoint _ _ = Nothing
