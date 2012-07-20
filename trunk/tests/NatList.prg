@@ -20,12 +20,12 @@ monad maybeM
 mergeNL :: NatList i -> NatList j -> Maybe (NatList {merge i j})
 mergeNL []nl j = Just j
 mergeNL (i@[as; a]nl) []nl = Just i
-mergeNL [as; a]nl [bs; b]nl = arrange as bs a b a b
-  where arrange :: NatList i -> NatList j -> Nat' a' -> Nat' b' -> Nat' a -> Nat' b -> Maybe (NatList {arrange i j a' b' a b})
-        arrange i j 0v (1+b')v a b = do { iaj <- mergeNL [i; a]nl j; return [iaj; b]nl }
-        arrange i j (1+a')v 0v a b = do { ijb <- mergeNL i [j; b]nl; return [ijb; a]nl }
-        arrange i j (1+a')v (1+b')v a b = arrange i j a' b' a b
-        arrange _ _ _ _ _ _ = Nothing
+mergeNL (i@[as; a]nl) (j@[bs; b]nl) = arrange a b i j
+  where arrange :: Nat' a -> Nat' b -> NatList i -> NatList j -> Maybe (NatList {arrange a b i j})
+        arrange 0v (1+b')v [i; a]nl [j; b]nl = do { iaj <- mergeNL [i; a]nl j; return [iaj; b]nl }
+        arrange (1+a')v 0v [i; a]nl [j; b]nl = do { ijb <- mergeNL i [j; b]nl; return [ijb; a]nl }
+        arrange (1+a)v (1+b)v i j = arrange a b i j
+        arrange _ _ _ _ = Nothing
 mergeNL _ _ = Nothing
 
 
