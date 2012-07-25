@@ -9,7 +9,7 @@ See my blog post: http://heisenbug.blogspot.com/2011/11/pondering-about-foundati
 > import Text.Parsec
 > import Data.Thrist
 > import Data.ByteString
-> import Char
+> import Data.Char
 > import TypeMachinery (Z, S, Nat'(..), toNat')
 > import TokenDef
 
@@ -34,8 +34,7 @@ Note: we do not yet require that e is strictly bigger than a.
 >                  e <- getPosition
 >                  return $ IntLit a undefined t
 
-We have to lift the parser operations into our bounded
-world.
+We have to lift the parser operations into our bounded world.
 
 > bounded :: Monad m => Nat' a -> ParsecT s u m Int -> ParsecT s u m (BoundedToken Int a e)
 > bounded strt p = do a <- getPosition
@@ -73,6 +72,15 @@ of running the parser should be a BoundedToken thrist.
 > baz :: Stream s m a => Thrist Parse a b -> ParsecT s u m b
 > baz Nil = tokenPrim undefined nextPos Just
 >         where nextPos pos x xs = pos
+> baz (Cons (Rep' a) rest) = do here <- many (baz' a)
+>                               rest <- getInput
+>                               let cont = baz rest
+>                               st <- getParserState
+>                               pd <- runParserT cont st "" [(here, rest)]
+>                               case pd of
+>                                 Right b -> return b
+>                                 Left err -> fail "No way"
+>                               
 > baz (Cons h rest) = do here <- baz' h
 >                        let cont = baz rest
 >                        st <- getParserState
@@ -80,13 +88,13 @@ of running the parser should be a BoundedToken thrist.
 >                        case pd of
 >                          Right b -> return b
 >                          Left err -> fail "No way"
->   where baz' :: Stream s m a => Parse a b -> ParsecT s u m b
->         baz' (Or l r) = baz' l <|> baz' r
->         baz' (Atom c) = char c
->         baz' (Sure f) = tokenPrim undefined nextPos (Just . f)
->              where nextPos pos x xs = pos
->         baz' (Try f) = tokenPrim undefined nextPos f
->              where nextPos pos x xs = pos
+> baz' :: Stream s m a => Parse a b -> ParsecT s u m b
+> baz' (Or l r) = baz' l <|> baz' r
+> baz' (Atom c) = char c
+> baz' (Sure f) = tokenPrim undefined nextPos (Just . f)
+>      where nextPos pos x xs = pos
+> baz' (Try f) = tokenPrim undefined nextPos f
+>      where nextPos pos x xs = pos
 >         --baz' (Rep' a) = do as <- many (baz' a) -- Parse [a] ([b], [a]) -> ParsecT s u m ([b], [a])
 >         --                   return (as, [])
 > 
