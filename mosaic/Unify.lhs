@@ -45,6 +45,12 @@ guarantees that this never ever becomes necessary.
 
 See also purgatory/LambdaPath.omg for insights.
 
+The node selection by providing an (absolute) path starting
+from the graph root results also in a subgraph. This can be
+considered to be an instance of a 'directed container', cf.
+Ahman, Chapman and Uustalu
+(http://www.cl.cam.ac.uk/~da357/papers/fossacs12.pdf).
+
 Anyway, we want a kind for the shape and a kind for the
 path from root so we can address any relevant (non-pointer)
 node.
