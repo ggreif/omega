@@ -30,7 +30,7 @@ Several points to consider:
   * Can these automatically be packed? Or do we need another mechanism?
   * Occulted type transformers on constructors that are locally refined?
   * How can we make this more catamorphism-like?
-  * S^0 is `id` on `Nat`
+  * `S^0` is `id` on `Nat`
   * Can we _forget_ `Nat' n` to a (value-level) `Nat`?
 
-This idea is very much influenced by Conor's [https://personal.cis.strath.ac.uk/conor.mcbride/pub/OAAO/Ornament.pdf _ornament_ cycle of papers]. The above example (in the intro) is very similar to the [http://sneezy.cs.nott.ac.uk/fun/nov-07/R-star.pdf R* talk].
+This idea is very much influenced by Conor's [https://personal.cis.strath.ac.uk/conor.mcbride/pub/OAAO/Ornament.pdf ornament cycle of papers]. The above example (in the intro) is very similar to the [http://sneezy.cs.nott.ac.uk/fun/nov-07/R-star.pdf R* talk].
