@@ -1,0 +1,31 @@
+#summary Proposes a new way to locally introduce theorems.
+#labels Phase-Design,Deprecated,crazy
+
+= Introduction =
+
+An unusual approach to retrofit constructors with type-level rules.
+
+Consider the length function
+{{{
+length [] = 0
+length (a:as) = 1 + length as
+}}}
+This is a catamorphism and has the type `length :: [a] -> Int`. But what if we want `Nat' a` as the range? And we also want (gasp!) a correctness guarantee?
+
+The idea is to locally augment the constructors with _theorems_:
+{{{
+let theorem (:) :: Nat' n -> Nat' (1+n)t
+    theorem [] :: Nat' 0t
+}}}
+And then proceed defining:
+{{{
+lengthNat [] = 0v
+lengthNat (a:as) = (1+lengthNat as)v
+}}}
+
+= Details =
+
+Several points to consider:
+  * Any type coming from the theorems needs to be hidden existentially.
+  * Occulted type transformes on constructors that are locally refined?
+  * Automatic links to other wiki pages
