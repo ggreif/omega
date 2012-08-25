@@ -14,7 +14,7 @@ This is a catamorphism and has the type `length :: [a] -> Int`. But what if we w
 
 The idea is to locally augment the constructors with _theorems_:
 {{{
-let theorem (:) :: Nat' n -> Nat' (1+n)t
+let theorem (:) :: a -> Nat' n -> Nat' (1+n)t
     theorem [] :: Nat' 0t
 }}}
 And then proceed defining:
@@ -33,4 +33,25 @@ Several points to consider:
   * `S^0` is `id` on `Nat`
   * Can we _forget_ `Nat' n` to a (value-level) `Nat`?
 
+Okay, how can the rules be attached to constructors? How can the rules access the type parameters?
+{{{
+(:) :: a -> [a] -> [a]
+}}}
+This is the default theorem. We can establish a local one
+{{{
+theorem (:) :: a -> (b, bs) -> (a, (b, bs))
+}}}
+which would create some signature of a _generalized fold_.
+
+In a sense what we are doing here is retrofitting some `prop` definition on a previously defined data type. This syntax may be useful
+{{{
+let prop [a] where
+  [] :: ...
+  (:) :: ...
+}}}
+
+= Related Work =
+
 This idea is very much influenced by Conor's [https://personal.cis.strath.ac.uk/conor.mcbride/pub/OAAO/Ornament.pdf ornament cycle of papers]. The above example (in the intro) is very similar to the [http://sneezy.cs.nott.ac.uk/fun/nov-07/R-star.pdf R* talk].
+
+Generalized folds go back to "Generalised folds for nested datatypes" by Bird and Paterson.
