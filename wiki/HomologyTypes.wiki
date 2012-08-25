@@ -114,7 +114,7 @@ manyfolds
 
 42 is boundary of `Int`
 
-`Equal Int Int` is boundary of *
+`Equal Int Int` is boundary of `*`
 
 
 === The Simplicial Complex ===
