@@ -4,6 +4,14 @@
 -- Hamana also has much to say (http://www.cs.gunma-u.ac.jp/~hamana/)
 --
 
+-- TODO:
+--  o add another parameter (VAR | FUN | NORMAL)
+--  o Arg is VAR
+--  o Up is VAR -> VAR
+--  o Enc is VAR -> FUN
+--  o introduce constructor Enc, signifying the function value enclosing the corresponding variable
+--    so we can write fak as Lm `fak $ If 0tm == 0 then 1 else App (Enc 0tm) (0tm - 1)
+
 import "Inventory.prg"
 
 data Tm :: Inventory Tag ~> * where
