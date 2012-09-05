@@ -54,9 +54,11 @@ How do other levels (kinds, sorts, etc.) fit in? As `Iceberg :: Lvl ~> Tag ~> τ
 
 So let's get this sketched. We need
   * fixed levels 0, 1, 2, ...
-  * level qualification _∀ l :: Level_
+  * level qualification _∀ n :: Level_
   * level lifting _(c+n)_, where c is constant
   * level functions? (doubtful) _n + n_
+  * star lifting _*n_
+  * lifting other level-polymorphic types? (doubtful, with the possible admissibility of `§`, i.e. _constraint_ kinds)
  
 _Idea: Can we make level a special kind? That is present at all levels? Then these qualifications would appear in the telescope._
 
