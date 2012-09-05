@@ -1,6 +1,14 @@
 #summary Different data types are just visible tips of the same iceberg.
 #labels Deprecated,Phase-Design
 
+= For the Sake of Aestetics =
+
+Here is a pretty picture, so you'll remember and come back :-)
+
+http://www.athropolis.com/arctic-facts/iceberg/iceberg-type.jpg
+
+(from www.athropolis.com)
+
 = Introduction =
 
 Usually programmers encounter data types as isolated or mutually recursive entities.
