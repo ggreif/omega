@@ -54,7 +54,7 @@ let prop [a] where
 
 Of course I've been vague about the type of `lengthNat` above. As you cannot pull out fresh universals of your hat, these must be _packed existentially_. So the signature would become
 {{{
-lengthNat :: [a] -> exists a . Nat' a`
+lengthNat :: [a] -> exists a . Nat' a
 }}}
 But this means tedious packing and unpacking each time. To automatize this part (and help the typechecker, which cannot see through `Ex`), I propose
 {{{
