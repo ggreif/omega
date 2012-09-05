@@ -50,6 +50,18 @@ let prop [a] where
   (:) :: ...
 }}}
 
+== The problem of existentials ==
+
+Of course I've been vague about the type of `lengthNat` above. As you cannot pull out fresh universals of your hat, these must be _packed existentially_. So the signature would become
+{{{
+lengthNat :: [a] -> exists a . Nat' a`
+}}}
+But this means tedious packing and unpacking each time. To automatize this part (and help the typechecker, which cannot see through `Ex`), I propose
+{{{
+... where exists theorem (:) :: a -> Nat' n -> Nat' (1+n)t
+}}}
+It may well turn out that _all_ interesting cases of constructor theorems need the existential wrapping feature, in which case we can drop the `exists`.
+
 = Related Work =
 
 This idea is very much influenced by Conor's [https://personal.cis.strath.ac.uk/conor.mcbride/pub/OAAO/Ornament.pdf ornament cycle of papers]. The above example (in the intro) is very similar to the [http://sneezy.cs.nott.ac.uk/fun/nov-07/R-star.pdf R* talk].
