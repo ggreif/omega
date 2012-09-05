@@ -50,6 +50,20 @@ Since we wish to integrate n-ary types into the iceberg, `τ` must actually be o
 
 How do other levels (kinds, sorts, etc.) fit in? As `Iceberg :: Lvl ~> Tag ~> τ`, possibly? What are the consistency conditions for this scheme? Can we model level polymorphism too?
 
+=== Flesh it out ===
+
+So let's get this sketched. We need
+  * fixed levels 0, 1, 2, ...
+  * level qualification _∀ l :: Level_
+  * level lifting _(c+n)_, where c is constant
+  * level functions? (doubtful) _n + n_
+ 
+_Idea: Can we make level a special kind? That is present at all levels? Then these qualifications would appear in the telescope._
+
+=== Singleton Types? ===
+
+When there is an (_n_+1) level of some data type, chances are good that it can be used as a parameter to the level _n_ singleton type. Elsewhere I suggest `Typ°` as the generated name for singleton types that is parametrized in `Typ`.
+
 = Bibliography =
 
 == Mendler Style Recursion Combinators ==
