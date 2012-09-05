@@ -64,7 +64,7 @@ _Idea: Can we make level a special kind? That is present at all levels? Then the
 
 === Singleton Types? ===
 
-When there is an (_n_+1) level of some data type, chances are good that it can be used as a parameter to the level _n_ singleton type. Elsewhere I suggest `Typ°` as the generated name for singleton types that is parametrized in `Typ`.
+When there is an (_n_+1) level of some data type, chances are good that it can be used as a parameter to the level _n_ singleton type. Elsewhere I suggest `Typ°` as the generated name for the singleton type that is parametrized in `Typ`.
 
 = Bibliography =
 
