@@ -14,29 +14,36 @@
 
 import "Inventory.prg"
 
-data Tm :: Inventory Tag ~> * where
+kind Usage = VAR | NORMAL
+
+data Tm :: Usage ~> Inventory Tag ~> * where
   -- lambda
-  Lm :: Label t -> Tm [inv; t]i -> Tm inv
+  Lm :: Label t -> Tm u [inv; t]i -> Tm NORMAL inv
   -- argument access
-  Arg :: Tm [ups; t]i
-  Up :: Tm [ups; t]i -> Tm [ups; t, t']i
+  Arg :: Tm VAR [ups; t]i
+  Up :: Tm VAR [ups; t]i -> Tm VAR [ups; t, t']i
+  -- the lambda introducing the argument
+  Enc :: Tm VAR inv -> Tm NORMAL inv
   -- application
-  App :: Tm inv -> Tm inv -> Tm inv
+  App :: Tm u inv -> Tm v inv -> Tm NORMAL inv
   -- recursive let
-  Let :: Label t -> Tm [inv; t]i ->  Tm [inv; t]i -> Tm inv
- deriving syntax (tm) Nat(Arg, Up) LeftPair(App)
+  Let :: Label t -> Tm u [inv; t]i ->  Tm v [inv; t]i -> Tm NORMAL inv
+ deriving syntax (tm) Nat(Arg, Up) LeftPair(App) Item(Enc)
 
 
--- identity function
+-- (closed) identity function
 --
-identity :: Tm []i
+identity :: Tm NORMAL []i
 identity = Lm `a 0tm
 
 -- ($) = \f . \a . f a
 --
-dollar :: Tm []i
+dollar :: Tm NORMAL []i
 dollar = Lm `f (Lm `a (1tm, 0tm)tm)
 
+-- bottom = \n . bottom n
+bottom = Lm `n ((0tm), 0tm)tm
+
 -- let a = a in a
-leta :: Tm []i
+leta :: Tm NORMAL []i
 leta = Let `a 0tm 0tm
