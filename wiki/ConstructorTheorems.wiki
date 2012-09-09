@@ -67,3 +67,5 @@ It may well turn out that _all_ interesting cases of constructor theorems need t
 This idea is very much influenced by Conor's [https://personal.cis.strath.ac.uk/conor.mcbride/pub/OAAO/Ornament.pdf ornament cycle of papers]. The above example (in the intro) is very similar to the [http://sneezy.cs.nott.ac.uk/fun/nov-07/R-star.pdf R* talk].
 
 Generalized folds go back to "Generalised folds for nested datatypes" by Bird and Paterson.
+
+This may be relevant too: http://comonad.com/reader/2009/incremental-folds/.
