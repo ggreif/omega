@@ -425,6 +425,8 @@ Diagrams of moving 'particles/waves' in [https://www.cs.indiana.edu/~sabry/paper
 
 Feynman diagrams. (Strings, Worldsheet)
 
+[http://sma.epfl.ch/~finster/opetope/opetope.html Opetopes].
+
 === n-Categories, string diagrams ===
 
 === Connections to String Theory ===
