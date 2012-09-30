@@ -189,6 +189,16 @@ Helper function that can chase
 >                            Chase (S go) pth p -> Chase go pth p
 >                            sub -> sub
 
+Rip out a subtree by resolving all outwards pointers with their pointees.
+The result is a root tree when all pointer could be resolved.
+
+> rip :: Path here -> Path p -> Underlying a here s -> Maybe (Sub Root)
+> rip here p tree = do Sub subtree <- Just $ grab here p tree
+>                      runResolver (here, tree) subtree
+
+> runResolver = undefined
+> --runResolver assoc tree = fail "Implement me!"
+
 Combine an absolute and a relative path to an absolute one
 
 > addPath :: Path a -> Path r -> Path (PathSum a r)
