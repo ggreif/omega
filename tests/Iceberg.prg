@@ -44,11 +44,12 @@ builtIn = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 0
 projectName :: Label l -> Thrist Iceberg () () -> Thrist Icename l l
 projectName _ []t = []t
 projectName l [Constructor l' lev sig; rest]t = case sameLabel l l' of
-                                                L Eq -> [NamedConstructor l' lev sig; projectName l rest]t
-                                                _ -> projectName l rest
+                                                L Eq -> undefined -- [NamedConstructor l' lev sig; projectName l rest]t
+                                                _ -> undefined -- projectName l rest
 
 projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel (HideLev l) (HideLev l)
 projectLevel _ []t = []t
+{-
 projectLevel l [Constructor t l' sig; rest]t = case sameLevel l l' of
                                                Just (Eq, Eq) -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                _ -> projectLevel l rest
@@ -60,3 +61,36 @@ sameLevel PolyLevel PolyLevel = Just (Eq, Eq)
 sameLevel (LevelUp l) (LevelUp l') = do (Eq, Eq) <- sameLevel l l'
                                         return (Eq, Eq)
                                       where monad maybeM
+-}
+
+
+data Icelevel' :: Lev n ~> Lev n ~> * where -- entities with certain level
+  LevelConstructor' :: LevelSubsumes l l' => Label t -> Level l -> Signature -> Icelevel' l' l'
+
+-- should be LevelFits
+prop LevelSubsumes :: Lev n ~> Lev n' ~> * where
+  BothValue :: LevelSubsumes ValueLevel ValueLevel
+  BothPoly :: LevelSubsumes PolyLevel PolyLevel
+  BothUp :: LevelSubsumes k k' -> LevelSubsumes (LevelUp k) (LevelUp k')
+  UpValuePoly :: LevelSubsumes (LevelUp ValueLevel) PolyLevel
+  --Commutes :: LevelSubsumes k k' => LevelSubsumes k' k -- NOT!
+
+
+-- should be 'fits'
+subsumes :: Level l -> Level l' -> Maybe (LevelSubsumes l l')
+subsumes ValueLevel ValueLevel = Just BothValue
+subsumes PolyLevel PolyLevel = Just BothPoly
+subsumes (LevelUp l) (LevelUp l') = do ev <- subsumes l l'
+                                       return $ BothUp ev
+                                     where monad maybeM
+subsumes (LevelUp ValueLevel) PolyLevel = Just UpValuePoly
+subsumes _ _ = Nothing
+
+projectLevel' :: Level l -> Thrist Iceberg () () -> Thrist Icelevel' l l
+projectLevel' _ []t = []t
+projectLevel' l [Constructor t l' sig; rest]t = case subsumes l l' of
+                                               Just BothValue -> [LevelConstructor' t l' sig; projectLevel' l rest]t
+                                               Just BothPoly -> [LevelConstructor' t l' sig; projectLevel' l rest]t
+                                               --Just (BothUp _) -> [LevelConstructor' t l' sig; projectLevel' l rest]t
+                                               --Just UpValuePoly -> [LevelConstructor' t l' sig; projectLevel' l rest]t
+                                               _ -> projectLevel' l rest
