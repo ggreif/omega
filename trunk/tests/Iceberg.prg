@@ -61,19 +61,19 @@ prop LevelSubsumes :: Lev n ~> Lev n' ~> * where
   ValuePoly :: LevelSubsumes ValueLevel PolyLevel
 
 
--- should be 'fits'
-subsumes :: Level l -> Level l' -> Maybe (LevelSubsumes l l')
-subsumes ValueLevel ValueLevel = Just BothValue
-subsumes PolyLevel PolyLevel = Just BothPoly
-subsumes (LevelUp l) (LevelUp l') = do ev <- subsumes l l'
-                                       return $ BothUp ev
-                                     where monad maybeM
-subsumes ValueLevel PolyLevel = Just ValuePoly
-subsumes _ _ = Nothing
+fits :: Level l -> Level l' -> Maybe (LevelSubsumes l l')
+fits ValueLevel ValueLevel = Just BothValue
+fits PolyLevel PolyLevel = Just BothPoly
+fits (LevelUp l) (LevelUp l') = do ev <- fits l l'
+                                   return $ BothUp ev
+                                 where monad maybeM
+fits ValueLevel PolyLevel = Just ValuePoly
+fits _ _ = Nothing
+
 
 projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel l l
 projectLevel _ []t = []t
-projectLevel l [Constructor t l' sig; rest]t = case subsumes l l' of
+projectLevel l [Constructor t l' sig; rest]t = case fits l l' of
                                                Just BothValue -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just BothPoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just (BothUp below) -> [LevelConstructor t l' sig; projectLevel l rest]t
