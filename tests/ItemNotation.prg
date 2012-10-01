@@ -35,7 +35,7 @@ data Wagon :: Inventory Tag ~> Inventory Tag ~> * where
  deriving syntax (w) Nat(ArgW, UpW) Item(AppW)
 
 
-data Thrist :: forall (l :: *1) . (l ~> l ~> *)  ~> l ~> l ~> * where
+data Thrist :: (l ~> l ~> *) ~> l ~> l ~> * where
   Nil :: Thrist k a a
   Cons :: k a b -> Thrist k b c -> Thrist k a c
  deriving List(t)
