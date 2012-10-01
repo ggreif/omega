@@ -32,40 +32,29 @@ data Iceberg :: * ~> * ~> * where
 data Icename :: Tag ~> Tag ~> * where -- entities with certain name
   NamedConstructor :: Label t -> Level l -> Signature -> Icename t t
 
-data Icelevel :: HiddenLev ~> HiddenLev ~> * where -- entities with certain level
-  LevelConstructor :: Label t -> Level l -> Signature -> Icelevel (HideLev l) (HideLev l)
+--data Icelevel :: HiddenLev ~> HiddenLev ~> * where -- entities with certain level
+--  LevelConstructor :: Label t -> Level l -> Signature -> Icelevel (HideLev l) (HideLev l)
+
+data Icelevel' :: Lev n ~> Lev n ~> * where -- entities with certain level
+  LevelConstructor' :: LevelSubsumes l' l => Label t -> Level l -> Signature -> Icelevel' l' l'
 
 
 builtIn :: Thrist Iceberg () ()
 builtIn = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 0l Sig
-          , Constructor `Z 1l Sig, Constructor `S 1l Sig, Constructor `Nat 2l Sig]t
+          , Constructor `Z 1l Sig, Constructor `S 1l Sig, Constructor `Nat 2l Sig
+          , Constructor starN (LevelUp PolyLevel) Sig
+          , Constructor constraintN (LevelUp PolyLevel) Sig]t
   where HideLabel natPrime = newLabel "Nat'"
+        HideLabel starN = newLabel "*n"
+        HideLabel constraintN = newLabel "#n"
 
 projectName :: Label l -> Thrist Iceberg () () -> Thrist Icename l l
 projectName _ []t = []t
 projectName l [Constructor l' lev sig; rest]t = case sameLabel l l' of
-                                                L Eq -> undefined -- [NamedConstructor l' lev sig; projectName l rest]t
-                                                _ -> undefined -- projectName l rest
-
-projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel (HideLev l) (HideLev l)
-projectLevel _ []t = []t
-{-
-projectLevel l [Constructor t l' sig; rest]t = case sameLevel l l' of
-                                               Just (Eq, Eq) -> [LevelConstructor t l' sig; projectLevel l rest]t
-                                               _ -> projectLevel l rest
+                                                L Eq -> [NamedConstructor l' lev sig; projectName l rest]t
+                                                _ -> projectName l rest
 
 
-sameLevel :: Level l -> Level l' -> Maybe (Equal l l', Equal (HideLev l) (HideLev l'))
-sameLevel ValueLevel ValueLevel = Just (Eq, Eq)
-sameLevel PolyLevel PolyLevel = Just (Eq, Eq)
-sameLevel (LevelUp l) (LevelUp l') = do (Eq, Eq) <- sameLevel l l'
-                                        return (Eq, Eq)
-                                      where monad maybeM
--}
-
-
-data Icelevel' :: Lev n ~> Lev n ~> * where -- entities with certain level
-  LevelConstructor' :: LevelSubsumes l' l => Label t -> Level l -> Signature -> Icelevel' l' l'
 
 -- should be LevelFits
 prop LevelSubsumes :: Lev n ~> Lev n' ~> * where
