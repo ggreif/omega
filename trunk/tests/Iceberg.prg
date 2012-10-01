@@ -59,6 +59,7 @@ prop LevelSubsumes :: Lev n ~> Lev n' ~> * where
   BothPoly :: LevelSubsumes PolyLevel PolyLevel
   BothUp :: LevelSubsumes k k' -> LevelSubsumes (LevelUp k) (LevelUp k')
   ValuePoly :: LevelSubsumes ValueLevel PolyLevel
+  AbovePoly :: {-LevelSubsumes (LevelUp k) (LevelUp k) ->-} LevelSubsumes (LevelUp k) PolyLevel
 
 
 fits :: Level l -> Level l' -> Maybe (LevelSubsumes l l')
@@ -68,6 +69,7 @@ fits (LevelUp l) (LevelUp l') = do ev <- fits l l'
                                    return $ BothUp ev
                                  where monad maybeM
 fits ValueLevel PolyLevel = Just ValuePoly
+fits (LevelUp l) PolyLevel = Just AbovePoly
 fits _ _ = Nothing
 
 
