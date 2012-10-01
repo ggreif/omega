@@ -110,3 +110,14 @@ projectLevel' l [NamedConstructor t l' sig; rest]t = case l `fits` l' of
                                                      Just AbovePoly -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
                                                      _ -> projectLevel' l rest
 
+data Levels :: Lev m ~> Lev m ~> * where
+  InLevel :: Thrist Icelevel l l -> Levels l (1+l)l
+
+t3 :: Thrist Levels 0l 2l
+t3 = [InLevel $ projectLevel 0l builtIns, InLevel $ projectLevel 1l builtIns]t
+
+fibrateLevels :: Level l -> Thrist Iceberg () () -> Thrist Levels l a
+fibrateLevels l berg = [InLevel $ projectLevel l berg; lazy (fibrateLevels (1+l)l berg)]t
+
+
+[t30, t31, t32, t33; t34]t = fibrateLevels 0l builtIns
