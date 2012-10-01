@@ -21,7 +21,7 @@ data Level :: Lev n ~> * where
   PolyLevel :: Level PolyLevel
  deriving syntax (l) Nat(ValueLevel, LevelUp)
 
-data Signature = Sig
+data Signature = Sig -- for now
 
 data Iceberg :: * ~> * ~> * where
   Constructor :: Label t -> Level l -> Signature -> Iceberg () ()
@@ -51,14 +51,14 @@ builtIns = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 
 
 projectName :: Label l -> Thrist Iceberg () () -> Thrist Icename l l
 projectName _ []t = []t
-projectName l [Constructor l' lev sig; rest]t = case sameLabel l l' of
+projectName l [Constructor l' lev sig; rest]t = case l `sameLabel` l' of
                                                 L Eq -> [NamedConstructor l' lev sig; projectName l rest]t
                                                 _ -> projectName l rest
 
 
 projectName' :: Label t -> Thrist Icelevel l l -> Thrist Icenamelevel (TL t l) (TL t l)
 projectName' _ []t = []t
-projectName' t [LevelConstructor t' lev sig; rest]t = case sameLabel t t' of
+projectName' t [LevelConstructor t' lev sig; rest]t = case t `sameLabel` t' of
                                                       L Eq -> [NamedLevelConstructor t' lev sig; projectName' t rest]t
                                                       _ -> projectName' t rest
 
@@ -87,11 +87,22 @@ fits _ _ = Nothing
 
 projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel l l
 projectLevel _ []t = []t
-projectLevel l [Constructor t l' sig; rest]t = case fits l l' of
+projectLevel l [Constructor t l' sig; rest]t = case l `fits` l' of
                                                Just BothValue -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just BothPoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just (BothUp below) -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just ValuePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just AbovePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                _ -> projectLevel l rest
+
+
+projectLevel' :: Level l -> Thrist Icename t t -> Thrist Icenamelevel (TL t l) (TL t l)
+projectLevel' _ []t = []t
+projectLevel' l [NamedConstructor t l' sig; rest]t = case l `fits` l' of
+                                                     Just BothValue -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
+                                                     Just BothPoly -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
+                                                     Just (BothUp below) -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
+                                                     Just ValuePoly -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
+                                                     Just AbovePoly -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
+                                                     _ -> projectLevel' l rest
 
