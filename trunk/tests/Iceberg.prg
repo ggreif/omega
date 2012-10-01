@@ -32,18 +32,15 @@ data Iceberg :: * ~> * ~> * where
 data Icename :: Tag ~> Tag ~> * where -- entities with certain name
   NamedConstructor :: Label t -> Level l -> Signature -> Icename t t
 
---data Icelevel :: HiddenLev ~> HiddenLev ~> * where -- entities with certain level
---  LevelConstructor :: Label t -> Level l -> Signature -> Icelevel (HideLev l) (HideLev l)
-
-data Icelevel' :: Lev n ~> Lev n ~> * where -- entities with certain level
-  LevelConstructor' :: LevelSubsumes l' l => Label t -> Level l -> Signature -> Icelevel' l' l'
+data Icelevel :: Lev n ~> Lev n ~> * where -- entities with certain level
+  LevelConstructor :: LevelSubsumes l' l => Label t -> Level l -> Signature -> Icelevel l' l'
 
 
 builtIn :: Thrist Iceberg () ()
 builtIn = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 0l Sig
           , Constructor `Z 1l Sig, Constructor `S 1l Sig, Constructor `Nat 2l Sig
-          , Constructor starN (LevelUp PolyLevel) Sig
-          , Constructor constraintN (LevelUp PolyLevel) Sig]t
+          , Constructor starN (LevelUp (LevelUp PolyLevel)) Sig
+          , Constructor constraintN (LevelUp (LevelUp PolyLevel)) Sig]t
   where HideLabel natPrime = newLabel "Nat'"
         HideLabel starN = newLabel "*n"
         HideLabel constraintN = newLabel "#n"
@@ -62,7 +59,6 @@ prop LevelSubsumes :: Lev n ~> Lev n' ~> * where
   BothPoly :: LevelSubsumes PolyLevel PolyLevel
   BothUp :: LevelSubsumes k k' -> LevelSubsumes (LevelUp k) (LevelUp k')
   UpValuePoly :: LevelSubsumes (LevelUp ValueLevel) PolyLevel
-  --Commutes :: LevelSubsumes k k' => LevelSubsumes k' k -- NOT!
 
 
 -- should be 'fits'
@@ -75,11 +71,11 @@ subsumes (LevelUp l) (LevelUp l') = do ev <- subsumes l l'
 subsumes (LevelUp ValueLevel) PolyLevel = Just UpValuePoly
 subsumes _ _ = Nothing
 
-projectLevel' :: Level l -> Thrist Iceberg () () -> Thrist Icelevel' l l
-projectLevel' _ []t = []t
-projectLevel' l [Constructor t l' sig; rest]t = case subsumes l l' of
-                                               Just BothValue -> [LevelConstructor' t l' sig; projectLevel' l rest]t
-                                               Just BothPoly -> [LevelConstructor' t l' sig; projectLevel' l rest]t
-                                               Just (BothUp below) -> [LevelConstructor' t l' sig; projectLevel' l rest]t
-                                               Just UpValuePoly -> [LevelConstructor' t l' sig; projectLevel' l rest]t
-                                               _ -> projectLevel' l rest
+projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel l l
+projectLevel _ []t = []t
+projectLevel l [Constructor t l' sig; rest]t = case subsumes l l' of
+                                               Just BothValue -> [LevelConstructor t l' sig; projectLevel l rest]t
+                                               Just BothPoly -> [LevelConstructor t l' sig; projectLevel l rest]t
+                                               Just (BothUp below) -> [LevelConstructor t l' sig; projectLevel l rest]t
+                                               Just UpValuePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
+                                               _ -> projectLevel l rest
