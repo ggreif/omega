@@ -1,3 +1,7 @@
+-- implement the idea described in
+-- https://code.google.com/p/omega/wiki/IcebergTypes
+--
+
 import "../src/LangPrelude.prg" (maybeM)
 
 data Thrist :: (l ~> l ~> *) ~> l ~> l ~> * where
