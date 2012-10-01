@@ -33,14 +33,15 @@ data Icename :: Tag ~> Tag ~> * where -- entities with certain name
   NamedConstructor :: Label t -> Level l -> Signature -> Icename t t
 
 data Icelevel :: Lev n ~> Lev n ~> * where -- entities with certain level
-  LevelConstructor :: LevelSubsumes l' l => Label t -> Level l -> Signature -> Icelevel l' l'
+  LevelConstructor :: LevelFits l' l => Label t -> Level l -> Signature -> Icelevel l' l'
 
 
-builtIn :: Thrist Iceberg () ()
-builtIn = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 0l Sig
-          , Constructor `Z 1l Sig, Constructor `S 1l Sig, Constructor `Nat 2l Sig
-          , Constructor starN (LevelUp (LevelUp PolyLevel)) Sig
-          , Constructor constraintN (LevelUp (LevelUp PolyLevel)) Sig]t
+builtIns :: Thrist Iceberg () ()
+builtIns = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 0l Sig
+           , Constructor `Z 1l Sig, Constructor `S 1l Sig, Constructor `Nat 2l Sig
+           , Constructor starN (LevelUp (LevelUp PolyLevel)) Sig
+           , Constructor constraintN (LevelUp (LevelUp PolyLevel)) Sig
+           , Constructor `MultValueAndUp PolyLevel Sig]t
   where HideLabel natPrime = newLabel "Nat'"
         HideLabel starN = newLabel "*n"
         HideLabel constraintN = newLabel "#n"
@@ -52,17 +53,18 @@ projectName l [Constructor l' lev sig; rest]t = case sameLabel l l' of
                                                 _ -> projectName l rest
 
 
+-- inclusion relation on levels
+--
+prop LevelFits :: Lev n ~> Lev n' ~> * where
+  BothValue :: LevelFits ValueLevel ValueLevel
+  BothPoly :: LevelFits PolyLevel PolyLevel
+  BothUp :: LevelFits k k' -> LevelFits (LevelUp k) (LevelUp k')
+  ValuePoly :: LevelFits ValueLevel PolyLevel
+  AbovePoly :: LevelFits (LevelUp k) PolyLevel
 
--- should be LevelFits
-prop LevelSubsumes :: Lev n ~> Lev n' ~> * where
-  BothValue :: LevelSubsumes ValueLevel ValueLevel
-  BothPoly :: LevelSubsumes PolyLevel PolyLevel
-  BothUp :: LevelSubsumes k k' -> LevelSubsumes (LevelUp k) (LevelUp k')
-  ValuePoly :: LevelSubsumes ValueLevel PolyLevel
-  AbovePoly :: {-LevelSubsumes (LevelUp k) (LevelUp k) ->-} LevelSubsumes (LevelUp k) PolyLevel
-
-
-fits :: Level l -> Level l' -> Maybe (LevelSubsumes l l')
+-- runtime compute level inclusion
+--
+fits :: Level l -> Level l' -> Maybe (LevelFits l l')
 fits ValueLevel ValueLevel = Just BothValue
 fits PolyLevel PolyLevel = Just BothPoly
 fits (LevelUp l) (LevelUp l') = do ev <- fits l l'
@@ -80,4 +82,5 @@ projectLevel l [Constructor t l' sig; rest]t = case fits l l' of
                                                Just BothPoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just (BothUp below) -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just ValuePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
+                                               Just AbovePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                _ -> projectLevel l rest
