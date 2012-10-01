@@ -65,7 +65,7 @@ sameLevel (LevelUp l) (LevelUp l') = do (Eq, Eq) <- sameLevel l l'
 
 
 data Icelevel' :: Lev n ~> Lev n ~> * where -- entities with certain level
-  LevelConstructor' :: LevelSubsumes l l' => Label t -> Level l -> Signature -> Icelevel' l' l'
+  LevelConstructor' :: LevelSubsumes l' l => Label t -> Level l -> Signature -> Icelevel' l' l'
 
 -- should be LevelFits
 prop LevelSubsumes :: Lev n ~> Lev n' ~> * where
@@ -91,6 +91,6 @@ projectLevel' _ []t = []t
 projectLevel' l [Constructor t l' sig; rest]t = case subsumes l l' of
                                                Just BothValue -> [LevelConstructor' t l' sig; projectLevel' l rest]t
                                                Just BothPoly -> [LevelConstructor' t l' sig; projectLevel' l rest]t
-                                               --Just (BothUp _) -> [LevelConstructor' t l' sig; projectLevel' l rest]t
-                                               --Just UpValuePoly -> [LevelConstructor' t l' sig; projectLevel' l rest]t
+                                               Just (BothUp below) -> [LevelConstructor' t l' sig; projectLevel' l rest]t
+                                               Just UpValuePoly -> [LevelConstructor' t l' sig; projectLevel' l rest]t
                                                _ -> projectLevel' l rest
