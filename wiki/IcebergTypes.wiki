@@ -66,6 +66,22 @@ _Idea: Can we make level a special kind? That is present at all levels? Then the
 
 When there is an (_n_+1) level of some data type, chances are good that it can be used as a parameter to the level _n_ singleton type. Elsewhere I suggest `Typ°` as the generated name for the singleton type that is parametrized in `Typ`.
 
+= Implementation =
+
+I have started filling the space spawned by ideas with code: https://code.google.com/p/omega/source/browse/trunk/tests/Iceberg.prg
+
+== Status ==
+
+We can compute fibrations by level. We can select by level and/or name.
+
+Still to do:
+  * signatures
+  * cutoff in fibrations (detect highest constant in set and loop back)
+  * typed/kindedness checks
+  * inference
+  * two-level formalism (structure functors?)
+  * singleton types
+
 = Bibliography =
 
 == Mendler Style Recursion Combinators ==
