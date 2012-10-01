@@ -15,9 +15,6 @@ data Lev :: Multiplicity ~> *1 where
   PolyLevel :: Lev Poly -- level n .
  deriving syntax (lev) Nat(ValueLevel, LevelUp)
 
-data HiddenLev :: *1 where
-  HideLev :: Lev m ~> HiddenLev
-
 data Level :: Lev n ~> * where
   ValueLevel :: Level ValueLevel
   LevelUp :: Level l -> Level (LevelUp l)
@@ -35,6 +32,12 @@ data Icename :: Tag ~> Tag ~> * where -- entities with certain name
 data Icelevel :: Lev n ~> Lev n ~> * where -- entities with certain level
   LevelConstructor :: LevelFits l' l => Label t -> Level l -> Signature -> Icelevel l' l'
 
+data TagLev :: Multiplicity ~> *1 where
+  TL :: Tag ~> Lev m ~> TagLev m
+
+data Icenamelevel :: TagLev n ~> TagLev n ~> * where -- entities with certain level and name
+  NamedLevelConstructor :: LevelFits l' l => Label t -> Level l -> Signature -> Icenamelevel (TL t l') (TL t l')
+
 
 builtIns :: Thrist Iceberg () ()
 builtIns = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 0l Sig
@@ -51,6 +54,13 @@ projectName _ []t = []t
 projectName l [Constructor l' lev sig; rest]t = case sameLabel l l' of
                                                 L Eq -> [NamedConstructor l' lev sig; projectName l rest]t
                                                 _ -> projectName l rest
+
+
+projectName' :: Label t -> Thrist Icelevel l l -> Thrist Icenamelevel (TL t l) (TL t l)
+projectName' _ []t = []t
+projectName' t [LevelConstructor t' lev sig; rest]t = case sameLabel t t' of
+                                                      L Eq -> [NamedLevelConstructor t' lev sig; projectName' t rest]t
+                                                      _ -> projectName' t rest
 
 
 -- inclusion relation on levels
@@ -84,3 +94,4 @@ projectLevel l [Constructor t l' sig; rest]t = case fits l l' of
                                                Just ValuePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just AbovePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                _ -> projectLevel l rest
+
