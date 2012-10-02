@@ -51,8 +51,10 @@ data Icenamelevel :: TagLev n ~> TagLev n ~> * where -- entities with certain le
 builtIns :: Thrist Iceberg () ()
 builtIns = [ Constructor `Z 0l $ SigApp (SigCtor natPrime) (SigCtor `Z)
            , Constructor `S 0l $ SigApp (SigApp (SigCtor varrow) (SigApp (SigCtor natPrime) $ SigVar `a)) (SigApp (SigCtor natPrime) $ (SigApp (SigCtor `S) $ SigVar `a))
-           , Constructor natPrime 0l Sig
-           , Constructor `Z 1l Sig, Constructor `S 1l Sig, Constructor `Nat 2l Sig
+           , Constructor natPrime 0l $ SigApp (SigApp (SigCtor karrow) (SigCtor `Nat)) (SigCtor starN)
+           , Constructor `Z 1l $ SigCtor `Nat
+           , Constructor `S 1l $ SigApp (SigApp (SigCtor karrow) (SigCtor `Nat)) (SigCtor `Nat)
+           , Constructor `Nat 2l Sig
            , Constructor starN (LevelUp (LevelUp PolyLevel)) Sig
            , Constructor constraintN (LevelUp (LevelUp PolyLevel)) Sig
            , Constructor varrow 1l Sig
