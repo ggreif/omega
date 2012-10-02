@@ -74,7 +74,7 @@ prop LevelFits :: Lev n ~> Lev n' ~> * where
   BothPoly :: LevelFits PolyLevel PolyLevel
   BothUp :: LevelFits k k' -> LevelFits (LevelUp k) (LevelUp k')
   ValuePoly :: LevelFits ValueLevel PolyLevel
-  AbovePoly :: LevelFits (LevelUp k) PolyLevel
+  AbovePoly :: LevelFits (LevelUp k) PolyLevel -- eeek FIXME: can be Mono!
 
 -- runtime compute level inclusion
 --
@@ -89,15 +89,24 @@ fits (LevelUp l) PolyLevel = Just AbovePoly
 fits _ _ = Nothing
 
 multiplicity :: Multiplicity ~> Multiplicity ~> Multiplicity
-{multiplicity Mono a} = Mono
-{multiplicity Poly a} = a
+{multiplicity Mono b} = Mono
+{multiplicity Poly b} = b
+
+unilev :: Lev a ~> Lev b ~> Lev {multiplicity a b}
+{unilev ValueLevel b} = ValueLevel
+{unilev (LevelUp a) (LevelUp b)} = {unilev a b}
+{unilev (LevelUp a) ValueLevel} = ValueLevel
+{unilev (LevelUp a) PolyLevel} = PolyLevel -- eeek FIXME: can be Mono!
+{unilev PolyLevel PolyLevel} = PolyLevel
+{unilev PolyLevel ValueLevel} = ValueLevel
+{unilev PolyLevel (LevelUp b)} = PolyLevel -- eeek FIXME: can be Mono!
 
 unifyLevels :: forall (a :: Multiplicity) (b :: Multiplicity) (l :: Lev a) (l' :: Lev b) . Level l -> Level l' -> exists (x :: Lev {multiplicity a b}) . Maybe (Level x)
 unifyLevels l l' = case l `fits` l' of
                    Just BothValue -> Ex (Just l)
-                   Just (BothUp from) -> retrofit (LevelUp l) (LevelUp l') from
+                   Just (BothUp from) -> undefined -- retrofit (LevelUp l) (LevelUp l') from
   where retrofit :: forall (a :: Multiplicity) (b :: Multiplicity) (l :: Lev a) (k :: Lev b) (m :: Lev a) (n :: Lev b) . Level k -> Level l -> LevelFits m n -> exists (x :: Lev {multiplicity a b}) . Maybe (Level x)
-        retrofit k l BothValue = Ex (Just l)
+        retrofit k l BothValue = Ex (Just k)
 
 
 projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel l l
