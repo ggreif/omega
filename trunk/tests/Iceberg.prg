@@ -25,7 +25,12 @@ data Level :: Lev n ~> * where
   PolyLevel :: Level PolyLevel
  deriving syntax (l) Nat(ValueLevel, LevelUp)
 
-data Signature = Sig -- for now
+data Signature :: * where
+  Sig :: Signature -- some signature (for now)
+  SigCtor :: Label t -> Signature
+  SigFun :: Label t -> Signature
+  SigVar :: Label t -> Signature
+  SigApp :: Signature -> Signature -> Signature
 
 data Iceberg :: * ~> * ~> * where
   Constructor :: Label t -> Level l -> Signature -> Iceberg () ()
@@ -44,14 +49,19 @@ data Icenamelevel :: TagLev n ~> TagLev n ~> * where -- entities with certain le
 
 
 builtIns :: Thrist Iceberg () ()
-builtIns = [ Constructor `Z 0l Sig, Constructor `S 0l Sig, Constructor natPrime 0l Sig
+builtIns = [ Constructor `Z 0l $ SigApp (SigCtor natPrime) (SigCtor `Z)
+           , Constructor `S 0l $ SigApp (SigApp (SigCtor varrow) (SigApp (SigCtor natPrime) $ SigVar `a)) (SigApp (SigCtor natPrime) $ (SigApp (SigCtor `S) $ SigVar `a))
+           , Constructor natPrime 0l Sig
            , Constructor `Z 1l Sig, Constructor `S 1l Sig, Constructor `Nat 2l Sig
            , Constructor starN (LevelUp (LevelUp PolyLevel)) Sig
            , Constructor constraintN (LevelUp (LevelUp PolyLevel)) Sig
+           , Constructor varrow 1l Sig
            , Constructor `MultValueAndUp PolyLevel Sig]t
   where HideLabel natPrime = newLabel "Nat'"
         HideLabel starN = newLabel "*n"
         HideLabel constraintN = newLabel "#n"
+        HideLabel varrow = newLabel "->"
+        HideLabel karrow = newLabel "~>"
 
 projectName :: Label l -> Thrist Iceberg () () -> Thrist Icename l l
 projectName _ []t = []t
