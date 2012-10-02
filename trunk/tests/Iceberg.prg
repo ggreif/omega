@@ -101,6 +101,16 @@ unilev :: Lev a ~> Lev b ~> Lev {multiplicity a b}
 {unilev PolyLevel (LevelUp b)} = LevelUp {unilev PolyLevel b}
 {unilev PolyLevel PolyLevel} = PolyLevel
 
+-- prove commutativity
+unifyCommutes :: Level k -> Level l -> Equal {unilev k l} {unilev l k}
+unifyCommutes ValueLevel ValueLevel = Eq
+unifyCommutes ValueLevel PolyLevel = Eq
+unifyCommutes (LevelUp a) (LevelUp b) = Eq where theorem hyp = unifyCommutes a b
+unifyCommutes (LevelUp a) PolyLevel = Eq where theorem hyp = unifyCommutes a PolyLevel
+unifyCommutes PolyLevel ValueLevel = Eq
+unifyCommutes PolyLevel (LevelUp b) = Eq where theorem hyp = unifyCommutes PolyLevel b
+unifyCommutes PolyLevel PolyLevel = Eq
+
 unifyLevels :: Level k -> Level l -> Maybe (Level {unilev k l})
 unifyLevels ValueLevel (LevelUp b) = Nothing
 unifyLevels ValueLevel ValueLevel = Just ValueLevel
@@ -112,10 +122,9 @@ unifyLevels (LevelUp a) ValueLevel = Nothing
 unifyLevels (LevelUp a) PolyLevel = do yes <- unifyLevels a PolyLevel
                                        return $ LevelUp yes
                                      where monad maybeM
-unifyLevels PolyLevel ValueLevel = Just ValueLevel
-unifyLevels PolyLevel (LevelUp b) = do yes <- unifyLevels PolyLevel b
-                                       return $ LevelUp yes
-                                     where monad maybeM
+unifyLevels PolyLevel ValueLevel = unifyLevels ValueLevel PolyLevel
+unifyLevels PolyLevel (LevelUp b) = unifyLevels (LevelUp b) PolyLevel
+  where theorem comm = unifyCommutes PolyLevel b
 unifyLevels PolyLevel PolyLevel = Just PolyLevel
 
 
