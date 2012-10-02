@@ -93,21 +93,39 @@ multiplicity :: Multiplicity ~> Multiplicity ~> Multiplicity
 {multiplicity Poly b} = b
 
 unilev :: Lev a ~> Lev b ~> Lev {multiplicity a b}
-{unilev ValueLevel b} = ValueLevel
-{unilev (LevelUp a) (LevelUp b)} = {unilev a b}
-{unilev (LevelUp a) ValueLevel} = ValueLevel
-{unilev (LevelUp a) PolyLevel} = PolyLevel -- eeek FIXME: can be Mono!
-{unilev PolyLevel PolyLevel} = PolyLevel
+{unilev ValueLevel ValueLevel} = ValueLevel
+{unilev ValueLevel PolyLevel} = ValueLevel
+{unilev (LevelUp a) (LevelUp b)} = LevelUp {unilev a b}
+{unilev (LevelUp a) PolyLevel} = LevelUp {unilev a PolyLevel}
 {unilev PolyLevel ValueLevel} = ValueLevel
-{unilev PolyLevel (LevelUp b)} = PolyLevel -- eeek FIXME: can be Mono!
+{unilev PolyLevel (LevelUp b)} = LevelUp {unilev PolyLevel b}
+{unilev PolyLevel PolyLevel} = PolyLevel
 
-unifyLevels :: forall (a :: Multiplicity) (b :: Multiplicity) (l :: Lev a) (l' :: Lev b) . Level l -> Level l' -> exists (x :: Lev {multiplicity a b}) . Maybe (Level x)
-unifyLevels l l' = case l `fits` l' of
-                   Just BothValue -> Ex (Just l)
-                   Just (BothUp from) -> undefined -- retrofit (LevelUp l) (LevelUp l') from
-  where retrofit :: forall (a :: Multiplicity) (b :: Multiplicity) (l :: Lev a) (k :: Lev b) (m :: Lev a) (n :: Lev b) . Level k -> Level l -> LevelFits m n -> exists (x :: Lev {multiplicity a b}) . Maybe (Level x)
-        retrofit k l BothValue = Ex (Just k)
+unifyLevels :: Level k -> Level l -> Maybe (Level {unilev k l})
+unifyLevels ValueLevel (LevelUp b) = Nothing
+unifyLevels ValueLevel ValueLevel = Just ValueLevel
+unifyLevels ValueLevel PolyLevel = Just ValueLevel
+unifyLevels (LevelUp a) (LevelUp b) = do yes <- unifyLevels a b
+                                         return $ LevelUp yes
+                                       where monad maybeM
+unifyLevels (LevelUp a) ValueLevel = Nothing
+unifyLevels (LevelUp a) PolyLevel = do yes <- unifyLevels a PolyLevel
+                                       return $ LevelUp yes
+                                     where monad maybeM
+unifyLevels PolyLevel ValueLevel = Just ValueLevel
+unifyLevels PolyLevel (LevelUp b) = do yes <- unifyLevels PolyLevel b
+                                       return $ LevelUp yes
+                                     where monad maybeM
+unifyLevels PolyLevel PolyLevel = Just PolyLevel
 
+{-
+unifyLevels k l = case (k `fits` l, k, l) of
+                   (Just BothValue k, l) -> Just k
+                   (Just (BothUp from), LevelUp k', LevelUp l') -> LevelUp $ retrofit k' l' from
+  where --retrofit :: forall (a :: Multiplicity) (b :: Multiplicity) (l :: Lev a) (k :: Lev b) (m :: Lev a) (n :: Lev b) . Level k -> Level l -> LevelFits m n -> Maybe (Level {unilev k l})
+        retrofit :: Level k -> Level l -> LevelFits k l -> Maybe (Level {unilev k l})
+        retrofit k l BothValue = undefined -- Just k
+-}
 
 projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel l l
 projectLevel _ []t = []t
