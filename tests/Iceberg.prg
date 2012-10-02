@@ -73,8 +73,6 @@ prop LevelFits :: Lev n ~> Lev n' ~> * where
   BothValue :: LevelFits ValueLevel ValueLevel
   InPoly :: LevelFits k PolyLevel
   BothUp :: LevelFits k k' -> LevelFits (LevelUp k) (LevelUp k')
---  ValuePoly :: LevelFits ValueLevel PolyLevel
---  AbovePoly :: LevelFits (LevelUp k) PolyLevel
 
 -- runtime compute level inclusion
 --
@@ -84,9 +82,6 @@ fits (LevelUp l) (LevelUp l') = do ev <- fits l l'
                                    return $ BothUp ev
                                  where monad maybeM
 fits _ PolyLevel = Just InPoly
---fits PolyLevel PolyLevel = Just BothPoly
---fits ValueLevel PolyLevel = Just ValuePoly
---fits (LevelUp l) PolyLevel = Just AbovePoly
 fits _ _ = Nothing
 
 multiplicity :: Multiplicity ~> Multiplicity ~> Multiplicity
@@ -103,6 +98,7 @@ unilev :: Lev a ~> Lev b ~> Lev {multiplicity a b}
 {unilev PolyLevel PolyLevel} = PolyLevel
 
 -- prove commutativity
+--
 unifyCommutes :: Level k -> Level l -> Equal {unilev k l} {unilev l k}
 unifyCommutes ValueLevel ValueLevel = Eq
 unifyCommutes ValueLevel PolyLevel = Eq
@@ -135,8 +131,6 @@ projectLevel l [Constructor t l' sig; rest]t = case l `fits` l' of
                                                Just BothValue -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just InPoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                Just (BothUp below) -> [LevelConstructor t l' sig; projectLevel l rest]t
-                                               --Just ValuePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
-                                               --Just AbovePoly -> [LevelConstructor t l' sig; projectLevel l rest]t
                                                _ -> projectLevel l rest
 
 
@@ -146,8 +140,6 @@ projectLevel' l [NamedConstructor t l' sig; rest]t = case l `fits` l' of
                                                      Just BothValue -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
                                                      Just InPoly -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
                                                      Just (BothUp below) -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
-                                                     --Just ValuePoly -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
-                                                     --Just AbovePoly -> [NamedLevelConstructor t l' sig; projectLevel' l rest]t
                                                      _ -> projectLevel' l rest
 
 data Levels :: Lev m ~> Lev m ~> * where
