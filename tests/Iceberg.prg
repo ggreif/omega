@@ -88,6 +88,17 @@ fits ValueLevel PolyLevel = Just ValuePoly
 fits (LevelUp l) PolyLevel = Just AbovePoly
 fits _ _ = Nothing
 
+multiplicity :: Multiplicity ~> Multiplicity ~> Multiplicity
+{multiplicity Mono a} = Mono
+{multiplicity Poly a} = a
+
+unifyLevels :: forall (a :: Multiplicity) (b :: Multiplicity) (l :: Lev a) (l' :: Lev b) . Level l -> Level l' -> exists (x :: Lev {multiplicity a b}) . Maybe (Level x)
+unifyLevels l l' = case l `fits` l' of
+                   Just BothValue -> Ex (Just l)
+                   Just (BothUp from) -> retrofit (LevelUp l) (LevelUp l') from
+  where retrofit :: forall (a :: Multiplicity) (b :: Multiplicity) (l :: Lev a) (k :: Lev b) (m :: Lev a) (n :: Lev b) . Level k -> Level l -> LevelFits m n -> exists (x :: Lev {multiplicity a b}) . Maybe (Level x)
+        retrofit k l BothValue = Ex (Just l)
+
 
 projectLevel :: Level l -> Thrist Iceberg () () -> Thrist Icelevel l l
 projectLevel _ []t = []t
