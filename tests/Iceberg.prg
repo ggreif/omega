@@ -49,11 +49,11 @@ data Icenamelevel :: TagLev n ~> TagLev n ~> * where -- entities with certain le
 
 
 builtIns :: Thrist Iceberg () ()
-builtIns = [ Constructor `Z 0l $ SigApp (SigCtor natPrime) (SigCtor `Z)
-           , Constructor `S 0l $ SigApp (SigApp (SigCtor varrow) (SigApp (SigCtor natPrime) $ SigVar `a)) (SigApp (SigCtor natPrime) $ (SigApp (SigCtor `S) $ SigVar `a))
-           , Constructor natPrime 0l $ SigApp (SigApp (SigCtor karrow) (SigCtor `Nat)) (SigCtor starN)
-           , Constructor `Z 1l $ SigCtor `Nat
-           , Constructor `S 1l $ SigApp (SigApp (SigCtor karrow) (SigCtor `Nat)) (SigCtor `Nat)
+builtIns = [ Constructor `Z 0l $ SigApp natPrimeCtor (SigCtor `Z)
+           , Constructor `S 0l $ SigApp (SigApp varrowCtor (SigApp natPrimeCtor $ SigVar `a)) (SigApp natPrimeCtor $ (SigApp (SigCtor `S) $ SigVar `a))
+           , Constructor natPrime 0l $ SigApp (SigApp karrowCtor natCtor) starCtor
+           , Constructor `Z 1l $ natCtor
+           , Constructor `S 1l $ SigApp (SigApp karrowCtor natCtor) natCtor
            , Constructor `Nat 2l Sig
            , Constructor starN (LevelUp (LevelUp PolyLevel)) Sig
            , Constructor constraintN (LevelUp (LevelUp PolyLevel)) Sig
@@ -64,6 +64,11 @@ builtIns = [ Constructor `Z 0l $ SigApp (SigCtor natPrime) (SigCtor `Z)
         HideLabel constraintN = newLabel "#n"
         HideLabel varrow = newLabel "->"
         HideLabel karrow = newLabel "~>"
+        starCtor = SigCtor starN
+        natPrimeCtor = SigCtor natPrime
+        varrowCtor = SigCtor varrow
+        karrowCtor = SigCtor karrow
+        natCtor = SigCtor `Nat
 
 projectName :: Label l -> Thrist Iceberg () () -> Thrist Icename l l
 projectName _ []t = []t
