@@ -3,6 +3,8 @@
 --
 -- Note: here we distinguish between expression, type and level
 --       variables bound
+--
+-- See also: http://www.haskell.org/pipermail/haskell-cafe/2008-November/050768.html
 
 data Ptm :: * ~> * ~> * ~> Nat ~> * where
   Var :: a -> Ptm a t l ll
