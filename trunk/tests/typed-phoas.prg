@@ -2,14 +2,15 @@
 -- advocated by Chipala and B. Oliveira
 --
 
-data Ptm :: * ~> * ~> * where
-  Var :: a -> Ptm a l
-  Lam :: (a -> Ptm a l) -> Ptm a l
-  Lev :: (l -> Ptm a l) -> Ptm a l
-  App :: Ptm a l -> Ptm a l -> Ptm a l
-  Star :: l -> Ptm a l
+data Ptm :: * ~> * ~> * ~> * where
+  Var :: a -> Ptm a t l
+  Lam :: (a -> Ptm a t l) -> Ptm a t l
+  Lev :: (l -> Ptm a t l) -> Ptm a t l
+  App :: Ptm a t l -> Ptm a t l -> Ptm a t l
+  Star :: l -> Ptm a t l
+  Forall :: (t -> Ptm a t l) -> Ptm a t l
 
-data Tm = Tm (forall a l . Ptm a (Nat' l))
+data Tm = Tm (forall a t l . Ptm a t (Nat' l))
 
 
 -- illegal
