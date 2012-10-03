@@ -2,17 +2,21 @@
 -- advocated by Chipala and B. Oliveira
 --
 
-data Ptm a = Var a
-           | Lam (a -> Ptm a)
-           | App (Ptm a) (Ptm a)
+data Ptm a l = Var a
+           | Lam (a -> Ptm a l)
+           | Lev (l -> Ptm  a l)
+           | App (Ptm a l) (Ptm a l)
 
-data Tm = Tm (forall a . Ptm a)
+data Tm = Tm (forall a l . Ptm a l)
 
 
 -- illegal
 --
 ##test "not parametric"
  ill = Tm (Lam (\a -> a + 2))
+
+##test "not parametric: expr var in level context"
+ ill = Tm (Lev (\a -> App (Var a) (Var a)))
 
 -- this is parametric
 --
