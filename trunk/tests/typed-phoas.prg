@@ -2,10 +2,11 @@
 -- advocated by Chipala and B. Oliveira
 --
 
-data Ptm a l = Var a
-           | Lam (a -> Ptm a l)
-           | Lev (l -> Ptm  a l)
-           | App (Ptm a l) (Ptm a l)
+data Ptm :: * ~> * ~> * where
+  Var :: a -> Ptm a l
+  Lam :: (a -> Ptm a l) -> Ptm a l
+  Lev :: (l -> Ptm  a l) -> Ptm a l
+  App :: Ptm a l -> Ptm a l -> Ptm a l
 
 data Tm = Tm (forall a l . Ptm a l)
 
