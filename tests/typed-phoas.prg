@@ -9,6 +9,7 @@ data Ptm :: * ~> * ~> * ~> * where
   App :: Ptm a t l -> Ptm a t l -> Ptm a t l
   Star :: l -> Ptm a t l
   Forall :: (t -> Ptm a t l) -> Ptm a t l
+  TyVar :: t -> Ptm a t l
 
 data Tm = Tm (forall a t l . Ptm a t (Nat' l))
 
@@ -21,7 +22,8 @@ data Tm = Tm (forall a t l . Ptm a t (Nat' l))
 ##test "not parametric: expr var in level context"
  ill = Tm (Lev (\a -> App (Var a) (Var a)))
 
--- this is parametric
+-- these are parametric
 --
 leg = Tm (Lam (\a -> App (Var a) (Var a)))
 
+leg2 = Tm (Forall (\t -> TyVar t))
