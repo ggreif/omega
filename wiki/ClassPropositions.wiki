@@ -70,8 +70,14 @@ instance Monoid (List a) where
   One = []
   mult = append
 }}}
-
 Class constructors must be defined in terms of instance constructors.
+
+But: It would be feasible to add a predicate in place of an actual constructor to implement _smart constructors_
+{{{
+instance Monoid (Smarty a) where
+  One x = if ... x ...
+  mult = ...
+}}}
 
 == Implementation details ==
 
