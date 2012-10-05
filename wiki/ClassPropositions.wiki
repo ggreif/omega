@@ -95,3 +95,13 @@ foo m | dict(Monoid).One m = ...
 Logically, `dict(Monoid (List a)).One` is implemented just like `isNeutral` above.
 
 Open issue: How can I implement type-level dictionaries (i.e. `§n` with n > 0)? Open type functions? Can narrowing be applied here at all?
+
+= Aside: how `prop` would work under the new scheme =
+
+The current proposition definition
+{{{
+prop Nat' :: Nat ~> * where
+  Z :: Nat' Z
+  S :: Nat' n -> Nat' (S n)
+}}}
+is adding a new data type (under `*0`) and a new proposition (under `§0 :: *1`) simultaneously, when possible.
