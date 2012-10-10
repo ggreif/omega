@@ -16,6 +16,10 @@ I envision three semantic forms:
 
 In any case a pattern match with a head position that is not in the container will fail.
 
+== Aside: Inductive vs. Coinductive ==
+
+Inductive means: _you can always increase_, whereas coinductive means _you can always remove_. By this categorization `Supply` is the coinductive sister of `Set`.
+
 == How to Deal with Pattern Match Failure ==
 
   # we could live in a `Maybe`-like monad
