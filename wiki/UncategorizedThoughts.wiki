@@ -4,7 +4,8 @@
 = cf. Paper "A tutorial impl ... pattern unification (Grundy, McBride) =
 
    * Dependent sums are like key and lock: the knowledge of the first projection (having the key) implies the knowledge of the *type* of the second projection (can open the lock), so we can do something useful with it.
-
-   * Have mixed PHOAS/deBruijn terms where indices hint at the presence and provide (p,B) <--> (P,b) converions; x: _has no X_, X: _may have X_.
-
+   * Have mixed PHOAS/deBruijn terms where indices hint at the presence and provide (p,B) <==> (P,b) converions; x: _has no X_, X: _may have X_.
    * use item notation thrists to serialize expression trees
+   * use apply thrists for {argument, π1, π2} (see Figure 1.)
+   * use TH to embed real Omega fragments into Haskell code (parser!!), as Iceberg: `[Ω|data Nat' ...|]`, and a special quotation to do the type checking and codegen. Free LLVM backend!
+   
