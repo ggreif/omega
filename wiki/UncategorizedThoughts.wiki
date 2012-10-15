@@ -61,7 +61,7 @@ Can we come up with a prime-based check for verifying _inductively sequentialnes
 Here is the idea:
    * `n` is 1 (`*` 1)
    * `Z` is 2 (`*` 1)
-   * `S n` is 3 (actually 3 * 1)
+   * `S n` is 3 (actually 3 `*` 1)
 
 So we have a (noncommutative?) monoid `Prim*`.
 
