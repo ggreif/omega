@@ -70,3 +70,7 @@ The check bases on _relative prime_-ness pointwise. The check must be performed 
 _Aside: should these primes enter into the Iceberg?_
 
 _Aside: what when the latter arguments are depedent? Fibrations?_
+
+== At the bottom of page 5 ==
+
+They resort to the same technique as Ahn and Sheard with _nax_: `…deriving fixpoint Nat`.
