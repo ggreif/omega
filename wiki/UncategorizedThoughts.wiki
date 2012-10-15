@@ -13,8 +13,7 @@
       # {{{sameLabel :: Label a -> Label b -> Equal a b + DiffLabel a b}}}.
    * surprise: we can also re-assemble the original label from the thrist in the same way!
 
-
-
+----
 = cf. Paper "Elaborating Inductive Definitions" (Dagand, !McBride) =
 
 == Defining types by inductively sequential functions ==
