@@ -74,3 +74,12 @@ _Aside: what when the latter arguments are depedent? Fibrations?_
 == At the bottom of page 5 ==
 
 They resort to the same technique as Ahn and Sheard with _nax_: `…deriving fixpoint Nat`.
+
+== Page 8 ==
+
+This very much reminds me of the Iceberg!
+
+    A desciption label ‹_l_› is a list starting wit the name of the datatype … and followed by the parameters of that datatype.
+
+
+Can we build telescopes using `do` notation? I guess so. Do we need PHOAS or can we employ the Hamana method (walking the graph)?
