@@ -12,3 +12,59 @@
       # {{{newLabel :: [Char] -> HiddenLabel}}}, and
       # {{{sameLabel :: Label a -> Label b -> Equal a b + DiffLabel a b}}}.
    * surprise: we can also re-assemble the original label from the thrist in the same way!
+
+
+
+= cf. Paper "Elaborating Inductive Definitions" (Dagand, !McBride) =
+
+== Defining types by inductively sequential functions ==
+
+From what I absorbed in the first pages, there is a clear correspondence between
+{{{
+data Vec :: * ~> Nat ~> * where
+  Nil :: Vec a 0t
+  Cons :: a -> Vec a n -> Vec a (1+n)t
+}}}
+and the correspinding inductively sequential function
+{{{
+vec :: * ~> Nat ~> *
+{vec a 0t} = Vec a 0t
+{vec a (1+n)t} = a -> Vec a n -> Vec a (1+n)t
+}}}
+
+_Aside: what happens when `{vec ...}` appears in the RHS?_
+
+The say that instead of writing datatype definitions, it is cooler to write such a type function and this allows a lot of automation. Think `deriving` in Haskell.
+
+== Connection to the Iceberg ==
+
+The surface syntax of Ωmega could extract (or even allow) such functions to simplify the construction.
+
+{{{
+vec :: (* ~> Nat ~> *) ~> * ~> Nat ~> *
+{vec t a 0t} = t a 0t
+{vec t a (1+n)t} = a -> t a n -> t a (1+n)t
+}}}
+
+Here the `t` parameter would be `Iceberg ‹Vec›` or such.
+
+== Connection to `prop` ==
+
+Issue 107 stipulates that the proof engine currently only can deal successfully with `prop`ositions where the rules are in sequentially inductive form. For these a clear decision procedure exists. But the `prop`s where this is not give are also useful. These require another type of backtracking. Could this dissonance be resolved?
+
+== Connection to primes ==
+
+Can we come up with a prime-based check for verifying _inductively sequentialness_?
+
+Here is the idea:
+   * `n` is 1 (* 1)
+   * `Z` is 2 (* 1)
+   * `S n` is 3 (actually 3 * 1)
+
+So we have a (noncommutative?) monoid `Prim*`.
+
+The check bases on _relative prime_-ness pointwise. The check must be performed for all pairwise combinations of the case legs, for more arguments we need monoid concatenation.
+
+_Aside: should these primes enter into the Iceberg?_
+
+_Aside: what when the latter arguments are depedent? Fibrations?_
