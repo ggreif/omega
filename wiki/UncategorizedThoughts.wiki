@@ -79,7 +79,7 @@ They resort to the same technique as Ahn and Sheard with _nax_: `…deriving fix
 
 This very much reminds me of the Iceberg!
 
-    A desciption label ‹_l_› is a list starting wit the name of the datatype … and followed by the parameters of that datatype.
+    A desciption label ‹l› is a list starting wit the name of the datatype … and followed by the parameters of that datatype.
 
 
 Can we build telescopes using `do` notation? I guess so. Do we need PHOAS or can we employ the Hamana method (walking the graph)?
