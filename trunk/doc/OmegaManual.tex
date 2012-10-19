@@ -996,8 +996,10 @@ zipWith f (x:xs) (y:ys) =
 
 fibs = 0 : 1 : (lazy (zipWith (+) fibs (tail fibs)))
 \end{verbatim}
+Here {\tt mimic} converts an accidentally strict function into
+a non-strict one (call-by-value to call-by-need conversion).
 
-We can observe a finite prefix of fibs by defining a take function
+We can observe a finite prefix of {\tt fibs} by defining a {\tt take} function
 
 \begin{verbatim}
 take 0 xs = []
