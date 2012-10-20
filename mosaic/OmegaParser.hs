@@ -10,6 +10,8 @@ import Control.Applicative
 
 ω = QuasiQuoter { quoteExp = parseExprExp }
 
+-- Omega AST
+
 data Exp :: * -> * where
   Var :: String -> Exp a
   Con :: String -> Exp a
@@ -23,8 +25,11 @@ lexeme :: Parser a -> Parser a
 lexeme p = do { x <- p; spaces; return x }
 integer = lexeme $ do { ds <- many1 digit; return $ IntLit (read ds) }
 
+-- TH helpers
+con = TH.conE . TH.mkName
+int = TH.litE . TH.IntegerL
 
-trans (Right (IntLit i)) = (TH.conE $ TH.mkName "Int") `TH.appE` (TH.litE $ TH.IntegerL (toInteger i))
+trans (Right (IntLit i)) = (con "Int") `TH.appE` (int (toInteger i))
 
 parseExprExp :: String -> TH.Q TH.Exp
 parseExprExp "" = fail "empty parse"
