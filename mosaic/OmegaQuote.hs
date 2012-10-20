@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds, KindSignatures, QuasiQuotes, GADTs #-}
+{-# LANGUAGE DataKinds, KindSignatures, QuasiQuotes, GADTs,
+             StandaloneDeriving #-}
 
 import OmegaParser
 
@@ -11,6 +12,8 @@ data Ω :: * -> * where
   Berg :: Ω a
   Δ :: Ω a
   Int :: Int -> Ω Int
+
+deriving instance Show (Ω a)
 
 µ s h = [ω|s * h|]
 
