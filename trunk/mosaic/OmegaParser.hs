@@ -24,7 +24,7 @@ lexeme p = do { x <- p; spaces; return x }
 integer = lexeme $ do { ds <- many1 digit; return $ IntLit (read ds) }
 
 
-trans (Right (IntLit i)) = TH.litE $ TH.IntegerL (toInteger i)
+trans (Right (IntLit i)) = (TH.conE $ TH.mkName "Int") `TH.appE` (TH.litE $ TH.IntegerL (toInteger i))
 
 parseExprExp :: String -> TH.Q TH.Exp
 parseExprExp "" = fail "empty parse"
