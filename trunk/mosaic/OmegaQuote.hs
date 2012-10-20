@@ -1,19 +1,21 @@
 {-# LANGUAGE DataKinds, KindSignatures, QuasiQuotes, GADTs,
-             StandaloneDeriving #-}
+             StandaloneDeriving, UnicodeSyntax #-}
 
 import OmegaParser
 
 (°) :: Int -> Int -> Int
 a ° b = a + b
 
--- the iceberg
+-- Ω values
 
 data Ω :: * -> * where
-  Berg :: Ω a
-  Δ :: Ω a
+  Bottom :: Ω a  -- (⊥)
   Int :: Int -> Ω Int
-
+  Apply :: Ω (a -> b) -> Ω a -> Ω b -- (⋅)
 deriving instance Show (Ω a)
+
+(⋅) = Apply
+(⊥) = Bottom
 
 µ s h = [ω|s * h|]
 

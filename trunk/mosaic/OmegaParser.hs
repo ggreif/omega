@@ -26,6 +26,7 @@ lexeme p = do { x <- p; spaces; return x }
 integer = lexeme $ do { ds <- many1 digit; return $ IntLit (read ds) }
 
 -- TH helpers
+var = TH.varE . TH.mkName
 con = TH.conE . TH.mkName
 int = TH.litE . TH.IntegerL
 
@@ -33,7 +34,7 @@ trans (Right (IntLit i)) = (con "Int") `TH.appE` (int (toInteger i))
 
 parseExprExp :: String -> TH.Q TH.Exp
 parseExprExp "" = fail "empty parse"
-parseExprExp "s * h" = TH.conE $ TH.mkName "Δ"
+parseExprExp "s * h" = var "⊥"
 parseExprExp s = do loc <- TH.location
                     let file = TH.loc_filename loc
                         exp = parse integer file s
