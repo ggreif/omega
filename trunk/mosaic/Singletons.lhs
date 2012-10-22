@@ -17,4 +17,4 @@ An example
 
 Then we can typedef it:
 
-> type Nat' n = Sng Nat
+> type Nat' n = Sng Nat n
