@@ -16,7 +16,8 @@ plus, we need to add the positional information
 
 runIParser :: IParser (At a) (k, l) -> Thrist (At Char) (k, m) -> Maybe (At a (k, l), Thrist (At Char) (l, m))
 
-> {-# LANGUAGE GADTs, KindSignatures, PolyKinds, DataKinds #-}
+> {-# LANGUAGE GADTs, KindSignatures, PolyKinds, DataKinds, FlexibleInstances,
+>              StandaloneDeriving #-}
 
 > module Parser where
 > import Data.Thrist
@@ -29,9 +30,19 @@ be an IMonad (and IFunctor, IApplicable, IAlternative as well).
 > data At :: * -> Nat -> Nat -> * where
 >   HoldChar :: Char -> At Char n (St n)
 
-> data IParser :: (Nat -> Nat -> *) -> Nat -> Nat -> * where
->   Char :: Char -> IParser a k (St k)
+> deriving instance Show (At t s e)
 
+> data IParser :: (Nat -> Nat -> *) -> Nat -> Nat -> * where
+>   --Char :: Char -> IParser a k (St k)
+>   P :: (Nat' k -> Thrist p k (St k) -> (Maybe (p k (St k)), Thrist p (St k) (St k))) -> IParser p k (St k)
+
+
+> char :: Char -> IParser (At Char) n (St n)
+> char c = P check
+>   where check k (Cons r@(HoldChar c') rest) | c == c' = (Just r, rest)
+
+> runIParser :: IParser p k (St k) -> Nat' k -> Thrist p k (St k) -> (Maybe (p k (St k)), Thrist p (St k) (St k))
+> runIParser (P p) k t = p k t
 
 -- counting Char Thrist
 
@@ -43,8 +54,17 @@ be an IMonad (and IFunctor, IApplicable, IAlternative as well).
 > type Six = St Five
 > type Seven = St Six
 
+> instance Show (Thrist (At Char) m n) where
+>   show t = '"' : show1 t ('"':[])
+>     where --show1 :: Thrist (At Char) m' n' -> String -> String
+>           show1 Nil acc = acc
+>           show1 (Cons (HoldChar c) rest) acc = c : show1 rest acc
+
 > infixr 5 -+
 > l -+ t = Cons (HoldChar l) t
 
+> t1 = runIParser (char 'H') Z ('H' -+ Nil)
+
 > t2 :: Thrist (At Char) Zt Six
 > t2 = 'H' -+ 'e' -+ 'l' -+ 'l' -+ 'o' -+ '!' -+ Nil
+
