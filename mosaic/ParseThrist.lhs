@@ -55,10 +55,10 @@ be an IMonad (and IFunctor, IApplicable, IAlternative as well).
 > type Seven = St Six
 
 > instance Show (Thrist (At Char) m n) where
->   show t = '"' : show1 t ('"':[])
->     where --show1 :: Thrist (At Char) m' n' -> String -> String
->           show1 Nil acc = acc
->           show1 (Cons (HoldChar c) rest) acc = c : show1 rest acc
+>   show t = '"' : go t ('"':[])
+>     where go :: Thrist (At Char) m' n' -> String -> String
+>           go Nil acc = acc
+>           go (Cons (HoldChar c) rest) acc = c : go rest acc
 
 > infixr 5 -+
 > l -+ t = Cons (HoldChar l) t
