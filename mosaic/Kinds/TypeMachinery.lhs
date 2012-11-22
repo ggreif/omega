@@ -59,7 +59,7 @@ A data type for existentially hiding
 Now we are ready to make Hidden Nat' an Integral type
 
 > instance Eq (Hidden Nat') where
-> Hide a == Hide b = sameNat' a b
+>   Hide a == Hide b = sameNat' a b
 
 > instance Ord (Hidden Nat') where
 >   Hide Z `compare` Hide Z = EQ
