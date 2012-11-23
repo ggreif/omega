@@ -17,7 +17,7 @@ plus, we need to add the positional information
 runIParser :: IParser (At a) (k, l) -> Thrist (At Char) (k, m) -> Maybe (At a (k, l), Thrist (At Char) (l, m))
 
 > {-# LANGUAGE GADTs, KindSignatures, PolyKinds, DataKinds, FlexibleInstances,
->              StandaloneDeriving #-}
+>              StandaloneDeriving, TypeHoles #-}
 
 > module Parser where
 > import Data.Thrist
@@ -29,17 +29,22 @@ be an IMonad (and IFunctor, IApplicable, IAlternative as well).
 
 > data At :: * -> Nat -> Nat -> * where
 >   HoldChar :: Char -> At Char n (St n)
+>   -- HoldString :: Nat' len -> String -> At Char n (Plus len n)
+>   HoldChars :: Thrist (At Char) Zt len -> At Char n (Plus len n)
 
 > deriving instance Show (At t s e)
 
 > data IParser :: (Nat -> Nat -> *) -> Nat -> Nat -> * where
->   --Char :: Char -> IParser a k (St k)
 >   P :: (Nat' k -> Thrist p k (St k) -> (Maybe (p k (St k)), Thrist p (St k) (St k))) -> IParser p k (St k)
 
 
 > char :: Char -> IParser (At Char) n (St n)
 > char c = P check
 >   where check k (Cons r@(HoldChar c') rest) | c == c' = (Just r, rest)
+
+> --chars :: Thrist (At Char) Zt len -> IParser (At Char) n (Plus len n)
+> --chars cs = P $ check cs
+> --  where check (Cons (HoldChar c) cs) k (Cons r@(HoldChar c') rest) | c == c' = undefined -- _ -- (Just _, rest)
 
 > runIParser :: IParser p k (St k) -> Nat' k -> Thrist p k (St k) -> (Maybe (p k (St k)), Thrist p (St k) (St k))
 > runIParser (P p) k t = p k t
