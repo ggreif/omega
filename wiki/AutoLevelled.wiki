@@ -126,6 +126,7 @@ foo :: Bar^3 -- pick the one under *3
 -- the syntactic/semantic identity Baz^0 ≡ Baz holds
 }}}
   * What is more intuitive, using the type arrows (->) or kind arrows (~>) in the auto-levelled definitions? _Probably the latter as this is what level-universal definitions do now in Ωmega. In the stratum of values the arrows get converted automatically._
+  * Namespaces. When I have `plus` rooted below `*∞` and also another definition of `plus` defined in stratum n > 0, then we cannot see the former in stratum n because of shadowing. So we need a means to grab it from the namespace below, where it must be unique. Haskell uses the `'`-prefix for this purpose, which is unfortunately part of the identifier syntax. We could use the `⌊plus⌋` bracketing to grab from the lower and `⌈plus⌉` from the upper namespace.
 
 ----
 = References =
