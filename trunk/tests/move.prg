@@ -1,4 +1,4 @@
-import "../tests/OneHi.prg" (plus, plusS)
+import "../tests/OneHi.prg" (plus, plusZ, plusS)
 
 data Thrist :: (l ~> l ~> *) ~> l ~> l ~> * where
   Nil :: Thrist k a a
@@ -11,6 +11,7 @@ data At :: * ~> Nat ~> Nat ~> * where
 
 thristLen :: Thrist (At Char) here {plus len here} -> Nat' len
 thristLen Nil = 0v
+  where theorem plusZ
 
 move :: Nat' offs -> Nat' len -> Thrist (At Char) here {plus len here} -> Thrist (At Char) offs {plus len offs}
 move _ 0v Nil = Nil
