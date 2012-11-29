@@ -220,8 +220,8 @@ What when we have a purely run-time (level 0) function definition for such an al
 Then the algorithms simply run in the `Hidden Foo` mode:
 {{{
 case foo of
-Hidden Bar -> 25
-Hidden (Quux p)
+Hidden Bar -> return $ Hide 25
+Hidden (Quux p) -> return $ Hide 42
 }}}
 Which has type `Hidden Foo°` and behaves like a regular `Foo` in Haskell. The recursive occurrences become hidden too (_but by which mechanism?_). 
 
