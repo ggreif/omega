@@ -227,13 +227,12 @@ Which has type `Hidden Foo°` and behaves like a regular `Foo` in Haskell. The r
 
 C.f. the `nax` paper.
 
-== The functin types ==
+== The function types ==
 
 With he above scheme the function arrow becomes a type constructor synonym
 {{{
 type a -> b = exists a' b' . a°a' ~> b°b'
 }}}
-
 But wait! We could add more hidden type indices, e.g. one that describes the internal structure of the function definition and all that stuff. Finally we could introduce a typeclass
 {{{
 class Category (--+) => Compilable (--+) where
