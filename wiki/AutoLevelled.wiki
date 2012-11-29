@@ -134,7 +134,8 @@ foo :: Bar^3 -- pick the one under *3
   # [http://www.cs.uoregon.edu/research/summerschool/summer08/video/July26Lect1.wmv Tim Sheard's 2008 Lecture Video]
   # http://code.google.com/p/omega/source/browse/trunk/tests/Progress.prg
   # http://personal.cis.strath.ac.uk/~conor/pub/she/fun/talk.pdf
-  # [http://web.cecs.pdx.edu/~sheard/papers/GADT+ExtKinds.ps GADTs + Extensible Kinds = Dependent Programming by Sheard, Hook, Linger]
+  # [http://web.cecs.pdx.edu/~sheard/papers/GADT+ExtKinds.ps GADTs + Extensible Kinds = Dependent Programming by Sheard, Hook and Linger]
+  # [nax.googlecode.com/svn/trunk/draft/IFL12draft.pdf Programming with Term-Indexed Types in Nax by Ahn, Sheard, Fiore and Pitts]
 
 ----
 = Examples =
@@ -205,4 +206,36 @@ Level 0 is standard.
 _Note: it does not compile (with v1.4.6)_
 {{{
 While parsing a type constructor, unknown type: Foo
+}}}
+
+== The use of the additional type index ==
+
+The additional index can be used to
+  * [SingletonStrictness derive strictness]
+  * type-based termination
+  * return value discrimination depending on input types (terminating?, inductively-sequential?, lemmata needed?)
+  * swappable type-checking regimes
+
+What when we have a purely run-time (level 0) function definition for such an algebraic type?
+Then the algorithms simply run in the `Hidden Foo` mode:
+{{{
+case foo of
+Hidden Bar -> 25
+Hidden (Quux p)
+}}}
+Which has type `Hidden Foo°` and behaves like a regular `Foo` in Haskell. The recursive occurrences become hidden too (_but by which mechanism?_). 
+
+C.f. the `nax` paper.
+
+== The functin types ==
+
+With he above scheme the function arrow becomes a type constructor synonym
+{{{
+type a -> b = exists a' b' . a°a' ~> b°b'
+}}}
+
+But wait! We could add more hidden type indices, e.g. one that describes the internal structure of the function definition and all that stuff. Finally we could introduce a typeclass
+{{{
+class Category (--+) => Compilable (--+) where
+  compile :: a --+ b -> a -> b
 }}}
