@@ -20,7 +20,7 @@ How to be sure that we have all (eligible) guesses of a certain depth?
 Why inductively sequential? Is there _converse_ of the type function? Need it be inductively sequential?
 Is the (,)-thrist (category of relations) of any use?
 
-Can we build a narrower from _class Data_ definitions (or similar Iceberg defs)?
+Can we build a narrower from _class Data_ definitions (or similar IcebergTypes defs)?
 
 = Reading List =
 
