@@ -2,48 +2,57 @@
 -- https://code.google.com/p/omega/wiki/IcebergTypes
 --
 
+{-# LANGUAGE DataKinds, PolyKinds, GADTs #-}
+
 import Data.Maybe
 import Data.Thrist
+import GHC.TypeLits
 
-{-
-data Multiplicity :: *2 where
+-- kind
+data Multiplicity where
   Mono :: Multiplicity
   Poly :: Multiplicity
--}
 
-data Lev :: Multiplicity -> *1 where
-  ValueLevel :: Lev a -- Mono
+-- kind
+data Lev (m :: Multiplicity) where
+  ValueLevel :: Lev m -- Mono
   LevelUp :: Lev m -> Lev m
   PolyLevel :: Lev m -- Poly -- level n .
 -- deriving syntax (lev) Nat(ValueLevel, LevelUp)
 
 data Level :: Lev n -> * where
-  ValueLevel :: Level ValueLevel
-  LevelUp :: Level l -> Level (LevelUp l)
-  PolyLevel :: Level PolyLevel
+  ValueLevel' :: Level 'ValueLevel
+  LevelUp' :: Level l -> Level ('LevelUp l)
+  PolyLevel' :: Level 'PolyLevel
 -- deriving syntax (l) Nat(ValueLevel, LevelUp)
 
 data Signature :: * where
   Sig :: Signature -- some signature (for now)
-  SigCtor :: Label t -> Signature
-  SigFun :: Label t -> Signature
-  SigVar :: Label t -> Signature
+  SigCtor :: Sing (t :: Symbol) -> Signature
+  SigFun :: Sing (t :: Symbol) -> Signature
+  SigVar :: Sing (t :: Symbol) -> Signature
   SigApp :: Signature -> Signature -> Signature
 
 data Iceberg :: * -> * -> * where
-  Constructor :: Label t -> Level l -> Signature -> Iceberg () ()
+  Constructor :: Sing (t :: Symbol) -> Level l -> Signature -> Iceberg () ()
 
-data Icename :: Tag -> Tag -> * where -- entities with certain name
-  NamedConstructor :: Label t -> Level l -> Signature -> Icename t t
+data Icename :: Symbol -> Symbol -> * where -- entities with certain name
+  NamedConstructor :: Sing (t :: Symbol) -> Level l -> Signature -> Icename t t
 
 data Icelevel :: Lev n -> Lev n -> * where -- entities with certain level
-  LevelConstructor :: LevelFits l' l => Label t -> Level l -> Signature -> Icelevel l' l'
+  LevelConstructor :: LevelFits l' l => Sing (t :: Symbol) -> Level l -> Signature -> Icelevel l' l'
 
-data TagLev :: Multiplicity -> *1 where
-  TL :: Tag -> Lev m -> TagLev m
+-- kind
+data TagLev :: Multiplicity where
+  TL :: Symbol -> Lev m -> TagLev m
 
 data Icenamelevel :: TagLev n -> TagLev n -> * where -- entities with certain level and name
-  NamedLevelConstructor :: LevelFits l' l => Label t -> Level l -> Signature -> Icenamelevel (TL t l') (TL t l')
+  NamedLevelConstructor :: LevelFits l' l => Sing (t :: Symbol) -> Level l -> Signature -> Icenamelevel (TL t l') (TL t l')
+
+
+class LevelFits (l :: Lev n) (m :: Lev n') -- ~> * -- where
+
+{-
 
 
 builtIns :: Thrist Iceberg () ()
@@ -75,7 +84,7 @@ projectName l [Constructor l' lev sig; rest]t = case l `sameLabel` l' of
                                                 _ -> projectName l rest
 
 
-projectName' :: Label t -> Thrist Icelevel l l -> Thrist Icenamelevel (TL t l) (TL t l)
+projectName' :: Sing (t :: Symbol) -> Thrist Icelevel l l -> Thrist Icenamelevel (TL t l) (TL t l)
 projectName' _ []t = []t
 projectName' t [LevelConstructor t' lev sig; rest]t = case t `sameLabel` t' of
                                                       L Eq -> [NamedLevelConstructor t' lev sig; projectName' t rest]t
@@ -169,3 +178,5 @@ fibrateLevels l berg = [InLevel $ projectLevel l berg; lazy (fibrateLevels (1+l)
 
 [t30, t31, t32, t33; t34]t = fibrateLevels 0l builtIns
 [t40, t41, t42, t43; t44]t = fibrateLevels PolyLevel builtIns
+
+-}
