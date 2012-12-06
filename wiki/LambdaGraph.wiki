@@ -1,0 +1,6 @@
+#summary Fϖ lambda terms form a graph.
+#labels Phase-Design
+
+https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
+
+Key document: http://www.cs.gunma-u.ac.jp/~hamana/Papers/poly.pdf
