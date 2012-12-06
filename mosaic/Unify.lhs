@@ -167,6 +167,16 @@ absolute path (undecidable instances!).
 > type instance PathExt (A1 r) r' = A1 (PathExt r r')
 > type instance PathExt (A2 r) r' = A2 (PathExt r r')
 
+Conceptually these two flavors of path are dual.
+I.e. we have some 'middle point' on the path, then
+we can form an existential pair:
+
+type EntirePath {-a-} c = forall b . (Path b, Path b -> Path c)
+
+Note that 'a' is normally Root above. Then the second projection
+is a path-extender. We can possibly get rid of relative paths
+above and reformulate this all in terms of them.
+
 Grab is a function to get a subtree at a relative path
 
 > grab :: Path here -> Path p -> Underlying a here s -> Sub (PathSum here p)
