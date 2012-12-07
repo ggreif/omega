@@ -190,6 +190,7 @@ Grab is a function to get a subtree at a relative path
 
 Helper function that can chase
 
+> grab' :: Underlying a here s -> Path p -> Path here -> Path sub -> Underlying a sub s' -> Sub (PathSum here p)
 > grab' tree down here p r = case grab down p r of
 >                            Chase Z Here Here -> Redirected here tree
 >                            Chase Z pth p -> case grab here ext tree of
@@ -437,7 +438,7 @@ Visualization of TermGraphs as DotGraphs
 >                           | Hide r <- nodeToPath f
 >                           , Redirected _ _ <- grab p r t
 >                           = [ GV.edgeEnds GV.Both, GA.TailClip False, pointerTail
->                             , GA.ArrowSize 0.7, GA.Color [GA.X11Color GA.Blue]
+>                             , GA.ArrowSize 0.7, GA.Color [GA.X11Color GV.Blue]
 >                             , GA.Weight 0.0 ]
 >            extraEdgeShape _ _ = []
 >            pointerTail = GV.arrowFrom GV.dotArrow
