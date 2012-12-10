@@ -2,12 +2,13 @@
 -- https://code.google.com/p/omega/wiki/IcebergTypes
 --
 
-{-# LANGUAGE DataKinds, PolyKinds, GADTs #-}
+{-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses #-}
 
 import Data.Maybe
 import Data.Thrist
 import GHC.TypeLits
 
+{-
 -- kind
 data Multiplicity where
   Mono :: Multiplicity
@@ -19,8 +20,15 @@ data Lev (m :: Multiplicity) where
   LevelUp :: Lev m -> Lev m
   PolyLevel :: Lev m -- Poly -- level n .
 -- deriving syntax (lev) Nat(ValueLevel, LevelUp)
+-}
 
-data Level :: Lev n -> * where
+-- kind
+data Lev where
+  ValueLevel :: Lev
+  LevelUp :: Lev -> Lev
+  PolyLevel :: Lev
+
+data Level :: Lev -> * where
   ValueLevel' :: Level 'ValueLevel
   LevelUp' :: Level l -> Level ('LevelUp l)
   PolyLevel' :: Level 'PolyLevel
@@ -39,18 +47,24 @@ data Iceberg :: * -> * -> * where
 data Icename :: Symbol -> Symbol -> * where -- entities with certain name
   NamedConstructor :: Sing (t :: Symbol) -> Level l -> Signature -> Icename t t
 
-data Icelevel :: Lev n -> Lev n -> * where -- entities with certain level
+data Icelevel :: Lev -> Lev -> * where -- entities with certain level
   LevelConstructor :: LevelFits l' l => Sing (t :: Symbol) -> Level l -> Signature -> Icelevel l' l'
 
+{-
 -- kind
 data TagLev :: Multiplicity where
   TL :: Symbol -> Lev m -> TagLev m
+-}
 
-data Icenamelevel :: TagLev n -> TagLev n -> * where -- entities with certain level and name
+-- kind
+data TagLev where
+  TL :: Symbol -> Lev -> TagLev
+
+data Icenamelevel :: TagLev -> TagLev -> * where -- entities with certain level and name
   NamedLevelConstructor :: LevelFits l' l => Sing (t :: Symbol) -> Level l -> Signature -> Icenamelevel (TL t l') (TL t l')
 
 
-class LevelFits (l :: Lev n) (m :: Lev n') -- ~> * -- where
+class LevelFits (l :: Lev) (m :: Lev) -- ~> * -- where
 
 {-
 
