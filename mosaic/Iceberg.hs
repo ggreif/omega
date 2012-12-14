@@ -2,11 +2,12 @@
 -- https://code.google.com/p/omega/wiki/IcebergTypes
 --
 
-{-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses #-}
+{-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses, LambdaCase #-}
 
 import Data.Maybe
 import Data.Thrist
 import GHC.TypeLits
+import Unsafe.Coerce (unsafeCoerce)
 
 {-
 -- kind
@@ -91,12 +92,27 @@ builtIns = [ Constructor `Z 0l $ SigApp natPrimeCtor (SigCtor `Z)
         karrowCtor = SigCtor karrow
         natCtor = SigCtor `Nat
 
-projectName :: Label l -> Thrist Iceberg () () -> Thrist Icename l l
-projectName _ []t = []t
-projectName l [Constructor l' lev sig; rest]t = case l `sameLabel` l' of
-                                                L Eq -> [NamedConstructor l' lev sig; projectName l rest]t
+-}
+
+
+data Equal :: k -> k -> * where
+  Eq :: Equal a a
+
+data Void
+
+sameLabel :: Sing (l :: Symbol) -> Sing (l' :: Symbol) -> Either (Equal l l') (Ordering, Equal l l' -> Void)
+sameLabel l l' = case fromSing l `compare` fromSing l of
+                 EQ -> Left (unsafeCoerce Eq)
+                 other -> Right (other, \case { _ -> undefined }{-FIXME-})
+
+projectName :: Sing (l :: Symbol) -> Thrist Iceberg () () -> Thrist Icename l l
+projectName _ Nil = Nil
+projectName l (Cons (Constructor l' lev sig) rest) = case l `sameLabel` l' of
+                                                Left Eq -> Cons (NamedConstructor l' lev sig) (projectName l rest)
                                                 _ -> projectName l rest
 
+
+{-
 
 projectName' :: Sing (t :: Symbol) -> Thrist Icelevel l l -> Thrist Icenamelevel (TL t l) (TL t l)
 projectName' _ []t = []t
