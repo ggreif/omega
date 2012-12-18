@@ -17,7 +17,7 @@ plus, we need to add the positional information
 runIParser :: IParser (At a) (k, l) -> Thrist (At Char) (k, m) -> Maybe (At a (k, l), Thrist (At Char) (l, m))
 
 > {-# LANGUAGE GADTs, KindSignatures, PolyKinds, DataKinds, FlexibleInstances,
->              StandaloneDeriving, TypeHoles #-}
+>              StandaloneDeriving, TypeOperators, TypeHoles #-}
 
 > module Parser where
 > import Data.Thrist
@@ -42,9 +42,26 @@ be an IMonad (and IFunctor, IApplicable, IAlternative as well).
 > char c = P check
 >   where check k (Cons r@(HoldChar c') rest) | c == c' = (Just r, rest)
 
+
+foldrThrist :: (forall i j. (i `arr` j) -> (j `brr` c) -> i `brr` c) -> (b `brr` c) -> Thrist arr a b -> a `brr` c
+
+Commutativity:
+Nat' len -> Nat' (len `Plus` Zt)
+
+> shift :: Nat' by -> Nat' (len `Plus` Zt) -> Nat' (len `Plus` by)
+> shift Z n = n
+> shift (S m) n = shift m (S n)
+
+
+> thristShift :: Nat' n -> Thrist p Zt len -> Thrist p n (len `Plus` n)
+> thristShift n Nil = Nil
+> --thristShift n (Cons e es) = Cons undefined (thristShift n es)
+
+
 > --chars :: Thrist (At Char) Zt len -> IParser (At Char) n (Plus len n)
 > --chars cs = P $ check cs
-> --  where check (Cons (HoldChar c) cs) k (Cons r@(HoldChar c') rest) | c == c' = undefined -- _ -- (Just _, rest)
+> --  where check :: Nat' len -> Thrist (At Char) a (Plus len a) -> Nat' n -> IParser (At Char) n (Plus len n)
+> --        check len (Cons (HoldChar c) cs) k (Cons r@(HoldChar c') rest) | c == c' = undefined -- _ -- (Just _, rest)
 
 > runIParser :: IParser p k (St k) -> Nat' k -> Thrist p k (St k) -> (Maybe (p k (St k)), Thrist p (St k) (St k))
 > runIParser (P p) k t = p k t
