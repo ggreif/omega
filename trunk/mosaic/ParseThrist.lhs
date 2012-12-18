@@ -48,6 +48,9 @@ foldrThrist :: (forall i j. (i `arr` j) -> (j `brr` c) -> i `brr` c) -> (b `brr`
 Commutativity:
 Nat' len -> Nat' (len `Plus` Zt)
 
+Hint: use the technique suggested in
+http://stackoverflow.com/questions/13555547/how-can-i-get-the-length-of-dependently-typed-interval
+
 > shift :: Nat' by -> Nat' (len `Plus` Zt) -> Nat' (len `Plus` by)
 > shift Z n = n
 > shift (S m) n = shift m (S n)
