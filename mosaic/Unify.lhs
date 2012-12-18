@@ -23,6 +23,11 @@ of
  o- application (future: repeated)
  o- shared or cyclic references
 
+Note: We definitely should not track the arity here,
+      but the type. We can have partially applied functions
+      and also arbitrarily many times applied functions such
+      as printf or (id id id id ...).
+
 See Hamana's paper on "Initial Algebra Semantics for Cyclic Sharing Structures"
 
 Short summary: even unconstrained directed graphs have
