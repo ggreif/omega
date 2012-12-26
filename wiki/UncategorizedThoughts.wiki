@@ -24,7 +24,7 @@ data Vec :: * ~> Nat ~> * where
   Nil :: Vec a 0t
   Cons :: a -> Vec a n -> Vec a (1+n)t
 }}}
-and the correspinding inductively sequential function
+and the corresponding inductively sequential function
 {{{
 vec :: * ~> Nat ~> *
 {vec a 0t} = Vec a 0t
