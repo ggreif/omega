@@ -426,7 +426,8 @@ Diagrams of moving 'particles/waves' in [https://www.cs.indiana.edu/~sabry/paper
 Feynman diagrams. (Strings, Worldsheet)
 
 Opetopes
-  * [http://sma.epfl.ch/~finster/opetope/opetope.html Opetopes slides]
+  * [http://sma.epfl.ch/~finster/opetope/opetope.html Interactive editor]
+  * [http://sma.epfl.ch/~finster/opetope/types-and-opetopes.pdf Opetopes slides]
   * [http://golem.ph.utexas.edu/category/2012/06/directed_homotopy_type_theory.html#c041675 along with some commentary]
   * video IAS [http://video.ias.edu/math/stpm2012/finster Higher Dimensional Syntax]
     * [http://uf-ias-2012.wikispaces.com/file/view/Higher-Dimensional-Syntax-Slides-Finster.pdf PDF]
