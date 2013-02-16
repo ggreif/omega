@@ -425,7 +425,11 @@ Diagrams of moving 'particles/waves' in [https://www.cs.indiana.edu/~sabry/paper
 
 Feynman diagrams. (Strings, Worldsheet)
 
-[http://sma.epfl.ch/~finster/opetope/opetope.html Opetopes] ([http://golem.ph.utexas.edu/category/2012/06/directed_homotopy_type_theory.html#c041675 along with some commentary]).
+Opetopes
+  * [http://sma.epfl.ch/~finster/opetope/opetope.html Opetopes slides]
+  * [http://golem.ph.utexas.edu/category/2012/06/directed_homotopy_type_theory.html#c041675 along with some commentary]
+  * video IAS [http://video.ias.edu/math/stpm2012/finster Higher Dimensional Syntax]
+  * video IAS [http://video.ias.edu/1213/univalent/0131-EricFinster The Calculus of Opetopes]
 
 === n-Categories, string diagrams ===
 
