@@ -1,0 +1,11 @@
+#summary A proof technique that is surely widely known.
+
+= Introduction =
+
+When looking at all equality proofs dealing with `Nat`s there is a common principle: each line mentions the same number of `S` and `Z` in the patterns as on the RHS.
+
+I call this _conservation of constructors`.
+
+Is there any literature on it?
+
+Such a constraint surely restricts the number of candidates for a proof-search algorithm.
