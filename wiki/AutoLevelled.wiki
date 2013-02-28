@@ -82,7 +82,7 @@ The types arising at any level are _finite_, and it is certainly possible to cre
 ----
 = Outlook: Pi in the Sky Programming =
 
-All programs not mentioning `°`, `‹‹...››` or `‹...›` automatically also live in the _sky_ , i.e. *∞, unless they are earth-bound (e.g. the `IO` monad). But there is a free flow of identifiers, bidirectionally.
+All programs not mentioning `°`, `‹‹...››` or `‹...›` automatically also live in the _sky_, i.e. `*∞`, unless they are earth-bound (e.g. the `IO` monad). But there is a free flow of identifiers, bidirectionally.
 
 Earth bound programs are also available in the sky, but cannot appear `::`-n raised for a determined n.
 Otherwise a sky program may occupy any level as long as everything is neatly stratified (exclusion of circularity which could lead to [http://www.google.de/search?q=girard's+paradox paradoxa]).
