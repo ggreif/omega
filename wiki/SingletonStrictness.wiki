@@ -22,6 +22,8 @@ starts4 ...
 
 So the return type would be enriched with the demanded shape of the argument(s).
 
+We can also consider this a the _pattern matching is evidence creation_ principle. Some existential value that is passed as an argument gets scrutinized and proofs about the argument's structure created. These proofs precisely quantify the gain in information (loss of entropy).
+
 = Details =
 
 [http://omega.googlecode.com/svn/wiki/Singleton-strictness.svg]
