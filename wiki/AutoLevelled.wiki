@@ -80,6 +80,21 @@ The types arising at any level are _finite_, and it is certainly possible to cre
 || _types_ || `Quux` || `Foo n -> Foo (Quux n)` ||
 
 ----
+= Outlook: Pi in the Sky Programming =
+
+All programs not mentioning `°`, `‹‹...››` or `‹...›` automatically also live in the _sky_, i.e. *∞, unless they are earth-bound (e.g. the `IO` monad). But there is a free flow of identifiers, bidirectionally.
+
+Earth bound programs are also available in the sky, but cannot appear `::`-n raised for a determined n.
+Otherwise a sky program may occupy any level as long as everything is neatly stratified (exclusion of circularity which could lead to [http://www.google.de/search?q=girard's+paradox paradoxa]).
+
+We obtain a form of dependent programming, which allows both styles, but the ultimate proving ability is not available when programming in the sky, one has to descend. The sky programs are elaborated to the GADT-only ones and all type-checking happens there. When pretty printing, we try to always output the sky program.
+
+{{{
+S (S Z) :: Nat -- in the sky
+°S (°S °Z) :: Nat° (°S (°S °Z)) -- at level n
+}}}
+
+----
 = Implementation Sketch =
 
 Here I hope to summarize all the places in the current code base that would be affected by a possible addition of this feature. First, of course all the minor nuisances which I have discovered (see the comments in the [#Examples below] examples) need to be overcome. I am slowly working on that, and issues exist.
