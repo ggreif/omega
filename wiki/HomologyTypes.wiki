@@ -74,6 +74,7 @@ This is also called the Curry-Howard correspondence
   * `Int` proves `*`
   * `Eq` proves `Equal Int Int`
 
+The first three are not a big deal, but the last is interesting.
 
 === Coloring our Ideas ===
 
@@ -131,6 +132,11 @@ We will see that the zero-dimensional entities are the most crucial ones, as the
  - values -- y = f(x) -- x travels on the cone towards combinator f and y leaves on the result cone.
  - types -- the incoming cone and result cone touch in the focal point, the combinator
  - kinds -- `*`, `* ~> *`, etc. -- the volume enclosed in the cones
+
+Values being loops travelling on (type) surfaces is seemingly an arbitrary choice, why not points (or a discrete set of them) travelling on something one-dimensional? After all, `42` seems very point-like. Two reasons:
+  * as said above 0-dimensional objects are already taken
+  * points are too devoid of structure to use them for something of utility
+A nice analogy to string theory arises here. Point-like particles cause problems, which go away (to some big extent) when increasing the dimension by one.
 
 ==== Topology redux ====
 
