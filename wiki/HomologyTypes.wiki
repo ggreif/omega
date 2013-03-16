@@ -160,7 +160,7 @@ There is another similar distilling process, going from simplicial sets to modul
 
 So the basic idea is to find surfaces which are the coimages of the data type's signature under some homology-like functor. The rest is to paint the coimage with pretty colors to account for the lost information.
 
-Videos about Homology. Video from LHUG (Algebra of Datatypes).
+Videos about [http://video.ias.edu/univalent/1213/0306-EricFinster Homology]. Video from [https://www.youtube.com/watch?feature=player_embedded&v=YScIPA8RbVE#! LHUG (Algebra of Datatypes)].
 
 === The Nat Datatype ===
 
