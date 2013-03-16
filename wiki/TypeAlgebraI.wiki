@@ -22,11 +22,11 @@ Need these ingredients:
   * Vector of fields, each with type-name and optionally with a name (possibly strictness?)
 
 We use `Fin` values for accessing the fields
-
+{{{
 data Prod :: Symbol -> Nat -> [Symbol] -> * where
   Unit :: Sing (name :: Symbol) -> Prod name 0 '[]
   Field :: Prod name ary fs -> Sing (f :: Symbol) -> Prod name (S ary) (fs ': f)
-
+}}}
 == Sums ==
 
 
@@ -39,3 +39,16 @@ Need these ingredients:
 
 = `sing` Builder =
 
+= Termination =
+
+For our DSL we probably do not want recursion in the data type.
+
+= Questions =
+
+Do we really want to refer to types and constructors by name or by LambdaGraph-like pointering?
+
+Is `Typable` derivable?
+
+Do we need a `(* -> *)` parameter for customization?
+
+Are (partially) saturated lazy function calls just `Prod`ucts?
