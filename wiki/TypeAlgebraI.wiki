@@ -52,3 +52,7 @@ Is `Typable` derivable?
 Do we need a `(* -> *)` parameter for customization?
 
 Are (partially) saturated lazy function calls just `Prod`ucts?
+
+Is constructor selection just a type-level function called with constructor name (as well as type params/indices) returning a value-level function of appropriate arity?
+
+Should we already add levels?
