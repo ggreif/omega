@@ -25,7 +25,7 @@ We use `Fin` values for accessing the fields
 {{{
 data Prod :: Symbol -> Nat -> [Symbol] -> * where
   Unit :: Sing (name :: Symbol) -> Prod name 0 '[]
-  Field :: Prod name ary fs -> Sing (f :: Symbol) -> Prod name (S ary) (fs ': f)
+  Field :: Prod name ary fs -> Sing (fty :: Symbol) -> Sing (fnm :: Maybe Symbol) -> Prod name (S ary) (fs ': fty)
 }}}
 == Sums ==
 
