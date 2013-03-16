@@ -1,0 +1,41 @@
+#summary Type algebra with names and constructors.
+#labels Phase-Design,Deprecated
+
+= Introduction =
+
+This is just the stripped down version of reflecting polynomial types to runtime (singleton) values.
+
+Do dependent telescopes.
+
+Convenient building with PHOAS or `sing`.
+
+
+= Details =
+
+== Products ==
+
+We start with products.
+
+Need these ingredients:
+  * Name
+  * Arity (implicit?)
+  * Vector of fields, each with type-name and optionally with a name (possibly strictness?)
+
+We use `Fin` values for accessing the fields
+
+data Prod :: Symbol -> Nat -> [Symbol] -> * where
+  Unit :: Sing (name :: Symbol) -> Prod name 0 '[]
+  Field :: Prod name ary fs -> Sing (f :: Symbol) -> Prod name (S ary) (fs ': f)
+
+== Sums ==
+
+
+Need these ingredients:
+  * Name
+  * Vector of constructors, each with type-name and optionally with a name (possibly strictness?)
+
+
+= PHOAS Builder =
+
+= `sing` Builder =
+
