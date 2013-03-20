@@ -82,3 +82,24 @@ This very much reminds me of the Iceberg!
 
 
 Can we build telescopes using `do` notation? I guess so. Do we need PHOAS or can we employ the Hamana method (walking the graph)?
+
+= Constructor Singletons =
+
+{{{
+data family Sing1 (r :: q) (a :: k) :: q -> *
+}}}
+
+This means we can have a singleton constructor and need not commit to the payload.
+
+= Forcing Inductive/Coinductive Types =
+
+Consider this List-like GADT
+{{{
+data List :: Boolean -> * -> * where
+  Nil :: List True t
+  Cons :: t -> List i t -> List i t
+}}}
+
+`List True t` is clearly inductive, but is `List False t` possible and does it mean a properly _coinductive_ type?
+
+Thought occurred while reading http://golem.ph.utexas.edu/category/2013/02/presentations_and_representati.html
