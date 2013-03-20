@@ -90,6 +90,21 @@ One could even convert `[expr]` to arrow units. The two forms of _escape_ would 
 
 Patterns seem feasible too.
 
+= The `Closed` Type Class =
+
+{{{
+class Closed arr where
+  type Domain arr
+  type Codomain arr
+  -- has a whitespace operator (juxtaposition)
+  (``) :: Domain arr `arr` Codomain arr -> Domain arr -> Codomain arr
+}}}
+
+{{{
+class instance Closed (->) where
+  (``) :: ($)
+}}}
+
 = References =
 
   * http://web.cecs.pdx.edu/~sheard/papers/HFL07Sheard.pdf
