@@ -91,6 +91,17 @@ data family Sing1 (r :: q) (a :: k) :: q -> *
 
 This means we can have a singleton constructor and need not commit to the payload.
 
+== Singleton Patterns ==
+
+Can we have a primitive (like `sing`) that builds up a matcher function
+
+{{{
+class SingF (a :: k) where
+  singMatcher :: Sing b -> Maybe (a :~: b)
+}}}
+
+Possibly with decidable equality?
+
 = Forcing Inductive/Coinductive Types =
 
 Consider this List-like GADT
