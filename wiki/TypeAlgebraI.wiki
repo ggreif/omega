@@ -27,6 +27,19 @@ data Prod :: Symbol -> Nat -> [Symbol] -> * where
   Unit :: Sing (name :: Symbol) -> Prod name 0 '[]
   Field :: Prod name ary fs -> Sing (fty :: Symbol) -> Sing (fnm :: Maybe Symbol) -> Prod name (S ary) (fty ': fs)
 }}}
+
+For reference here is the Maybe kind:
+{{{
+data instance Sing (l :: Maybe k) where
+  Nothing' :: Sing Nothing
+  Just' :: Sing t -> Sing (Just t)
+
+instance SingI (Nothing :: Maybe k) where
+  sing = Nothing'
+instance SingI (n :: k) => SingI (Just n :: Maybe k) where
+  sing = Just' sing
+}}}
+
 == Sums ==
 
 
