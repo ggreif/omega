@@ -121,4 +121,4 @@ A standard monad just gives you the Kleisli category. When one wants to track mo
   * use overloaded syntax for `do`, or
   * capture all extra semantics in an (adapter) thrist and compile (`foldThrist`) it to a standard monad (with extra semantics `Hidden`).
 
-The charm of the latter way is that the hidden part can still be observed.
+The charm of the latter way is that the hidden part can still be observed. (I was watching http://vimeo.com/61646976).
