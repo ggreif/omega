@@ -114,3 +114,11 @@ data List :: Boolean -> * -> * where
 `List True t` is clearly inductive, but is `List False t` possible and does it mean a properly _coinductive_ type?
 
 Thought occurred while reading http://golem.ph.utexas.edu/category/2013/02/presentations_and_representati.html
+
+= Mightier Monads =
+
+A standard monad just gives you the Kleisli category. When one wants to track more invariants one can
+  * use overloaded syntax for `do`, or
+  * capture all extra semantics in an (adapter) thrist and compile (`foldThrist`) it to a standard monad (with extra semantics `Hidden`).
+
+The charm of the latter way is that the hidden part can still be observed.
