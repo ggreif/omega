@@ -24,6 +24,33 @@ runIParser :: IParser (At a) (k, l) -> Thrist (At Char) (k, m) -> Maybe (At a (k
 > module Parser where
 > import Data.Thrist
 > import Kinds.TypeMachinery
+> import Prelude hiding ((>>=), (>>), return)
+
+Small experiment with custom monad class
+
+e.g. Track nesting
+
+> class GMonad (m :: Nat -> * -> *) where
+>   return :: a -> m n a
+>   (>>) :: m n a -> m (St n) b -> m (St n) b
+>   a >> b = a >>= \_ -> b
+>   (>>=) :: m n a -> (a -> m (St n) b) -> m (St n) b
+
+> data Garsec :: Nat -> * -> * where
+>   Pure :: a -> Garsec n a
+>   Char :: Char -> Garsec n ()
+>   SomeChar :: Garsec n Char
+>   Bind :: Garsec n a -> (a -> Garsec (St n) b) -> Garsec (St n) b
+> --deriving instance Show a => Show (Garsec n a)
+
+> g1 = do a <- Char 'H'
+>         Char 'e'
+>         b <- SomeChar
+>         return "He"
+
+> instance GMonad Garsec where
+>   return = Pure
+>   (>>=) = Bind
 
 For now we try to ignore the fact that IParser should
 be an IMonad (and IFunctor, IApplicable, IAlternative as well).
