@@ -51,9 +51,9 @@ Nat' len -> Nat' (len `Plus` Zt)
 Hint: use the technique suggested in
 http://stackoverflow.com/questions/13555547/how-can-i-get-the-length-of-dependently-typed-interval
 
-> shift :: Nat' by -> Nat' (len `Plus` Zt) -> Nat' (len `Plus` by)
-> shift Z n = n
-> shift (S m) n = shift m (S n)
+> --shift :: Nat' by -> Nat' (len `Plus` Zt) -> Nat' (len `Plus` by)
+> --shift Z n = n
+> --shift (S m) n = shift m (S n)
 
 
 > thristShift :: Nat' n -> Thrist p Zt len -> Thrist p n (len `Plus` n)
@@ -65,6 +65,15 @@ http://stackoverflow.com/questions/13555547/how-can-i-get-the-length-of-dependen
 > --chars cs = P $ check cs
 > --  where check :: Nat' len -> Thrist (At Char) a (Plus len a) -> Nat' n -> IParser (At Char) n (Plus len n)
 > --        check len (Cons (HoldChar c) cs) k (Cons r@(HoldChar c') rest) | c == c' = undefined -- _ -- (Just _, rest)
+
+> --move :: Nat' offs -> Thrist (At Char) here (Plus len here) -> Thrist (At Char) offs (Plus len offs)
+> --move _ Nil = Nil
+> --move (S Z) (Cons (HoldChar c) as) = Cons (HoldChar c) $ move (S (S Z)) as
+
+> --thristLen :: Thrist (At Char) here (Plus len here) -> Nat' len
+> --thristLen Nil = Z
+
+
 
 > runIParser :: IParser p k (St k) -> Nat' k -> Thrist p k (St k) -> (Maybe (p k (St k)), Thrist p (St k) (St k))
 > runIParser (P p) k t = p k t
