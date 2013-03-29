@@ -19,6 +19,8 @@ runIParser :: IParser (At a) (k, l) -> Thrist (At Char) (k, m) -> Maybe (At a (k
 > {-# LANGUAGE GADTs, KindSignatures, PolyKinds, DataKinds, FlexibleInstances,
 >              StandaloneDeriving, TypeOperators, TypeHoles #-}
 
+> {-# LANGUAGE RebindableSyntax #-}
+
 > module Parser where
 > import Data.Thrist
 > import Kinds.TypeMachinery
