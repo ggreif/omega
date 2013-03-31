@@ -131,3 +131,12 @@ http://stackoverflow.com/questions/13555547/how-can-i-get-the-length-of-dependen
 > t2 :: Thrist (At Char) Zt Six
 > t2 = 'H' -+ 'e' -+ 'l' -+ 'l' -+ 'o' -+ '!' -+ Nil
 
+
+For some parsers we can statically know the end index, given a start index.
+For more complicated ones, this will break down, i.e. for choice it will be
+either the first or the second that succeeded. Here we'll statically only
+know `OR (start + m) (start + n)`, but at runtime we'll supply a
+`Sing (side :: Bool)` so that an `ElimOR(side, or)` will be able to recover
+the correct index. This means that we can possibly avoid a big (and ugly)
+algebra on `OR (OR ... ...) ...)` which make the types increasingly unwieldy.
+Similarly for n-fold repetitions.
