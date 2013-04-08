@@ -9,3 +9,7 @@ I call this _conservation of constructors`.
 Is there any literature on it?
 
 Such a constraint surely restricts the number of candidates for a proof-search algorithm.
+
+= Property Conservation =
+
+The above principle is a pretty strong one, we may desire to forget some (exact) constructors, but count _depth_. I.e. for tree-like data we may be interested in the conservation of the _fringe_, or the _contour_ (fringe with depth of each element). For sorting we may want conservation of the _permutation_.
