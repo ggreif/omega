@@ -122,3 +122,33 @@ A standard monad just gives you the Kleisli category. When one wants to track mo
   * capture all extra semantics in an (adapter) thrist and compile (`foldThrist`) it to a standard monad (with extra semantics `Hidden`).
 
 The charm of the latter way is that the hidden part can still be observed. (I was watching http://vimeo.com/61646976).
+
+= Algebraic effects and handlers (for proof assistants) =
+
+Andrej's lecture at IAS (video). He describes his system (based on eff) for proof assistants. Handlers have dynamic extent. (In Haskell one would implement them as implicit parameters).
+
+operations are P x Type -> Set.
+
+Example: `if` is a ternary operation, so the argument space is indexed by `Fin 3`. So (schematically)
+{{{
+data family If (arg :: Fin 3) :: *
+data instance If 0 = Bool
+data instance If 1 = a
+data instance If 2 = a
+}}}
+The handlers may ask expressions (of algebraic effects) about their enclosed arguments, e.g.
+{{{
+let cond = ask 0 expr in
+let cond' = eval cond in
+if cond' then { let consequent = ask 1 expr; eval consequent ... }
+       else { let other = ask 2 expr; eval other ... }
+}}}
+`ask` is then continuation invocation, and the type of it is `ask If :: Fin n -> *`, a dependent type.
+
+In TH we could produce the algebraic effected expression as `[eff|if False then 3 else 42|]`
+which should lift that expr up the type level and return the corresponding singleton.
+
+The evaluator would have a bunch of `ask` handlers in dynamic scope
+as well as an `eval` handler.
+
+The concept of accessing the arguments by some arbitrary indes allow for keyword arguments and infinitary arguments.
