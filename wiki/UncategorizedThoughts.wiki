@@ -125,7 +125,7 @@ The charm of the latter way is that the hidden part can still be observed. (I wa
 
 = Algebraic effects and handlers (for proof assistants) =
 
-Andrej's lecture at IAS (video). He describes his system (based on eff) for proof assistants. Handlers have dynamic extent. (In Haskell one would implement them as implicit parameters).
+Andrej's lecture at IAS ([http://video.ias.edu/univalent/1213/0321-AndrejBauer video]). He describes his system (based on [http://math.andrej.com/eff/ eff]) for proof assistants. Handlers have dynamic extent. (In Haskell one would implement them as implicit parameters).
 
 operations are P x Type -> Set.
 
@@ -151,4 +151,4 @@ which should lift that expr up the type level and return the corresponding singl
 The evaluator would have a bunch of `ask` handlers in dynamic scope
 as well as an `eval` handler.
 
-The concept of accessing the arguments by some arbitrary indes allow for keyword arguments and infinitary arguments.
+The concept of accessing the arguments by some arbitrary index allow for keyword arguments and infinitary arguments.
