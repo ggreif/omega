@@ -152,3 +152,5 @@ The evaluator would have a bunch of `ask` handlers in dynamic scope
 as well as an `eval` handler.
 
 The concept of accessing the arguments by some arbitrary index allow for keyword arguments and infinitary arguments.
+
+Edwin Brady [http://edwinb.wordpress.com/2013/03/28/programming-and-reasoning-with-algebraic-effects-and-dependent-types/ seems to like the idea too].
