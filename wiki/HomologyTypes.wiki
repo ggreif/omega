@@ -454,6 +454,10 @@ Opetopes
 
 === n-Categories, string diagrams ===
 
+[http://vimeo.com/6590617 Tangles, diagrams and monads] by Dan Piponi
+
+Relative monads (Altenkirch, Chapman, et al.)
+
 === Connections to String Theory ===
   world surface of strings (particles)
   * combinators: decay events, collisions
