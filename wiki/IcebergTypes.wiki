@@ -9,6 +9,8 @@ http://www.athropolis.com/arctic-facts/iceberg/iceberg-type.jpg
 
 (from www.athropolis.com)
 
+For Hemingway's version, see http://en.wikipedia.org/wiki/Iceberg_Theory
+
 = Introduction =
 
 Usually programmers encounter data types as isolated or mutually recursive entities.
