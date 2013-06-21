@@ -1,6 +1,6 @@
 -- implement the idea described in
 -- https://code.google.com/p/omega/wiki/IcebergTypes
---
+-- Omega Impl is here: https://code.google.com/p/omega/source/browse/trunk/tests/Iceberg.prg
 
 {-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses, LambdaCase #-}
 
