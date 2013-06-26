@@ -2,7 +2,8 @@
 -- https://code.google.com/p/omega/wiki/IcebergTypes
 -- Omega Impl is here: https://code.google.com/p/omega/source/browse/trunk/tests/Iceberg.prg
 
-{-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses, LambdaCase, EmptyCase #-}
+{-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses, FlexibleInstances
+           , LambdaCase, EmptyCase #-}
 
 import Data.Maybe
 import Data.Thrist
@@ -60,8 +61,20 @@ data TagLev where
 data Icenamelevel :: TagLev -> TagLev -> * where -- entities with certain level and name
   NamedLevelConstructor :: LevelFits l' l => Sing (t :: Symbol) -> Level l -> Signature -> Icenamelevel (TL t l') (TL t l')
 
+-- inclusion relation on levels
+--
+{-
+prop LevelFits :: Lev n ~> Lev n' ~> * where
+  BothValue :: LevelFits ValueLevel ValueLevel
+  InPoly :: LevelFits k PolyLevel
+  BothUp :: LevelFits k k' -> LevelFits (LevelUp k) (LevelUp k')
+-}
+
 
 class LevelFits (l :: Lev) (m :: Lev) -- ~> * -- where
+instance LevelFits ValueLevel ValueLevel
+instance LevelFits k PolyLevel
+instance LevelFits k k' => LevelFits (LevelUp k) (LevelUp k')
 
 {-
 
@@ -117,13 +130,6 @@ projectName' t [LevelConstructor t' lev sig; rest]t = case t `sameLabel` t' of
                                                       L Eq -> [NamedLevelConstructor t' lev sig; projectName' t rest]t
                                                       _ -> projectName' t rest
 
-
--- inclusion relation on levels
---
-prop LevelFits :: Lev n ~> Lev n' ~> * where
-  BothValue :: LevelFits ValueLevel ValueLevel
-  InPoly :: LevelFits k PolyLevel
-  BothUp :: LevelFits k k' -> LevelFits (LevelUp k) (LevelUp k')
 
 -- runtime compute level inclusion
 --
