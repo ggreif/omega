@@ -2,7 +2,7 @@
 -- https://code.google.com/p/omega/wiki/IcebergTypes
 -- Omega Impl is here: https://code.google.com/p/omega/source/browse/trunk/tests/Iceberg.prg
 
-{-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses, LambdaCase #-}
+{-# LANGUAGE DataKinds, PolyKinds, GADTs, MultiParamTypeClasses, LambdaCase, EmptyCase #-}
 
 import Data.Maybe
 import Data.Thrist
@@ -100,7 +100,7 @@ sameLabel :: Sing (l :: Symbol) -> Sing (l' :: Symbol) -> Either (Equal l l') (O
 sameLabel l l' = case l `eqSingSym` l' of
                  Just Refl -> Left Eq
                  _ -> Right ( fromSing l `compare` fromSing l'
-                            , \case { _ -> undefined }{-FIXME-})
+                            , \case { } )
 
 projectName :: Sing (l :: Symbol) -> Thrist Iceberg () () -> Thrist Icename l l
 projectName _ Nil = Nil
