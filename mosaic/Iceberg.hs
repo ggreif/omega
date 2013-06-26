@@ -7,7 +7,6 @@
 import Data.Maybe
 import Data.Thrist
 import GHC.TypeLits
-import Unsafe.Coerce (unsafeCoerce)
 
 {-
 data kind Multiplicity where
@@ -98,9 +97,10 @@ data Equal :: k -> k -> * where
 data Void
 
 sameLabel :: Sing (l :: Symbol) -> Sing (l' :: Symbol) -> Either (Equal l l') (Ordering, Equal l l' -> Void)
-sameLabel l l' = case fromSing l `compare` fromSing l' of
-                 EQ -> Left (unsafeCoerce Eq)
-                 other -> Right (other, \case { _ -> undefined }{-FIXME-})
+sameLabel l l' = case l `eqSingSym` l' of
+                 Just Refl -> Left Eq
+                 _ -> Right ( fromSing l `compare` fromSing l'
+                            , \case { _ -> undefined }{-FIXME-})
 
 projectName :: Sing (l :: Symbol) -> Thrist Iceberg () () -> Thrist Icename l l
 projectName _ Nil = Nil
