@@ -10,13 +10,11 @@ import GHC.TypeLits
 import Unsafe.Coerce (unsafeCoerce)
 
 {-
--- kind
-data Multiplicity where
+data kind Multiplicity where
   Mono :: Multiplicity
   Poly :: Multiplicity
 
--- kind
-data Lev (m :: Multiplicity) where
+data kind Lev (m :: Multiplicity) where
   ValueLevel :: Lev m -- Mono
   LevelUp :: Lev m -> Lev m
   PolyLevel :: Lev m -- Poly -- level n .
@@ -52,8 +50,7 @@ data Icelevel :: Lev -> Lev -> * where -- entities with certain level
   LevelConstructor :: LevelFits l' l => Sing (t :: Symbol) -> Level l -> Signature -> Icelevel l' l'
 
 {-
--- kind
-data TagLev :: Multiplicity where
+data kind TagLev :: Multiplicity where
   TL :: Symbol -> Lev m -> TagLev m
 -}
 
