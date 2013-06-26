@@ -3,6 +3,9 @@ locations of the parsed stuff in the type of the stuff.
 
 See my blog post: http://heisenbug.blogspot.com/2011/11/pondering-about-foundations.html
 
+I found the parallel-parsing comment in this thread very interesting:
+http://www.reddit.com/r/haskell/comments/1h0wf7/from_zero_to_cooperative_threads_in_33_lines_of/caq3xuc
+
 > {-# LANGUAGE GADTs, KindSignatures, StandaloneDeriving #-}
 
 > module BoundedParser where
