@@ -98,7 +98,7 @@ data Equal :: k -> k -> * where
 data Void
 
 sameLabel :: Sing (l :: Symbol) -> Sing (l' :: Symbol) -> Either (Equal l l') (Ordering, Equal l l' -> Void)
-sameLabel l l' = case fromSing l `compare` fromSing l of
+sameLabel l l' = case fromSing l `compare` fromSing l' of
                  EQ -> Left (unsafeCoerce Eq)
                  other -> Right (other, \case { _ -> undefined }{-FIXME-})
 
