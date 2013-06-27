@@ -16,7 +16,7 @@ data Hidden :: (k -> *) -> * where
  Hide :: c a -> Hidden c
 
 sym s = hide <$> string s
-  where hide s = strip . fromJust . (toSing :: String -> Maybe SomeSymbol)
+  where hide = strip . fromJust . (toSing :: String -> Maybe SomeSymbol)
         strip (SomeSing x) = Hide (rewrap x)
         rewrap :: SingI n => a n -> Sing n
         rewrap x = sing
