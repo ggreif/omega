@@ -162,3 +162,11 @@ The category of finite sets on N and order preserving embeddings:
 http://www.cs.ut.ee/~varmo/tday-kaariku/chapman-slides.pdf
 
 Very neat idea, and funny that I am trying to do something like this with opetopes. I.e. skip certain parts but only stretch up to a certain point.
+
+= Mezzo preprint (of ICFP '13 paper) =
+
+http://gallium.inria.fr/%7Efpottier/publis/pottier-protzenko-mezzo.pdf
+
+This reminded me of the thread shape typing (thr :: FrameKind) for tracking resources and transfer. Not sure whether I have written down thread shapes anywhere, but the idea is to represent each thread's execution trace as `thr shape` where `shape` is fringe-like as the program executes, and `thr` is thread-specific, with primitives for forking etc.
+
+Now resources obtain a thread-specific fingerprint, and can only be _dereferenced_ to a regular haskell value in that context, and furthermore this must be linear.
