@@ -4,3 +4,10 @@
 https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
 
 Key document: http://www.cs.gunma-u.ac.jp/~hamana/Papers/poly.pdf
+
+Some relevant packages:
+  * http://hackage.haskell.org/package/compdata
+  * http://hackage.haskell.org/package/regular
+  * http://hackage.haskell.org/package/multirec
+
+Some provide PHOAS-based finitely representable graphs.
