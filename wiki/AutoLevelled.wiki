@@ -223,6 +223,10 @@ _Note: it does not compile (with v1.4.6)_
 While parsing a type constructor, unknown type: Foo
 }}}
 
+== Ωmega example for `‹‹Maybe››` ==
+
+http://code.google.com/p/omega/source/browse/trunk/tests/SingMaybe.prg
+
 == The use of the additional type index ==
 
 The additional index can be used to
