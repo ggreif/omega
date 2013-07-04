@@ -227,6 +227,16 @@ While parsing a type constructor, unknown type: Foo
 
 http://code.google.com/p/omega/source/browse/trunk/tests/SingMaybe.prg
 
+If we had the strange recursion, it would look like
+
+{{{
+data Mayb :: level n . Mayb a ~> *n where
+  Noth :: Mayb Noth
+  Jus :: a ~> Mayb (Jus a)
+}}}
+
+Of course assuming `(~>)` is level-preserving (which Ωmega 1 is _not_).
+
 == The use of the additional type index ==
 
 The additional index can be used to
