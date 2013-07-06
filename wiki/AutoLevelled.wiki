@@ -230,12 +230,12 @@ http://code.google.com/p/omega/source/browse/trunk/tests/SingMaybe.prg
 If we had the strange recursion, it would look like
 
 {{{
-data Mayb :: level n . Mayb a ~> *n where
-  Noth :: Mayb Noth
-  Jus :: a ~> Mayb (Jus a)
+data Mayb :: level n . Mayb a ~> *n ~> *n where
+  Noth :: Mayb Noth a
+  Jus :: a ~> Mayb (Jus a) a
 }}}
 
-Of course assuming `(~>)` is level-preserving (which Ωmega 1 is _not_).
+Of course assuming `(~>)` is level-preserving (which Ωmega 1 is _not always_).
 
 == The use of the additional type index ==
 
