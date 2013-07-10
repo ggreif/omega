@@ -1,5 +1,7 @@
 {-# LANGUAGE KindSignatures, DataKinds, TypeOperators #-}
 
+-- See: https://code.google.com/p/omega/wiki/LambdaGraph
+
 data {-kind-} Lam = Var Lam | App Lam Lam | Abs Lam | Ref [Go]
 data {-kind-} Go = Up | Le | Ri
 
