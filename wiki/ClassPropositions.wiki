@@ -89,7 +89,7 @@ instance Monoid (Smarty a) where
 
 When in term position `One 4` would be desugared as
 {{{
-case 4 of x | p x -> x
+case 4 of x | even x -> x
 }}}
 
 
