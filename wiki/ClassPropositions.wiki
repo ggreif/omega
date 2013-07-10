@@ -83,7 +83,7 @@ Or maybe class constructors could be pattern synonyms:
 
 {{{
 instance Monoid (Smarty a) where
-  One x = x | p x
+  One = x | even x
   ...
 }}}
 
