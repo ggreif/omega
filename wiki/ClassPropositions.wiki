@@ -53,7 +53,7 @@ class Monoid a where
 
 Here is how this can be used:
 {{{
-isNeutral :: Monoid a -> Bool
+isNeutral :: Monoid a => a -> Bool
 isNeutral One = True;
 isNeutral _ = False;
 }}}
