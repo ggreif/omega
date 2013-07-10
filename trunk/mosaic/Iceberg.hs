@@ -90,7 +90,9 @@ instance LevelFits k k' => LevelFits (LevelUp k) (LevelUp k')
 
 
 builtIns :: Thrist Iceberg () ()
-builtIns = Cons (Constructor singZ ValueLevel' $ SigApp natPrimeCtor (SigCtor singZ)) Nil
+builtIns = Cons (Constructor singZ ValueLevel' $ SigApp natPrimeCtor (SigCtor singZ)) -- Z{-2} :: Nat{-1} Z{-1}
+         $ Cons (Constructor singS ValueLevel' $ SigApp (SigApp varrowCtor (SigApp natPrimeCtor $ SigVar varA)) (SigApp natPrimeCtor $ (SigApp (SigCtor singS) $ SigVar varA))) -- S{-2} :: Nat{-1} n -> Nat{-1} (S{-1} n)
+         $ Nil
       {-     , Constructor `S 0l $ SigApp (SigApp varrowCtor (SigApp natPrimeCtor $ SigVar `a)) (SigApp natPrimeCtor $ (SigApp (SigCtor `S) $ SigVar `a))
            , Constructor natPrime 0l $ SigApp (SigApp karrowCtor natCtor) starCtor
            , Constructor `Z 1l $ natCtor
@@ -102,14 +104,16 @@ builtIns = Cons (Constructor singZ ValueLevel' $ SigApp natPrimeCtor (SigCtor si
            , Constructor `MultValueAndUp PolyLevel Sig]t   -}
   where natPrime = sing :: Sing "Nat'"
         singZ = sing :: Sing "Z"
+        singS = sing :: Sing "S"
+        varA = sing :: Sing "a"
         {-HideLabel starN = newLabel "*n"
-        HideLabel constraintN = newLabel "#n"
-        HideLabel varrow = newLabel "->"
-        HideLabel karrow = newLabel "~>"
+        HideLabel constraintN = newLabel "#n"-}
+        varrow = sing :: Sing "->"
+        {-HideLabel karrow = newLabel "~>"
         starCtor = SigCtor starN-}
         natPrimeCtor = SigCtor natPrime
-        {-varrowCtor = SigCtor varrow
-        karrowCtor = SigCtor karrow
+        varrowCtor = SigCtor varrow
+        {-karrowCtor = SigCtor karrow
         natCtor = SigCtor `Nat-}
 
 
