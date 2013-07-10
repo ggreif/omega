@@ -13,9 +13,6 @@ import Control.Applicative
 import Data.Maybe (fromJust)
 import Kinds.TypeMachinery
 
---data Hidden :: (k -> *) -> * where
--- Hide :: c a -> Hidden c
-
 sym s = hide <$> string s
   where hide = strip . fromJust . (toSing :: String -> Maybe SomeSymbol)
         strip (SomeSing x) = Hide (rewrap x)
@@ -90,11 +87,10 @@ instance LevelFits k PolyLevel
 instance LevelFits k k' => LevelFits (LevelUp k) (LevelUp k')
 
 
---newLabel :: String -> Hidden (Sing :: Symbol -> *)
---newLabel s = undefined
+
 
 builtIns :: Thrist Iceberg () ()
-builtIns = Cons (Constructor (sing :: Sing "Z") ValueLevel' $ SigApp natPrimeCtor (SigCtor (sing :: Sing "Z"))) Nil
+builtIns = Cons (Constructor singZ ValueLevel' $ SigApp natPrimeCtor (SigCtor singZ)) Nil
       {-     , Constructor `S 0l $ SigApp (SigApp varrowCtor (SigApp natPrimeCtor $ SigVar `a)) (SigApp natPrimeCtor $ (SigApp (SigCtor `S) $ SigVar `a))
            , Constructor natPrime 0l $ SigApp (SigApp karrowCtor natCtor) starCtor
            , Constructor `Z 1l $ natCtor
@@ -105,6 +101,7 @@ builtIns = Cons (Constructor (sing :: Sing "Z") ValueLevel' $ SigApp natPrimeCto
            , Constructor varrow 1l Sig
            , Constructor `MultValueAndUp PolyLevel Sig]t   -}
   where natPrime = sing :: Sing "Nat'"
+        singZ = sing :: Sing "Z"
         {-HideLabel starN = newLabel "*n"
         HideLabel constraintN = newLabel "#n"
         HideLabel varrow = newLabel "->"
