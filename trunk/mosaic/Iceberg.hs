@@ -11,9 +11,10 @@ import GHC.TypeLits
 import Text.Parsec
 import Control.Applicative
 import Data.Maybe (fromJust)
+import Kinds.TypeMachinery
 
-data Hidden :: (k -> *) -> * where
- Hide :: c a -> Hidden c
+--data Hidden :: (k -> *) -> * where
+-- Hide :: c a -> Hidden c
 
 sym s = hide <$> string s
   where hide = strip . fromJust . (toSing :: String -> Maybe SomeSymbol)
@@ -88,12 +89,13 @@ instance LevelFits ValueLevel ValueLevel
 instance LevelFits k PolyLevel
 instance LevelFits k k' => LevelFits (LevelUp k) (LevelUp k')
 
-{-
 
+--newLabel :: String -> Hidden (Sing :: Symbol -> *)
+--newLabel s = undefined
 
 builtIns :: Thrist Iceberg () ()
-builtIns = [ Constructor `Z 0l $ SigApp natPrimeCtor (SigCtor `Z)
-           , Constructor `S 0l $ SigApp (SigApp varrowCtor (SigApp natPrimeCtor $ SigVar `a)) (SigApp natPrimeCtor $ (SigApp (SigCtor `S) $ SigVar `a))
+builtIns = Cons (Constructor (sing :: Sing "Z") ValueLevel' $ SigApp natPrimeCtor (SigCtor (sing :: Sing "Z"))) Nil
+      {-     , Constructor `S 0l $ SigApp (SigApp varrowCtor (SigApp natPrimeCtor $ SigVar `a)) (SigApp natPrimeCtor $ (SigApp (SigCtor `S) $ SigVar `a))
            , Constructor natPrime 0l $ SigApp (SigApp karrowCtor natCtor) starCtor
            , Constructor `Z 1l $ natCtor
            , Constructor `S 1l $ SigApp (SigApp karrowCtor natCtor) natCtor
@@ -101,19 +103,17 @@ builtIns = [ Constructor `Z 0l $ SigApp natPrimeCtor (SigCtor `Z)
            , Constructor starN (LevelUp (LevelUp PolyLevel)) Sig
            , Constructor constraintN (LevelUp (LevelUp PolyLevel)) Sig
            , Constructor varrow 1l Sig
-           , Constructor `MultValueAndUp PolyLevel Sig]t
-  where HideLabel natPrime = newLabel "Nat'"
-        HideLabel starN = newLabel "*n"
+           , Constructor `MultValueAndUp PolyLevel Sig]t   -}
+  where natPrime = sing :: Sing "Nat'"
+        {-HideLabel starN = newLabel "*n"
         HideLabel constraintN = newLabel "#n"
         HideLabel varrow = newLabel "->"
         HideLabel karrow = newLabel "~>"
-        starCtor = SigCtor starN
+        starCtor = SigCtor starN-}
         natPrimeCtor = SigCtor natPrime
-        varrowCtor = SigCtor varrow
+        {-varrowCtor = SigCtor varrow
         karrowCtor = SigCtor karrow
-        natCtor = SigCtor `Nat
-
--}
+        natCtor = SigCtor `Nat-}
 
 
 data Equal :: k -> k -> * where
