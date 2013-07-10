@@ -79,6 +79,20 @@ instance Monoid (Smarty a) where
   mult = ...
 }}}
 
+Or maybe class constructors could be pattern synonyms:
+
+{{{
+instance Monoid (Smarty a) where
+  One x = x | p x
+  ...
+}}}
+
+When in term position `One 4` would be desugared as
+{{{
+case 4 of x | p x -> x
+}}}
+
+
 == Implementation details ==
 
 Class constructors are added to the runtime dictionary for `§` as predicates on the value, i.e.
