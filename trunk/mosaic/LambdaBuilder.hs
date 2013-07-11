@@ -1,9 +1,24 @@
-{-# LANGUAGE KindSignatures, DataKinds, TypeOperators, StandaloneDeriving, GADTs #-}
+{-# LANGUAGE KindSignatures, DataKinds, TypeOperators, StandaloneDeriving, GADTs,
+             MultiParamTypeClasses, FlexibleInstances, FlexibleContexts,
+             UndecidableInstances #-}
 
 -- See: https://code.google.com/p/omega/wiki/LambdaGraph
 
 data {-kind-} Lam = Var Lam | App Lam Lam | Abs Lam | Ref [Go]
-data {-kind-} Go = Up | Le | Ri
+data {-kind-} Go = Up | Le | Ri | Down
+
+data Trace = Root Lam | VarD Trace Lam | AppL Trace Lam | AppR Trace Lam | AbsD Trace Lam
+
+-- a zipper for lambda trees
+--
+data Traced :: Trace -> * where
+  EmptyRoot :: Builder l => l sh -> Traced (Root sh)
+  VarDown :: Builder l => Traced tr -> l (Var sh) -> Traced (VarD tr sh)
+  AppLeft :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppL tr shl)
+  AppRight :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppR tr shr)
+  AbsDown :: Builder l => Traced tr -> l (Abs sh) -> Traced (AbsD tr sh)
+
+--deriving instance Show (Traced tr)
 
 class Builder (shape :: Lam -> *) where
   v :: shape inner -> shape (Var inner)
@@ -11,6 +26,15 @@ class Builder (shape :: Lam -> *) where
   app :: shape left -> shape right -> shape (App left right)
   here :: shape (Ref '[Up])
   up :: shape (Ref p) -> shape (Ref (Up ': p))
+  close :: Closed sh env => Traced env -> shape sh -> shape sh
+
+class Closed (sh :: Lam) (env :: Trace)
+instance Closed (Ref '[]) env
+instance Closed (Ref more) up => Closed (Ref (Up ': more)) (VarD up sh)
+instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AbsD up sh)
+instance Closed below (VarD env below) => Closed (Var below) env
+instance Closed below (AbsD env below) => Closed (Abs below) env
+
 
 data Classical :: Lam -> * where
   LAM :: Classical sh -> Classical (Abs sh)
