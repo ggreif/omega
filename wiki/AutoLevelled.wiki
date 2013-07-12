@@ -243,7 +243,7 @@ The additional index can be used to
   * [SingletonStrictness derive strictness]
   * type-based termination
   * return value discrimination depending on input types (terminating?, inductively-sequential?, lemmata needed?)
-  * swappable type-checking regimes
+  * [http://www.reddit.com/r/haskell/comments/1ht33e/bottomup_type_annotation_with_the_cofree_comonad/caxzuqu swappable type-checking regimes]
 
 What when we have a purely run-time (level 0) function definition for such an algebraic type?
 Then the algorithms simply run in the `Hidden Foo` mode:
