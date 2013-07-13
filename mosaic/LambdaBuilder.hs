@@ -53,6 +53,8 @@ instance Builder Classical where
   here = HERE
   checkClosure (EmptyRoot _) HERE = NoWay
   checkClosure p@(VarDown up _) HERE = Goal p HERE
+  checkClosure env a@(APP l r) = case (checkClosure (AppLeft env a) a, checkClosure (AppRight env a) a) of
+                                 x -> undefined --(p1@(Goal _ _), p2@(Goal _ _)) -> ProvenApp (AppLeft env l, p1) (AppRight env r, p2)
 
 -- We need a buildable tree of witnesses
 -- later it will be parametrised in the constraint?
@@ -62,8 +64,8 @@ data Proven :: Trace -> Lam -> * where
   --LAM :: Classical sh -> Classical (Abs sh)
   ProvenApp :: -- (Closed left (AppL env left), Closed right (AppR env right)) =>
                Closed (App left right) env =>
-               (Traced (AppL env left), Proven (AppL env left) left) ->
-               (Traced (AppR env right), Proven (AppR env right) right) ->
+               (Traced (AppL env left), Proven trL left) ->
+               (Traced (AppR env right), Proven trR right) ->
                Proven env (App left right)
   --VAR :: Classical sh -> Classical (Var sh)
   Goal :: (Closed (Ref '[Up]) (VarD up sh), Builder l) => Traced (VarD up sh) -> l (Ref '[Up]) -> Proven (VarD up sh) (Ref '[Up])
@@ -73,3 +75,7 @@ data Proven :: Trace -> Lam -> * where
 -- ######
 
 t1 = v HERE
+t1' = close (EmptyRoot t1) t1
+
+t2 = app t1 t1
+t2' = close (EmptyRoot t2) t2
