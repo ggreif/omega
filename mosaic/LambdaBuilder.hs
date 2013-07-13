@@ -7,7 +7,7 @@
 data {-kind-} Lam = Var Lam | App Lam Lam | Abs Lam | Ref [Go]
 data {-kind-} Go = Up | Le | Ri | Down
 
-data Trace = Root Lam | VarD Trace Lam | AppL Trace Lam | AppR Trace Lam | AbsD Trace Lam
+data {-kind-} Trace = Root Lam | VarD Trace Lam | AppL Trace Lam | AppR Trace Lam | AbsD Trace Lam
 
 -- a zipper for lambda trees
 --
@@ -27,6 +27,7 @@ class Builder (shape :: Lam -> *) where
   here :: shape (Ref '[Up])
   up :: shape (Ref p) -> shape (Ref (Up ': p))
   close :: Closed sh env => Traced env -> shape sh -> shape sh
+  checkClosure :: Traced env -> shape sh -> Proven env sh
 
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
@@ -34,6 +35,7 @@ instance Closed (Ref more) up => Closed (Ref (Up ': more)) (VarD up sh)
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AbsD up sh)
 instance Closed below (VarD env below) => Closed (Var below) env
 instance Closed below (AbsD env below) => Closed (Abs below) env
+instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
 
 
 data Classical :: Lam -> * where
@@ -49,3 +51,25 @@ instance Builder Classical where
   app = APP
   v = VAR
   here = HERE
+  checkClosure (EmptyRoot _) HERE = NoWay
+  checkClosure p@(VarDown up _) HERE = Goal p HERE
+
+-- We need a buildable tree of witnesses
+-- later it will be parametrised in the constraint?
+--
+data Proven :: Trace -> Lam -> * where
+  NoWay :: Proven env sh
+  --LAM :: Classical sh -> Classical (Abs sh)
+  ProvenApp :: -- (Closed left (AppL env left), Closed right (AppR env right)) =>
+               Closed (App left right) env =>
+               (Traced (AppL env left), Proven (AppL env left) left) ->
+               (Traced (AppR env right), Proven (AppR env right) right) ->
+               Proven env (App left right)
+  --VAR :: Classical sh -> Classical (Var sh)
+  Goal :: (Closed (Ref '[Up]) (VarD up sh), Builder l) => Traced (VarD up sh) -> l (Ref '[Up]) -> Proven (VarD up sh) (Ref '[Up])
+
+
+-- TESTS
+-- ######
+
+t1 = v HERE
