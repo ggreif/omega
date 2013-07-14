@@ -5,6 +5,8 @@ https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
 
 Key document: http://www.cs.gunma-u.ac.jp/~hamana/Papers/poly.pdf
 
+I started implementing it here: https://code.google.com/p/omega/source/browse/mosaic/LambdaBuilder.hs
+
 Some relevant packages:
   * http://hackage.haskell.org/package/compdata
   * http://hackage.haskell.org/package/regular
