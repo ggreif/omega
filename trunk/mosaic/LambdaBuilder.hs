@@ -33,22 +33,34 @@ class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) (VarD up sh)
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AbsD up sh)
+instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AppL up sh)
+instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AppR up sh)
 instance Closed below (VarD env below) => Closed (Var below) env
 instance Closed below (AbsD env below) => Closed (Abs below) env
 instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
 
 data Proven :: Lam -> Trace -> * where
   NoWay :: Proven sh env
-  --ProveRefAbsD :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) (AbsD env stuff)
   TrivialRef :: Proven (Ref '[]) env
-  ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
+  --ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
+  ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) (AppR env stuff)
   ProvenApp :: (Closed l (AppL env l), Closed r (AppR env r)) =>
                Proven l (AppL env l) -> Proven r (AppR env r) ->
                Proven (App l r) env
 
 
-proveRef :: Classical (Ref (Up ': more)) -> Traced ((down :: Trace -> Lam -> Trace) env stuff) -> Proven (Ref (Up ': more)) (down env stuff)
-proveRef HERE (VarDown _ _) = ProvenRefUp undefined -- ProvenRefUp TrivialRef
+--proveRef :: Classical (Ref (Up ': more)) -> Traced env -> Proven (Ref (Up ': more)) env
+proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
+--proveRef HERE (VarDown _ _) = ProvenRefUp TrivialRef
+--proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
+--proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
+--proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
+proveRef (UP and) (AppRight up _) = case (proveRef and up) of
+                                    NoWay -> NoWay
+                                    p@(ProvenRefUp _) -> ProvenRefUp p
+
+
+
 data Classical :: Lam -> * where
   LAM :: Classical sh -> Classical (Abs sh)
   APP :: Classical left -> Classical right -> Classical (App left right)
