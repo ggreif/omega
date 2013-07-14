@@ -27,7 +27,7 @@ class Builder (shape :: Lam -> *) where
   here :: shape (Ref '[Up])
   up :: shape (Ref p) -> shape (Ref (Up ': p))
   close :: Closed sh env => Traced env -> shape sh -> shape sh
-  checkClosure :: Traced env -> shape sh -> Proven env sh
+  checkClosure :: Traced env -> shape sh -> Proven sh env
 
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
@@ -37,12 +37,24 @@ instance Closed below (VarD env below) => Closed (Var below) env
 instance Closed below (AbsD env below) => Closed (Abs below) env
 instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
 
+data Proven :: Lam -> Trace -> * where
+  NoWay :: Proven sh env
+  --ProveRefAbsD :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) (AbsD env stuff)
+  TrivialRef :: Proven (Ref '[]) env
+  ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
+  ProvenApp :: (Closed l (AppL env l), Closed r (AppR env r)) =>
+               Proven l (AppL env l) -> Proven r (AppR env r) ->
+               Proven (App l r) env
 
+
+proveRef :: Classical (Ref (Up ': more)) -> Traced ((down :: Trace -> Lam -> Trace) env stuff) -> Proven (Ref (Up ': more)) (down env stuff)
+proveRef HERE (VarDown _ _) = ProvenRefUp undefined -- ProvenRefUp TrivialRef
 data Classical :: Lam -> * where
   LAM :: Classical sh -> Classical (Abs sh)
   APP :: Classical left -> Classical right -> Classical (App left right)
   VAR :: Classical sh -> Classical (Var sh)
   HERE :: Classical (Ref '[Up])
+  UP :: Classical (Ref more) -> Classical (Ref (Up ': more))
 
 deriving instance Show (Classical sh)
 
@@ -51,6 +63,9 @@ instance Builder Classical where
   app = APP
   v = VAR
   here = HERE
+  up = UP
+
+{-
   checkClosure (EmptyRoot _) HERE = NoWay
   checkClosure p@(VarDown up _) HERE = Goal p HERE
   checkClosure env@(AppLeft _ _) (APP v@(VAR l) _) = case checkClosure (VarDown env v) v of
@@ -78,7 +93,7 @@ data Proven :: Trace -> Lam -> * where
   -- instance Closed below (VarD env below) => Closed (Var below) env
   ProvenVar :: Closed (Var below) env => Proven (VarD env below) below -> Proven env (Var below)
   Goal :: (Closed (Ref '[Up]) (VarD up sh), Builder l) => Traced (VarD up sh) -> l (Ref '[Up]) -> Proven (VarD up sh) (Ref '[Up])
-
+-}
 
 -- TESTS
 -- ######
