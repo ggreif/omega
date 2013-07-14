@@ -31,10 +31,6 @@ class Builder (shape :: Lam -> *) where
 
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
---instance Closed (Ref more) up => Closed (Ref (Up ': more)) (VarD up sh)
---instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AbsD up sh)
---instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AppL up sh)
---instance Closed (Ref more) up => Closed (Ref (Up ': more)) (AppR up sh)
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
 instance Closed below (VarD env below) => Closed (Var below) env
 instance Closed below (AbsD env below) => Closed (Abs below) env
@@ -44,21 +40,39 @@ data Proven :: Lam -> Trace -> * where
   NoWay :: Proven sh env
   TrivialRef :: Proven (Ref '[]) env
   ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
-  --ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) (AppR env stuff)
   ProvenApp :: (Closed l (AppL env l), Closed r (AppR env r)) =>
                Proven l (AppL env l) -> Proven r (AppR env r) ->
                Proven (App l r) env
+  ProvenVar :: Closed below (VarD env below) =>
+               Proven below (VarD env below) -> Proven (Var below) env
 
+--prove :: Classical sh -> 
 
 proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
 proveRef HERE (VarDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
+proveRef (UP and) (VarDown up _) = case (proveRef and up) of
+                                   NoWay -> NoWay
+                                   p@(ProvenRefUp _) -> ProvenRefUp p
+proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
+                                   NoWay -> NoWay
+                                   p@(ProvenRefUp _) -> ProvenRefUp p
+proveRef (UP and) (AppLeft up _) = case (proveRef and up) of
+                                   NoWay -> NoWay
+                                   p@(ProvenRefUp _) -> ProvenRefUp p
 proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     NoWay -> NoWay
                                     p@(ProvenRefUp _) -> ProvenRefUp p
 
+
+
+proveVar :: Classical (Var sh) -> Traced env -> Proven (Var sh) env
+proveVar v@(VAR h@HERE)  env = ProvenVar $ proveRef h (VarDown env v)
+proveVar v@(VAR u@(UP _))  env = case proveRef u (VarDown env v) of
+                                 NoWay -> NoWay
+                                 p@(ProvenRefUp _) -> ProvenVar p
 
 
 data Classical :: Lam -> * where
