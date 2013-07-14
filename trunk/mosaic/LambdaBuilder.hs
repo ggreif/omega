@@ -1,6 +1,6 @@
 {-# LANGUAGE KindSignatures, DataKinds, TypeOperators, StandaloneDeriving, GADTs,
              MultiParamTypeClasses, FlexibleInstances, FlexibleContexts,
-             UndecidableInstances #-}
+             UndecidableInstances, TypeHoles #-}
 
 -- See: https://code.google.com/p/omega/wiki/LambdaGraph
 
@@ -53,8 +53,13 @@ instance Builder Classical where
   here = HERE
   checkClosure (EmptyRoot _) HERE = NoWay
   checkClosure p@(VarDown up _) HERE = Goal p HERE
-  checkClosure env a@(APP l r) = case (checkClosure (AppLeft env a) a, checkClosure (AppRight env a) a) of
-                                 x -> undefined --(p1@(Goal _ _), p2@(Goal _ _)) -> ProvenApp (AppLeft env l, p1) (AppRight env r, p2)
+  checkClosure env@(AppLeft _ _) (APP v@(VAR l) _) = case checkClosure (VarDown env v) v of
+                                                     p@(ProvenVar _) -> ProvenL undefined --(undefined, undefined)
+                                                     x -> NoWay
+                                 --x -> undefined --(p1@(Goal _ _), p2@(Goal _ _)) -> ProvenApp (AppLeft env l, p1) (AppRight env r, p2)
+  checkClosure env@(EmptyRoot _) a@(APP l r) = case (checkClosure (AppLeft env a) a, checkClosure (AppRight env a) a) of
+                                               --(ProvenL _ _, ProvenR _ _)
+                                               x -> NoWay
 
 -- We need a buildable tree of witnesses
 -- later it will be parametrised in the constraint?
@@ -62,12 +67,16 @@ instance Builder Classical where
 data Proven :: Trace -> Lam -> * where
   NoWay :: Proven env sh
   --LAM :: Classical sh -> Classical (Abs sh)
+  ProvenL :: Closed left (AppL env left) =>
+               (Traced (AppL env sh), Proven env left) ->
+               Proven (AppL env sh) (App left right)
   ProvenApp :: -- (Closed left (AppL env left), Closed right (AppR env right)) =>
                Closed (App left right) env =>
                (Traced (AppL env left), Proven trL left) ->
                (Traced (AppR env right), Proven trR right) ->
                Proven env (App left right)
-  --VAR :: Classical sh -> Classical (Var sh)
+  -- instance Closed below (VarD env below) => Closed (Var below) env
+  ProvenVar :: Closed (Var below) env => Proven (VarD env below) below -> Proven env (Var below)
   Goal :: (Closed (Ref '[Up]) (VarD up sh), Builder l) => Traced (VarD up sh) -> l (Ref '[Up]) -> Proven (VarD up sh) (Ref '[Up])
 
 
