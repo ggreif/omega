@@ -36,6 +36,8 @@ instance Closed below (VarD env below) => Closed (Var below) env
 instance Closed below (AbsD env below) => Closed (Abs below) env
 instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
 
+instance Closed below (VarD env below) => Closed (Var down) (VarD env (Var down))
+
 data Proven :: Lam -> Trace -> * where
   NoWay :: Proven sh env
   TrivialRef :: Proven (Ref '[]) env
@@ -45,6 +47,9 @@ data Proven :: Lam -> Trace -> * where
                Proven (App l r) env
   ProvenVar :: Closed below (VarD env below) =>
                Proven below (VarD env below) -> Proven (Var below) env
+
+  ProvenDown :: Closed (Ref more) up =>
+                Closed (Ref more) up -> Proven below (VarD env below)
 
 --prove :: Classical sh -> 
 
@@ -96,35 +101,6 @@ instance Builder Classical where
   here = HERE
   up = UP
 
-{-
-  checkClosure (EmptyRoot _) HERE = NoWay
-  checkClosure p@(VarDown up _) HERE = Goal p HERE
-  checkClosure env@(AppLeft _ _) (APP v@(VAR l) _) = case checkClosure (VarDown env v) v of
-                                                     p@(ProvenVar _) -> ProvenL undefined --(undefined, undefined)
-                                                     x -> NoWay
-                                 --x -> undefined --(p1@(Goal _ _), p2@(Goal _ _)) -> ProvenApp (AppLeft env l, p1) (AppRight env r, p2)
-  checkClosure env@(EmptyRoot _) a@(APP l r) = case (checkClosure (AppLeft env a) a, checkClosure (AppRight env a) a) of
-                                               --(ProvenL _ _, ProvenR _ _)
-                                               x -> NoWay
-
--- We need a buildable tree of witnesses
--- later it will be parametrised in the constraint?
---
-data Proven :: Trace -> Lam -> * where
-  NoWay :: Proven env sh
-  --LAM :: Classical sh -> Classical (Abs sh)
-  ProvenL :: Closed left (AppL env left) =>
-               (Traced (AppL env sh), Proven env left) ->
-               Proven (AppL env sh) (App left right)
-  ProvenApp :: -- (Closed left (AppL env left), Closed right (AppR env right)) =>
-               Closed (App left right) env =>
-               (Traced (AppL env left), Proven trL left) ->
-               (Traced (AppR env right), Proven trR right) ->
-               Proven env (App left right)
-  -- instance Closed below (VarD env below) => Closed (Var below) env
-  ProvenVar :: Closed (Var below) env => Proven (VarD env below) below -> Proven env (Var below)
-  Goal :: (Closed (Ref '[Up]) (VarD up sh), Builder l) => Traced (VarD up sh) -> l (Ref '[Up]) -> Proven (VarD up sh) (Ref '[Up])
--}
 
 -- TESTS
 -- ######
@@ -134,3 +110,4 @@ t1' = close (EmptyRoot t1) t1
 
 t2 = app t1 t1
 t2' = close (EmptyRoot t2) t2
+
