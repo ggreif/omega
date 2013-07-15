@@ -80,23 +80,20 @@ proveVar v@(VAR u@(UP _)) env = case proveRef u (VarDown env v) of
 proveVar (VAR a@(APP _ _)) env = case proveApp a (AppLeft env a) of -- proveDown!!!
                                  NoWay -> NoWay
                                  p@(ProvenApp _ _) -> undefined -- ProvenVar p
---proveVar v@(VAR w@(VAR _)) env = case proveDown w (VarDown env v) of
---                                 NoWay -> NoWay
---                                 p@(ProvenVar _) -> ProvenVar p
 proveVar v@(VAR a) env = case proveDown a (VarDown env v) of
                          NoWay -> NoWay
                          p@(ProvenAbs _) -> ProvenVar p
                          p@(ProvenVar _) -> ProvenVar p
 
 proveApp :: Classical (App l r) -> Traced env -> Proven (App l r) env
-proveApp app@(APP h@HERE h2@HERE) env = undefined -- case proveRef h (AppL env v)
+proveApp app@(APP h@HERE h2@HERE) env@(AppLeft _ _) = case (proveRef h env) of
+                                                      p@(ProvenRefUp _) -> ProvenApp (ProvenRefUp TrivialRef) undefined
 
 proveAbs :: Classical (Abs sh) -> Traced env -> Proven (Abs sh) env
 proveAbs a@(LAM h@HERE) env = ProvenAbs $ proveRef h (AbsDown env a)
 -- TODO: all cases just like proveVar!
 
 
--- Todo: can we eliminate Traced env from proveDown???
 proveDown :: Classical sh -> Traced env -> Proven sh env
 proveDown v@(VAR _) env@(VarDown _ _) = proveVar v env
 proveDown a@(LAM _) env@(AbsDown _ _) = proveAbs a env
