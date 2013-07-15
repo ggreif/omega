@@ -34,9 +34,9 @@ instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
 instance Closed below (VarD env below) => Closed (Var below) env
 instance Closed below (AbsD env below) => Closed (Abs below) env
+--instance Closed below (AppL env below) => Closed (App below) env
+--instance Closed below (AppR env below) => Closed (App below) env
 instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
-
-instance Closed below (VarD env below) => Closed (Var down) (VarD env (Var down))
 
 data Proven :: Lam -> Trace -> * where
   NoWay :: Proven sh env
@@ -47,9 +47,8 @@ data Proven :: Lam -> Trace -> * where
                Proven (App l r) env
   ProvenVar :: Closed below (VarD env below) =>
                Proven below (VarD env below) -> Proven (Var below) env
-
-  ProvenDown :: Closed (Ref more) up =>
-                Closed (Ref more) up -> Proven below (VarD env below)
+  ProvenAbs :: Closed below (AbsD env below) =>
+               Proven below (AbsD env below) -> Proven (Abs below) env
 
 --prove :: Classical sh -> 
 
@@ -74,16 +73,22 @@ proveRef (UP and) (AppRight up _) = case (proveRef and up) of
 
 
 proveVar :: Classical (Var sh) -> Traced env -> Proven (Var sh) env
-proveVar v@(VAR h@HERE)  env = ProvenVar $ proveRef h (VarDown env v)
-proveVar v@(VAR u@(UP _))  env = case proveRef u (VarDown env v) of
+proveVar v@(VAR h@HERE) env = ProvenVar $ proveRef h (VarDown env v)
+proveVar v@(VAR u@(UP _)) env = case proveRef u (VarDown env v) of
+                                NoWay -> NoWay
+                                p@(ProvenRefUp _) -> ProvenVar p
+proveVar (VAR a@(APP _ _)) env = case proveApp a (AppLeft env a) of -- proveDown!!!
                                  NoWay -> NoWay
-                                 p@(ProvenRefUp _) -> ProvenVar p
-proveVar (VAR a@(APP _ _))  env = case proveApp a (AppLeft env a) of -- proveDown!!!
-                                  NoWay -> NoWay
-                                  p@(ProvenApp _ _) -> undefined -- ProvenVar p
+                                 p@(ProvenApp _ _) -> undefined -- ProvenVar p
+proveVar v@(VAR w@(VAR _)) env = case proveDown w (VarDown env v) of
+                                 NoWay -> NoWay
+                                 p@(ProvenVar _) -> ProvenVar p
 
 proveApp :: Classical (App l r) -> Traced env -> Proven (App l r) env
-proveApp v@(APP h@HERE h2@HERE)  env = undefined -- case proveRef h (AppL env v)
+proveApp app@(APP h@HERE h2@HERE) env = undefined -- case proveRef h (AppL env v)
+
+proveDown :: Classical sh -> Traced env -> Proven sh env
+proveDown v@(VAR h@HERE) env@(VarDown _ _) = proveVar v env
 
 data Classical :: Lam -> * where
   LAM :: Classical sh -> Classical (Abs sh)
