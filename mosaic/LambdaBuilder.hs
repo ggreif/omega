@@ -78,7 +78,8 @@ proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     p@(ProvenRefUp _) -> ProvenRefUp p
 -- TODO: Le, Ri, Down
 
-
+-- Arrived at a Var
+--
 proveVar :: Classical (Var sh) -> Traced env -> Proven (Var sh) env
 proveVar v@(VAR h@HERE) env = ProvenVar $ proveRef h (VarDown env v)
 proveVar v@(VAR u@(UP _)) env = case proveRef u (VarDown env v) of
@@ -92,26 +93,36 @@ proveVar v@(VAR a) env = case proveDown a (VarDown env v) of
                          p@(ProvenAbs _) -> ProvenVar p
                          p@(ProvenVar _) -> ProvenVar p
 
-proveAppL :: Classical (App l r) -> Traced env -> Proven (App l r) env
+-- Just made a left-step into an App
+proveAppL :: Classical (App l r) -> Traced {-AppL-}env -> Proven (App l r) env
 proveAppL a@(APP h@HERE _) env = case proveRef h (AppLeft env a) of
                                  p@(ProvenRefUp _) -> ProvenAppL p --ProvenApp (ProvenRefUp _) undefined
 
+-- TODO: proveAppR
+
 {-
+-- Arrived at an App.
+-- prove both directions
+--
 proveApp :: Classical (App l r) -> Traced env -> Proven (App l r) env
 proveApp app@(APP h@HERE _) env@(AppLeft _ _) = case (proveRef h env) of
                                                 p@(ProvenRefUp _) -> ProvenAppL (ProvenRefUp _) --ProvenApp (ProvenRefUp _) undefined
 -}
 
+-- Arrived at an Abs.
+--
 proveAbs :: Classical (Abs sh) -> Traced env -> Proven (Abs sh) env
 proveAbs a@(LAM h@HERE) env = ProvenAbs $ proveRef h (AbsDown env a)
 -- TODO: all cases just like proveVar!
 
 
+-- We have just made a step (recorded in env) and arrived at some
+-- unknown shape. Analyse first argument.
+--
 proveDown :: Classical sh -> Traced env -> Proven sh env
-proveDown v@(VAR _) env@(VarDown _ _) = proveVar v env
-proveDown a@(LAM _) env@(AbsDown _ _) = proveAbs a env
-proveDown a@(APP l _) env@(AppLeft _ _) = proveAppL a env
---proveDown a@(APP _ r) env@(AppRight _ _) = proveApp a env
+proveDown v@(VAR _) env = proveVar v env
+proveDown a@(LAM _) env = proveAbs a env
+proveDown a@(APP l _) env = proveAppL a env -- FIXME
 
 data Classical :: Lam -> * where
   LAM :: Classical sh -> Classical (Abs sh)
