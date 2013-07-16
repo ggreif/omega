@@ -54,9 +54,6 @@ data Proven :: Lam -> Trace -> * where
 
 --prove :: Classical sh -> 
 
-
--- TODO: we have duplication here: proveRef is called as (VarDown (VarDown _ _) _)
-
 -- prove a Ref by looking at last *step* where we passed by
 --
 proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
