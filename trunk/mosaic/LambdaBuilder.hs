@@ -49,8 +49,14 @@ data Proven :: Lam -> Trace -> * where
                Proven below (VarD env below) -> Proven (Var below) env
   ProvenAbs :: Closed below (AbsD env below) =>
                Proven below (AbsD env below) -> Proven (Abs below) env
+  ProvenAppL:: Closed below (VarD env below) =>
+               Proven below (AppL env below) -> Proven (App below other) env
 
 --prove :: Classical sh -> 
+
+
+-- TODO: we have duplication here: proveRef is called as (VarDown (VarDown _ _) _)
+
 
 proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
 proveRef HERE (VarDown _ _) = ProvenRefUp TrivialRef
@@ -77,7 +83,7 @@ proveVar v@(VAR h@HERE) env = ProvenVar $ proveRef h (VarDown env v)
 proveVar v@(VAR u@(UP _)) env = case proveRef u (VarDown env v) of
                                 NoWay -> NoWay
                                 p@(ProvenRefUp _) -> ProvenVar p
-proveVar (VAR a@(APP _ _)) env = case proveApp a (AppLeft env a) of -- proveDown!!!
+proveVar (VAR a@(APP _ _)) env = case proveDown a (AppLeft env a) of
                                  NoWay -> NoWay
                                  p@(ProvenApp _ _) -> undefined -- ProvenVar p
 proveVar v@(VAR a) env = case proveDown a (VarDown env v) of
@@ -85,9 +91,15 @@ proveVar v@(VAR a) env = case proveDown a (VarDown env v) of
                          p@(ProvenAbs _) -> ProvenVar p
                          p@(ProvenVar _) -> ProvenVar p
 
+proveAppL :: Classical (App l r) -> Traced env -> Proven (App l r) env
+proveAppL a@(APP h@HERE _) env = case proveRef h (AppLeft env a) of
+                                 p@(ProvenRefUp _) -> ProvenAppL p --ProvenApp (ProvenRefUp _) undefined
+
+{-
 proveApp :: Classical (App l r) -> Traced env -> Proven (App l r) env
-proveApp app@(APP h@HERE h2@HERE) env@(AppLeft _ _) = case (proveRef h env) of
-                                                      p@(ProvenRefUp _) -> ProvenApp (ProvenRefUp TrivialRef) undefined
+proveApp app@(APP h@HERE _) env@(AppLeft _ _) = case (proveRef h env) of
+                                                p@(ProvenRefUp _) -> ProvenAppL (ProvenRefUp _) --ProvenApp (ProvenRefUp _) undefined
+-}
 
 proveAbs :: Classical (Abs sh) -> Traced env -> Proven (Abs sh) env
 proveAbs a@(LAM h@HERE) env = ProvenAbs $ proveRef h (AbsDown env a)
@@ -97,8 +109,8 @@ proveAbs a@(LAM h@HERE) env = ProvenAbs $ proveRef h (AbsDown env a)
 proveDown :: Classical sh -> Traced env -> Proven sh env
 proveDown v@(VAR _) env@(VarDown _ _) = proveVar v env
 proveDown a@(LAM _) env@(AbsDown _ _) = proveAbs a env
-proveDown a@(APP l _) env@(AppLeft _ _) = proveApp a env
-proveDown a@(APP _ r) env@(AppRight _ _) = proveApp a env
+proveDown a@(APP l _) env@(AppLeft _ _) = proveAppL a env
+--proveDown a@(APP _ r) env@(AppRight _ _) = proveApp a env
 
 data Classical :: Lam -> * where
   LAM :: Classical sh -> Classical (Abs sh)
