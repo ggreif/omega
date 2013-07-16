@@ -79,6 +79,7 @@ proveRef (UP and) (AppRight up _) = case (proveRef and up) of
 -- TODO: Le, Ri, Down
 
 -- Arrived at a Var
+--     NB: should be proveUnderVar :: Classical sh -> Traced (VarD env sh) -> Proven (Var sh) env
 --
 proveVar :: Classical (Var sh) -> Traced env -> Proven (Var sh) env
 proveVar v@(VAR h@HERE) env = ProvenVar $ proveRef h (VarDown env v)
