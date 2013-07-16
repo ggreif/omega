@@ -57,7 +57,8 @@ data Proven :: Lam -> Trace -> * where
 
 -- TODO: we have duplication here: proveRef is called as (VarDown (VarDown _ _) _)
 
-
+-- prove a Ref by looking at last *step* where we passed by
+--
 proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
 proveRef HERE (VarDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
