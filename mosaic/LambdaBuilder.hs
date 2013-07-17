@@ -78,6 +78,27 @@ proveRef (UP and) (AppRight up _) = case (proveRef and up) of
 -- Arrived at a Var
 --     NB: should be proveUnderVar :: Classical sh -> Traced (VarD env sh) -> Proven (Var sh) env
 --
+
+proveUnderVar :: Classical sh -> Traced (VarD env sh) -> Proven (Var sh) env
+proveUnderVar h@HERE env = ProvenVar $ proveRef h env
+proveUnderVar u@(UP _) env = case proveRef u env of
+                                NoWay -> NoWay
+                                p@(ProvenRefUp _) -> ProvenVar p
+proveUnderVar a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
+                                (NoWay, _) -> NoWay
+                                (_, NoWay) -> NoWay
+                                (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
+                                (p@(ProvenVar _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
+                                (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
+                                (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
+proveUnderVar v@(VAR a) env = case proveDown a (VarDown env v) of
+                              NoWay -> NoWay
+                              p@(ProvenAbs _) -> ProvenVar $ ProvenVar p
+                              p@(ProvenVar _) -> ProvenVar $ ProvenVar p
+
+
+-- Arrived at a Var
+--
 proveVar :: Classical (Var sh) -> Traced env -> Proven (Var sh) env
 proveVar v@(VAR h@HERE) env = ProvenVar $ proveRef h (VarDown env v)
 proveVar v@(VAR u@(UP _)) env = case proveRef u (VarDown env v) of
