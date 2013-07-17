@@ -129,6 +129,7 @@ instance Builder Classical where
   app = APP
   here = HERE
   up = UP
+  checkClosure env sh = proveDown sh env
 
 
 -- TESTS
