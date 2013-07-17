@@ -26,6 +26,7 @@ class Builder (shape :: Lam -> *) where
   here :: shape (Ref '[Up])
   up :: shape (Ref p) -> shape (Ref (Up ': p))
   close :: Closed sh env => Traced env -> shape sh -> shape sh
+  close _ sh = sh
   checkClosure :: Traced env -> shape sh -> Proven sh env
 
 class Closed (sh :: Lam) (env :: Trace)
@@ -47,18 +48,12 @@ data Proven :: Lam -> Trace -> * where
 deriving instance Show (Proven sh env)
 
 
---prove :: Classical sh -> 
-
 -- prove a Ref by looking at last *step* where we passed by
 --
 proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
 proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
-proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
-proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
-                                   NoWay -> NoWay
-                                   p@(ProvenRefUp _) -> ProvenRefUp p
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
@@ -96,7 +91,6 @@ proveApp a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRi
                            (NoWay, _) -> NoWay
                            (_, NoWay) -> NoWay
                            (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenApp p q
-                           (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenApp p q
                            (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenApp p q
                            (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenApp p q
                            (p@(ProvenAbs _), q@(ProvenApp _ _)) -> ProvenApp p q
@@ -129,7 +123,7 @@ instance Builder Classical where
   app = APP
   here = HERE
   up = UP
-  checkClosure env sh = proveDown sh env
+  checkClosure = flip proveDown
 
 
 -- TESTS
