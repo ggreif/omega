@@ -40,6 +40,7 @@ data Proven :: Lam -> Trace -> * where
   NoWay :: Proven sh env
   TrivialRef :: Proven (Ref '[]) env
   ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
+  ProvenRefLeft :: Closed (Ref more) (AppL env stuff) => Proven (Ref more) (AppL env stuff) -> Proven (Ref (Le ': more)) env
   ProvenApp :: (Closed l (AppL env l), Closed r (AppR env r)) =>
                Proven l (AppL env l) -> Proven r (AppR env r) ->
                Proven (App l r) env
@@ -55,6 +56,7 @@ proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
 proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
+proveRef (UP (LEFT STOP)) (AppLeft up _) = ProvenRefUp $ ProvenRefLeft TrivialRef
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
@@ -64,6 +66,7 @@ proveRef (UP and) (AppLeft up _) = case (proveRef and up) of
 proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     NoWay -> NoWay
                                     p@(ProvenRefUp _) -> ProvenRefUp p
+
 proveRef _ _ = NoWay
 
 -- TODO: Le, Ri, Down
@@ -116,6 +119,8 @@ data Classical :: Lam -> * where
   APP :: Classical left -> Classical right -> Classical (App left right)
   HERE :: Classical (Ref '[Up])
   UP :: Classical (Ref more) -> Classical (Ref (Up ': more))
+  LEFT :: Classical (Ref more) -> Classical (Ref (Le ': more))
+  STOP :: Classical (Ref '[])
 
 deriving instance Show (Classical sh)
 
@@ -144,3 +149,8 @@ t3'' = proveDown t3 (EmptyRoot t3)
 t4 = app t1 (lam $ up HERE)
 t4' = close (EmptyRoot t4) t4
 t4'' = proveDown t4 (EmptyRoot t4)
+
+t5 = app t1 (lam $ up $ LEFT $ STOP)
+-- t5' = close (EmptyRoot t5) t5
+t5'' = proveDown t5 (EmptyRoot t5)
+
