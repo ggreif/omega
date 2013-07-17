@@ -36,6 +36,7 @@ instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> La
 
 
 instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (Root (App l r))
+instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
 
 
 instance Closed below (AbsD env below) => Closed (Abs below) env
@@ -160,6 +161,6 @@ t4' = close (EmptyRoot t4) t4
 t4'' = proveDown t4 (EmptyRoot t4)
 
 t5 = app t1 (lam $ up $ LEFT $ STOP)
--- t5' = close (EmptyRoot t5) t5
+t5' = close (EmptyRoot t5) t5
 t5'' = proveDown t5 (EmptyRoot t5)
 
