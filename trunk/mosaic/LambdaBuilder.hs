@@ -38,14 +38,18 @@ instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> La
 --instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
 
 -- YES! (below one)
-instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (AppR (Root (App l r)) r)
+instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (AppR (Root (App l r)) r)
+instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Ri ': more)) (AppR (Root (App l r)) r)
+
+{-
 instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (AppL (Root (App l r)) l)
 instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (AppR (Root (App l r)) r)
 instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (AppL (Root (App l r)) l)
+-}
 
-class CanGo (down :: Go) (from :: Trace)
-instance CanGo Le (Root (App l r))
-instance CanGo Ri (Root (App l r))
+--class CanGo (down :: Go) (from :: Trace)
+--instance CanGo Le (Root (App l r))
+--instance CanGo Ri (Root (App l r))
 
 --instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
 
@@ -141,6 +145,7 @@ data Classical :: Lam -> * where
   HERE :: Classical (Ref '[Up])
   UP :: Classical (Ref more) -> Classical (Ref (Up ': more))
   LEFT :: Classical (Ref more) -> Classical (Ref (Le ': more))
+  RIGHT :: Classical (Ref more) -> Classical (Ref (Ri ': more))
   STOP :: Classical (Ref '[])
 
 deriving instance Show (Classical sh)
@@ -177,3 +182,7 @@ t5' = close (EmptyRoot t5) t5
 t5'b = close (AppRight (EmptyRoot t5) t5) (lam $ up $ LEFT $ STOP)
 t5'' = proveDown t5 (EmptyRoot t5)
 
+t6 = app t1 (lam $ up $ RIGHT $ STOP)
+t6' = close (EmptyRoot t6) t6
+t6'b = close (AppRight (EmptyRoot t6) t6) (lam $ up $ RIGHT $ STOP)
+t6'' = proveDown t6 (EmptyRoot t6)
