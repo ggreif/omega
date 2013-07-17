@@ -97,21 +97,6 @@ proveUnderVar v@(VAR a) env = case proveDown a (VarDown env v) of
                               p@(ProvenVar _) -> ProvenVar $ ProvenVar p
 
 
--- Arrived at a Var
---
-proveVar :: Classical (Var sh) -> Traced env -> Proven (Var sh) env
-proveVar v@(VAR h@HERE) env = ProvenVar $ proveRef h (VarDown env v)
-proveVar v@(VAR u@(UP _)) env = case proveRef u (VarDown env v) of
-                                NoWay -> NoWay
-                                p@(ProvenRefUp _) -> ProvenVar p
-proveVar (VAR a@(APP _ _)) env = case proveDown a (AppLeft env a) of
-                                 NoWay -> NoWay
-                                 p@(ProvenApp _ _) -> undefined -- ProvenVar p
-proveVar v@(VAR a) env = case proveDown a (VarDown env v) of
-                         NoWay -> NoWay
-                         p@(ProvenAbs _) -> ProvenVar p
-                         p@(ProvenVar _) -> ProvenVar p
-
 -- Just made a left-step into an App
 proveAppL :: Classical (App l r) -> Traced {-AppL-}env -> Proven (App l r) env
 proveAppL a@(APP h@HERE _) env = case proveRef h (AppLeft env a) of
@@ -139,7 +124,7 @@ proveAbs a@(LAM h@HERE) env = ProvenAbs $ proveRef h (AbsDown env a)
 -- unknown shape. Analyse first argument.
 --
 proveDown :: Classical sh -> Traced env -> Proven sh env
-proveDown v@(VAR _) env = proveVar v env
+proveDown v@(VAR down) env = proveUnderVar down (VarDown env v)
 proveDown a@(LAM _) env = proveAbs a env
 proveDown a@(APP l _) env = proveAppL a env -- FIXME
 
