@@ -52,6 +52,9 @@ data Proven :: Lam -> Trace -> * where
   ProvenAppL:: Closed below (VarD env below) =>
                Proven below (AppL env below) -> Proven (App below other) env
 
+deriving instance Show (Proven sh env)
+
+
 --prove :: Classical sh -> 
 
 -- prove a Ref by looking at last *step* where we passed by
@@ -75,10 +78,8 @@ proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     p@(ProvenRefUp _) -> ProvenRefUp p
 -- TODO: Le, Ri, Down
 
--- Arrived at a Var
---     NB: should be proveUnderVar :: Classical sh -> Traced (VarD env sh) -> Proven (Var sh) env
+-- arrived under a Var
 --
-
 proveUnderVar :: Classical sh -> Traced (VarD env sh) -> Proven (Var sh) env
 proveUnderVar h@HERE env = ProvenVar $ proveRef h env
 proveUnderVar u@(UP _) env = case proveRef u env of
@@ -87,14 +88,6 @@ proveUnderVar u@(UP _) env = case proveRef u env of
 proveUnderVar a@(APP l r) env = case proveApp a env of
                                 NoWay -> NoWay
                                 p@(ProvenApp _ _) -> ProvenVar p
-
-{- case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
-                                (NoWay, _) -> NoWay
-                                (_, NoWay) -> NoWay
-                                (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
-                                (p@(ProvenVar _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
-                                (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
-                                (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)-}
 proveUnderVar v@(VAR a) env = case proveDown a (VarDown env v) of
                               NoWay -> NoWay
                               p@(ProvenAbs _) -> ProvenVar $ ProvenVar p
@@ -113,24 +106,24 @@ proveAppL a@(APP h@HERE _) env = case proveRef h (AppLeft env a) of
 --
 proveApp :: Classical (App l r) -> Traced env -> Proven (App l r) env
 proveApp a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
-                                (NoWay, _) -> NoWay
-                                (_, NoWay) -> NoWay
-                                (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenApp p q
-                                (p@(ProvenVar _), q@(ProvenAbs _)) -> ProvenApp p q
-                                (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenApp p q
-                                (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenApp p q
-                                (p@(ProvenAbs _), q@(ProvenVar _)) -> ProvenApp p q
-                                (p@(ProvenVar _), q@(ProvenVar _)) -> ProvenApp p q
-                                (p@(ProvenApp _ _), q@(ProvenVar _)) -> ProvenApp p q
-                                (p@(ProvenRefUp _), q@(ProvenVar _)) -> ProvenApp p q
-                                (p@(ProvenAbs _), q@(ProvenApp _ _)) -> ProvenApp p q
-                                (p@(ProvenVar _), q@(ProvenApp _ _)) -> ProvenApp p q
-                                (p@(ProvenApp _ _), q@(ProvenApp _ _)) -> ProvenApp p q
-                                (p@(ProvenRefUp _), q@(ProvenApp _ _)) -> ProvenApp p q
-                                (p@(ProvenAbs _), q@(ProvenRefUp _)) -> ProvenApp p q
-                                (p@(ProvenVar _), q@(ProvenRefUp _)) -> ProvenApp p q
-                                (p@(ProvenApp _ _), q@(ProvenRefUp _)) -> ProvenApp p q
-                                (p@(ProvenRefUp _), q@(ProvenRefUp _)) -> ProvenApp p q
+                           (NoWay, _) -> NoWay
+                           (_, NoWay) -> NoWay
+                           (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenApp p q
+                           (p@(ProvenVar _), q@(ProvenAbs _)) -> ProvenApp p q
+                           (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenApp p q
+                           (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenApp p q
+                           (p@(ProvenAbs _), q@(ProvenVar _)) -> ProvenApp p q
+                           (p@(ProvenVar _), q@(ProvenVar _)) -> ProvenApp p q
+                           (p@(ProvenApp _ _), q@(ProvenVar _)) -> ProvenApp p q
+                           (p@(ProvenRefUp _), q@(ProvenVar _)) -> ProvenApp p q
+                           (p@(ProvenAbs _), q@(ProvenApp _ _)) -> ProvenApp p q
+                           (p@(ProvenVar _), q@(ProvenApp _ _)) -> ProvenApp p q
+                           (p@(ProvenApp _ _), q@(ProvenApp _ _)) -> ProvenApp p q
+                           (p@(ProvenRefUp _), q@(ProvenApp _ _)) -> ProvenApp p q
+                           (p@(ProvenAbs _), q@(ProvenRefUp _)) -> ProvenApp p q
+                           (p@(ProvenVar _), q@(ProvenRefUp _)) -> ProvenApp p q
+                           (p@(ProvenApp _ _), q@(ProvenRefUp _)) -> ProvenApp p q
+                           (p@(ProvenRefUp _), q@(ProvenRefUp _)) -> ProvenApp p q
 
 
 -- Arrived at an Abs.
@@ -144,9 +137,11 @@ proveAbs a@(LAM h@HERE) env = ProvenAbs $ proveRef h (AbsDown env a)
 -- unknown shape. Analyse first argument.
 --
 proveDown :: Classical sh -> Traced env -> Proven sh env
+proveDown h@HERE env = proveRef h env
+proveDown u@(UP and) env = proveRef u env
 proveDown v@(VAR down) env = proveUnderVar down (VarDown env v)
 proveDown a@(LAM _) env = proveAbs a env
-proveDown a@(APP l _) env = proveAppL a env -- FIXME
+proveDown a@(APP _ _) env = proveApp a env
 
 data Classical :: Lam -> * where
   LAM :: Classical sh -> Classical (Abs sh)
@@ -174,3 +169,4 @@ t1' = close (EmptyRoot t1) t1
 t2 = app t1 t1
 t2' = close (EmptyRoot t2) t2
 
+t2'' = proveDown t2 (EmptyRoot t2)
