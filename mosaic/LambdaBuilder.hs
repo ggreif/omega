@@ -33,6 +33,25 @@ class Builder (shape :: Lam -> *) where
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
+
+
+
+
+--instance Closed (Ref more) (AppL env stuff) => Closed (Ref (Le ': more)) env
+
+
+instance Closed (Ref more) (AppL (Root (App l r)) (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
+
+
+
+--instance Closed (Ref more) (AppL env stuff) => Closed (Ref (Up ': Le ': more)) (AppL env stuff)
+
+
+
+
+
+
+
 instance Closed below (AbsD env below) => Closed (Abs below) env
 instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
 
@@ -56,7 +75,7 @@ proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
 proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
-proveRef (UP (LEFT STOP)) (AppLeft up _) = ProvenRefUp $ ProvenRefLeft TrivialRef
+proveRef (LEFT STOP) (EmptyRoot _) = ProvenRefLeft TrivialRef
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
