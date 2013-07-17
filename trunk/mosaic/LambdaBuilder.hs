@@ -14,7 +14,7 @@ data {-kind-} Trace = Root Lam | AppL Trace Lam | AppR Trace Lam | AbsD Trace La
 -- a zipper for lambda trees
 --
 data Traced :: Trace -> * where
-  EmptyRoot :: Builder l => l sh -> Traced (Root sh)
+  EmptyRoot :: (l ~ Classical, Builder l) => l sh -> Traced (Root sh)
   AppLeft :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppL tr shl)
   AppRight :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppR tr shr)
   AbsDown :: Builder l => Traced tr -> l (Abs sh) -> Traced (AbsD tr sh)
@@ -35,21 +35,7 @@ instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
 
 
-
-
---instance Closed (Ref more) (AppL env stuff) => Closed (Ref (Le ': more)) env
-
-
-instance Closed (Ref more) (AppL (Root (App l r)) (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
-
-
-
---instance Closed (Ref more) (AppL env stuff) => Closed (Ref (Up ': Le ': more)) (AppL env stuff)
-
-
-
-
-
+instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (Root (App l r))
 
 
 instance Closed below (AbsD env below) => Closed (Abs below) env
@@ -75,7 +61,11 @@ proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
 proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
-proveRef (LEFT STOP) (EmptyRoot _) = ProvenRefLeft TrivialRef
+proveRef STOP _ = TrivialRef
+proveRef (LEFT more) o@(EmptyRoot a@(APP _ _)) = case proveRef more (AppLeft o a) of
+                                                 NoWay -> NoWay
+                                                 p@TrivialRef -> ProvenRefLeft p
+                                                 --p@(ProvenRefLeft _) -> ProvenRefLeft p
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
