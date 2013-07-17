@@ -14,7 +14,7 @@ data {-kind-} Trace = Root Lam | AppL Trace Lam | AppR Trace Lam | AbsD Trace La
 -- a zipper for lambda trees
 --
 data Traced :: Trace -> * where
-  EmptyRoot :: (l ~ Classical, Builder l) => l sh -> Traced (Root sh)
+  EmptyRoot :: (l ~ Classical, Builder l) => l sh -> Traced (Root sh) -- HACK
   AppLeft :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppL tr shl)
   AppRight :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppR tr shr)
   AbsDown :: Builder l => Traced tr -> l (Abs sh) -> Traced (AbsD tr sh)
@@ -34,23 +34,18 @@ class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
 
--- ##########
---class AppRoach (l :: Lam) (r :: Lam) (down :: Trace -> Lam -> Trace) (t :: Lam)
---instance AppRoach l r AppL l
---instance AppRoach l r AppR r
-
---instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (Root (App l r))
-
-
---instance (AppRoach l r step t, Closed (Ref more) (step (Root (App l r)) t)) => Closed (Ref (Le ': more)) (Root (App l r))
 -- NEEDED?
-instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
+--instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
 
 -- YES! (below one)
 instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (AppR (Root (App l r)) r)
+instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (AppL (Root (App l r)) l)
+instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (AppR (Root (App l r)) r)
+instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (AppL (Root (App l r)) l)
 
 class CanGo (down :: Go) (from :: Trace)
 instance CanGo Le (Root (App l r))
+instance CanGo Ri (Root (App l r))
 
 --instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
 
