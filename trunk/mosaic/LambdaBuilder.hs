@@ -38,15 +38,14 @@ type family Shape (env :: Trace) :: Lam
 type instance Shape (Root sh) = sh
 type instance Shape ((down :: Trace -> Lam -> Trace) up sh) = sh
 
-instance CanGo Le (Shape env) => Closed (Ref (Le ': more)) env --(Root (App l r))
-instance CanGo Ri (Shape env) => Closed (Ref (Ri ': more)) env -- (Root (App l r))
+instance CanGo (Le ': more) (Shape env) => Closed (Ref (Le ': more)) env
+instance CanGo (Ri ': more) (Shape env) => Closed (Ref (Ri ': more)) env
 
-class CanGo (down :: Go) (from :: Lam)
-instance CanGo Le (App l r)
-instance CanGo Ri (App l r)
-instance CanGo Down (Abs down)
-
---instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
+class CanGo (down :: [Go]) (from :: Lam)
+instance CanGo '[] sh
+instance CanGo more l => CanGo (Le ': more) (App l r)
+instance CanGo more r => CanGo (Ri ': more) (App l r)
+instance CanGo more d => CanGo (Down ': more) (Abs d)
 
 
 instance Closed below (AbsD env below) => Closed (Abs below) env
