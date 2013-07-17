@@ -3,7 +3,8 @@
              UndecidableInstances, TypeHoles #-}
 
 -- See: https://code.google.com/p/omega/wiki/LambdaGraph
--- TODO: model" let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
+-- TODO: model "let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
+-- TODO: use Maybe instead of NoWay
 
 data {-kind-} Lam = App Lam Lam | Abs Lam | Ref [Go]
 data {-kind-} Go = Up | Le | Ri | Down
