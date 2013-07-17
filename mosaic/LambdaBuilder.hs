@@ -84,13 +84,17 @@ proveUnderVar h@HERE env = ProvenVar $ proveRef h env
 proveUnderVar u@(UP _) env = case proveRef u env of
                                 NoWay -> NoWay
                                 p@(ProvenRefUp _) -> ProvenVar p
-proveUnderVar a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
+proveUnderVar a@(APP l r) env = case proveApp a env of
+                                NoWay -> NoWay
+                                p@(ProvenApp _ _) -> ProvenVar p
+
+{- case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
                                 (NoWay, _) -> NoWay
                                 (_, NoWay) -> NoWay
                                 (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
                                 (p@(ProvenVar _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
                                 (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
-                                (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)
+                                (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenVar (ProvenApp p q)-}
 proveUnderVar v@(VAR a) env = case proveDown a (VarDown env v) of
                               NoWay -> NoWay
                               p@(ProvenAbs _) -> ProvenVar $ ProvenVar p
@@ -100,18 +104,34 @@ proveUnderVar v@(VAR a) env = case proveDown a (VarDown env v) of
 -- Just made a left-step into an App
 proveAppL :: Classical (App l r) -> Traced {-AppL-}env -> Proven (App l r) env
 proveAppL a@(APP h@HERE _) env = case proveRef h (AppLeft env a) of
-                                 p@(ProvenRefUp _) -> ProvenAppL p --ProvenApp (ProvenRefUp _) undefined
+                                 p@(ProvenRefUp _) -> ProvenAppL p
 
 -- TODO: proveAppR
 
-{-
 -- Arrived at an App.
 -- prove both directions
 --
 proveApp :: Classical (App l r) -> Traced env -> Proven (App l r) env
-proveApp app@(APP h@HERE _) env@(AppLeft _ _) = case (proveRef h env) of
-                                                p@(ProvenRefUp _) -> ProvenAppL (ProvenRefUp _) --ProvenApp (ProvenRefUp _) undefined
--}
+proveApp a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
+                                (NoWay, _) -> NoWay
+                                (_, NoWay) -> NoWay
+                                (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenApp p q
+                                (p@(ProvenVar _), q@(ProvenAbs _)) -> ProvenApp p q
+                                (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenApp p q
+                                (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenApp p q
+                                (p@(ProvenAbs _), q@(ProvenVar _)) -> ProvenApp p q
+                                (p@(ProvenVar _), q@(ProvenVar _)) -> ProvenApp p q
+                                (p@(ProvenApp _ _), q@(ProvenVar _)) -> ProvenApp p q
+                                (p@(ProvenRefUp _), q@(ProvenVar _)) -> ProvenApp p q
+                                (p@(ProvenAbs _), q@(ProvenApp _ _)) -> ProvenApp p q
+                                (p@(ProvenVar _), q@(ProvenApp _ _)) -> ProvenApp p q
+                                (p@(ProvenApp _ _), q@(ProvenApp _ _)) -> ProvenApp p q
+                                (p@(ProvenRefUp _), q@(ProvenApp _ _)) -> ProvenApp p q
+                                (p@(ProvenAbs _), q@(ProvenRefUp _)) -> ProvenApp p q
+                                (p@(ProvenVar _), q@(ProvenRefUp _)) -> ProvenApp p q
+                                (p@(ProvenApp _ _), q@(ProvenRefUp _)) -> ProvenApp p q
+                                (p@(ProvenRefUp _), q@(ProvenRefUp _)) -> ProvenApp p q
+
 
 -- Arrived at an Abs.
 --
