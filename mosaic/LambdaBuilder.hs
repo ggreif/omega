@@ -40,6 +40,8 @@ instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> La
 -- YES! (below one)
 instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (AppR (Root (App l r)) r)
 instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Ri ': more)) (AppR (Root (App l r)) r)
+instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': more)) (AppR (Root (Abs sh)) sh)
+--instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': more)) (AppR ((down :: Trace -> Lam -> Trace) (Abs sh)) sh)
 
 {-
 instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (AppL (Root (App l r)) l)
@@ -146,6 +148,7 @@ data Classical :: Lam -> * where
   UP :: Classical (Ref more) -> Classical (Ref (Up ': more))
   LEFT :: Classical (Ref more) -> Classical (Ref (Le ': more))
   RIGHT :: Classical (Ref more) -> Classical (Ref (Ri ': more))
+  DOWN :: Classical (Ref more) -> Classical (Ref (Down ': more))
   STOP :: Classical (Ref '[])
 
 deriving instance Show (Classical sh)
@@ -186,3 +189,11 @@ t6 = app t1 (lam $ up $ RIGHT $ STOP)
 t6' = close (EmptyRoot t6) t6
 t6'b = close (AppRight (EmptyRoot t6) t6) (lam $ up $ RIGHT $ STOP)
 t6'' = proveDown t6 (EmptyRoot t6)
+
+t7a = lam $ lam HERE
+t7b = lam $ up $ LEFT $ DOWN $ STOP
+t7 = app t7a t7b
+t7' = close (EmptyRoot t7) t7
+t7'b = close (AppRight (EmptyRoot t7) t7) t7b
+t7'' = proveDown t7 (EmptyRoot t7)
+
