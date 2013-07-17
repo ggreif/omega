@@ -36,22 +36,21 @@ instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> La
 
 -- NEEDED?
 --instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
-
+{-
 -- YES! (below one)
 instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (AppR (Root (App l r)) r)
 instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Ri ': more)) (AppR (Root (App l r)) r)
 instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': more)) (AppR (Root (Abs sh)) sh)
 --instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': more)) (AppR ((down :: Trace -> Lam -> Trace) (Abs sh)) sh)
-
-{-
-instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (AppL (Root (App l r)) l)
-instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (AppR (Root (App l r)) r)
-instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (AppL (Root (App l r)) l)
 -}
 
---class CanGo (down :: Go) (from :: Trace)
---instance CanGo Le (Root (App l r))
---instance CanGo Ri (Root (App l r))
+
+instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
+instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (Root (App l r))
+
+class CanGo (down :: Go) (from :: Trace)
+instance CanGo Le (Root (App l r))
+instance CanGo Ri (Root (App l r))
 
 --instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
 
@@ -180,20 +179,21 @@ t4' = close (EmptyRoot t4) t4
 t4a' = close (AppRight (EmptyRoot t4) t4) t4
 t4'' = proveDown t4 (EmptyRoot t4)
 
-t5 = app t1 (lam $ up $ LEFT $ STOP)
+t5 = app t1 (lam $ up $ up $ LEFT $ STOP)
 t5' = close (EmptyRoot t5) t5
-t5'b = close (AppRight (EmptyRoot t5) t5) (lam $ up $ LEFT $ STOP)
+t5'b = close (AppRight (EmptyRoot t5) t5) (lam $ up $ up $ LEFT $ STOP)
 t5'' = proveDown t5 (EmptyRoot t5)
 
-t6 = app t1 (lam $ up $ RIGHT $ STOP)
+t6 = app t1 (lam $ up $ up $ RIGHT $ STOP)
 t6' = close (EmptyRoot t6) t6
-t6'b = close (AppRight (EmptyRoot t6) t6) (lam $ up $ RIGHT $ STOP)
+t6'b = close (AppRight (EmptyRoot t6) t6) (lam $ up $ up $ RIGHT $ STOP)
 t6'' = proveDown t6 (EmptyRoot t6)
 
+{-
 t7a = lam $ lam HERE
 t7b = lam $ up $ LEFT $ DOWN $ STOP
 t7 = app t7a t7b
 t7' = close (EmptyRoot t7) t7
 t7'b = close (AppRight (EmptyRoot t7) t7) t7b
 t7'' = proveDown t7 (EmptyRoot t7)
-
+-}
