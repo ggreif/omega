@@ -13,22 +13,22 @@ data {-kind-} Trace = Root Lam | AppL Trace Lam | AppR Trace Lam | AbsD Trace La
 
 -- a zipper for lambda trees
 --
-data Traced :: Trace -> * where
-  EmptyRoot :: (l ~ Classical, Builder l) => l sh -> Traced (Root sh) -- HACK
-  AppLeft :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppL tr shl)
-  AppRight :: Builder l => Traced tr -> l (App shl shr) -> Traced (AppR tr shr)
-  AbsDown :: Builder l => Traced tr -> l (Abs sh) -> Traced (AbsD tr sh)
+data Traced :: (Lam -> *) -> Trace -> * where
+  EmptyRoot :: Builder l => l sh -> Traced l (Root sh)
+  AppLeft :: Builder l => Traced l tr -> l (App shl shr) -> Traced l (AppL tr shl)
+  AppRight :: Builder l => Traced l tr -> l (App shl shr) -> Traced l (AppR tr shr)
+  AbsDown :: Builder l => Traced l tr -> l (Abs sh) -> Traced l (AbsD tr sh)
 
---deriving instance Show (Traced tr)
+deriving instance Show (Traced Classical tr)
 
 class Builder (shape :: Lam -> *) where
   lam :: shape inner -> shape (Abs inner)
   app :: shape left -> shape right -> shape (App left right)
   here :: shape (Ref '[Up])
   up :: shape (Ref p) -> shape (Ref (Up ': p))
-  close :: Closed sh env => Traced env -> shape sh -> shape sh
+  close :: Closed sh env => Traced shape env -> shape sh -> shape sh
   close _ sh = sh
-  checkClosure :: Traced env -> shape sh -> Proven sh env
+  checkClosure :: Traced shape env -> shape sh -> Proven sh env
 
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
@@ -66,16 +66,16 @@ data Proven :: Lam -> Trace -> * where
 
 deriving instance Show (Proven sh env)
 
-getShape :: Traced env -> Classical (Shape env)
+getShape :: Traced Classical env -> Classical (Shape env)
 getShape (EmptyRoot a@(APP _ _)) = a
---getShape (AppLeft _ a) = a
---getShape (AppRight _ a) = a
---getShape (AbsDown _ a) = a
+getShape (AppLeft _ (APP l _)) = l
+getShape (AppRight _ (APP _ r)) = r
+getShape (AbsDown _ (LAM d)) = d
 
 
 -- prove a Ref by looking at last *step* where we passed by
 --
-proveRef :: Classical (Ref more) -> Traced env -> Proven (Ref more) env
+proveRef :: Classical (Ref more) -> Traced Classical env -> Proven (Ref more) env
 proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
@@ -92,6 +92,12 @@ proveRef (RIGHT more) env | a@(APP _ _) <- getShape env = case proveRef more (Ap
                                                  p@(ProvenRefLeft _) -> ProvenRefRight p
                                                  p@(ProvenRefRight _) -> ProvenRefRight p
                                                  p@(ProvenRefDown _) -> ProvenRefRight p
+proveRef (DOWN more) env | a@(LAM _) <- getShape env = case proveRef more (AbsDown env a) of
+                                                 NoWay -> NoWay
+                                                 p@TrivialRef -> ProvenRefDown p
+                                                 p@(ProvenRefLeft _) -> ProvenRefDown p
+                                                 p@(ProvenRefRight _) -> ProvenRefDown p
+                                                 p@(ProvenRefDown _) -> ProvenRefDown p
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
@@ -101,14 +107,14 @@ proveRef (UP and) (AppLeft up _) = case (proveRef and up) of
 proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     NoWay -> NoWay
                                     p@(ProvenRefUp _) -> ProvenRefUp p
+                                    --p@(ProvenRefLeft _) -> p
+                                    p -> error $ show p
 
 proveRef _ _ = NoWay
 
--- TODO: Le, Ri, Down
-
 -- arrived under an Abs
 --
-proveUnderAbs :: Classical sh -> Traced (AbsD env sh) -> Proven (Abs sh) env
+proveUnderAbs :: Classical sh -> Traced Classical (AbsD env sh) -> Proven (Abs sh) env
 proveUnderAbs h@HERE env = ProvenAbs $ proveRef h env
 proveUnderAbs u@(UP _) env = case proveRef u env of
                                 NoWay -> NoWay
@@ -120,12 +126,14 @@ proveUnderAbs v@(LAM a) env = case proveDown a (AbsDown env v) of
                               NoWay -> NoWay
                               p@(ProvenAbs _) -> ProvenAbs $ ProvenAbs p
                               p@(ProvenApp _ _) -> ProvenAbs $ ProvenAbs p
+                              p@(ProvenRefUp _) -> ProvenAbs $ ProvenAbs p
+                              --p -> error $ show p
 
 
 -- Arrived at an App.
 -- prove both directions
 --
-proveApp :: Classical (App l r) -> Traced env -> Proven (App l r) env
+proveApp :: Classical (App l r) -> Traced Classical env -> Proven (App l r) env
 proveApp a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
                            (NoWay, _) -> NoWay
                            (_, NoWay) -> NoWay
@@ -143,7 +151,7 @@ proveApp a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRi
 -- We have just made a step (recorded in env) and arrived at some
 -- unknown shape. Analyse first argument.
 --
-proveDown :: Classical sh -> Traced env -> Proven sh env
+proveDown :: Classical sh -> Traced Classical env -> Proven sh env
 proveDown h@HERE env = proveRef h env
 proveDown u@(UP and) env = proveRef u env
 proveDown v@(LAM down) env = proveUnderAbs down (AbsDown env v)
