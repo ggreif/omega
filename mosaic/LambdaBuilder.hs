@@ -1,6 +1,6 @@
 {-# LANGUAGE KindSignatures, DataKinds, TypeOperators, StandaloneDeriving, GADTs,
              MultiParamTypeClasses, FlexibleInstances, FlexibleContexts,
-             UndecidableInstances, TypeHoles #-}
+             UndecidableInstances, TypeHoles, TypeFamilies #-}
 
 -- See: https://code.google.com/p/omega/wiki/LambdaGraph
 -- TODO: model "let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
@@ -44,13 +44,15 @@ instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': mor
 --instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': more)) (AppR ((down :: Trace -> Lam -> Trace) (Abs sh)) sh)
 -}
 
+type family Shape (env :: Trace) :: Lam
+type instance Shape (Root sh) = sh
 
-instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
-instance CanGo Ri (Root (App l r)) => Closed (Ref (Ri ': more)) (Root (App l r))
+instance CanGo Le (Shape env) => Closed (Ref (Le ': more)) env --(Root (App l r))
+instance CanGo Ri (Shape env) => Closed (Ref (Ri ': more)) env -- (Root (App l r))
 
-class CanGo (down :: Go) (from :: Trace)
-instance CanGo Le (Root (App l r))
-instance CanGo Ri (Root (App l r))
+class CanGo (down :: Go) (from :: Lam)
+instance CanGo Le (App l r)
+instance CanGo Ri (App l r)
 
 --instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
 
