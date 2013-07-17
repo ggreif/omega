@@ -34,18 +34,9 @@ class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
 
--- NEEDED?
---instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
-{-
--- YES! (below one)
-instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (AppR (Root (App l r)) r)
-instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Ri ': more)) (AppR (Root (App l r)) r)
-instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': more)) (AppR (Root (Abs sh)) sh)
---instance Closed (Ref more) (AbsD (Root (Abs sh)) sh) => Closed (Ref (Down ': more)) (AppR ((down :: Trace -> Lam -> Trace) (Abs sh)) sh)
--}
-
 type family Shape (env :: Trace) :: Lam
 type instance Shape (Root sh) = sh
+type instance Shape ((down :: Trace -> Lam -> Trace) up sh) = sh
 
 instance CanGo Le (Shape env) => Closed (Ref (Le ': more)) env --(Root (App l r))
 instance CanGo Ri (Shape env) => Closed (Ref (Ri ': more)) env -- (Root (App l r))
@@ -53,6 +44,7 @@ instance CanGo Ri (Shape env) => Closed (Ref (Ri ': more)) env -- (Root (App l r
 class CanGo (down :: Go) (from :: Lam)
 instance CanGo Le (App l r)
 instance CanGo Ri (App l r)
+instance CanGo Down (Abs down)
 
 --instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
 
@@ -191,11 +183,11 @@ t6' = close (EmptyRoot t6) t6
 t6'b = close (AppRight (EmptyRoot t6) t6) (lam $ up $ up $ RIGHT $ STOP)
 t6'' = proveDown t6 (EmptyRoot t6)
 
-{-
+
 t7a = lam $ lam HERE
-t7b = lam $ up $ LEFT $ DOWN $ STOP
+t7b = lam $ up $ up $ LEFT $ DOWN $ STOP
 t7 = app t7a t7b
 t7' = close (EmptyRoot t7) t7
 t7'b = close (AppRight (EmptyRoot t7) t7) t7b
 t7'' = proveDown t7 (EmptyRoot t7)
--}
+
