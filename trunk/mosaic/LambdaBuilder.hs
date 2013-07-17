@@ -3,6 +3,8 @@
              UndecidableInstances, TypeHoles #-}
 
 -- See: https://code.google.com/p/omega/wiki/LambdaGraph
+-- TODO: model" let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
+-- TODO: VAR is redundant!
 
 data {-kind-} Lam = Var Lam | App Lam Lam | Abs Lam | Ref [Go]
 data {-kind-} Go = Up | Le | Ri | Down
@@ -34,8 +36,6 @@ instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
 instance Closed below (VarD env below) => Closed (Var below) env
 instance Closed below (AbsD env below) => Closed (Abs below) env
---instance Closed below (AppL env below) => Closed (App below) env
---instance Closed below (AppR env below) => Closed (App below) env
 instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
 
 data Proven :: Lam -> Trace -> * where
@@ -49,8 +49,6 @@ data Proven :: Lam -> Trace -> * where
                Proven below (VarD env below) -> Proven (Var below) env
   ProvenAbs :: Closed below (AbsD env below) =>
                Proven below (AbsD env below) -> Proven (Abs below) env
-  ProvenAppL:: Closed below (VarD env below) =>
-               Proven below (AppL env below) -> Proven (App below other) env
 
 deriving instance Show (Proven sh env)
 
@@ -76,6 +74,8 @@ proveRef (UP and) (AppLeft up _) = case (proveRef and up) of
 proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     NoWay -> NoWay
                                     p@(ProvenRefUp _) -> ProvenRefUp p
+proveRef _ _ = NoWay
+
 -- TODO: Le, Ri, Down
 
 -- arrived under a Var
@@ -93,13 +93,6 @@ proveUnderVar v@(VAR a) env = case proveDown a (VarDown env v) of
                               p@(ProvenAbs _) -> ProvenVar $ ProvenVar p
                               p@(ProvenVar _) -> ProvenVar $ ProvenVar p
 
-
--- Just made a left-step into an App
-proveAppL :: Classical (App l r) -> Traced {-AppL-}env -> Proven (App l r) env
-proveAppL a@(APP h@HERE _) env = case proveRef h (AppLeft env a) of
-                                 p@(ProvenRefUp _) -> ProvenAppL p
-
--- TODO: proveAppR
 
 -- Arrived at an App.
 -- prove both directions
@@ -168,5 +161,12 @@ t1' = close (EmptyRoot t1) t1
 
 t2 = app t1 t1
 t2' = close (EmptyRoot t2) t2
-
 t2'' = proveDown t2 (EmptyRoot t2)
+
+t3 = app t1 (v $ up $ up HERE)
+-- t3' = close (EmptyRoot t3) t3
+t3'' = proveDown t3 (EmptyRoot t3)
+
+t4 = app t1 (v $ up HERE)
+t4' = close (EmptyRoot t4) t4
+t4'' = proveDown t4 (EmptyRoot t4)
