@@ -40,6 +40,7 @@ type instance Shape ((down :: Trace -> Lam -> Trace) up sh) = sh
 
 instance CanGo (Le ': more) (Shape env) => Closed (Ref (Le ': more)) env
 instance CanGo (Ri ': more) (Shape env) => Closed (Ref (Ri ': more)) env
+instance CanGo (Down ': more) (Shape env) => Closed (Ref (Down ': more)) env
 
 class CanGo (down :: [Go]) (from :: Lam)
 instance CanGo '[] sh
@@ -55,9 +56,9 @@ data Proven :: Lam -> Trace -> * where
   NoWay :: Proven sh env
   TrivialRef :: Proven (Ref '[]) env
   ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
-  ProvenRefLeft :: Proven (Ref more) (AppL env stuff) -> Proven (Ref (Le ': more)) env
-  ProvenRefRight :: Proven (Ref more) (AppR env stuff) -> Proven (Ref (Ri ': more)) env
-  ProvenRefDown :: Proven (Ref more) (AbsD env stuff) -> Proven (Ref (Down ': more)) env
+  ProvenRefLeft :: CanGo more (Shape env) => Proven (Ref more) (AppL env stuff) -> Proven (Ref (Le ': more)) env
+  ProvenRefRight :: CanGo more (Shape env) => Proven (Ref more) (AppR env stuff) -> Proven (Ref (Ri ': more)) env
+  ProvenRefDown :: CanGo more (Shape env) => Proven (Ref more) (AbsD env stuff) -> Proven (Ref (Down ': more)) env
   ProvenApp :: (Closed l (AppL env l), Closed r (AppR env r)) =>
                Proven l (AppL env l) -> Proven r (AppR env r) ->
                Proven (App l r) env
@@ -68,9 +69,21 @@ deriving instance Show (Proven sh env)
 
 getShape :: Traced Classical env -> Classical (Shape env)
 getShape (EmptyRoot a@(APP _ _)) = a
+getShape (EmptyRoot a@(LAM _)) = a
 getShape (AppLeft _ (APP l _)) = l
 getShape (AppRight _ (APP _ r)) = r
 getShape (AbsDown _ (LAM d)) = d
+
+
+type family AppShape (env :: Trace) :: Trace
+type instance AppShape (Root (App l r)) = (AppL (Root (App l r)) l)
+type instance AppShape (AppL up sh) = (AppL up sh)
+--type instance AppShape (AppR up sh) = Shape up
+
+getAppShape :: Traced Classical env -> Traced Classical (AppShape env)
+getAppShape env@(EmptyRoot a@(APP _ _)) = (AppLeft env a)
+getAppShape env@(AppLeft up _) = env
+--getAppShape (AppRight up _) = up
 
 
 -- prove a Ref by looking at last *step* where we passed by
@@ -80,13 +93,13 @@ proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
 proveRef STOP _ = TrivialRef
-proveRef (LEFT more) env | a@(APP _ _) <- getShape env = case proveRef more (AppLeft env a) of
+proveRef (LEFT more) env@(EmptyRoot a@(APP _ _)) = case proveRef more (AppLeft env a) of
                                                  NoWay -> NoWay
                                                  p@TrivialRef -> ProvenRefLeft p
                                                  p@(ProvenRefLeft _) -> ProvenRefLeft p
-                                                 p@(ProvenRefRight _) -> ProvenRefLeft p
-                                                 p@(ProvenRefDown _) -> ProvenRefLeft p
-proveRef (RIGHT more) env | a@(APP _ _) <- getShape env = case proveRef more (AppRight env a) of
+--                                                 p@(ProvenRefRight _) -> ProvenRefLeft p
+--                                                 p@(ProvenRefDown _) -> ProvenRefLeft p
+{-proveRef (RIGHT more) env | a@(APP _ _) <- getAppShape env = case proveRef more (AppRight env a) of
                                                  NoWay -> NoWay
                                                  p@TrivialRef -> ProvenRefRight p
                                                  p@(ProvenRefLeft _) -> ProvenRefRight p
@@ -98,6 +111,7 @@ proveRef (DOWN more) env | a@(LAM _) <- getShape env = case proveRef more (AbsDo
                                                  p@(ProvenRefLeft _) -> ProvenRefDown p
                                                  p@(ProvenRefRight _) -> ProvenRefDown p
                                                  p@(ProvenRefDown _) -> ProvenRefDown p
+-}
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
