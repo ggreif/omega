@@ -34,9 +34,25 @@ class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
 
+-- ##########
+--class AppRoach (l :: Lam) (r :: Lam) (down :: Trace -> Lam -> Trace) (t :: Lam)
+--instance AppRoach l r AppL l
+--instance AppRoach l r AppR r
 
-instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (Root (App l r))
-instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
+--instance Closed (Ref more) (AppL (Root (App l r)) l) => Closed (Ref (Le ': more)) (Root (App l r))
+
+
+--instance (AppRoach l r step t, Closed (Ref more) (step (Root (App l r)) t)) => Closed (Ref (Le ': more)) (Root (App l r))
+-- NEEDED?
+instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (Root (App l r))
+
+-- YES! (below one)
+instance CanGo Le (Root (App l r)) => Closed (Ref (Le ': more)) (AppR (Root (App l r)) r)
+
+class CanGo (down :: Go) (from :: Trace)
+instance CanGo Le (Root (App l r))
+
+--instance Closed (Ref more) (AppR (Root (App l r)) r) => Closed (Ref (Le ': more)) (Root (App l r))
 
 
 instance Closed below (AbsD env below) => Closed (Abs below) env
@@ -158,9 +174,11 @@ t3'' = proveDown t3 (EmptyRoot t3)
 
 t4 = app t1 (lam $ up HERE)
 t4' = close (EmptyRoot t4) t4
+t4a' = close (AppRight (EmptyRoot t4) t4) t4
 t4'' = proveDown t4 (EmptyRoot t4)
 
 t5 = app t1 (lam $ up $ LEFT $ STOP)
 t5' = close (EmptyRoot t5) t5
+t5'b = close (AppRight (EmptyRoot t5) t5) (lam $ up $ LEFT $ STOP)
 t5'' = proveDown t5 (EmptyRoot t5)
 
