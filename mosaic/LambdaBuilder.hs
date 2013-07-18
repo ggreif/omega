@@ -76,8 +76,6 @@ data SameShape :: (Lam -> *) -> Trace -> * where
 type family AppLShape (env :: Trace) :: Trace
 type instance AppLShape (Root (App l r)) = AppL (Root (App l r)) l
 type instance AppLShape ((down :: Trace -> Lam -> Trace) up (App l r)) = AppL (down up (App l r)) l
---type instance AppLShape (AppL up (App l r)) = AppL (AppL up (App l r)) l
---type instance AppLShape (AppR up (App l r)) = AppL (AppR up (App l r)) l
 
 relevantLeft :: Traced Classical env -> Maybe (SameShape Classical env)
 relevantLeft env@(EmptyRoot a@(APP _ _)) = return $ Lefty (AppLeft env a)
@@ -89,8 +87,6 @@ relevantLeft _ = Nothing
 type family AppRShape (env :: Trace) :: Trace
 type instance AppRShape (Root (App l r)) = AppR (Root (App l r)) r
 type instance AppRShape ((down :: Trace -> Lam -> Trace) up (App l r)) = AppR (down up (App l r)) r
---type instance AppRShape (AppL up (App l r)) = AppR (AppL up (App l r)) r
---type instance AppRShape (AppR up (App l r)) = AppR (AppR up (App l r)) r
 
 relevantRight :: Traced Classical env -> Maybe (SameShape Classical env)
 relevantRight env@(EmptyRoot a@(APP _ _)) = return $ Righty (AppRight env a)
@@ -102,8 +98,6 @@ relevantRight _ = Nothing
 type family AbsDShape (env :: Trace) :: Trace
 type instance AbsDShape (Root (Abs d)) = AbsD (Root (Abs d)) d
 type instance AbsDShape ((down :: Trace -> Lam -> Trace) up (Abs d)) = AbsD (down up (Abs d)) d
---type instance AbsDShape (AppL up (Abs d)) = AbsD (AppL up (Abs d)) d
---type instance AbsDShape (AppR up (Abs d)) = AbsD (AppR up (Abs d)) d
 
 relevantDown :: Traced Classical env -> Maybe (SameShape Classical env)
 relevantDown env@(EmptyRoot l@(LAM _)) = return $ Downy (AbsDown env l)
@@ -111,7 +105,6 @@ relevantDown env@(AbsDown _ (LAM l@(LAM _))) = return $ Downy (AbsDown env l)
 relevantDown env@(AppLeft _ (APP l@(LAM _) _)) = return $ Downy (AbsDown env l)
 relevantDown env@(AppRight _ (APP _ l@(LAM _))) = return $ Downy (AbsDown env l)
 relevantDown _ = Nothing
-
 
 -- prove a Ref by looking at last *step* where we passed by
 --
