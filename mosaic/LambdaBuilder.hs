@@ -4,7 +4,6 @@
 
 -- See: https://code.google.com/p/omega/wiki/LambdaGraph
 -- TODO: model "let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
--- TODO: use Maybe instead of NoWay
 -- TODO: LEFT of LAMBDA
 -- TODO: HERE = UP STOP
 
@@ -30,7 +29,7 @@ class Builder (shape :: Lam -> *) where
   up :: shape (Ref p) -> shape (Ref (Up ': p))
   close :: Closed sh env => Traced shape env -> shape sh -> shape sh
   close _ sh = sh
-  checkClosure :: (Shape env ~ sh) => Traced shape env -> shape sh -> Proven sh env
+  checkClosure :: (Shape env ~ sh) => Traced shape env -> shape sh -> Maybe (Proven sh env)
 
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
@@ -55,7 +54,6 @@ instance Closed below (AbsD env below) => Closed (Abs below) env
 instance (Closed left (AppL env left), Closed right (AppR env right)) => Closed (App left right) env
 
 data Proven :: Lam -> Trace -> * where
-  NoWay :: Proven sh env
   TrivialRef :: Proven (Ref '[]) env
   ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
   ProvenRefLeft :: (CanGo more (Shape (AppL env l)), Shape env ~ App l r) => Proven (Ref more) (AppL env l) -> Proven (Ref (Le ': more)) env
@@ -70,7 +68,6 @@ data Proven :: Lam -> Trace -> * where
 deriving instance Show (Proven sh env)
 
 data SameShape :: (Lam -> *) -> Trace -> * where
-  Unrecognized :: SameShape l env
   Lefty :: (AppLShape env ~ AppL env sh) => Traced l (AppLShape env) -> SameShape l env
   Righty :: (AppRShape env ~ AppR env sh) => Traced l (AppRShape env) -> SameShape l env
   Downy :: (AbsDShape env ~ AbsD env sh) => Traced l (AbsDShape env) -> SameShape l env
@@ -82,12 +79,12 @@ type instance AppLShape (AbsD up (App l r)) = AppL (AbsD up (App l r)) l
 type instance AppLShape (AppL up (App l r)) = AppL (AppL up (App l r)) l
 type instance AppLShape (AppR up (App l r)) = AppL (AppR up (App l r)) l
 
-relevantLeft :: Traced Classical env -> SameShape Classical env
-relevantLeft env@(EmptyRoot a@(APP _ _)) = Lefty (AppLeft env a)
-relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Lefty (AppLeft env a)
-relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Lefty (AppLeft env a)
-relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Lefty (AppLeft env a)
-relevantLeft _ = Unrecognized
+relevantLeft :: Traced Classical env -> Maybe (SameShape Classical env)
+relevantLeft env@(EmptyRoot a@(APP _ _)) = return $ Lefty (AppLeft env a)
+relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = return $ Lefty (AppLeft env a)
+relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = return $ Lefty (AppLeft env a)
+relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = return $ Lefty (AppLeft env a)
+relevantLeft _ = Nothing
 
 type family AppRShape (env :: Trace) :: Trace
 type instance AppRShape (Root (App l r)) = AppR (Root (App l r)) r
@@ -95,12 +92,12 @@ type instance AppRShape (AbsD up (App l r)) = AppR (AbsD up (App l r)) r
 type instance AppRShape (AppL up (App l r)) = AppR (AppL up (App l r)) r
 type instance AppRShape (AppR up (App l r)) = AppR (AppR up (App l r)) r
 
-relevantRight :: Traced Classical env -> SameShape Classical env
-relevantRight env@(EmptyRoot a@(APP _ _)) = Righty (AppRight env a)
-relevantRight env@(AbsDown _ (LAM a@(APP _ _))) = Righty (AppRight env a)
-relevantRight env@(AppLeft _ (APP a@(APP _ _) _)) = Righty (AppRight env a)
-relevantRight env@(AppRight _ (APP _ a@(APP _ _))) = Righty (AppRight env a)
-relevantRight _ = Unrecognized
+relevantRight :: Traced Classical env -> Maybe (SameShape Classical env)
+relevantRight env@(EmptyRoot a@(APP _ _)) = return $ Righty (AppRight env a)
+relevantRight env@(AbsDown _ (LAM a@(APP _ _))) = return $ Righty (AppRight env a)
+relevantRight env@(AppLeft _ (APP a@(APP _ _) _)) = return $ Righty (AppRight env a)
+relevantRight env@(AppRight _ (APP _ a@(APP _ _))) = return $ Righty (AppRight env a)
+relevantRight _ = Nothing
 
 type family AbsDShape (env :: Trace) :: Trace
 type instance AbsDShape (Root (Abs d)) = AbsD (Root (Abs d)) d
@@ -108,105 +105,100 @@ type instance AbsDShape (AbsD up (Abs d)) = AbsD (AbsD up (Abs d)) d
 type instance AbsDShape (AppL up (Abs d)) = AbsD (AppL up (Abs d)) d
 type instance AbsDShape (AppR up (Abs d)) = AbsD (AppR up (Abs d)) d
 
-relevantDown :: Traced Classical env -> SameShape Classical env
-relevantDown env@(EmptyRoot l@(LAM _)) = Downy (AbsDown env l)
-relevantDown env@(AbsDown _ (LAM l@(LAM _))) = Downy (AbsDown env l)
-relevantDown env@(AppLeft _ (APP l@(LAM _) _)) = Downy (AbsDown env l)
-relevantDown env@(AppRight _ (APP _ l@(LAM _))) = Downy (AbsDown env l)
-relevantDown _ = Unrecognized
+relevantDown :: Traced Classical env -> Maybe (SameShape Classical env)
+relevantDown env@(EmptyRoot l@(LAM _)) = return $ Downy (AbsDown env l)
+relevantDown env@(AbsDown _ (LAM l@(LAM _))) = return $ Downy (AbsDown env l)
+relevantDown env@(AppLeft _ (APP l@(LAM _) _)) = return $ Downy (AbsDown env l)
+relevantDown env@(AppRight _ (APP _ l@(LAM _))) = return $ Downy (AbsDown env l)
+relevantDown _ = Nothing
 
 
 -- prove a Ref by looking at last *step* where we passed by
 --
-proveRef :: Classical (Ref more) -> Traced Classical env -> Proven (Ref more) env
-proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
-proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
-proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
-proveRef STOP _ = TrivialRef
-proveRef l@(LEFT more) env = case relevantLeft env of
-                             Unrecognized -> NoWay
-                             Lefty down@(AppLeft _ _) -> case proveRef more down of
-                                                         NoWay -> NoWay
-                                                         p@TrivialRef -> ProvenRefLeft p
-                                                         p@(ProvenRefLeft _) -> ProvenRefLeft p
-                                                         p@(ProvenRefRight _) -> ProvenRefLeft p
-                                                         p@(ProvenRefDown _) -> ProvenRefLeft p
-proveRef l@(RIGHT more) env = case relevantRight env of
-                              Unrecognized -> NoWay
-                              Righty down@(AppRight _ _) -> case proveRef more down of
-                                                            NoWay -> NoWay
-                                                            p@TrivialRef -> ProvenRefRight p
-                                                            p@(ProvenRefLeft _) -> ProvenRefRight p
-                                                            p@(ProvenRefRight _) -> ProvenRefRight p
-                                                            p@(ProvenRefDown _) -> ProvenRefRight p
+proveRef :: Classical (Ref more) -> Traced Classical env -> Maybe (Proven (Ref more) env)
+proveRef HERE (AbsDown _ _) = return $ ProvenRefUp TrivialRef
+proveRef HERE (AppLeft _ _) = return $ ProvenRefUp TrivialRef
+proveRef HERE (AppRight _ _) = return $ ProvenRefUp TrivialRef
+proveRef STOP _ = return $ TrivialRef
+proveRef l@(LEFT more) env = do Lefty down@(AppLeft _ _) <- relevantLeft env
+                                proof <- proveRef more down
+                                return $ case proof of
+                                         p@TrivialRef -> ProvenRefLeft p
+                                         p@(ProvenRefLeft _) -> ProvenRefLeft p
+                                         p@(ProvenRefRight _) -> ProvenRefLeft p
+                                         p@(ProvenRefDown _) -> ProvenRefLeft p
+proveRef l@(RIGHT more) env = do Righty down@(AppRight _ _) <- relevantRight env
+                                 proof <- proveRef more down
+                                 return $ case proof of
+                                          p@TrivialRef -> ProvenRefRight p
+                                          p@(ProvenRefLeft _) -> ProvenRefRight p
+                                          p@(ProvenRefRight _) -> ProvenRefRight p
+                                          p@(ProvenRefDown _) -> ProvenRefRight p
 
-proveRef (DOWN more) env = case relevantDown env of
-                           Unrecognized -> NoWay
-                           Downy down@(AbsDown _ _) -> case proveRef more down of
-                                                       NoWay -> NoWay
-                                                       p@TrivialRef -> ProvenRefDown p
-                                                       p@(ProvenRefLeft _) -> ProvenRefDown p
-                                                       p@(ProvenRefRight _) -> ProvenRefDown p
-                                                       p@(ProvenRefDown _) -> ProvenRefDown p
+proveRef (DOWN more) env = do Downy down@(AbsDown _ _) <- relevantDown env
+                              proof <- proveRef more down
+                              return $ case proof of
+                                       p@TrivialRef -> ProvenRefDown p
+                                       p@(ProvenRefLeft _) -> ProvenRefDown p
+                                       p@(ProvenRefRight _) -> ProvenRefDown p
+                                       p@(ProvenRefDown _) -> ProvenRefDown p
 
-proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
-                                   NoWay -> NoWay
-                                   p@(ProvenRefUp _) -> ProvenRefUp p
-                                   p@(ProvenRefDown _) -> ProvenRefUp p
-proveRef (UP and) (AppLeft up _) = case (proveRef and up) of
-                                   NoWay -> NoWay
-                                   p@(ProvenRefUp _) -> ProvenRefUp p
-                                   p@(ProvenRefLeft _) -> ProvenRefUp p
-                                   p@(ProvenRefRight _) -> ProvenRefUp p
-proveRef (UP and) (AppRight up _) = case (proveRef and up) of
-                                    NoWay -> NoWay
-                                    p@(ProvenRefUp _) -> ProvenRefUp p
-                                    p@(ProvenRefLeft _) -> ProvenRefUp p
-                                    p@(ProvenRefRight _) -> ProvenRefUp p
-                                    --p -> error $ show p
+proveRef (UP and) (AbsDown up _) = do proof <- proveRef and up
+                                      return $ case proof of
+                                               p@(ProvenRefUp _) -> ProvenRefUp p
+                                               p@(ProvenRefDown _) -> ProvenRefUp p
+proveRef (UP and) (AppLeft up _) = do proof <- proveRef and up
+                                      return $ case proof of
+                                               p@(ProvenRefUp _) -> ProvenRefUp p
+                                               p@(ProvenRefLeft _) -> ProvenRefUp p
+                                               p@(ProvenRefRight _) -> ProvenRefUp p
+proveRef (UP and) (AppRight up _) = do proof <- proveRef and up
+                                       return $ case proof of
+                                                p@(ProvenRefUp _) -> ProvenRefUp p
+                                                p@(ProvenRefLeft _) -> ProvenRefUp p
+                                                p@(ProvenRefRight _) -> ProvenRefUp p
 
-proveRef _ _ = NoWay
+proveRef _ _ = Nothing
 
 -- arrived under an Abs
 --
-proveUnderAbs :: Classical sh -> Traced Classical (AbsD env sh) -> Proven (Abs sh) env
-proveUnderAbs h@HERE env = ProvenAbs $ proveRef h env
-proveUnderAbs u@(UP _) env = case proveRef u env of
-                                NoWay -> NoWay
-                                p@(ProvenRefUp _) -> ProvenAbs p
-proveUnderAbs a@(APP l r) env = case proveApp a env of
-                                NoWay -> NoWay
-                                p@(ProvenApp _ _) -> ProvenAbs p
-proveUnderAbs v@(LAM a) env = case proveDown a (AbsDown env v) of
-                              NoWay -> NoWay
-                              p@(ProvenAbs _) -> ProvenAbs $ ProvenAbs p
-                              p@(ProvenApp _ _) -> ProvenAbs $ ProvenAbs p
-                              p@(ProvenRefUp _) -> ProvenAbs $ ProvenAbs p
-                              --p -> error $ show p
+proveUnderAbs :: Classical sh -> Traced Classical (AbsD env sh) -> Maybe (Proven (Abs sh) env)
+proveUnderAbs h@HERE env = fmap ProvenAbs (proveRef h env)
+proveUnderAbs u@(UP _) env = do proof <- proveRef u env
+                                return $ case proof of
+                                         p@(ProvenRefUp _) -> ProvenAbs p
+proveUnderAbs a@(APP l r) env = do proof <- proveApp a env
+                                   return $ case proof of
+                                            p@(ProvenApp _ _) -> ProvenAbs p
+proveUnderAbs v@(LAM a) env = do proof <- proveDown a (AbsDown env v)
+                                 return $ case proof of
+                                          p@(ProvenAbs _) -> ProvenAbs $ ProvenAbs p
+                                          p@(ProvenApp _ _) -> ProvenAbs $ ProvenAbs p
+                                          p@(ProvenRefUp _) -> ProvenAbs $ ProvenAbs p
 
 
 -- Arrived at an App.
 -- prove both directions
 --
-proveApp :: (Shape env ~ App l r) => Classical (App l r) -> Traced Classical env -> Proven (App l r) env
-proveApp a@(APP l r) env = case (proveDown l (AppLeft env a), proveDown r (AppRight env a)) of
-                           (NoWay, _) -> NoWay
-                           (_, NoWay) -> NoWay
-                           (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenApp p q
-                           (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenApp p q
-                           (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenApp p q
-                           (p@(ProvenAbs _), q@(ProvenApp _ _)) -> ProvenApp p q
-                           (p@(ProvenApp _ _), q@(ProvenApp _ _)) -> ProvenApp p q
-                           (p@(ProvenRefUp _), q@(ProvenApp _ _)) -> ProvenApp p q
-                           (p@(ProvenAbs _), q@(ProvenRefUp _)) -> ProvenApp p q
-                           (p@(ProvenApp _ _), q@(ProvenRefUp _)) -> ProvenApp p q
-                           (p@(ProvenRefUp _), q@(ProvenRefUp _)) -> ProvenApp p q
+proveApp :: (Shape env ~ App l r) => Classical (App l r) -> Traced Classical env -> Maybe (Proven (App l r) env)
+proveApp a@(APP l r) env = do proofL <- proveDown l (AppLeft env a)
+                              proofR <- proveDown r (AppRight env a)
+                              return $ case (proofL, proofR) of
+                                       (p@(ProvenAbs _), q@(ProvenAbs _)) -> ProvenApp p q
+                                       (p@(ProvenApp _ _), q@(ProvenAbs _)) -> ProvenApp p q
+                                       (p@(ProvenRefUp _), q@(ProvenAbs _)) -> ProvenApp p q
+                                       (p@(ProvenAbs _), q@(ProvenApp _ _)) -> ProvenApp p q
+                                       (p@(ProvenApp _ _), q@(ProvenApp _ _)) -> ProvenApp p q
+                                       (p@(ProvenRefUp _), q@(ProvenApp _ _)) -> ProvenApp p q
+                                       (p@(ProvenAbs _), q@(ProvenRefUp _)) -> ProvenApp p q
+                                       (p@(ProvenApp _ _), q@(ProvenRefUp _)) -> ProvenApp p q
+                                       (p@(ProvenRefUp _), q@(ProvenRefUp _)) -> ProvenApp p q
 
 
 -- We have just made a step (recorded in env) and arrived at some
 -- unknown shape. Analyse first argument.
 --
-proveDown :: (Shape env ~ sh) => Classical sh -> Traced Classical env -> Proven sh env
+proveDown :: (Shape env ~ sh) => Classical sh -> Traced Classical env -> Maybe (Proven sh env)
 proveDown h@HERE env = proveRef h env
 proveDown u@(UP and) env = proveRef u env
 proveDown v@(LAM down) env = proveUnderAbs down (AbsDown env v)
