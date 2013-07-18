@@ -67,12 +67,14 @@ data Proven :: Lam -> Trace -> * where
 
 deriving instance Show (Proven sh env)
 
+{-
 getShape :: Traced Classical env -> Classical (Shape env)
 getShape (EmptyRoot a@(APP _ _)) = a
 getShape (EmptyRoot a@(LAM _)) = a
 getShape (AppLeft _ (APP l _)) = l
 getShape (AppRight _ (APP _ r)) = r
 getShape (AbsDown _ (LAM d)) = d
+-}
 
 
 type family AppLShape (env :: Trace) :: Trace
@@ -85,16 +87,20 @@ type instance AppLShape (AppR up (App l r)) = AppL (AppR up (App l r)) l
 proveRefLeft :: Classical (Ref (Le ': more)) -> Traced Classical env -> Proven (Ref (Le ': more)) env
 proveRefLeft (LEFT more) env = case relevantLeft env of
                                Nothing -> NoWay
-                               Just down -> case proveRef more down of
-                                            NoWay -> NoWay
-                                            p@TrivialRef -> ProvenRefLeft p
+                               Just (down@(AppLeft _ _), Lefty _ _) -> case proveRef more down of
+                                                          NoWay -> NoWay
+                                                          p@TrivialRef -> ProvenRefLeft p
+                                                          --p@(ProvenRefLeft _) -> ProvenRefLeft p
+
+data SameShape :: Trace -> * where
+  Lefty :: (AppLShape env ~ AppL env sh) => Traced l (AppLShape env) -> Traced l (AppL env sh) -> SameShape env
 
 
-relevantLeft :: Traced Classical env -> Maybe (Traced Classical (AppLShape env))
-relevantLeft env@(EmptyRoot a@(APP _ _)) = Just $ AppLeft env a
-relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Just $ AppLeft env a
-relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Just $ AppLeft env a
-relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Just $ AppLeft env a
+relevantLeft :: Traced Classical env -> Maybe (Traced Classical (AppLShape env), SameShape env)
+relevantLeft env@(EmptyRoot a@(APP _ _)) = Just $ (AppLeft env a, Lefty (AppLeft env a) (AppLeft env a))
+relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Just $ (AppLeft env a, Lefty (AppLeft env a) (AppLeft env a))
+relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Just $ (AppLeft env a, Lefty (AppLeft env a) (AppLeft env a))
+relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Just $ (AppLeft env a, Lefty (AppLeft env a) (AppLeft env a))
 relevantLeft _ = Nothing
 
 
