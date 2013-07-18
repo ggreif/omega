@@ -6,6 +6,7 @@
 -- TODO: model "let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
 -- TODO: use Maybe instead of NoWay
 -- TODO: LEFT of LAMBDA
+-- TODO: HERE = UP STOP
 
 data {-kind-} Lam = App Lam Lam | Abs Lam | Ref [Go]
 data {-kind-} Go = Up | Le | Ri | Down
@@ -71,6 +72,7 @@ deriving instance Show (Proven sh env)
 data SameShape :: (Lam -> *) -> Trace -> * where
   Unrecognized :: SameShape l env
   Lefty :: (AppLShape env ~ AppL env sh) => Traced l (AppLShape env) -> SameShape l env
+  Righty :: (AppRShape env ~ AppR env sh) => Traced l (AppRShape env) -> SameShape l env
   Downy :: (AbsDShape env ~ AbsD env sh) => Traced l (AbsDShape env) -> SameShape l env
 
 
@@ -86,6 +88,19 @@ relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Lefty (AppLeft env a)
 relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Lefty (AppLeft env a)
 relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Lefty (AppLeft env a)
 relevantLeft _ = Unrecognized
+
+type family AppRShape (env :: Trace) :: Trace
+type instance AppRShape (Root (App l r)) = AppR (Root (App l r)) r
+type instance AppRShape (AbsD up (App l r)) = AppR (AbsD up (App l r)) r
+type instance AppRShape (AppL up (App l r)) = AppR (AppL up (App l r)) r
+type instance AppRShape (AppR up (App l r)) = AppR (AppR up (App l r)) r
+
+relevantRight :: Traced Classical env -> SameShape Classical env
+relevantRight env@(EmptyRoot a@(APP _ _)) = Righty (AppRight env a)
+relevantRight env@(AbsDown _ (LAM a@(APP _ _))) = Righty (AppRight env a)
+relevantRight env@(AppLeft _ (APP a@(APP _ _) _)) = Righty (AppRight env a)
+relevantRight env@(AppRight _ (APP _ a@(APP _ _))) = Righty (AppRight env a)
+relevantRight _ = Unrecognized
 
 type family AbsDShape (env :: Trace) :: Trace
 type instance AbsDShape (Root (Abs d)) = AbsD (Root (Abs d)) d
@@ -111,28 +126,28 @@ proveRef STOP _ = TrivialRef
 proveRef l@(LEFT more) env = case relevantLeft env of
                              Unrecognized -> NoWay
                              Lefty down@(AppLeft _ _) -> case proveRef more down of
-                                                           NoWay -> NoWay
-                                                           p@TrivialRef -> ProvenRefLeft p
-                                                           p@(ProvenRefLeft _) -> ProvenRefLeft p
-                                                           p@(ProvenRefRight _) -> ProvenRefLeft p
-                                                           p@(ProvenRefDown _) -> ProvenRefLeft p
+                                                         NoWay -> NoWay
+                                                         p@TrivialRef -> ProvenRefLeft p
+                                                         p@(ProvenRefLeft _) -> ProvenRefLeft p
+                                                         p@(ProvenRefRight _) -> ProvenRefLeft p
+                                                         p@(ProvenRefDown _) -> ProvenRefLeft p
+proveRef l@(RIGHT more) env = case relevantRight env of
+                              Unrecognized -> NoWay
+                              Righty down@(AppRight _ _) -> case proveRef more down of
+                                                            NoWay -> NoWay
+                                                            p@TrivialRef -> ProvenRefRight p
+                                                            p@(ProvenRefLeft _) -> ProvenRefRight p
+                                                            p@(ProvenRefRight _) -> ProvenRefRight p
+                                                            p@(ProvenRefDown _) -> ProvenRefRight p
 
-{-proveRef (RIGHT more) env | a@(APP _ _) <- getAppShape env = case proveRef more (AppRight env a) of
-                                                 NoWay -> NoWay
-                                                 p@TrivialRef -> ProvenRefRight p
-                                                 p@(ProvenRefLeft _) -> ProvenRefRight p
-                                                 p@(ProvenRefRight _) -> ProvenRefRight p
-                                                 p@(ProvenRefDown _) -> ProvenRefRight p
-
--}
 proveRef (DOWN more) env = case relevantDown env of
                            Unrecognized -> NoWay
                            Downy down@(AbsDown _ _) -> case proveRef more down of
-                                                 NoWay -> NoWay
-                                                 p@TrivialRef -> ProvenRefDown p
-                                                 p@(ProvenRefLeft _) -> ProvenRefDown p
-                                                 p@(ProvenRefRight _) -> ProvenRefDown p
-                                                 p@(ProvenRefDown _) -> ProvenRefDown p
+                                                       NoWay -> NoWay
+                                                       p@TrivialRef -> ProvenRefDown p
+                                                       p@(ProvenRefLeft _) -> ProvenRefDown p
+                                                       p@(ProvenRefRight _) -> ProvenRefDown p
+                                                       p@(ProvenRefDown _) -> ProvenRefDown p
 
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
