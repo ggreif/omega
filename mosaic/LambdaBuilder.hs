@@ -17,7 +17,7 @@ data Traced :: (Lam -> *) -> Trace -> * where
   EmptyRoot :: Builder l => l sh -> Traced l (Root sh)
   AppLeft :: (Shape tr ~ App shl shr, Builder l) => Traced l tr -> l (App shl shr) -> Traced l (AppL tr shl)
   AppRight :: (Shape tr ~ App shl shr, Builder l) => Traced l tr -> l (App shl shr) -> Traced l (AppR tr shr)
-  AbsDown :: Builder l => Traced l tr -> l (Abs sh) -> Traced l (AbsD tr sh)
+  AbsDown :: (Shape tr ~ Abs sh, Builder l) => Traced l tr -> l (Abs sh) -> Traced l (AbsD tr sh)
 
 deriving instance Show (Traced Classical tr)
 
@@ -58,7 +58,8 @@ data Proven :: Lam -> Trace -> * where
   ProvenRefUp :: Closed (Ref more) env => Proven (Ref more) env -> Proven (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) env stuff)
   ProvenRefLeft :: (CanGo more (Shape (AppL env l)), Shape env ~ App l r) => Proven (Ref more) (AppL env l) -> Proven (Ref (Le ': more)) env
   ProvenRefRight :: (CanGo more (Shape (AppR env r)), Shape env ~ App l r) => Proven (Ref more) (AppR env r) -> Proven (Ref (Ri ': more)) env
-  ProvenRefDown :: CanGo more (Shape env) => Proven (Ref more) (AbsD env stuff) -> Proven (Ref (Down ': more)) env
+--  ProvenRefDown :: (CanGo more (Shape (AbsD env d)), Shape env ~ Abs d) => Proven (Ref more) (AbsD env d) -> Proven (Ref (Down ': more)) env
+  ProvenRefDown :: CanGo more (Shape (AbsD env d)) => Proven (Ref more) (AbsD env d) -> Proven (Ref (Down ': more)) env
   ProvenApp :: (Closed l (AppL env l), Closed r (AppR env r)) =>
                Proven l (AppL env l) -> Proven r (AppR env r) ->
                Proven (App l r) env
@@ -73,6 +74,13 @@ type instance AppLShape (AbsD up (App l r)) = AppL (AbsD up (App l r)) l
 type instance AppLShape (AppL up (App l r)) = AppL (AppL up (App l r)) l
 type instance AppLShape (AppR up (App l r)) = AppL (AppR up (App l r)) l
 
+relevantLeft :: Traced Classical env -> SameShape Classical env
+relevantLeft env@(EmptyRoot a@(APP _ _)) = Lefty (AppLeft env a)
+relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Lefty (AppLeft env a)
+relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Lefty (AppLeft env a)
+relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Lefty (AppLeft env a)
+relevantLeft _ = Unrecognized
+
 {-
 proveRefLeft :: Classical (Ref (Le ': more)) -> Traced Classical env -> Proven (Ref (Le ': more)) env
 proveRefLeft (LEFT more) env = case relevantLeft env of
@@ -86,14 +94,21 @@ proveRefLeft (LEFT more) env = case relevantLeft env of
 data SameShape :: (Lam -> *) -> Trace -> * where
   Unrecognized :: SameShape l env
   Lefty :: (AppLShape env ~ AppL env sh) => Traced l (AppLShape env) -> SameShape l env
+  Downy :: (AbsDShape env ~ AbsD env sh) => Traced l (AbsDShape env) -> SameShape l env
 
 
-relevantLeft :: Traced Classical env -> SameShape Classical env
-relevantLeft env@(EmptyRoot a@(APP _ _)) = Lefty (AppLeft env a)
-relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Lefty (AppLeft env a)
-relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Lefty (AppLeft env a)
-relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Lefty (AppLeft env a)
-relevantLeft _ = Unrecognized
+type family AbsDShape (env :: Trace) :: Trace
+type instance AbsDShape (Root (Abs d)) = AbsD (Root (Abs d)) d
+type instance AbsDShape (AbsD up (Abs d)) = AbsD (AbsD up (Abs d)) d
+type instance AbsDShape (AppL up (Abs d)) = AbsD (AppL up (Abs d)) d
+type instance AbsDShape (AppR up (Abs d)) = AbsD (AppR up (Abs d)) d
+
+relevantDown :: Traced Classical env -> SameShape Classical env
+relevantDown env@(EmptyRoot l@(LAM _)) = Downy (AbsDown env l)
+relevantDown env@(AbsDown _ (LAM l@(LAM _))) = Downy (AbsDown env l)
+relevantDown env@(AppLeft _ (APP l@(LAM _) _)) = Downy (AbsDown env l)
+relevantDown env@(AppRight _ (APP _ l@(LAM _))) = Downy (AbsDown env l)
+relevantDown _ = Unrecognized
 
 
 -- prove a Ref by looking at last *step* where we passed by
@@ -110,6 +125,7 @@ proveRef l@(LEFT more) env = case relevantLeft env of
                                                            p@TrivialRef -> ProvenRefLeft p
                                                            p@(ProvenRefLeft _) -> ProvenRefLeft p
                                                            p@(ProvenRefRight _) -> ProvenRefLeft p
+                                                           --p@(ProvenRefDown _) -> ProvenRefLeft p
 
 {-proveRef (RIGHT more) env | a@(APP _ _) <- getAppShape env = case proveRef more (AppRight env a) of
                                                  NoWay -> NoWay
@@ -117,13 +133,17 @@ proveRef l@(LEFT more) env = case relevantLeft env of
                                                  p@(ProvenRefLeft _) -> ProvenRefRight p
                                                  p@(ProvenRefRight _) -> ProvenRefRight p
                                                  p@(ProvenRefDown _) -> ProvenRefRight p
-proveRef (DOWN more) env | a@(LAM _) <- getShape env = case proveRef more (AbsDown env a) of
+
+-}
+proveRef (DOWN more) env = case relevantDown env of
+                           Unrecognized -> NoWay
+                           Downy down -> case proveRef more down of
                                                  NoWay -> NoWay
                                                  p@TrivialRef -> ProvenRefDown p
                                                  p@(ProvenRefLeft _) -> ProvenRefDown p
                                                  p@(ProvenRefRight _) -> ProvenRefDown p
-                                                 p@(ProvenRefDown _) -> ProvenRefDown p
--}
+                                                 --p@(ProvenRefDown _) -> ProvenRefDown p
+
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
