@@ -6,6 +6,8 @@
 -- TODO: model "let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
 -- TODO: LEFT of LAMBDA
 -- TODO: HERE = UP STOP
+-- TODO: class Typed where itsType :: l sh -> levup l sh
+-- TODO: a simple minded interpreter (abstracted monadic?), compiler?
 
 data {-kind-} Lam = App Lam Lam | Abs Lam | Ref [Go]
 data {-kind-} Go = Up | Le | Ri | Down
