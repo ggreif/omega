@@ -73,27 +73,26 @@ type instance AppLShape (AbsD up (App l r)) = AppL (AbsD up (App l r)) l
 type instance AppLShape (AppL up (App l r)) = AppL (AppL up (App l r)) l
 type instance AppLShape (AppR up (App l r)) = AppL (AppR up (App l r)) l
 
-
+{-
 proveRefLeft :: Classical (Ref (Le ': more)) -> Traced Classical env -> Proven (Ref (Le ': more)) env
 proveRefLeft (LEFT more) env = case relevantLeft env of
                                Unrecognized -> NoWay
-                               Lefty down@(AppLeft env a) _ -> case proveRef more down of
+                               Lefty down@(AppLeft env a) -> case proveRef more down of
                                                           NoWay -> NoWay
                                                           p@TrivialRef -> ProvenRefLeft p
                                                           p@(ProvenRefLeft _) -> ProvenRefLeft p
                                                           p@(ProvenRefRight _) -> ProvenRefLeft p
-
+-}
 data SameShape :: (Lam -> *) -> Trace -> * where
   Unrecognized :: SameShape l env
---  Lefty :: (AppLShape env ~ AppL env sh) => Traced l (AppLShape env) -> SameShape l env
-  Lefty :: (AppLShape env ~ AppL env sh) => Traced l (AppLShape env) -> l (Shape env) -> SameShape l env
+  Lefty :: (AppLShape env ~ AppL env sh) => Traced l (AppLShape env) -> SameShape l env
 
 
 relevantLeft :: Traced Classical env -> SameShape Classical env
-relevantLeft env@(EmptyRoot a@(APP _ _)) = Lefty (AppLeft env a) a
-relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Lefty (AppLeft env a) a
-relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Lefty (AppLeft env a) a
-relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Lefty (AppLeft env a) a
+relevantLeft env@(EmptyRoot a@(APP _ _)) = Lefty (AppLeft env a)
+relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Lefty (AppLeft env a)
+relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Lefty (AppLeft env a)
+relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Lefty (AppLeft env a)
 relevantLeft _ = Unrecognized
 
 
@@ -104,14 +103,14 @@ proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
 proveRef STOP _ = TrivialRef
-proveRef l@(LEFT more) env = proveRefLeft l env -- case relevantLeft env of
-                           --Nothing -> NoWay
-                           --Just down -> case proveRef more down of
-                           --             NoWay -> NoWay
-                                      --  p@TrivialRef -> ProvenRefLeft p
-                                      --  p@(ProvenRefLeft _) -> ProvenRefLeft p
-                                      --  p@(ProvenRefRight _) -> ProvenRefLeft p
---                                                 p@(ProvenRefDown _) -> ProvenRefLeft p
+proveRef l@(LEFT more) env = case relevantLeft env of
+                             Unrecognized -> NoWay
+                             Lefty down@(AppLeft env a) -> case proveRef more down of
+                                                           NoWay -> NoWay
+                                                           p@TrivialRef -> ProvenRefLeft p
+                                                           p@(ProvenRefLeft _) -> ProvenRefLeft p
+                                                           p@(ProvenRefRight _) -> ProvenRefLeft p
+
 {-proveRef (RIGHT more) env | a@(APP _ _) <- getAppShape env = case proveRef more (AppRight env a) of
                                                  NoWay -> NoWay
                                                  p@TrivialRef -> ProvenRefRight p
@@ -134,8 +133,9 @@ proveRef (UP and) (AppLeft up _) = case (proveRef and up) of
 proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     NoWay -> NoWay
                                     p@(ProvenRefUp _) -> ProvenRefUp p
-                                    --p@(ProvenRefLeft _) -> p
-                                    p -> error $ show p
+                                    p@(ProvenRefLeft _) -> ProvenRefUp p
+                                    p@(ProvenRefRight _) -> ProvenRefUp p
+                                    --p -> error $ show p
 
 proveRef _ _ = NoWay
 
