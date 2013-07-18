@@ -75,15 +75,27 @@ getShape (AppRight _ (APP _ r)) = r
 getShape (AbsDown _ (LAM d)) = d
 
 
-type family AppShape (env :: Trace) :: Trace
-type instance AppShape (Root (App l r)) = (AppL (Root (App l r)) l)
-type instance AppShape (AppL up sh) = (AppL up sh)
---type instance AppShape (AppR up sh) = Shape up
+type family AppLShape (env :: Trace) :: Trace
+type instance AppLShape (Root (App l r)) = AppL (Root (App l r)) l
+type instance AppLShape (AbsD up (App l r)) = AppL (AbsD up (App l r)) l
+type instance AppLShape (AppL up (App l r)) = AppL (AppL up (App l r)) l
+type instance AppLShape (AppR up (App l r)) = AppL (AppR up (App l r)) l
 
-getAppShape :: Traced Classical env -> Traced Classical (AppShape env)
-getAppShape env@(EmptyRoot a@(APP _ _)) = (AppLeft env a)
-getAppShape env@(AppLeft up _) = env
---getAppShape (AppRight up _) = up
+
+proveRefLeft :: Classical (Ref (Le ': more)) -> Traced Classical env -> Proven (Ref (Le ': more)) env
+proveRefLeft (LEFT more) env = case relevantLeft env of
+                               Nothing -> NoWay
+                               Just down -> case proveRef more down of
+                                            NoWay -> NoWay
+                                            p@TrivialRef -> ProvenRefLeft p
+
+
+relevantLeft :: Traced Classical env -> Maybe (Traced Classical (AppLShape env))
+relevantLeft env@(EmptyRoot a@(APP _ _)) = Just $ AppLeft env a
+relevantLeft env@(AbsDown _ (LAM a@(APP _ _))) = Just $ AppLeft env a
+relevantLeft env@(AppLeft _ (APP a@(APP _ _) _)) = Just $ AppLeft env a
+relevantLeft env@(AppRight _ (APP _ a@(APP _ _))) = Just $ AppLeft env a
+relevantLeft _ = Nothing
 
 
 -- prove a Ref by looking at last *step* where we passed by
@@ -93,11 +105,13 @@ proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
 proveRef STOP _ = TrivialRef
-proveRef (LEFT more@(RIGHT STOP)) env@(EmptyRoot a@(APP _ _)) = case proveRef more (AppLeft env a) of
-                                                 NoWay -> NoWay
-                                                 p@TrivialRef -> ProvenRefLeft p
-                                                 p@(ProvenRefLeft _) -> ProvenRefLeft p
-                                                 p@(ProvenRefRight _) -> ProvenRefLeft p
+proveRef l@(LEFT more) env = proveRefLeft l env -- case relevantLeft env of
+                           --Nothing -> NoWay
+                           --Just down -> case proveRef more down of
+                           --             NoWay -> NoWay
+                                      --  p@TrivialRef -> ProvenRefLeft p
+                                      --  p@(ProvenRefLeft _) -> ProvenRefLeft p
+                                      --  p@(ProvenRefRight _) -> ProvenRefLeft p
 --                                                 p@(ProvenRefDown _) -> ProvenRefLeft p
 {-proveRef (RIGHT more) env | a@(APP _ _) <- getAppShape env = case proveRef more (AppRight env a) of
                                                  NoWay -> NoWay
