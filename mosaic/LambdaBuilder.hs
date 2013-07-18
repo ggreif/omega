@@ -152,9 +152,12 @@ proveRef (DOWN more) env = case relevantDown env of
 proveRef (UP and) (AbsDown up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
+                                   p@(ProvenRefDown _) -> ProvenRefUp p
 proveRef (UP and) (AppLeft up _) = case (proveRef and up) of
                                    NoWay -> NoWay
                                    p@(ProvenRefUp _) -> ProvenRefUp p
+                                   p@(ProvenRefLeft _) -> ProvenRefUp p
+                                   p@(ProvenRefRight _) -> ProvenRefUp p
 proveRef (UP and) (AppRight up _) = case (proveRef and up) of
                                     NoWay -> NoWay
                                     p@(ProvenRefUp _) -> ProvenRefUp p
