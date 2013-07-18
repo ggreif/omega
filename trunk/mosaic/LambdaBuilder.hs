@@ -5,6 +5,7 @@
 -- See: https://code.google.com/p/omega/wiki/LambdaGraph
 -- TODO: model "let(rec) a = sub in expr" with KILL1 @ sub (expr ... UP LEFT)
 -- TODO: use Maybe instead of NoWay
+-- TODO: LEFT of LAMBDA
 
 data {-kind-} Lam = App Lam Lam | Abs Lam | Ref [Go]
 data {-kind-} Go = Up | Le | Ri | Down
@@ -59,8 +60,6 @@ data Proven :: Lam -> Trace -> * where
   ProvenRefLeft :: (CanGo more (Shape (AppL env l)), Shape env ~ App l r) => Proven (Ref more) (AppL env l) -> Proven (Ref (Le ': more)) env
   ProvenRefRight :: (CanGo more (Shape (AppR env r)), Shape env ~ App l r) => Proven (Ref more) (AppR env r) -> Proven (Ref (Ri ': more)) env
   ProvenRefDown :: (CanGo more (Shape (AbsD env d)), Shape env ~ Abs d) => Proven (Ref more) (AbsD env d) -> Proven (Ref (Down ': more)) env
---  ProvenRefDown :: CanGo more (Shape (AbsD env d)) => Proven (Ref more) (AbsD env d) -> Proven (Ref (Down ': more)) env
---  ProvenRefDown :: (CanGo more (Shape (AbsD env d)), CanGo (Down ': more) (Shape env), Shape env ~ d) => Proven (Ref more) (AbsD env d) -> Proven (Ref (Down ': more)) env
   ProvenApp :: (Closed l (AppL env l), Closed r (AppR env r)) =>
                Proven l (AppL env l) -> Proven r (AppR env r) ->
                Proven (App l r) env
