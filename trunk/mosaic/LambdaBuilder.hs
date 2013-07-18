@@ -93,11 +93,11 @@ proveRef HERE (AbsDown _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppLeft _ _) = ProvenRefUp TrivialRef
 proveRef HERE (AppRight _ _) = ProvenRefUp TrivialRef
 proveRef STOP _ = TrivialRef
-proveRef (LEFT more) env@(EmptyRoot a@(APP _ _)) = case proveRef more (AppLeft env a) of
+proveRef (LEFT more@(RIGHT STOP)) env@(EmptyRoot a@(APP _ _)) = case proveRef more (AppLeft env a) of
                                                  NoWay -> NoWay
                                                  p@TrivialRef -> ProvenRefLeft p
                                                  p@(ProvenRefLeft _) -> ProvenRefLeft p
---                                                 p@(ProvenRefRight _) -> ProvenRefLeft p
+                                                 p@(ProvenRefRight _) -> ProvenRefLeft p
 --                                                 p@(ProvenRefDown _) -> ProvenRefLeft p
 {-proveRef (RIGHT more) env | a@(APP _ _) <- getAppShape env = case proveRef more (AppRight env a) of
                                                  NoWay -> NoWay
