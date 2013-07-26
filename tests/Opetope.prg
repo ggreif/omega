@@ -1,4 +1,6 @@
 -- Modeling Opetopes
+-- here is Eric's editor: http://sma.epfl.ch/~finster/opetope/opetope.html
+--
 
 import "../tests/NatList.prg"
 
