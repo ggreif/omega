@@ -33,6 +33,9 @@ class Builder (shape :: Lam -> *) where
   close _ sh = sh
   checkClosure :: (Shape env ~ sh) => Traced shape env -> shape sh -> Maybe (Proven sh env)
 
+class Builder shape => TypedBuilder shape where
+  levelUp :: shape inner -> shape inner
+
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
 instance Closed (Ref more) up => Closed (Ref (Up ': more)) ((down :: Trace -> Lam -> Trace) up sh)
