@@ -34,7 +34,8 @@ class Builder (shape :: Lam -> *) where
   checkClosure :: (Shape env ~ sh) => Traced shape env -> shape sh -> Maybe (Proven sh env)
 
 class Builder shape => TypedBuilder shape where
-  levelUp :: shape inner -> shape inner
+  -- levelUp, calculate the corresponding "type", which has same shape, e.g. lam becomes pi, etc.
+  levelUp :: Traced shape env -> shape sh -> shape sh
 
 class Closed (sh :: Lam) (env :: Trace)
 instance Closed (Ref '[]) env
