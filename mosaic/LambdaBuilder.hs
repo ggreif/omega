@@ -267,6 +267,11 @@ type family Subst (residue :: Lam) (with :: Lam) :: Lam
 type instance Subst (Ref '[Up]) with = with
 
 
+-- note: we need a constraint, that substituend does not refer to "strange" places,
+-- such as the apply expression itself, or into the left subtree (lam residue).
+-- ORELSE: at least assign semantics to such a thing.
+
+
 --beta :: Builder shape => shape (App (Abs residue) substituend) -> shape (residue `Subst` substituend)
 beta :: (shape ~ Classical) => shape (App (Abs residue) substituend) -> shape (residue `Subst` substituend)
 --beta (APP (LAM residue) substituend) = _
