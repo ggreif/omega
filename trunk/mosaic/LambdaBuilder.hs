@@ -260,3 +260,14 @@ t7' = close (EmptyRoot t7) t7
 t7'b = close (AppRight (EmptyRoot t7) t7) t7b
 t7'' = proveDown t7 (EmptyRoot t7)
 
+
+-- parallel substitution
+--
+type family Subst (residue :: Lam) (with :: Lam) :: Lam
+type instance Subst (Ref '[Up]) with = with
+
+
+--beta :: Builder shape => shape (App (Abs residue) substituend) -> shape (residue `Subst` substituend)
+beta :: (shape ~ Classical) => shape (App (Abs residue) substituend) -> shape (residue `Subst` substituend)
+--beta (APP (LAM residue) substituend) = _
+beta (APP (LAM HERE) substituend) = substituend
