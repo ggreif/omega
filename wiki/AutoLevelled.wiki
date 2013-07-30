@@ -256,7 +256,7 @@ Which has type `Hidden Foo°` and behaves like a regular `Foo` in Haskell. The r
 
 C.f. the `nax` paper.
 
-Intuitively the `°` separates the _semantic_ portion of the type from the _ad-hoc_ portion. The ad-hoc part is directly intended by the program author, and the Hindley-Milner type inference is acting on this part. The semantic portion is however the bridge-head enabling analyses and isomorphisms to be established. For example the if we can establish an isomorphism of the semantic portions of two values that represent the same value (e.g. {{{S (S (S Z)))}}} and {{{3}}}, then we can verify a conversion function.
+Intuitively the `°` separates the _semantic_ portion of the type from the _ad-hoc_ portion. The ad-hoc part is directly intended by the program author, and the Hindley-Milner type inference is acting on this part. The semantic portion is however the bridgehead enabling analyses and isomorphisms to be established. For example the if we can establish an isomorphism of the semantic portions of two values that represent the same value (e.g. {{{S (S (S Z)))}}} and {{{3}}}, then we can verify a conversion function.
 
 == The function types ==
 
