@@ -23,7 +23,7 @@ Each _lambda node_ is a portal where subgraphs are passed in by means of _applic
 
 == well-formed graphs ==
 
-all references of the (full) graph are pointing at some node of the graph. When in the process of zipping, we have a partial graph in its surroundings, and each reference must be resolvable into either the partial graph or the surroundings.
+All references of the (full) graph are pointing at some node of the graph. When in the process of zipping, we have a partial graph in its surroundings, and each reference must be resolvable into either the partial graph or the surroundings.
 
 == canonical references ==
 
@@ -40,3 +40,16 @@ TODO: illustration
 corresponds to {{{let a = a in a}}}
 
 _Note: the middle `a` corresponds to the right branch of the application node._
+
+== search tree ==
+
+When the graph is either canonical, or all references have some `up` segments followed by a `left` segment. The rest is not relevant, but may not contain `up`segments.
+
+All _previously mentioned_ subgraphs can be accessed this way. The search tree configuration thus is the most generic one, offering maximal sharing.
+
+
+= Substitution =
+
+Beta reduction happens by lifting the right application branch up a level, the left one up two levels, and than recursively inserting the pushed down right branch in the appropriate reference nodes of the left branch.
+
+We need primitive movements for this.
