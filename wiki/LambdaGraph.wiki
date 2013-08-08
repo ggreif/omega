@@ -1,4 +1,4 @@
-#summary Fϖ lambda terms form a graph.
+#summary Fω lambda terms form a graph.
 #labels Phase-Design
 
 https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
@@ -43,7 +43,7 @@ _Note: the middle `a` corresponds to the right branch of the application node._
 
 == search tree ==
 
-When the graph is either canonical, or all references have some `up` segments followed by a `left` segment. The rest is not relevant, but may not contain `up`segments.
+When the graph is either canonical, or all references have some `up` segments followed by a `left` segment. The rest is not relevant, but may not contain `up` segments.
 
 All _previously mentioned_ subgraphs can be accessed this way. The search tree configuration thus is the most generic one, offering maximal sharing.
 
