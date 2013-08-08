@@ -3,7 +3,7 @@
 
 https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
 
-Key document: http://www.cs.gunma-u.ac.jp/~hamana/Papers/poly.pdf
+Key document: http://arxiv.org/pdf/1007.4266.pdf, but see also http://www.cs.gunma-u.ac.jp/~hamana/Papers/poly.pdf
 
 I started implementing it here: https://code.google.com/p/omega/source/browse/mosaic/LambdaBuilder.hs
 
