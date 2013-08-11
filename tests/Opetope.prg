@@ -43,6 +43,7 @@ prop Subtree :: Tree ~> Tree ~> * where
 
 data Stack :: Tree ~> Tree ~> * where
   Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
+  SubDone :: Stack ()tr []tr
   Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
   -- the following three grab a node
@@ -69,11 +70,13 @@ lolliCell = Empty Done
 dolliCell :: Stack [()tr]tr ()tr
 dolliCell = Empty $ Fork In Done
 
---  |         o   |
--- (o)  --->   \ /
--- (|)          o
---  |           |
+--    |           o   |
+-- | [o] |  --->   \ /
+-- | [|] |          o
+--    |             |
 
+--cyclops :: Stack [()tr]tr [[]tr, ()tr]tr
+--cyclops = Subdivision SubDone (Exclude NodeDone)
 
 --- OLD IMPLEMENTATION FOLLOWS
 
