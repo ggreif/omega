@@ -43,6 +43,7 @@ prop Subtree :: Tree ~> Tree ~> * where
 
 data Stack :: Tree ~> Tree ~> * where
   Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
+  Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
 
 -- remains to define corollas
 
