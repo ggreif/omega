@@ -1,7 +1,7 @@
 -- Modeling Opetopes
 -- here is Eric's editor: http://sma.epfl.ch/~finster/opetope/opetope.html
 --
--- Note: Kock et al. use similar different scheme, where
+-- Note: Kock et al. use a similar scheme, where
 --          - dots    <-->   lines
 --          - spheres <-->   dots
 --          - lines disappear
@@ -16,11 +16,21 @@
 
 import "../tests/NatList.prg"
 
+-- list kind
+--kind List = Ni | Co 
 
+-- define the Tree kind, a rose tree
+-- note: Ni may only appear in Fork second position (TODO: use GADT!)
 
+kind Tree = Unit | Ni | Fork Tree Tree deriving syntax (tr) List(Ni, Fork) Unit(Unit)
 
+-- define a proposition for subtrees
 
-
+prop Subtree :: Tree ~> Tree ~> * where
+  BothUnit :: Subtree ()tr ()tr
+  BothNil :: Subtree []tr []tr
+  Take :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
+  Skip :: Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
 
 
 
