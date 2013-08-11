@@ -24,16 +24,31 @@ import "../tests/NatList.prg"
 
 kind Tree = Unit | Ni | Fork Tree Tree deriving syntax (tr) List(Ni, Fork) Unit(Unit)
 
+-- make it singleton
+
+data Tree' :: Tree ~> * where
+  In :: Tree' ()tr
+  Fork :: Tree' head -> Tree' tail -> Tree' [head; tail]tr
+  Done :: Tree' []tr
+
 -- define a proposition for subtrees
 
 prop Subtree :: Tree ~> Tree ~> * where
   BothUnit :: Subtree ()tr ()tr
   BothNil :: Subtree []tr []tr
-  Take :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
-  Skip :: Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
+  TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
+  SkipHead :: Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
 
+-- now we can stack cards
 
+data Stack :: Tree ~> Tree ~> * where
+  Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
 
+-- remains to define corollas
+
+prop Corolla :: Tree ~> * where
+  None' :: Corolla []tr
+  One' :: Corolla tail -> Corolla [()tr; tail]tr
 
 --- OLD IMPLEMENTATION FOLLOWS
 
