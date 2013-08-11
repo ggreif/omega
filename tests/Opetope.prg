@@ -1,8 +1,31 @@
 -- Modeling Opetopes
 -- here is Eric's editor: http://sma.epfl.ch/~finster/opetope/opetope.html
 --
+-- Note: Kock et al. use similar different scheme, where
+--          - dots    <-->   lines
+--          - spheres <-->   dots
+--          - lines disappear
+--          -                spheres appear
+
+-- Note: In Eric's new work (at IAS) there are no
+--       dots any more, instead he uses 'outout cards', so
+--          - (output) cards   <-->  lines
+--          - space between stacked cards <--> output cards
+--          - lines disappear
+--          -                (regular) cards appear
 
 import "../tests/NatList.prg"
+
+
+
+
+
+
+
+
+
+
+--- OLD IMPLEMENTATION FOLLOWS
 
 -- Node Types
 
