@@ -44,12 +44,36 @@ prop Subtree :: Tree ~> Tree ~> * where
 data Stack :: Tree ~> Tree ~> * where
   Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
   Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
+  Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
+  -- the following three grab a node
+  NodeDone :: Stack []tr []tr
+  Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head, tail]tr [prodhead, prodtail]tr
+  Exclude :: {- EntireNode => -} Stack tail prod -> Stack [head, tail]tr prod
 
 -- remains to define corollas
 
 prop Corolla :: Tree ~> * where
   None' :: Corolla []tr
   One' :: Corolla tail -> Corolla [()tr; tail]tr
+
+--  o   --->  |
+--  |         |
+
+lolliCell :: Stack []tr ()tr
+lolliCell = Empty Done
+
+--  |         |
+--  o   --->  |
+--  |         |
+
+dolliCell :: Stack [()tr]tr ()tr
+dolliCell = Empty $ Fork In Done
+
+--  |         o   |
+-- (o)  --->   \ /
+-- (|)          o
+--  |           |
+
 
 --- OLD IMPLEMENTATION FOLLOWS
 
