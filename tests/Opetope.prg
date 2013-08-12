@@ -32,6 +32,7 @@ data Tree' :: Tree ~> * where
   Done :: Tree' []tr
 
 -- define a proposition for subtrees
+-- to be checked: TakeHead must ensure that all the node is consumed
 
 prop Subtree :: Tree ~> Tree ~> * where
   BothUnit :: Subtree ()tr ()tr
@@ -39,7 +40,7 @@ prop Subtree :: Tree ~> Tree ~> * where
   TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
   SkipHead :: Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
 
--- now we can stack cards
+-- now we can stack cards (these are zooms in Kock et al. parlance)
 
 data Stack :: Tree ~> Tree ~> * where
   Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
