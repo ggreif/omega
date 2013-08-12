@@ -35,10 +35,10 @@ data Tree' :: Tree ~> * where
 -- to be checked: TakeHead must ensure that all the node is consumed
 
 prop Subtree :: Tree ~> Tree ~> * where
-  BothUnit :: Subtree ()tr ()tr
+  UnitSub :: Subtree ()tr tr
   BothNil :: Subtree []tr []tr
   TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
-  SkipHead :: Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
+  --SkipHead :: Subtree tail tail' -> Subtree [()tr; tail]tr [head'; tail']tr
 
 -- now we can stack cards (these are zooms in Kock et al. parlance)
 
@@ -48,7 +48,7 @@ data Stack :: Tree ~> Tree ~> * where
   Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
-  -- (which is assumed to be open); [perhaps, note: there may be other cards stacked on this one]
+  -- [perhaps, note: there may be other cards stacked on this one]
   NodeDone :: Stack []tr [()tr]tr
   Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head; tail]tr [prodhead; prodtail]tr
   Exclude :: {- EntireNode => -} Stack tail prod -> Stack [()tr; tail]tr prod
