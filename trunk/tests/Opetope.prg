@@ -47,12 +47,15 @@ data Stack :: Tree ~> Tree ~> * where
   SubDone :: Stack ()tr []tr
   Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
-  -- the following three grab a node
+  -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
+  -- there may be other cards stacked on this one
   NodeDone :: Stack []tr []tr
   Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head, tail]tr [prodhead, prodtail]tr
   Exclude :: {- EntireNode => -} Stack tail prod -> Stack [head, tail]tr prod
+  -- we need a way to sequence cards
+  -- MultiCard :: ??? Disjoint a b 0 => Subtree a -> Subtree b -> Stack tr a [proda, prodb]tr
 
--- remains to define corollas
+-- it remains to define corollas
 
 prop Corolla :: Tree ~> * where
   None' :: Corolla []tr
