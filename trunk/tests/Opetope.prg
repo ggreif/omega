@@ -48,10 +48,10 @@ data Stack :: Tree ~> Tree ~> * where
   Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
-  -- there may be other cards stacked on this one
-  NodeDone :: Stack []tr []tr
-  Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head, tail]tr [prodhead, prodtail]tr
-  Exclude :: {- EntireNode => -} Stack tail prod -> Stack [head, tail]tr prod
+  -- (which is assumed to be open); [perhaps, note: there may be other cards stacked on this one]
+  NodeDone :: Stack []tr [()tr]tr
+  Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head; tail]tr [prodhead; prodtail]tr
+  Exclude :: {- EntireNode => -} Stack tail prod -> Stack [()tr; tail]tr prod
   -- we need a way to sequence cards
   -- MultiCard :: ??? Disjoint a b 0 => Subtree a -> Subtree b -> Stack tr a [proda, prodb]tr
 
@@ -73,6 +73,20 @@ lolliCell = Empty Done
 
 dolliCell :: Stack [()tr]tr ()tr
 dolliCell = Empty $ Fork In Done
+
+--              |
+--  [o]   --->  o
+--   |          |
+
+lolliFrame :: Stack []tr [()tr]tr
+lolliFrame = Encompass NodeDone
+
+--   |          |
+--  [o]   --->  o
+--   |          |
+
+dolliFrame :: Stack [()tr]tr [()tr]tr
+dolliFrame = Encompass (Exclude NodeDone)
 
 --    |           o   |
 -- | [o] |  --->   \ /
