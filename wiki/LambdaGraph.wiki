@@ -53,3 +53,9 @@ All _previously mentioned_ subgraphs can be accessed this way. The search tree c
 Beta reduction happens by lifting the right application branch up a level, the left one up two levels, and than recursively inserting the pushed down right branch in the appropriate reference nodes of the left branch.
 
 We need primitive movements for this.
+
+= Notes =
+
+There is only one binder (in the spirit of [http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=331521 Kamareddine, JFP 2005] and by resorting to level inference, it can be recovered whether it is a π, lambda or Lambda.
+
+Later there will be a ∑-like binder too.
