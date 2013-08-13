@@ -14,7 +14,7 @@
 --          - lines disappear
 --          -                (regular) cards appear
 
-import "../tests/NatList.prg"
+--import "../tests/NatList.prg"
 import "../tests/Nat.prg"
 
 -- list kind
@@ -101,9 +101,21 @@ dolliFrame = Encompass (Exclude NodeDone)
 
 -- Stacking, Valence, Affine subtree, Substitute at an affine position
 
--- Counting Units in a Tree
+-- Counting Units in a tree
 
 valence :: Tree ~> Nat
 {valence []tr} = 0t
 {valence [head; tail]tr} = {plus {valence head} {valence tail}}
 {valence ()tr} = 1t
+
+
+-- a pointer is a valence-1 subtree of a tree
+-- it is used to mark a unit in a tree where substitution will occur
+--
+prop Pointers :: Nat ~> Tree ~> Tree ~> * where
+  Finger :: Pointers 1t ()tr ()tr
+  Finished :: Pointers 0t []tr []tr
+  ThisWay :: Pointers 1t head' head -> Pointers 0t tail' tail -> Pointers 1t [head'; tail']tr [head; tail]tr
+  ElseWhere :: Pointers 1t tail' tail -> Pointers 1t [[]tr; tail']tr [head; tail]tr
+
+
