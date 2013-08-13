@@ -125,8 +125,8 @@ valence :: Tree ~> Nat
 prop Pointers :: Nat ~> Tree ~> Tree ~> * where
   Finger :: Pointers 1t ()tr ()tr
   Finished :: Pointers 0t []tr []tr
-  ThisWay :: Pointers 1t head' head -> Pointers 0t tail' tail -> Pointers 1t [head'; tail']tr [head; tail]tr
-  ElseWhere :: Pointers 1t tail' tail -> Pointers 1t [[]tr; tail']tr [head; tail]tr
+  ThisWay :: Pointers 1t head' head -> Pointers n tail' tail -> Pointers (1+n)t [head'; tail']tr [head; tail]tr
+  ElseWhere :: Pointers n tail' tail -> Pointers n [[]tr; tail']tr [head; tail]tr
 
 -- substitute WHAT    WHERE   IN
 substitute :: Tree ~> Tree ~> Tree ~> Tree
