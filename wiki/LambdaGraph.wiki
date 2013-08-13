@@ -1,6 +1,10 @@
 #summary Fω lambda terms form a graph.
 #labels Phase-Design
 
+= Main Idea =
+
+A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up*{left|right}*) references.
+
 https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
 
 Key document: http://arxiv.org/pdf/1007.4266.pdf, but see also http://www.cs.gunma-u.ac.jp/~hamana/Papers/poly.pdf
@@ -66,3 +70,7 @@ non-zero `n`would collapse to `1`, and for `n=1` it would be a common loop.
 So an application node with `n=0` would normally be eliminable, unless there are {up.left} etc. references in the right subgraph.
 
 Iterated nodes are useful for finitary sharing, as type checking etc., can process the many iterations in bulk.
+
+= More Interesting Papers =
+
+http://gallium.inria.fr/~balabons/Recherche/Balabonski-ICFP13.pdf mentions the "sharing-via-labelling" technique.
