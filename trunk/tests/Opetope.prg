@@ -39,7 +39,6 @@ prop Subtree :: Tree ~> Tree ~> * where
   UnitSub :: Subtree ()tr tr
   BothNil :: Subtree []tr []tr
   TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
-  --SkipHead :: Subtree tail tail' -> Subtree [()tr; tail]tr [head'; tail']tr
 
 -- now we can stack cards (these are zooms in Kock et al. parlance)
 
@@ -55,6 +54,8 @@ data Stack :: Tree ~> Tree ~> * where
   Exclude :: {- EntireNode => -} Stack tail prod -> Stack [()tr; tail]tr prod
   -- we need a way to sequence cards
   -- MultiCard :: ??? Disjoint a b 0 => Subtree a -> Subtree b -> Stack tr a [proda, prodb]tr
+
+  On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {substitute out' at out}
 
 -- it remains to define corollas
 
@@ -89,6 +90,9 @@ lolliFrame = Encompass NodeDone
 dolliFrame :: Stack [()tr]tr [()tr]tr
 dolliFrame = Encompass (Exclude NodeDone)
 
+stacked :: Stack [()tr]tr [[()tr]tr]tr
+stacked = On dolliFrame dolliFrame (In `Fork` Done)
+
 --    |           o   |
 -- | [o] |  --->   \ /
 -- | [|] |          o
@@ -118,4 +122,8 @@ prop Pointers :: Nat ~> Tree ~> Tree ~> * where
   ThisWay :: Pointers 1t head' head -> Pointers 0t tail' tail -> Pointers 1t [head'; tail']tr [head; tail]tr
   ElseWhere :: Pointers 1t tail' tail -> Pointers 1t [[]tr; tail']tr [head; tail]tr
 
-
+-- substitute WHAT    WHERE   IN
+substitute :: Tree ~> Tree ~> Tree ~> Tree
+{substitute what ()tr ()tr} = what
+{substitute what []tr []tr} = []tr
+{substitute what [head'; tail']tr [head; tail]tr} = [{substitute what head' head}; {substitute what tail' tail}]tr
