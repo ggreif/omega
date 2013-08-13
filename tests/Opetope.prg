@@ -90,8 +90,14 @@ lolliFrame = Encompass NodeDone
 dolliFrame :: Stack [()tr]tr [()tr]tr
 dolliFrame = Encompass (Exclude NodeDone)
 
+--   |          |
+--   |          o
+-- [[o]]  --->  |
+--   |          o
+--   |          |
+
 stacked :: Stack [()tr]tr [[()tr]tr]tr
-stacked = On dolliFrame dolliFrame (In `Fork` Done)
+stacked = (dolliFrame `On` dolliFrame) (In `Fork` Done)
 
 --    |           o   |
 -- | [o] |  --->   \ /
