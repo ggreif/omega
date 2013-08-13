@@ -56,6 +56,13 @@ We need primitive movements for this.
 
 = Notes =
 
-There is only one binder (in the spirit of [http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=331521 Kamareddine, JFP 2005] and by resorting to level inference, it can be recovered whether it is a π, lambda or Lambda.
+There is only one binder (in the spirit of [http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=331521 Kamareddine, JFP 2005]) and by resorting to level inference, it can be recovered whether it is a π, lambda or Lambda.
 
 Later there will be a ∑-like binder too.
+
+The application node could come equipped with a natural number, signifying the number of iterated applications, i.e. S^n^Z, for constant `n`. Fixpoints can also be encoded by f @ {up}. In this case
+non-zero `n`would collapse to `1`, and for `n=1` it would be a common loop.
+
+So an application node with `n=0` would normally be eliminable, unless there are {up.left} etc. references in the right subgraph.
+
+Iterated nodes are useful for finitary sharing, as type checking etc., can process the many iterations in bulk.
