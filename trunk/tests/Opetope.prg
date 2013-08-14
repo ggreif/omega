@@ -23,6 +23,7 @@ data Dir :: *2 where
 -- define the Tree kind, a rose tree
 -- note: we may need a two-level kind, since we need to track disjointness
 --       of subtrees
+-- todo: later we may want to have a label kind parameter too
 
 data Tree :: Dir ~> *1 where
   Unit :: Tree Ver
@@ -62,7 +63,7 @@ data Stack :: Tree d ~> Tree e ~> * where
   -- we need a way to sequence cards
   -- MultiCard :: ??? Disjoint a b 0 => Subtree a -> Subtree b -> Stack tr a [proda, prodb]tr
 
-  On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {substitute out' at out}
+  On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {graft out' at out}
 
 -- it remains to define corollas
 
@@ -147,23 +148,28 @@ prop Pointers :: Nat ~> Tree d ~> Tree e ~> * where
   ThisWay :: Pointers 1t head' head -> Pointers n tail' tail -> Pointers (1+n)t [head'; tail']tr [head; tail]tr
   ElseWhere :: Pointers n tail' tail -> Pointers n [[]tr; tail']tr [head; tail]tr
 
--- substitute WHAT      WHERE     IN
-substitute :: Tree d ~> Tree e ~> Tree f ~> Tree f
-{substitute what ()tr ()tr} = what
-{substitute what []tr tr} = tr
-{substitute what [head'; tail']tr [head; tail]tr} = [{substitute what head' head}; {substitute what tail' tail}]tr
+-- http://en.wikipedia.org/wiki/Grafting
+--
+-- graft WHAT      WHERE     IN
+graft :: Tree d ~> Tree e ~> Tree f ~> Tree f
+{graft what ()tr ()tr} = what
+{graft what []tr tr} = tr
+{graft what [head'; tail']tr [head; tail]tr} = [{graft what head' head}; {graft what tail' tail}]tr
 
 {- NOTE: we have an Omega bug here:
 
-prompt> :norm {substitute []tr ()tr ()tr}
+prompt> :norm {graft []tr ()tr ()tr}
 Normalizes to:
   []tr
 
 prompt> :kind []tr
 []tr :: Tree Hor  = []tr
 
-prompt> :kind {substitute []tr ()tr ()tr}
-{substitute []tr ()tr ()tr} :: Tree Ver  = {substitute []tr ()tr ()tr}
+prompt> :kind {graft []tr ()tr ()tr}
+{graft []tr ()tr ()tr} :: Tree Ver  = {graft []tr ()tr ()tr}
 
 ... BUT: Hor /= Ver :-(
 -}
+
+-- substitution: replace a pointed node (of valence n) in a tree with an
+-- other tree of (valence n) -- TODO
