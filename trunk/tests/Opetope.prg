@@ -56,7 +56,6 @@ data Stack :: Tree d ~> Tree e ~> * where
   Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
-  -- [perhaps, note: there may be other cards stacked on this one]
   NodeDone :: Stack []tr [()tr]tr
   Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head; tail]tr [prodhead; prodtail]tr
   Exclude :: {- EntireNode => -} Stack tail prod -> Stack [()tr; tail]tr prod
