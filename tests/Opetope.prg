@@ -128,6 +128,7 @@ nopetope = [crossed, lolliFrame; dolliForever]cplx
 -- back to unit as fast as possible...
 --
 stopetope = [crossed, lolliFrame, dolliCell]cplx
+neverstopetope = [crossed, lolliFrame, dolliCell; neverstopetope]cplx
 
 --   |          o
 -- [[|]]  --->  |
