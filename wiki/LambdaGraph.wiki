@@ -43,7 +43,7 @@ https://omega.googlecode.com/svn/wiki/Letrec.svg
 
 corresponds to {{{let a = a in a}}}
 
-_Note: the middle `a` corresponds to the right branch of the application node._
+_Note: the middle_ `a` _corresponds to the right branch of the application node._
 
 == search tree ==
 
