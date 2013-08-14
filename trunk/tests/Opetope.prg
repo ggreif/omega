@@ -122,7 +122,8 @@ crossed = SubDone
 
 -- we can now join things
 --
-nopetope = [crossed, lolliFrame, dolliFrame, dolliFrame]cplx
+dolliForever = [dolliFrame; dolliForever]cplx
+nopetope = [crossed, lolliFrame; dolliForever]cplx
 
 --   |          o
 -- [[|]]  --->  |
