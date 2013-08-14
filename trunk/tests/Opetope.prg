@@ -8,7 +8,7 @@
 --          -                spheres appear
 
 -- Note: In Eric's new work (at IAS) there are no
---       dots any more, instead he uses 'outout cards', so
+--       dots any more, instead he uses 'output cards', so
 --          - (output) cards   <-->  lines
 --          - space between stacked cards <--> output cards
 --          - lines disappear
