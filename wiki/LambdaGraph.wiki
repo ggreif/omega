@@ -3,7 +3,7 @@
 
 = Main Idea =
 
-A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up*{left|right}*) references.
+A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up`*`{left|right}`*`) references.
 
 https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
 
@@ -60,7 +60,7 @@ We need primitive movements for this.
 
 = Notes =
 
-There is only one binder (in the spirit of [http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=331521 Kamareddine, JFP 2005]) and by resorting to level inference, it can be recovered whether it is a π, lambda or Lambda.
+There is only one binder (in the spirit of [http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=331521 Kamareddine, JFP 2005]) and by resorting to level inference, it can be recovered whether it is a π, λ or Λ.
 
 Later there will be a ∑-like binder too.
 
