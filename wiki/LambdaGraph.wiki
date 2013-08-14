@@ -3,7 +3,7 @@
 
 = Main Idea =
 
-A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up`*`{left|right}`*`) references.
+A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up`*`{down|left|right}`*`) references.
 
 https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
 
@@ -39,7 +39,7 @@ These are non-canonical graphs. When a reference ascends to an application node 
 
 https://omega.googlecode.com/svn/wiki/Letrec.svg
 
-{{{(λup) @ up.left}}}
+{{{(λ{up}) @ {up.left}}}}
 
 corresponds to (recursive) {{{let a = a in a}}}
 
