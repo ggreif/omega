@@ -1,4 +1,4 @@
-#summary Fω lambda terms form a graph.
+#summary F,,ω,, lambda terms form a graph.
 #labels Phase-Design
 
 = Main Idea =
