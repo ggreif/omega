@@ -125,6 +125,10 @@ crossed = SubDone
 dolliForever = [dolliFrame; dolliForever]cplx
 nopetope = [crossed, lolliFrame; dolliForever]cplx
 
+-- back to unit as fast as possible...
+--
+stopetope = [crossed, lolliFrame, dolliCell]cplx
+
 --   |          o
 -- [[|]]  --->  |
 --   |          o
