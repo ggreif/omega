@@ -106,6 +106,13 @@ dolliFrame = Encompass (Exclude NodeDone)
 stacked :: Stack [()tr]tr [[()tr]tr]tr
 stacked = (dolliFrame `On` dolliFrame) (In `Fork` Done)
 
+--   |
+--  [|]   --->  o
+--   |          |
+
+crossed :: Stack ()tr []tr
+crossed = SubDone
+
 --    |           o   |
 -- | [o] |  --->   \ /
 -- | [|] |          o
