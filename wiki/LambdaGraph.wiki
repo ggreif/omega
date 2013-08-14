@@ -58,14 +58,14 @@ Beta reduction happens by lifting the right application branch up a level, the l
 
 We need primitive movements (_steps_) for this.
 
-== Step: `Down`, `Left`, `Right`
+== Step: `Down`, `Left`, `Right` ==
 
 These are easy. Mark a _limit node_ and a _target node_ below it. Everything outside the cone of the former counts as the environment and references that point into the environment are _free_. These stretch.
 Everything else remains the same.
 
 TODO: illustrate
 
-== Step: `Up`
+== Step: `Up` ==
 
 This is hairy. Similarly we have our limit node and the target node in its cone. Free references are simply shortened by removing the initial `Up`. References that point into the cone of the target node do not change. Otherwise, ... (TODO: I need to think about this.)
 
