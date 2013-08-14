@@ -15,7 +15,7 @@
    id="svg3045"
    version="1.1"
    inkscape:version="0.48.4 r9939"
-   sodipodi:docname="New document 2">
+   sodipodi:docname="Letrec.svg">
   <defs
      id="defs3047">
     <marker
@@ -68,9 +68,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="6.6565392"
-     inkscape:cx="44.139911"
-     inkscape:cy="22.009111"
+     inkscape:zoom="17.322047"
+     inkscape:cx="32.065069"
+     inkscape:cy="48.847193"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -91,7 +91,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -177,5 +177,11 @@
        id="path4391"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path3467"
+       d="m 168.30842,397.94437 c 34.29548,18.92822 12.35709,41.72884 12.35709,41.72884"
+       style="fill:none;stroke:#00b800;stroke-width:0.30814758px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#DotM)" />
   </g>
 </svg>
