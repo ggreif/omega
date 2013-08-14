@@ -16,6 +16,12 @@
 
 import "../tests/Nat.prg"
 
+
+data ZoomComplex :: Tree e ~> Tree f ~> * where
+  Nil :: ZoomComplex a a
+  Cons :: Stack a b -> ZoomComplex b c -> ZoomComplex a c
+ deriving List(cplx)
+
 data Dir :: *2 where
   Hor :: Dir
   Ver :: Dir
@@ -53,7 +59,8 @@ prop Subtree :: Tree d ~> Tree e ~> * where
 data Stack :: Tree d ~> Tree e ~> * where
   Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
   SubDone :: Stack ()tr []tr
-  Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
+  SubCont :: Stack ()tr tr -> Stack ()tr [tr]tr
+  --Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
   NodeDone :: Stack []tr [()tr]tr
@@ -112,6 +119,20 @@ stacked = (dolliFrame `On` dolliFrame) (In `Fork` Done)
 
 crossed :: Stack ()tr []tr
 crossed = SubDone
+
+-- we can now join things
+--
+nopetope = [crossed, lolliFrame, dolliFrame]cplx
+
+--   |          o
+-- [[|]]  --->  |
+--   |          o
+--   |          |
+
+drossed :: Stack ()tr [[]tr]tr
+drossed = SubCont SubDone
+-- drossed = (SubDone `On` NodeDone) In
+-- Note: can we find a way to graft here? Then On would be feasible
 
 --    |           o   |
 -- | [o] |  --->   \ /
