@@ -150,7 +150,7 @@ prop Pointers :: Nat ~> Tree d ~> Tree e ~> * where
 -- substitute WHAT      WHERE     IN
 substitute :: Tree d ~> Tree e ~> Tree f ~> Tree f
 {substitute what ()tr ()tr} = what
-{substitute what []tr []tr} = []tr
+{substitute what []tr tr} = tr
 {substitute what [head'; tail']tr [head; tail]tr} = [{substitute what head' head}; {substitute what tail' tail}]tr
 
 {- NOTE: we have an Omega bug here:
