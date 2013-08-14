@@ -37,9 +37,9 @@ References are canonical when they only point upwards. Binding references are ca
 
 These are non-canonical graphs. When a reference ascends to an application node and descends to the left into a lambda node.
 
-TODO: illustration
+https://omega.googlecode.com/svn/wiki/LambdaGraph.svg
 
-{{{(\up) @ up.left}}}
+{{{(λup) @ up.left}}}
 
 corresponds to {{{let a = a in a}}}
 
