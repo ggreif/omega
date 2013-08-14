@@ -16,16 +16,23 @@
 
 import "../tests/Nat.prg"
 
+data Dir :: *2 where
+  Hor :: Dir
+  Ver :: Dir
+
 -- define the Tree kind, a rose tree
--- note: Ni may only appear in Fork second position (TODO: use GADT!)
 -- note: we may need a two-level kind, since we need to track disjointness
 --       of subtrees
 
-kind Tree = Unit | Ni | Fork Tree Tree deriving syntax (tr) List(Ni, Fork) Unit(Unit)
+data Tree :: Dir ~> *1 where
+  Unit :: Tree Ver
+  Ni :: Tree Hor
+  Fork :: Tree d ~> Tree Hor ~> Tree Hor
+ deriving syntax (tr) List(Ni, Fork) Unit(Unit)
 
 -- make it singleton
 
-data Tree' :: Tree ~> * where
+data Tree' :: Tree d ~> * where
   In :: Tree' ()tr
   Fork :: Tree' head -> Tree' tail -> Tree' [head; tail]tr
   Done :: Tree' []tr
@@ -35,14 +42,14 @@ data Tree' :: Tree ~> * where
 -- define a proposition for subtrees
 -- to be checked: TakeHead must ensure that all the node is consumed
 
-prop Subtree :: Tree ~> Tree ~> * where
+prop Subtree :: Tree d ~> Tree e ~> * where
   UnitSub :: Subtree ()tr tr
   BothNil :: Subtree []tr []tr
   TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
 
 -- now we can stack cards (these are zooms in Kock et al. parlance)
 
-data Stack :: Tree ~> Tree ~> * where
+data Stack :: Tree d ~> Tree e ~> * where
   Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
   SubDone :: Stack ()tr []tr
   Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
@@ -59,7 +66,7 @@ data Stack :: Tree ~> Tree ~> * where
 
 -- it remains to define corollas
 
-prop Corolla :: Tree ~> * where
+prop Corolla :: Tree d ~> * where
   None' :: Corolla []tr
   One' :: Corolla tail -> Corolla [()tr; tail]tr
 
@@ -113,20 +120,20 @@ stacked = (dolliFrame `On` dolliFrame) (In `Fork` Done)
 
 -- counting Units in a tree
 
-valence :: Tree ~> Nat
+valence :: Tree d ~> Nat
 {valence []tr} = 0t
 {valence [head; tail]tr} = {plus {valence head} {valence tail}}
 {valence ()tr} = 1t
 
 -- counting siblings of a tree
 
-nodeValence :: Tree ~> Nat
+nodeValence :: Tree d ~> Nat
 {nodeValence []tr} = 0t
 {nodeValence [head; tail]tr} = (1+{nodeValence tail})t
 
 -- nodeValenceAt: given a (multi)pointer, determine the node valences at those positions
---               WHERE   IN
-nodeValenceAt :: Tree ~> Tree ~> Nat
+--               WHERE     IN
+nodeValenceAt :: Tree d ~> Tree e ~> Nat
 {nodeValenceAt ()tr tree} = {nodeValence tree}
 {nodeValenceAt []tr []tr} = 0t
 {nodeValenceAt [head'; tail']tr [head; tail]tr} = {plus {nodeValenceAt head' head} {nodeValenceAt tail' tail}}
@@ -134,14 +141,29 @@ nodeValenceAt :: Tree ~> Tree ~> Nat
 -- a pointer is a valence-1 subtree of a tree
 -- it is used to mark a unit in a tree where substitution will occur
 --
-prop Pointers :: Nat ~> Tree ~> Tree ~> * where
+prop Pointers :: Nat ~> Tree d ~> Tree e ~> * where
   Finger :: Pointers 1t ()tr ()tr
   Finished :: Pointers 0t []tr []tr
   ThisWay :: Pointers 1t head' head -> Pointers n tail' tail -> Pointers (1+n)t [head'; tail']tr [head; tail]tr
   ElseWhere :: Pointers n tail' tail -> Pointers n [[]tr; tail']tr [head; tail]tr
 
--- substitute WHAT    WHERE   IN
-substitute :: Tree ~> Tree ~> Tree ~> Tree
+-- substitute WHAT      WHERE     IN
+substitute :: Tree d ~> Tree e ~> Tree f ~> Tree f
 {substitute what ()tr ()tr} = what
 {substitute what []tr []tr} = []tr
 {substitute what [head'; tail']tr [head; tail]tr} = [{substitute what head' head}; {substitute what tail' tail}]tr
+
+{- NOTE: we have an Omega bug here:
+
+prompt> :norm {substitute []tr ()tr ()tr}
+Normalizes to:
+  []tr
+
+prompt> :kind []tr
+[]tr :: Tree Hor  = []tr
+
+prompt> :kind {substitute []tr ()tr ()tr}
+{substitute []tr ()tr ()tr} :: Tree Ver  = {substitute []tr ()tr ()tr}
+
+... BUT: Hor /= Ver :-(
+-}
