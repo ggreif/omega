@@ -14,14 +14,12 @@
 --          - lines disappear
 --          -                (regular) cards appear
 
---import "../tests/NatList.prg"
 import "../tests/Nat.prg"
-
--- list kind
---kind List = Ni | Co 
 
 -- define the Tree kind, a rose tree
 -- note: Ni may only appear in Fork second position (TODO: use GADT!)
+-- note: we may need a two-level kind, since we need to track disjointness
+--       of subtrees
 
 kind Tree = Unit | Ni | Fork Tree Tree deriving syntax (tr) List(Ni, Fork) Unit(Unit)
 
@@ -31,6 +29,8 @@ data Tree' :: Tree ~> * where
   In :: Tree' ()tr
   Fork :: Tree' head -> Tree' tail -> Tree' [head; tail]tr
   Done :: Tree' []tr
+ deriving syntax (ar) List(Done, Fork) Unit(In) -- "arbre"
+-- http://www.papoulipoesique.com/wp-content/uploads/2013/06/arbre.jpg
 
 -- define a proposition for subtrees
 -- to be checked: TakeHead must ensure that all the node is consumed
