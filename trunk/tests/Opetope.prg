@@ -124,6 +124,12 @@ nodeValence :: Tree ~> Nat
 {nodeValence []tr} = 0t
 {nodeValence [head; tail]tr} = (1+{nodeValence tail})t
 
+-- nodeValenceAt: given a (multi)pointer, determine the node valences at those positions
+--               WHERE   IN
+nodeValenceAt :: Tree ~> Tree ~> Nat
+{nodeValenceAt ()tr tree} = {nodeValence tree}
+{nodeValenceAt []tr []tr} = 0t
+{nodeValenceAt [head'; tail']tr [head; tail]tr} = {plus {nodeValenceAt head' head} {nodeValenceAt tail' tail}}
 
 -- a pointer is a valence-1 subtree of a tree
 -- it is used to mark a unit in a tree where substitution will occur
