@@ -35,7 +35,7 @@ As computer science and real-world software installations are increasingly under
 
 In this educational pearl we set out to give forms to the abstract terms appearing in the typed formalisms and make suggestive pictures how a programmer can think about them and mentally connect the parts.
 
-We shall examine a type system not unlike to the programming language Ωmega [http://code.google.com/p/omega ref], its particulars and the ideas behind it.
+We shall examine a type system not unlike to the programming language [http://code.google.com/p/omega Ωmega], its particulars and the ideas behind it.
 
 
 === Typed lambda calculi ===
