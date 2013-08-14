@@ -111,12 +111,18 @@ stacked = (dolliFrame `On` dolliFrame) (In `Fork` Done)
 
 -- Stacking, Valence, Affine subtree, Substitute at an affine position
 
--- Counting Units in a tree
+-- counting Units in a tree
 
 valence :: Tree ~> Nat
 {valence []tr} = 0t
 {valence [head; tail]tr} = {plus {valence head} {valence tail}}
 {valence ()tr} = 1t
+
+-- counting siblings of a tree
+
+nodeValence :: Tree ~> Nat
+{nodeValence []tr} = 0t
+{nodeValence [head; tail]tr} = (1+{nodeValence tail})t
 
 
 -- a pointer is a valence-1 subtree of a tree
