@@ -41,7 +41,7 @@ https://omega.googlecode.com/svn/wiki/Letrec.svg
 
 {{{(λup) @ up.left}}}
 
-corresponds to {{{let a = a in a}}}
+corresponds to (recursive) {{{let a = a in a}}}
 
 _Note: the middle_ `a` _corresponds to the right branch of the application node._
 
@@ -57,6 +57,12 @@ All _previously mentioned_ subgraphs can be accessed this way. The search tree c
 Beta reduction happens by lifting the right application branch up a level, the left one up two levels, and than recursively inserting the pushed down right branch in the appropriate reference nodes of the left branch.
 
 We need primitive movements for this.
+
+TODO: illustrate
+
+== Movements ==
+
+Since primitive movements only affect _free references_ (those into the context) stream fusion like techniques could be applied to avoid multiple traversals of the tree.
 
 = Notes =
 
