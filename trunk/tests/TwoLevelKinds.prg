@@ -17,8 +17,8 @@ type Tree = Fix TreeF
 -}
 
 
-data T a = Nix | F a a
+data T r a = Nix | F r a r
 
-data Fix f = Fix (f (Fix f))
+data Fix f a = Fix (f (Fix f a) a)
 
-type Tree = Fix T
+type Tree a = Fix T a
