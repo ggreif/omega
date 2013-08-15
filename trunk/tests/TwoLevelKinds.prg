@@ -30,4 +30,6 @@ type Tree a = Fix T a
 
 omega.exe: RankN.hs:(1704,1)-(1708,23): Non-exhaustive patterns in function matchKind
 
+>>> http://code.google.com/p/omega/source/browse/trunk/src/RankN.hs#1704
+
 -}
