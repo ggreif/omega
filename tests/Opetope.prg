@@ -70,6 +70,10 @@ data Stack :: Tree d ~> Tree e ~> * where
   -- MultiCard :: ??? Disjoint a b 0 => Subtree a -> Subtree b -> Stack tr a [proda, prodb]tr
 
   On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {graft out' at out}
+  Beside :: () -- (Pointers 1t at tr, Pointers 1t {graft skipping at at} {graft skipping at tr})
+         => Tree' at -> Tree' skipping -> Stack tr' [out']tr -> Stack tr out -> Stack {graft tr' {graft skipping at at} {graft skipping at tr}} [out'; out]tr
+
+  -- WARNING: [out']tr ---> one sibling for now
 
 -- it remains to define corollas
 
@@ -140,13 +144,14 @@ drossed = SubCont SubDone
 -- drossed = (SubDone `On` NodeDone) In
 -- Note: can we find a way to graft here? Then On would be feasible
 
---    |           o   |
+--                    |
+--    |           o   o
 -- | [o] |  --->   \ /
 -- | [|] |          o
 --    |             |
 
 --cyclops :: Stack [()tr]tr [[]tr, ()tr]tr
---cyclops = Subdivision SubDone (Exclude NodeDone)
+--cyclops = Pick (Beside ()ar ()ar SubDone (Exclude NodeDone)) NodeDone
 
 
 
