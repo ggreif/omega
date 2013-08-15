@@ -17,8 +17,14 @@ type Tree = Fix TreeF
 -}
 
 
-data T r a = Nix | F r a r
+kind T r a = Nix | F r a r
 
-data Fix f a = Fix (f (Fix f a) a)
+kind Fix f a = X (f (Fix f a) a)
 
 type Tree a = Fix T a
+
+{- Triggers omega bug:
+
+omega.exe: RankN.hs:(1704,1)-(1708,23): Non-exhaustive patterns in function matchKind
+
+-}
