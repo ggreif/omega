@@ -211,3 +211,14 @@ prompt> :kind {graft []tr ()tr ()tr}
 
 -- substitution: replace a pointed node (of valence n) in a tree with an
 -- other tree of (valence n) -- TODO
+
+
+-- HERE IS A NICE RESEARCH QUESTION:
+-- is it possible to "proof search" a Zoom?
+-- i.e.
+{-
+
+class ZoomLike (int :: Tree) (out :: Tree) where
+  zoom :: (Nodes int ~ Valence out) => Zoom int out
+
+-}
