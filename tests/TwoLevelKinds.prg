@@ -20,7 +20,7 @@ type Tree = Fix TreeF
 kind T r a = Nix | F r a r
 
 kind Fix f a = X (f (Fix f a) a)
-                  ^
+---               ^
 ------------------+
 --- here is the bug!
 
