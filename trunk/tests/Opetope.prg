@@ -78,13 +78,11 @@ data Stack :: Tree d ~> Tree e ~> * where
 
   On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {graft out' at out}
 
-
   -- building niches
   NicheDone :: Stack ()tr []tr
   Also :: () -- (Pointers 1t at tr)
-         => Tree' at -> Stack tr' [out']tr -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
+         => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
 
-  -- WARNING: [out']tr ---> one sibling for now
 
 -- it remains to define corollas
 
@@ -169,8 +167,8 @@ niche0 = NicheDone
 --  |           |
 
 -- this is a niche, but assume to be a frame
---niche1 :: Stack ()tr [[]tr, []tr]tr
---niche1 = Also ()ar SubDone NicheDone
+niche1 :: Stack ()tr [[]tr]tr
+niche1 = Also ()ar SubDone NicheDone
 
 --  |         o   o
 -- [|]  --->   \ /
