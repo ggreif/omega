@@ -1266,7 +1266,7 @@ skolTy :: TyCh m => Sigma -> m ([TcTv],[Pred],Rho)
 skolTy sigma = unBindWith (\ x -> return "SkolemVarsShouldNeverBackPatch") newSkolem sigma
 
 -- "new" from "unBindWithL" will be one of these three functions
-newFlexi       nam quant k = do { v <- newFlexiTyVar k; return(TcTv v)}
+newFlexi       nam quant k = newTau k
 newSkolem      nam quant k = do { v <- newSkolTyVar (show nam) k; return(TcTv v)}
 newRigid loc s nam quant k = do { v <- newRigidTyVar quant loc (return s) k; return(TcTv v) }
 
@@ -1706,7 +1706,14 @@ matchKind (Karr a b) (t:ts) =
      ; unify a k
      ; matchKind b ts }
 matchKind k [] = zonk k
-
+matchKind k@(TcTv _) (t:ts) = do --kind <- kindOfM t -- FIXME: gross oversimplification
+                                 dom <- newUniv --newTau $ MK kind
+                                 rng <- newUniv -- newFlexiTyVar $ MK kind
+                                 let arr = Karr dom rng
+                                 unify arr k
+                                 matchKind rng ts
+                                 zonk k
+matchKind k ts = failM 0 [Ds "\nmatchKind: ===>  ", Ds $ shtt k, Ds " <====    ", Dl ts "   ,,,,   "]
 
 checkTyFun :: TyCh m => String -> Rho -> [Tau] -> Expected Tau -> m [Tau]
 checkTyFun nm (Rtau k) [] (Infer ref) = do { a <- zonk k; writeRef ref a; return[] }
