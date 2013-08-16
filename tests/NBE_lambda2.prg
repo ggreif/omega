@@ -1,4 +1,5 @@
 -- See: http://en.wikipedia.org/wiki/Normalisation_by_evaluation
+-- and also http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.39.2361
 --
 import "../src/LangPrelude.prg" (listM,Monad,compose,const)
 
@@ -77,8 +78,8 @@ infer :: TyEnv g -> Exp g t -> Ty t
 infer g (Var x)         = inferVar g x
 infer g (Lam t e)       = Arr t (infer (Cons t g) e)
 infer g (App e e')      = case infer g e of Arr _ t -> t
-infer g (ETrue)         = Bool
-infer g (EFalse)        = Bool
+infer g ETrue           = Bool
+infer g EFalse          = Bool
 infer g (If _ e _)      = infer g e
 
 inferVar :: TyEnv g -> Var g t -> Ty t
