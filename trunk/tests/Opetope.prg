@@ -88,8 +88,8 @@ data Stack :: Tree d ~> Tree e ~> * where
   -- building niches
   NicheDone :: Stack ()tr []tr
   Niche :: Stack tr out -> Stack tr [out]tr
-  Also :: () -- (Pointers 1t at tr)
-         => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
+  Also :: Pointers 1t at tr
+       => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
 
  deriving syntax(z) Record(NicheDone, Also) Item(Frame)
 
@@ -268,16 +268,21 @@ graft :: Tree d ~> Tree e ~> Tree f ~> Tree f
 {graft what []tr tr} = tr
 {graft what [head'; tail']tr [head; tail]tr} = [{graft what head' head}; {graft what tail' tail}]tr
 
-
+-- extgraft: extend and graft
+--
 extgraft :: Tree what ~> Tree wher ~> Tree tree ~> Tree tree'
 {extgraft what ()tr ()tr} = what
 {extgraft what []tr ()tr} = ()tr
-{extgraft what [head; tail]tr ()tr} = [{extgraft what head ()tr}; {extgraft what tail ()tr}]tr
+{extgraft what [head; tail]tr ()tr} = {extgrafthor what [head; tail]tr}
 {extgraft what []tr []tr} = []tr
 {extgraft what []tr [head; tail]tr} = [head; tail]tr
 {extgraft what [head'; tail']tr [head; tail]tr} = [{extgraft what head' head}; {extgraft what tail' tail}]tr
 
-{- TODO? multiGraft :: Treelist -> where -> in -}
+-- helper:
+extgrafthor :: Tree what ~> Tree Hor ~> Tree Hor
+{extgrafthor what []tr} = []tr
+{extgrafthor what [head; tail]tr} = [{extgraft what head ()tr}; {extgrafthor what tail}]tr
+
 
 {- NOTE: we have an Omega bug here:
 
