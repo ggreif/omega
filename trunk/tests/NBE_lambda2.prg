@@ -3,6 +3,8 @@
 -- almost there: http://www.cs.nott.ac.uk/~txa/publ/flops04.pdf
 --       slides: http://www.cs.nott.ac.uk/~txa/talks/flops-slides.pdf
 -- other slides: http://cs.ioc.ee/~tarmo/tsem08/abel-slides.pdf
+--     by Fiore: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.130.1867
+--     and Abel: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.278.4776
 --
 import "../src/LangPrelude.prg" (listM,Monad,compose,const)
 
