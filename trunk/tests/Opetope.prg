@@ -88,6 +88,8 @@ data Stack :: Tree d ~> Tree e ~> * where
   Also :: () -- (Pointers 1t at tr)
          => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
 
+ deriving syntax(z) Record(NicheDone, Also)
+
 
 -- it remains to define corollas
 
@@ -170,7 +172,7 @@ drossed = SubCont SubDone
 
 -- this is a niche, but assume to be a frame
 niche0 :: Stack ()tr []tr
-niche0 = NicheDone
+niche0 = {}z
 
 --  |           |
 -- [|]          +
@@ -178,7 +180,7 @@ niche0 = NicheDone
 
 -- this is a niche, but assume to be a frame
 niche1 :: Stack ()tr [[]tr]tr
-niche1 = Also ()ar SubDone NicheDone
+niche1 = {()ar=SubDone; {}z}z
 
 --  |         o   o
 -- [|]  --->   \ /
@@ -187,7 +189,7 @@ niche1 = Also ()ar SubDone NicheDone
 
 -- this is a niche, but assume to be a frame
 niche2 :: Stack ()tr [[]tr, []tr]tr
-niche2 = Also ()ar SubDone niche1
+niche2 = {()ar=SubDone; niche1}z
 
 --                |
 --  |         o   o
@@ -197,7 +199,7 @@ niche2 = Also ()ar SubDone niche1
 
 
 niche10 :: Stack [()tr]tr [[()tr]tr, []tr]tr
-niche10 = Also ()ar (Exclude NodeDone) $ Niche SubDone
+niche10 = {()ar=Exclude NodeDone; Niche SubDone}z
 
 
 -- ################################
