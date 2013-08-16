@@ -19,6 +19,7 @@ data Ty :: *0 ~> *0 where
 data Var :: *0 ~> *0 ~> *0 where
    ZVar :: Var (h,t) t
    SVar :: Var h t -> Var (h,s) t
+ deriving Nat(d)
 
 data Exp :: *0 ~> *0 ~> *0 where
    Var :: Var g t -> Exp g t
@@ -30,7 +31,7 @@ data Exp :: *0 ~> *0 ~> *0 where
 
 -- smart constructors ----------------------------------------------------------
 lamE :: Ty s -> (Exp (g,s) s -> Exp (g,s) t) -> Exp g (s -> t)
-lamE s f = Lam s (f (Var ZVar))
+lamE s f = Lam s (f $ Var 0d)
 
 ifE :: Exp g Bool -> Exp g t -> Exp g t -> Exp g t
 ifE t ETrue EFalse = t
@@ -55,14 +56,14 @@ eqT Bool Bool = True
 eqT _ _ = False
 
 eqV :: Var g t -> Var h s -> Bool
-eqV (SVar x) (SVar y) = eqV x y
-eqV ZVar ZVar = True
+eqV (1+x)d (1+y)d = eqV x y
+eqV 0d 0d = True
 eqV _ _ = False
 
 -- evaluation ------------------------------------------------------------------
 var :: Var g t -> g -> t
-var ZVar     (_,t) = t
-var (SVar x) (h,s) = var x h
+var 0d     (_,t) = t
+var (1+x)d (h,s) = var x h
 
 exp :: Exp g t -> g -> t
 exp (Var x)    g = var x g
@@ -88,8 +89,8 @@ infer g EFalse          = Bool
 infer g (If _ e _)      = infer g e
 
 inferVar :: TyEnv g -> Var g t -> Ty t
-inferVar (Cons t h) (SVar x) = inferVar h x
-inferVar (Cons t h) (ZVar)   = t
+inferVar (Cons t h) (1+x)d = inferVar h x
+inferVar (Cons t h) 0d     = t
 
 -- tree monad ------------------------------------------------------------------
 
@@ -175,8 +176,8 @@ normalize s (Box e) = Box (quote s (exp e ()))
 -- examples --------------------------------------------------------------------
 b2b = Arr Bool Bool
 b22b = Arr b2b b2b
-zero = Var ZVar
-one = Var (SVar ZVar)
+zero = Var 0d
+one = Var 1d
 once   = Box (Lam b2b (Lam Bool (App one zero)))
 twice  = Box (Lam b2b (Lam Bool (App one (App one zero))))
 thrice = Box (Lam b2b (Lam Bool (App one (App one (App one zero)))))
