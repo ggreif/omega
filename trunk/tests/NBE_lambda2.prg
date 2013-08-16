@@ -1,6 +1,7 @@
 -- See: http://en.wikipedia.org/wiki/Normalisation_by_evaluation
 -- and also http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.39.2361
 -- almost there: http://www.cs.nott.ac.uk/~txa/publ/flops04.pdf
+--       slides: http://www.cs.nott.ac.uk/~txa/talks/flops-slides.pdf
 --
 import "../src/LangPrelude.prg" (listM,Monad,compose,const)
 
