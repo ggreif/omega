@@ -32,19 +32,19 @@ ifE t e e' = if eqE e e' then e else If t e e'
 
 -- boring equality tests -------------------------------------------------------
 eqB :: BoxExp t -> BoxExp s -> Bool
-eqB (Box e) (Box e_) = eqE e e_
+eqB (Box e) (Box e') = eqE e e'
 
 eqE :: Exp g t -> Exp h s -> Bool
 eqE (Var x) (Var y) = eqV x y
-eqE (Lam s e) (Lam s_ e_) = eqT s s_ && eqE e e_
-eqE (App e1 e2) (App e1_ e2_) = eqE e1 e1_ && eqE e2 e2_
-eqE (If e1 e2 e3) (If e1_ e2_ e3_) = eqE e1 e1_ && (eqE e2 e2_ && eqE e3 e3_)
+eqE (Lam s e) (Lam s' e') = eqT s s' && eqE e e'
+eqE (App e1 e2) (App e1' e2') = eqE e1 e1' && eqE e2 e2'
+eqE (If e1 e2 e3) (If e1' e2' e3') = eqE e1 e1' && (eqE e2 e2' && eqE e3 e3')
 eqE ETrue ETrue = True
 eqE EFalse EFalse = True
 eqE _ _ = False
 
 eqT :: Ty t -> Ty s -> Bool
-eqT (Arr s t) (Arr s_ t_) = eqT s s_ && eqT t t_
+eqT (Arr s t) (Arr s' t') = eqT s s' && eqT t t'
 eqT Bool Bool = True
 eqT _ _ = False
 
@@ -99,10 +99,10 @@ treeM = Monad Val bind error
 tmap f x = do a <- x; return (f a)
   where monad treeM
 
-flatten t = flatten_ t []
+flatten t = fl t []
  where
-   flatten_ (Val a)      k = a:k
-   flatten_ (Choice l r) k = flatten_ l (flatten_ r k)
+   fl (Val a)      k = a:k
+   fl (Choice l r) k = fl l (fl r k)
 
 
 -- quote & friends -------------------------------------------------------------
