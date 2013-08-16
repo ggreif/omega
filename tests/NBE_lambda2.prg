@@ -8,20 +8,20 @@ monad listM
 
 data Ty :: *0 ~> *0 where
    Bool :: Ty Bool
-   Arr :: (Ty a) -> (Ty b) -> Ty (a -> b)
+   Arr :: Ty a -> Ty b -> Ty (a -> b)
 
 data Var :: *0 ~> *0 ~> *0 where
-   ZVar :: Var ((h,t)) t
-   SVar :: (Var h t) -> Var ((h,s)) t
+   ZVar :: Var (h,t) t
+   SVar :: Var h t -> Var (h,s) t
 
 data Exp :: *0 ~> *0 ~> *0 where
-   Var :: (Var g t) -> Exp g t
-   Lam :: (Ty a) -> (Exp ((g,a)) b) -> Exp g (a -> b)
-   App :: (Exp g (s -> t)) -> (Exp g s) -> Exp g t
-   If :: (Exp g Bool) -> (Exp g t) -> (Exp g t) -> Exp g t
+   Var :: Var g t -> Exp g t
+   Lam :: Ty a -> Exp (g,a) b -> Exp g (a -> b)
+   App :: Exp g (s -> t) -> Exp g s -> Exp g t
+   If :: Exp g Bool -> Exp g t -> Exp g t -> Exp g t
    ETrue :: Exp g Bool
-   EFalse :: Exp g Bool   
-   
+   EFalse :: Exp g Bool
+
 -- smart constructors ----------------------------------------------------------
 lamE :: Ty s -> (Exp (g,s) s -> Exp (g,s) t) -> Exp g (s -> t)
 lamE s f = Lam s (f (Var ZVar))
@@ -39,8 +39,8 @@ eqE (Var x) (Var y) = eqV x y
 eqE (Lam s e) (Lam s_ e_) = eqT s s_ && eqE e e_
 eqE (App e1 e2) (App e1_ e2_) = eqE e1 e1_ && eqE e2 e2_
 eqE (If e1 e2 e3) (If e1_ e2_ e3_) = eqE e1 e1_ && (eqE e2 e2_ && eqE e3 e3_)
-eqE (ETrue) (ETrue) = True
-eqE (EFalse) (EFalse) = True
+eqE ETrue ETrue = True
+eqE EFalse EFalse = True
 eqE _ _ = False
 
 eqT :: Ty t -> Ty s -> Bool
@@ -62,15 +62,15 @@ exp :: Exp g t -> g -> t
 exp (Var x)    g = var x g
 exp (Lam _ e)  g = \a -> exp e (g,a)
 exp (App e e') g = exp e g (exp e' g)
-exp (ETrue)    g = True
-exp (EFalse)   g = False
+exp ETrue      g = True
+exp EFalse     g = False
 exp (If c t e) g = if exp c g then exp t g else exp e g
 
 -- type inference --------------------------------------------------------------
- 
+
 
 data TyEnv :: *0 ~> *0 where
-   Cons :: (Ty t) -> (TyEnv h) -> TyEnv ((h,t))
+   Cons :: Ty t -> TyEnv h -> TyEnv (h,t)
    Nil :: TyEnv g
 
 infer :: TyEnv g -> Exp g t -> Ty t
@@ -148,7 +148,7 @@ questionsE (Arr s t)    = do
                           q <- questionsE t
                           return (\f -> q (App f d))
 
--- should be 
+-- should be
 --      find (List (Exp g Bool) n) -> Tree (Exp g a) n -> Exp g a
 find :: [Exp g Bool] -> Tree (Exp g a) -> Exp g a
 find []         (Val a)         = a
@@ -178,4 +178,3 @@ thrice = Box (Lam b2b (Lam Bool (App one (App one (App one zero)))))
 test = [ eqB (nf b22b thrice) (nf b22b once)
        , eqB (nf b22b twice)  (nf b22b once)]
   where nf = normalize
-
