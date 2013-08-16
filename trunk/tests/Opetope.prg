@@ -199,7 +199,8 @@ extgraft :: Tree what ~> Tree wher ~> Tree tree ~> Tree tree'
 {extgraft what ()tr ()tr} = what
 {extgraft what []tr ()tr} = ()tr
 {extgraft what [head; tail]tr ()tr} = [{extgraft what head ()tr}; {extgraft what tail ()tr}]tr
---{extgraft what []tr tr} = tr
+{extgraft what []tr []tr} = []tr
+{extgraft what []tr [head; tail]tr} = [head; tail]tr
 {extgraft what [head'; tail']tr [head; tail]tr} = [{extgraft what head' head}; {extgraft what tail' tail}]tr
 
 {- TODO? multiGraft :: Treelist -> where -> in -}
