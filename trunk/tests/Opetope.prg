@@ -155,6 +155,11 @@ drossed = SubCont SubDone
 -- drossed = (SubDone `On` NodeDone) In
 -- Note: can we find a way to graft here? Then On would be feasible
 
+
+-- ################################
+-- ############  Niches ###########
+-- ################################
+
 --  |          +
 --  |          |
 
@@ -176,18 +181,17 @@ niche1 = Also ()ar SubDone NicheDone
 --  |           |
 
 -- this is a niche, but assume to be a frame
---niche2 :: Stack ()tr [[]tr, []tr]tr
---niche2 = Also ()ar SubDone SubDone
+niche2 :: Stack ()tr [[]tr, []tr]tr
+niche2 = Also ()ar SubDone niche1
 
 --                |
 --  |         o   o
 -- [o]  --->   \ /
--- [|]          o
+-- [|]          +
 --  |           |
 
---paste :: Stack [()tr]tr [[]tr, ()tr]tr
---paste = Also ()ar SubDone (Exclude NodeDone)
-
+--niche01 :: Stack [()tr]tr [[]tr, ()tr]tr
+--niche01 = Also ()ar SubDone (Exclude NodeDone)
 
 --                    |
 --    |           o   o
