@@ -80,6 +80,7 @@ data Stack :: Tree d ~> Tree e ~> * where
 
   -- building niches
   NicheDone :: Stack ()tr []tr
+  Niche :: Stack tr out -> Stack tr [out]tr
   Also :: () -- (Pointers 1t at tr)
          => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
 
@@ -190,8 +191,9 @@ niche2 = Also ()ar SubDone niche1
 -- [|]          +
 --  |           |
 
---niche01 :: Stack [()tr]tr [[]tr, ()tr]tr
---niche01 = Also ()ar SubDone (Exclude NodeDone)
+niche10 :: Stack [()tr]tr [[()tr]tr, []tr]tr
+--niche10 = Also ()ar SubDone $ Niche (Exclude NodeDone)
+niche10 = Also ()ar (Exclude NodeDone) $ Niche SubDone
 
 --                    |
 --    |           o   o
