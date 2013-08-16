@@ -62,7 +62,7 @@ prop Subtree :: Tree d ~> Tree e ~> * where
   TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
 
 -- TODO: separate the notions of Niche / Frame / Cell
-kind Volume = Frame | Cell
+kind Volume = Framed | Cell
 kind Diagram = Closed Volume | OpenNiche
 -- should be a parameter to Stack
 
@@ -70,10 +70,6 @@ kind Diagram = Closed Volume | OpenNiche
 
 data Stack :: Tree d ~> Tree e ~> * where
   Corolla :: Corolla tr => Tree' tr -> Stack tr ()tr
-
-  -- are these needed?
-  SubDone :: Stack ()tr []tr -- ({}z)z
-  SubCont :: Stack ()tr tr -> Stack ()tr [tr]tr -- ({inner}z)z
 
   -- needed?
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
@@ -97,6 +93,10 @@ data Stack :: Tree d ~> Tree e ~> * where
 
  deriving syntax(z) Record(NicheDone, Also) Item(Frame)
 
+subDone = ({}z)z
+
+subCont :: Stack ()tr tr -> Stack ()tr [tr]tr
+subCont inner = ({()ar=inner}z)z
 
 -- it remains to define corollas
 
@@ -145,7 +145,7 @@ stacked = (dolliFrame `On` dolliFrame) (In `Fork` Done)
 --   |          |
 
 crossed :: Stack ()tr []tr
-crossed = SubDone
+crossed = subDone
 
 -- we can now join things
 --
@@ -165,9 +165,7 @@ stopetope'' = [crossed, lolliFrame, dolliCell]cplx
 --   |          |
 
 drossed :: Stack ()tr [[]tr]tr
-drossed = SubCont SubDone
--- drossed = (SubDone `On` NodeDone) In
--- Note: can we find a way to graft here? Then On would be feasible
+drossed = subCont subDone
 
 
 -- ################################
@@ -187,7 +185,7 @@ niche0 = {}z
 
 -- this is a niche, but assume to be a frame
 niche1 :: Stack ()tr [[]tr]tr
-niche1 = {()ar=SubDone; {}z}z
+niche1 = {()ar=subDone; {}z}z
 
 --  |         o   o
 -- [|]  --->   \ /
@@ -196,7 +194,7 @@ niche1 = {()ar=SubDone; {}z}z
 
 -- this is a niche, but assume to be a frame
 niche2 :: Stack ()tr [[]tr, []tr]tr
-niche2 = {()ar=SubDone; niche1}z
+niche2 = {()ar=subDone; niche1}z
 
 --                |
 --  |         o   o
@@ -206,7 +204,7 @@ niche2 = {()ar=SubDone; niche1}z
 
 
 niche10 :: Stack [()tr]tr [[()tr]tr, []tr]tr
-niche10 = {()ar=Exclude NodeDone; Niche SubDone}z
+niche10 = {()ar=Exclude NodeDone; Niche subDone}z
 
 
 -- ################################
