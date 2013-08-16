@@ -20,16 +20,5 @@ type Tree = Fix TreeF
 kind T r a = Nix | F r a r
 
 kind Fix f a = X (f (Fix f a) a)
----               ^
-------------------+
---- here is the bug!
 
 type Tree a = Fix T a
-
-{- Triggers omega bug:
-
-omega.exe: RankN.hs:(1704,1)-(1708,23): Non-exhaustive patterns in function matchKind
-
->>> http://code.google.com/p/omega/source/browse/trunk/src/RankN.hs#1704
-
--}
