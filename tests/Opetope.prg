@@ -61,6 +61,11 @@ prop Subtree :: Tree d ~> Tree e ~> * where
   BothNil :: Subtree []tr []tr
   TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
 
+-- TODO: separate the notions of Niche / Frame / Cell
+kind Volume = Frame | Cell
+kind Diagram = Closed Volume | OpenNiche
+-- should be a parameter to Stack
+
 -- now we can stack cards (these are zooms in Kock et al. parlance)
 
 data Stack :: Tree d ~> Tree e ~> * where
@@ -80,6 +85,7 @@ data Stack :: Tree d ~> Tree e ~> * where
   NodeDone :: Stack []tr [()tr]tr
   Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head; tail]tr [prodhead; prodtail]tr
   Exclude :: {- EntireNode => -} Stack tail prod -> Stack [()tr; tail]tr prod
+  -- TODO: maybe just specify a subtree (Tree') and that's it
 
   On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {graft out' at out}
 
