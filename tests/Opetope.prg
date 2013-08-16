@@ -77,8 +77,12 @@ data Stack :: Tree d ~> Tree e ~> * where
   -- MultiCard :: ??? Disjoint a b 0 => Subtree a -> Subtree b -> Stack tr a [proda, prodb]tr
 
   On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {graft out' at out}
-  Beside :: () -- (Pointers 1t at tr, Pointers 1t {graft skipping at at} {graft skipping at tr})
-         => Tree' at -> Tree' skipping -> Stack tr' [out']tr -> Stack tr out -> Stack {graft tr' {graft skipping at at} {graft skipping at tr}} [out'; out]tr
+
+
+  -- building niches
+  NicheDone :: Stack ()tr []tr
+  Also :: () -- (Pointers 1t at tr)
+         => Tree' at -> Stack tr' [out']tr -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
 
   -- WARNING: [out']tr ---> one sibling for now
 
@@ -152,6 +156,40 @@ drossed :: Stack ()tr [[]tr]tr
 drossed = SubCont SubDone
 -- drossed = (SubDone `On` NodeDone) In
 -- Note: can we find a way to graft here? Then On would be feasible
+
+--  |          +
+--  |          |
+
+-- this is a niche, but assume to be a frame
+niche0 :: Stack ()tr []tr
+niche0 = NicheDone
+
+--  |           |
+-- [|]          +
+--  |           |
+
+-- this is a niche, but assume to be a frame
+--niche1 :: Stack ()tr [[]tr, []tr]tr
+--niche1 = Also ()ar SubDone NicheDone
+
+--  |         o   o
+-- [|]  --->   \ /
+-- [|]          +
+--  |           |
+
+-- this is a niche, but assume to be a frame
+--niche2 :: Stack ()tr [[]tr, []tr]tr
+--niche2 = Also ()ar SubDone SubDone
+
+--                |
+--  |         o   o
+-- [o]  --->   \ /
+-- [|]          o
+--  |           |
+
+--paste :: Stack [()tr]tr [[]tr, ()tr]tr
+--paste = Also ()ar SubDone (Exclude NodeDone)
+
 
 --                    |
 --    |           o   o
