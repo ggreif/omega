@@ -64,7 +64,7 @@ prop Subtree :: Tree d ~> Tree e ~> * where
 -- now we can stack cards (these are zooms in Kock et al. parlance)
 
 data Stack :: Tree d ~> Tree e ~> * where
-  Empty :: Corolla tr => Tree' tr -> Stack tr ()tr
+  Corolla :: Corolla tr => Tree' tr -> Stack tr ()tr
   SubDone :: Stack ()tr []tr
   SubCont :: Stack ()tr tr -> Stack ()tr [tr]tr
   --Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
@@ -72,6 +72,7 @@ data Stack :: Tree d ~> Tree e ~> * where
 
   -- put a frame around a niche
   Frame :: (Equal {nodes tr} {nodeValence out}) => Stack tr out -> Stack tr out
+
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
   NodeDone :: Stack []tr [()tr]tr
   Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head; tail]tr [prodhead; prodtail]tr
@@ -98,14 +99,14 @@ prop Corolla :: Tree d ~> * where
 --  |         |
 
 lolliCell :: Stack []tr ()tr
-lolliCell = Empty Done
+lolliCell = Corolla Done
 
 --  |         |
 --  o   --->  |
 --  |         |
 
 dolliCell :: Stack [()tr]tr ()tr
-dolliCell = Empty $ Fork In Done
+dolliCell = Corolla $ Fork In Done
 
 --              |
 --  [o]   --->  o
