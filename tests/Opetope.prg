@@ -69,6 +69,9 @@ data Stack :: Tree d ~> Tree e ~> * where
   SubCont :: Stack ()tr tr -> Stack ()tr [tr]tr
   --Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
+
+  -- put a frame around a niche
+  Frame :: (Equal {nodes tr} {nodeValence out}) => Stack tr out -> Stack tr out
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
   NodeDone :: Stack []tr [()tr]tr
   Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head; tail]tr [prodhead; prodtail]tr
@@ -191,19 +194,24 @@ niche2 = Also ()ar SubDone niche1
 -- [|]          +
 --  |           |
 
+
 niche10 :: Stack [()tr]tr [[()tr]tr, []tr]tr
---niche10 = Also ()ar SubDone $ Niche (Exclude NodeDone)
 niche10 = Also ()ar (Exclude NodeDone) $ Niche SubDone
 
---                    |
---    |           o   o
--- | [o] |  --->   \ /
--- | [|] |          o
---    |             |
 
---cyclops :: Stack [()tr]tr [[]tr, ()tr]tr
---cyclops = Pick (Beside ()ar ()ar SubDone (Exclude NodeDone)) NodeDone
+-- ################################
+-- ############  Frames ###########
+-- ################################
 
+--   |              |
+--  /|\         o   o
+-- |[o]|  --->   \ /
+-- |[|]|          o
+--  \|/           |
+--   |
+
+cyclops :: Stack [()tr]tr [[()tr]tr, []tr]tr
+cyclops = Frame niche10
 
 
 -- Stacking, Valence, Affine subtree, Substitute at an affine position
@@ -220,6 +228,13 @@ valence :: Tree d ~> Nat
 nodeValence :: Tree d ~> Nat
 {nodeValence []tr} = 0t
 {nodeValence [head; tail]tr} = (1+{nodeValence tail})t
+
+-- counting nodes in a tree
+
+nodes :: Tree d ~> Nat
+{nodes ()tr} = t
+{nodes []tr} = 1t
+{nodes [head; tail]tr} = {plus {nodes head} {nodes tail}}
 
 -- nodeValenceAt: given a (multi)pointer, determine the node valences at those positions
 --               WHERE     IN
