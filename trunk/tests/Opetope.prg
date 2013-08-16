@@ -16,11 +16,18 @@
 
 import "../tests/Nat.prg"
 
+kind Trees = NoTree | Pre (Tree d) Trees deriving syntax (ts) List(NoTree, Pre)
 
-data ZoomComplex :: Tree e ~> Tree f ~> * where
-  Nil :: ZoomComplex a a
-  Cons :: Stack a b -> ZoomComplex b c -> ZoomComplex a c
- deriving List(cplx)
+data ZoomCompley :: Tree e ~> Tree f ~> * where
+  Nily :: ZoomCompley a a
+  Consy :: Stack a b -> ZoomCompley b c -> ZoomCompley a c
+ deriving List(cply)
+
+data ZoomComplex :: Trees ~> * where
+  Nilx :: ZoomComplex [()tr]ts
+  Endx :: Stack a b -> ZoomComplex [a, b]ts
+  Consx :: Stack a b -> ZoomComplex [b; c]ts -> ZoomComplex [a, b; c]ts
+ deriving syntax (cplx) List(Nilx, Consx) Item(Endx)
 
 data Dir :: *2 where
   Hor :: Dir
@@ -126,13 +133,15 @@ crossed = SubDone
 
 -- we can now join things
 --
-dolliForever = [dolliFrame; dolliForever]cplx
-nopetope = [crossed, lolliFrame; dolliForever]cplx
+dolliForever = [dolliFrame; dolliForever]cply
+nopetope = [crossed, lolliFrame; dolliForever]cply
 
 -- back to unit as fast as possible...
 --
-stopetope = [crossed, lolliFrame, dolliCell]cplx
-neverstopetope = [crossed, lolliFrame, dolliCell; neverstopetope]cplx
+stopetope = [crossed, lolliFrame, dolliCell]cply
+neverstopetope = [crossed, lolliFrame, dolliCell; neverstopetope]cply
+stopetope' = [crossed, lolliFrame; (dolliCell)cplx]cplx
+stopetope'' = [crossed, lolliFrame, dolliCell]cplx
 
 --   |          o
 -- [[|]]  --->  |
