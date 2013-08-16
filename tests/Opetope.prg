@@ -65,9 +65,12 @@ prop Subtree :: Tree d ~> Tree e ~> * where
 
 data Stack :: Tree d ~> Tree e ~> * where
   Corolla :: Corolla tr => Tree' tr -> Stack tr ()tr
-  SubDone :: Stack ()tr []tr
-  SubCont :: Stack ()tr tr -> Stack ()tr [tr]tr
-  --Subdivision :: Stack ()tr sub -> Stack tr rest -> Stack tr [sub; rest]tr
+
+  -- are these needed?
+  SubDone :: Stack ()tr []tr -- ({}z)z
+  SubCont :: Stack ()tr tr -> Stack ()tr [tr]tr -- ({inner}z)z
+
+  -- needed?
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
 
   -- put a frame around a niche
@@ -77,8 +80,6 @@ data Stack :: Tree d ~> Tree e ~> * where
   NodeDone :: Stack []tr [()tr]tr
   Pick :: {- EntireNode => -} Stack head prodhead -> Stack tail prodtail -> Stack [head; tail]tr [prodhead; prodtail]tr
   Exclude :: {- EntireNode => -} Stack tail prod -> Stack [()tr; tail]tr prod
-  -- we need a way to sequence cards
-  -- MultiCard :: ??? Disjoint a b 0 => Subtree a -> Subtree b -> Stack tr a [proda, prodb]tr
 
   On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {graft out' at out}
 
@@ -88,7 +89,7 @@ data Stack :: Tree d ~> Tree e ~> * where
   Also :: () -- (Pointers 1t at tr)
          => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
 
- deriving syntax(z) Record(NicheDone, Also)
+ deriving syntax(z) Record(NicheDone, Also) Item(Frame)
 
 
 -- it remains to define corollas
@@ -214,7 +215,7 @@ niche10 = {()ar=Exclude NodeDone; Niche SubDone}z
 --   |
 
 cyclops :: Stack [()tr]tr [[()tr]tr, []tr]tr
-cyclops = Frame niche10
+cyclops = (niche10)z
 
 
 -- Stacking, Valence, Affine subtree, Substitute at an affine position
