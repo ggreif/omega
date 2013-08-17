@@ -1666,12 +1666,11 @@ mustBe (term,qual) t comput expect =
 -- "infer" and "check" walk over a type inferring type information
 -- from the structure of the type and information in the type
 -- environment. They are placing kind annotations
--- at the leaves (in variables), "kindOf" and "kindOfM"
--- walk over an annotated tree and compute the kind of the
+-- at the leaves (in variables), "kindOfM" walk
+-- over an annotated tree and compute the kind of the
 -- type. This could be a pure function, except for the
 -- possibility of polymorphic TyCon's. Then we need to
 -- generate new 'kind variables', so it must be monadic.
--- We supply a pure function "kindOf" but it is inexact.
 
 
 kindOfM :: TyCh m => Tau -> m Tau

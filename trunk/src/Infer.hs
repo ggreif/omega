@@ -5016,7 +5016,6 @@ parseAndKind env s = tcInFIO env
        ; let kind x = do { k <- kindOfM x; (_,s) <- showThruDisplay [Dd x,Ds " :: ",Dd k]; return s}
        ; pairs <- mapM kind (subtermsTau tau [])
        ; return(MK tau,s2,pairs)
-       -- ; return(MK (kindOf s2),s2)
        })
 
 
