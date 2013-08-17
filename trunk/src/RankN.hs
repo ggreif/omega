@@ -1705,11 +1705,11 @@ matchKind (Karr a b) (t:ts) =
      ; unify a k
      ; matchKind b ts }
 matchKind k [] = zonk k
-matchKind k@(TcTv _) (t:ts) = do { dom <- newUniv
-                                 ; rng <- newUniv
-                                 ; unify (Karr dom rng) k
-                                 ; matchKind rng ts
-                                 ; zonk k }
+matchKind k@(TcTv _) ts = do { dom <- newUniv
+                             ; rng <- newUniv
+                             ; let arr = Karr dom rng
+                             ; unify arr k
+                             ; matchKind arr ts }
 matchKind k ts = failM 0 [Ds "\nmatchKind: ===>  ", Ds $ shtt k, Ds " <====    ", Dl ts "   ,,,,   "]
 
 checkTyFun :: TyCh m => String -> Rho -> [Tau] -> Expected Tau -> m [Tau]
