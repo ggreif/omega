@@ -250,17 +250,12 @@ equalParts (TyApp (TyApp (TyCon sx _ "Equal" k) x) y) = (x,y)
 
 
 varWild (Tv _ _ k) = TcTv(wild k)
-{-
-termWild t = case kindOf t of
-               Just k -> TcTv (wild (MK k))
-              --  Nothing -> TcTv (wild star)
-              -}
 
 -- There is unique variable "WildCard" that is different from all
 -- other type variables. It is unique, but different. Its actual
 -- value doesn't matter, since it is never looked at, only its identity.
 -- Sometimes we need versions with the same identity, but different
--- kinds. varWild, termWild, and termWildM compute one of these.
+-- kinds. varWild, and termWildM compute one of these.
 
 wild = unsafePerformIO (do { n <- nextInteger; r <- newRef Nothing; return(Tv n (Flexi r))})
 
