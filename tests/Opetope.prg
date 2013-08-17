@@ -8,14 +8,65 @@
 --          -                spheres appear
 
 -- Note: In Eric's new work (at IAS) there are no
---       dots any more, instead he uses 'output cards', so
---          - (output) cards   <-->  lines
---          - space between stacked cards <--> output cards
+--       dots any more, instead he uses 'external cards', so
+--          - (external) cards   <-->  lines
+--          - space between stacked cards <--> external cards
 --          - lines disappear
 --          -                (regular) cards appear
 
 import "../tests/Nat.prg"
 
+-- GLOBAL TODOs
+----------------
+
+-- Naming: Seems essential for identifying things Hor(Name), Ver(Tree)
+--         Name can be Label, then Niches (= sequences of opetope names).
+--         the latter arise from the composition rule.
+--         Note: don't store names in Stacks, that kills alpha
+--               conversion. Instead names should be pushed into nodes
+--               'singleton style' from outside: (node :: Tree (Hor `g))
+
+-- Morphisms: given an opetope and a pointer to one of its cards
+--            extract the opetope of that face (do we need a label
+--            space to reliably find it?). This must be a type
+--            function, with an algorithm accompanying it to extract
+--            the face proper.
+
+-- Composition: grafting of trees to external cards, but only if the
+--              morphisms (faces) match. lower-dim stuff is unaffected.
+
+-- Swapping: given a proof of equality between two niches, provide an
+--           operation to swap them, replacing old faces by new ones,
+--           FGL-style (functional graph library), just note that
+--           certain morphisms are gone, others appeared.
+
+-- References: a disciplined way of saying "I am an identical node to that guy",
+--             by corollary these always obtain the same names.
+--             a topologist would say 'surgery' (http://en.wikipedia.org/wiki/Surgery_theory)
+--             We get a new Tree flavour, Ref, at least one up, followed by
+--             naturals to index a node in a subtree.
+--             At this point we are doing algebraic topology, and dealing with
+--             closed manifolds, so that we can do homology etc. on them.
+--             In logic this corresponds to relations, satisfiability.
+
+-- Quoting: So far we have only dealt with data, i.e. quoted (inert) syntax.
+--          we need a way to convert this syntax to code (e.g. at some stage),
+--          to obtain semantics. We can have the usual splicing game.
+--          Lisp does this with sexprs and macros.
+--          The code needs then be executed (run, decreasing stage), when
+--          it becomes active, and we can observe the manifestation of its
+--          semantics. The reduction system could go along the lines of the
+--          (typed) LambdaGraph.
+
+-- NbE: I fully believe we can use this technique to reduce opetopic terms
+--      to normal form. ('many syntax', 'one semantics' adjunction:
+--                       http://www.logicmatters.net/resources/pdfs/Galois.pdf)
+
+
+
+
+-- TODO: these three must be LeftLists
+--
 kind Trees = NoTree | Pre (Tree d) Trees deriving syntax (ts) List(NoTree, Pre)
 
 data ZoomCompley :: Tree e ~> Tree f ~> * where
@@ -62,7 +113,7 @@ prop Subtree :: Tree d ~> Tree e ~> * where
   TakeHead :: Subtree head head' -> Subtree tail tail' -> Subtree [head; tail]tr [head'; tail']tr
 
 -- TODO: separate the notions of Niche / Frame / Cell
-kind Volume = Framed | Cell
+kind Volume = FramedHollow | FilledCell
 kind Diagram = Closed Volume | OpenNiche
 -- should be a parameter to Stack
 
@@ -71,11 +122,13 @@ kind Diagram = Closed Volume | OpenNiche
 data Stack :: Tree d ~> Tree e ~> * where
   Corolla :: Corolla tr => Tree' tr -> Stack tr ()tr
 
-  -- needed?
+  -- needed? TODO: Define Target
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
 
   -- put a frame around a niche
-  Frame :: (Equal {nodes tr} {nodeValence out}) => Stack tr out -> Stack tr out
+  -- TODO: Corolla out
+  -- TODO: this constructor should be called Target
+  Frame :: (Corolla out, Equal {nodes tr} {nodeValence out}) => Stack tr out -> Stack tr out
 
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
   NodeDone :: Stack []tr [()tr]tr
@@ -100,6 +153,7 @@ subCont inner = ({()ar=inner}z)z
 
 -- it remains to define corollas
 
+-- TODO: one could say {nodes tr} == 1
 prop Corolla :: Tree d ~> * where
   None' :: Corolla []tr
   One' :: Corolla tail -> Corolla [()tr; tail]tr
