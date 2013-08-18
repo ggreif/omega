@@ -366,3 +366,40 @@ class ZoomLike (int :: Tree) (out :: Tree) where
   zoom :: (Nodes int ~ Valence out) => Zoom int out
 
 -}
+
+
+prop Reference :: Tree Hor ~> * where
+  Stop :: Reference []tr
+  Up :: Reference tr -> Reference [tr]tr
+
+{-
+
+    |
+0   L  (lambda node)
+|   |
+1   1
+|   |
+2   2
+ \ /
+  o
+  |
+  B  (binds here)
+  |
+
+Encodes \x.xx
+
+And this:
+
+|
+LB
+|
+
+encodes \x.x
+
+Or should this be just the unit tree (|)?
+
+-}
+
+
+--TODO: prop Lambda :: Tree Hor ~> * where
+  
