@@ -1937,7 +1937,7 @@ morepolyRhoRho s  x (Rpair a b) = do{(m,n) <- checkPair x; morepolySigmaSigma s 
 morepolyRhoRho s  (Rsum m n) (Rsum a b) = do{ morepolySigmaSigma s m a; morepolySigmaSigma s n b }
 morepolyRhoRho s  (Rsum m n) x = do{(a,b) <- checkSum x; morepolySigmaSigma s m a; morepolySigmaSigma s n b}
 morepolyRhoRho s  x (Rsum a b) = do{(m,n) <- checkSum x; morepolySigmaSigma s m a; morepolySigmaSigma s n b}
-morepolyRhoRho s  (Rtau x) (Rtau y) = (unify x y)
+morepolyRhoRho s  (Rtau x) (Rtau y) = morepolyTauTau s x y
 
 morepolyRhoExpectedRho s t1 (Check t2) = morepolyRhoRho s t1 t2
 morepolyRhoExpectedRho s t1 (Infer r)  = do { a <- zonk t1; writeRef r a }
