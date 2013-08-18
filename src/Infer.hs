@@ -2871,7 +2871,7 @@ checkLhsMatch current sigma (ps,rhs) =
      ; lhsExps <- mapM (uncurry check) (zip lhsTau ks)
      ; rhsTau <- toTau (additional ++ newenv,loc,exts,[]) rhs
      ; w <- check rhsTau range
-     ; return(lhsExps,pats,w)
+     ; return (lhsExps,pats,w)
      }
 
 -- In order to kind-check a type function we need to compute that the
@@ -2880,24 +2880,24 @@ checkLhsMatch current sigma (ps,rhs) =
 
 checkPTBndr :: ToEnv -> (Tpat,Tau) ->  TC ToEnv
 checkPTBndr _ (Tvar s nm,k) =
-  return[(s,TyVar nm (MK k),poly (MK k))]
+  return [(s,TyVar nm (MK k),poly (MK k))]
 checkPTBndr current (Tfun c xs,k) = checkPTBndr current (Tcon c xs,k)
 checkPTBndr current (Tcon ('`':cs) xs,_) = return []
 checkPTBndr current (y@(Tcon c xs),k) =
-  do {(tau,kind@(K lvs sigma)) <- getInfo y current c
+  do { (tau,kind@(K lvs sigma)) <- getInfo y current c
      ; let check1 [] rng = return(rng,[])
            check1 (x:xs) (Karr m n) =
              do { env1 <- checkPTBndr current (x,m)
                 ; (rng,env2) <- check1 xs n
-                ; return(rng,env1++env2)}
+                ; return (rng,env1++env2) }
            check1 (x:xs) kind = failD 1 [Ds "The type: ",Dd y,Ds " is not well kinded"]
-     ; (preds,kind2) <-  instanTy lvs sigma
+     ; (preds,kind2) <- instanTy lvs sigma
      ; when (not(null preds))
             (failD 1 [Ds "Non empty relational predicate list in type function use: ",Dd y])
      ; case kind2 of
          Rtau k2 -> do { (rng,newenv) <- check1 xs k2
                        ; unify rng k
-                       ; return newenv}
+                       ; return newenv }
          rho -> failD 1 [Ds "Rho type: ",Dd rho,Ds " for kind of ",Dd y]
      }
 checkPTBndr current (y@(Tstar n),k) =
