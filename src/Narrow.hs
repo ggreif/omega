@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts
   , FlexibleInstances
   #-}
+
 module Narrow(narr,defTree,Check(..),matches) where
 
 import Data.List(union,find,partition)
@@ -13,7 +14,7 @@ import RankN
 import NarrowData
 import Debug.Trace(trace)
 
-class (TyCh m) => Check m where
+class TyCh m => Check m where
   getMode :: String -> m Bool
   wait :: String -> m ()
   rewEq :: (Tau,Tau) -> m(Maybe Unifier2)
