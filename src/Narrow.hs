@@ -568,16 +568,16 @@ branchP _ = False
 -- a common root term, and position.
 
 makeTreeL :: [DefTree TcTv Tau] -> [DefTree TcTv Tau]
-makeTreeL [Leaf x free lhs rhs ] = [Leaf x free lhs rhs]
+makeTreeL leaf@[Leaf x free lhs rhs] = leaf
 makeTreeL (Branchx term pos tree : rest)
   | all branchP rest &&
     all (== pos) (map (\(Branchx _ p _) -> p) rest)
-  = do { zs <- mapM (makeTreeL)(partition children)
+  = do { zs <- mapM makeTreeL (partition children)
        ; return( Branchx term pos zs)}
   where children = concat (map (\(Branchx _ _ t) -> t)
                                (Branchx term pos tree : rest))
         partition [] = []
-        partition (Leaf x free lhs rhs : rest) = [Leaf x free lhs rhs] : partition rest
+        partition (leaf@(Leaf x free lhs rhs) : rest) = [leaf] : partition rest
         partition (Branchx term pos tree : rest)
           = (Branchx term pos tree : a) : partition b
           where (a, b) = aux rest ([],[])
@@ -609,7 +609,6 @@ fff xs = plistf ff "[1" xs "\n" "1]"
 mainYM :: Check m => NName -> [([TcTv],[Tau],Tau)] -> m[DefTree TcTv Tau]
 mainYM name patternList = do { pairs <- mapM (f13 name) patternList
                              ; let allPossibleOneFromEach = cross2 pairs
-                             --; return(makeTreeL (concat pairs))}
                              ; return(concat(map makeTreeL allPossibleOneFromEach))}
 
   where f13:: Check m => NName -> ([TcTv],[Tau],Tau) -> m [DefTree TcTv Tau]
