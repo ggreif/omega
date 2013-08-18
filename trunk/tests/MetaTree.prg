@@ -5,9 +5,13 @@ data Dir :: *2 where
 data Tree :: Dir ~> *1 where
   Pri :: Tag ~> Tree (Hor Tag)
   Unit :: Tree (Ver name)
-  Ni :: Tree (Hor name)
-  Fork :: Tree (d Tag) ~> Tree (Hor name) ~> Tree (Hor name)
- deriving syntax (tr) List(Ni, Fork) Unit(Unit) Item(Pri)
+  --Ni :: Tree (Hor name)
+  --Fork :: Tree (d name) ~> Tree (Hor name) ~> Tree (Hor name)
+  -- pasting
+  Empty :: Tree (Hor (Wrap name))
+  Paste :: Tree (Hor name) ~> Tree (Hor (Wrap name)) ~> Tree (Hor (Wrap name))
+ --deriving syntax (tr) List(Ni, Fork) Unit(Unit) Item(Pri)
+ deriving syntax (tr) List(Empty, Paste) Unit(Unit) Item(Pri)
 
 data Tree' :: Tree d ~> * where
   Labeled :: Label tag -> Tree' (tag)tr
@@ -18,11 +22,11 @@ data Tree' :: Tree d ~> * where
 
 kind Wrap a = W a
 
-data Stack :: Tree (d Tag) ~> Tree (e Tag) ~> * where
+data Stack :: Tree (d n) ~> Tree (e n) ~> * where
   Cell :: Stack ()tr ()tr
   NicheDone :: Stack ()tr []tr
-  Niche :: Stack tr out -> Stack tr [out]tr
+  --Niche :: Stack tr out -> Stack tr [out]tr
   Also :: Tree' at -> Stack tr out' -> Stack tr out -> Stack tr [out'; out]tr
  deriving syntax(z) Record(NicheDone, Also)
 
-t1 = {(`hey)ar=Cell}z
+--t1 = {(`hey)ar=Cell}z
