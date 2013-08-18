@@ -12,8 +12,6 @@ data Tree :: Dir ~> *1 where
 -- graft WHAT      WHERE     IN
 graft :: Tree d ~> Tree e ~> Tree f ~> Tree f
 {graft what ()tr ()tr} = what
-{graft what []tr tr} = tr
-{graft what [head'; tail']tr [head; tail]tr} = [{graft what head' head}; {graft what tail' tail}]tr
 
 
 {- NOTE: we have an Omega bug here:
