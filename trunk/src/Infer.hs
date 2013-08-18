@@ -85,7 +85,7 @@ import Value(Label(..),Equal(..))
 
 instance Check (Mtc TcEnv Pred) where
   getMode s = getM s False
-  wait = waitN  -- warnM [Ds "<return> to continue ..."] >> fio2Mtc(fio getLine)
+  wait = waitN
   rewNestedEqual (t1,t2) =
     do { rs <- getLemmaRules "Equal"
        ; env <- tcEnv
@@ -2795,7 +2795,7 @@ useTypeSig decs = map (pushHints ps) ds
 
 -- ======================================================================
 -- Code for doing kind inference and evaluating type functions like
--- plus :: (Nat ~> Nat ~> Nat)
+-- plus :: Nat ~> Nat ~> Nat
 -- {plus (S x) y} = S {plus x y}
 -- {plus Z y} = y
 
@@ -3058,7 +3058,7 @@ norm2T info (TyEx l) =
       ; return(TyEx(windup vs (ps,body')),u)}
 
 
-normWithDefs:: Info -> (DefTree TcTv Tau) -> Tau -> TC(Tau,Unifier2) -> TC(Tau,Unifier2)
+normWithDefs :: Info -> (DefTree TcTv Tau) -> Tau -> TC(Tau,Unifier2) -> TC(Tau,Unifier2)
 normWithDefs info (Leaf pat free lhs rhs) term next =
  do { (lhs2,rhs2) <- freshX (free,lhs,rhs)
     ; case match2 ([],[]) [(lhs2,term)] of
