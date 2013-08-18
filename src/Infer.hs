@@ -362,7 +362,7 @@ projBindMode (var,quad,mode) = (var,quad)
 
 -- type ToEnv = [(String,Tau,PolyKind)] -- In RankN.hs
 data Frag = Frag [(Var,(PolyKind,Mod,CodeLevel,Exp),BindMode)] [TcTv] ToEnv
-                 [Pred] Unifier [(String,(RWrule))]
+                 [Pred] Unifier [(String,RWrule)]
                  [SynExt String]
 
 interesting (Frag env skols _ eqn theta rules exts) = not(null eqn)
@@ -534,14 +534,14 @@ getkind x env = f (type_env env) (tyfuns env)
    where f [] ts = fail ("Unknown type: "++x)
          f ((y,t,k):xs) table | x==y =
              case lookup x table of
-                  Just (tree) -> return(k,t,show tree)
+                  Just tree -> return(k,t,show tree)
                   Nothing -> return(k,t,"")
          f (x:xs) ts = f xs ts
 
 getVar :: Var -> TcEnv -> Maybe(PolyKind,Mod,CodeLevel,Exp)
 getVar nm env = Map.lookup nm (var_env env)
 
-getRules :: String -> TcEnv -> [(RWrule)]
+getRules :: String -> TcEnv -> [RWrule]
 getRules "" env = concat (map snd (Map.toList (rules env)))
 getRules nm env =
   case Map.lookup nm (rules env) of
@@ -602,7 +602,7 @@ showSome xs =
 instance Typable (Mtc TcEnv Pred) Lit Rho where
   tc x@(Int n) expect = zap x (Rtau intT) expect
   tc x@(Char c) expect = zap x (Rtau charT) expect
-  tc x@(Unit) expect = zap x (Rtau unitT) expect
+  tc x@Unit expect = zap x (Rtau unitT) expect
   tc x@(ChrSeq s) expect = zap x (Rtau chrSeqT) expect
   tc x@(Symbol n) expect = zap x (Rtau symbolT) expect
   tc x@(Float n) expect = zap x (Rtau floatT) expect
@@ -1428,7 +1428,7 @@ checkPat rename mod k t pat =
              Right(s,x,y) -> badRefine pat tauExpect tauC s x y
              Left(psi,truths) ->
                do { writeRef rhoCref (subRho psi rhoC)  -- BackPatch Pattern description
-                  ; let triples = map (addRigid) pairs
+                  ; let triples = map addRigid pairs
                   ; k2 <- addUnifier psi (addPVS vsC k)
                   ; let k3 = addEqs (truths ++ subPred psi assump) k2
                   ; (k4,ps2) <- checkPats rename k3 triples
@@ -2036,11 +2036,11 @@ checkDataDecs decls =
            lift ((level,isProp,tag,(Global s,(polyk,mod,n,exp))):xs) types values =
              case (definesValues level,definesTypes level) of
                -- I.e. a Kind or above, the ConFuns are types not values!
-              (False,True) -> lift xs ((s,TyCon tag level s (polyk),polyk):types) values
+              (False,True) -> lift xs ((s,TyCon tag level s polyk,polyk):types) values
               (True,False) -> do { poly2 <- specializeAt0 s polyk
                                  ; lift xs types ((Global s,(poly2,mod,n,exp),LetBnd):values)}
               (True,True) -> do { poly2 <- specializeAt0 s polyk
-                                ; lift xs ((s,TyCon tag level s (polyk),polyk):types)
+                                ; lift xs ((s,TyCon tag level s polyk,polyk):types)
                                           ((Global s,(poly2,mod,n,exp),LetBnd):values)}
      ; let proj (nm,tau,polykind,levs) = (nm,tau,polykind)
      ; (types,values) <- lift conFunMap2 (map proj tyConMap2) []
@@ -2803,11 +2803,11 @@ computeTypeFunEnv :: TcEnv -> [Dec] -> TC TcEnv
 computeTypeFunEnv env xs =
   do { triples <- mapM doOneTypeFun xs
      ; return (env{ type_env = triples ++ type_env env })}
- where doOneTypeFun (t@(TypeFun loc nm Nothing ms)) =
-         fail ("\nType functions must be explicitly kinded with kind signature\n"++show t)
-       doOneTypeFun (t@(TypeFun loc nm (Just pt) ms)) =
+ where doOneTypeFun t@(TypeFun _ _ Nothing _) =
+         fail ("\nType functions must be explicitly kinded with kind signatures.\n"++show t)
+       doOneTypeFun t@(TypeFun loc nm (Just pt) ms) =
           do { (nmSigmaType,monoKindAsTau,nmTypeKind,names) <- inferPolyPT [] pt
-             ; let poly = K names (nmSigmaType)
+             ; let poly = K names nmSigmaType
                    getLevel (Star n) = n
                    getLevel _ = lv 1
              ; return (nm,TyCon Ox (getLevel monoKindAsTau) nm poly,poly) }
@@ -2816,7 +2816,7 @@ hasMonoTypeFun :: TcEnv -> [Dec] -> TC [(String,DefTree TcTv Tau)]
 hasMonoTypeFun env [] = return []
 hasMonoTypeFun env1 (dd@(TypeFun loc nm (Just pt) ms) : more) = newLoc loc $
   do { (nmSigmaType,monoKind,nmTypeKind,names) <- inferPolyPT [] pt
-     ; let polyt@(K _ (sigma)) = K names (nmSigmaType)
+     ; let polyt@(K _ sigma) = K names nmSigmaType
      ; clauses <- mapM (checkLhsMatch (type_env env1) sigma) ms
      ; morepairs <- hasMonoTypeFun env1 more
      ; rule@(NarR(a,xs))  <- makeRule nm polyt clauses
@@ -3331,7 +3331,7 @@ solveByNarrowing (nsol,nsteps) context@(s,_) normTruths tests =
        ; let termOf (TermP x,ts,(ls,un)) = (x,(ls,un))
              termOf (EqP(x,y),ts,(ls,un)) = (teq x y,(ls,un))
        ; result <- if exceed
-            then do {(solvedByDecProc) <- tryCooper (foldr pred2Pair [] normTruths) conj
+            then do { solvedByDecProc <- tryCooper (foldr pred2Pair [] normTruths) conj
                     ; if solvedByDecProc
                          then return([],[])
                          else failM 0 [Ds "Solving the equations: ",Dd tests
@@ -3450,13 +3450,13 @@ tryCooper truths x =
                           >> return FalseF)
 
               ; case ans of
-                  TrueF -> do { warnM [Ds "\nGOOD ans = ",Ds (show ans)]; return(True)}
+                  TrueF -> do { warnM [Ds "\nGOOD ans = ",Ds (show ans)]; return True }
                   _ -> do { warnM [Ds "\nBAD ans = ",Ds (show ans)]
                           ; ans2 <- integer_qelim form
                           ; warnM [Ds "Non quantified =\n",Ds (show ans2)]
-                          ; return (False) }
+                          ; return False }
               }
-         Nothing -> return (False)}
+         Nothing -> return False }
 
 prob2Tau :: Prob Tau -> Tau
 prob2Tau (TermP x) = x
@@ -4296,7 +4296,7 @@ look2 = showAllVals 1000 tcEnv0
 
 interactiveLoop :: (env -> TC Bool) -> env -> TC ()
 interactiveLoop f env = handleM 3
-  (do { (continue) <-  (f env)
+  (do { continue <- f env
       ; if continue then interactiveLoop f env else return ()
       }) (\ s -> do {outputString s; interactiveLoop f env})
 
@@ -4370,30 +4370,30 @@ checkReadEvalPrint (hint,env) =
      ; input <- getS "check> " tabExpandFun
      ; z <- parseString pCommand input
      ; case z of
-        Left s -> do {putS s; return (True) }
+        Left s -> do {putS s; return True }
         Right(x,rest) ->
          case x of
           (ColonCom "?" _) -> warnM [Ds commandString] >> return True
-          (ColonCom "set" s) -> fio2Mtc(setCommand s True (True))
-          (ColonCom "q" _) -> return (False)
+          (ColonCom "set" s) -> fio2Mtc(setCommand s True True)
+          (ColonCom "q" _) -> return False
           (ColonCom "rules" s) ->
              do { let rs = getRules s env
                 ; warnM [Ds "rules\n",Dl rs "\n  "]
-                ; return(True)
+                ; return True
                 }
           (ColonCom "e" _) ->
              do { truths <- zonk (assumptions env)
                 ; warnM [Ds "truths: ",Dd truths,Ds ("\n  "++shtt truths)]
-                ; return (True) }
+                ; return True }
           (ColonCom "h" _) ->
              do { warnM [Ds "Hint = ",Dd hint]
-                ; return(True)
+                ; return True
                 }
           (ColonCom "k" x) ->
              do { (k,t,tree) <- getkind x env
                 ; putS (x++" :: "++(pprint k)++
                         "\n" ++ pprint t ++ "\n"++tree)
-                ; return (True) }
+                ; return True }
           (ColonCom "t" x) ->
              case getVar (Global x) env of
                 Just(sigma,mod,lev,exp) ->
@@ -4403,7 +4403,7 @@ checkReadEvalPrint (hint,env) =
                       ; verbose <- getMode "kind"
                       ; when verbose (showKinds varsOfPoly s1)
                       ; return True}
-                Nothing -> do { putS ("Unknown name: "++x); return (True)}
+                Nothing -> do { putS ("Unknown name: "++x); return True }
           (ColonCom "norm" e) ->
              do { exp <- getExp e
                 ; (t,exp2) <- inferExp exp
@@ -4462,10 +4462,10 @@ checkReadEvalPrint (hint,env) =
                 ; verbose <- getMode "kind"
                 ; when verbose (showKinds varsOfRho t3)
                 ; whenM (not (null preds2)) [Ds "Only when we can solve\n   ",Dd preds2]
-                ; return (True)
+                ; return True
                 }
           EmptyCom -> return True
-          other -> putS "unknown command" >> return (True)
+          other -> putS "unknown command" >> return True
      }
 
 similar:: Rho -> Rho -> Bool  -- An approximation of Equality
