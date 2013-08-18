@@ -22,10 +22,7 @@ data Tree' :: Tree d ~> * where
 
 kind Wrap a = W a
 
-{-
-data Stack :: Tree (d n) ~> Tree (e n) ~> * where   -- Omega bug (occurs check)
--}
-data Stack :: Tree (d n) ~> Tree e ~> * where
+data Stack :: Tree (d m) ~> Tree (e n) ~> * where
   Cell :: Stack ()tr ()tr
   A :: Stack tr (`A)tr
   B :: Stack tr (`B)tr
