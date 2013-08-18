@@ -22,11 +22,15 @@ data Tree' :: Tree d ~> * where
 
 kind Wrap a = W a
 
-data Stack :: Tree (d n) ~> Tree (e n) ~> * where
+{-
+data Stack :: Tree (d n) ~> Tree (e n) ~> * where   -- Omega bug (occurs check)
+-}
+data Stack :: Tree (d n) ~> Tree e ~> * where
   Cell :: Stack ()tr ()tr
   NicheDone :: Stack ()tr []tr
---Also :: Tree' at -> Stack tr out' -> Stack tr out -> Stack tr [out'; out]tr
-  Also :: Tree' out' -> Tree' out' -> Stack tr out -> Stack tr [out'; out]tr
+  Also :: Tree' at -> Stack tr out' -> Stack tr out -> Stack tr [out'; out]tr
+--Also :: Tree' out' -> Tree' out' -> Stack tr out -> Stack tr [out'; out]tr
  deriving syntax(z) Record(NicheDone, Also)
 
---t1 = {(`hey)ar=Cell}z
+##test "Cell does not qualify"
+  t1 = {(`hey)ar=Cell}z
