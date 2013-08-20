@@ -10,7 +10,10 @@ GHC_OPT_FLAGS    =
 HUGS             = hugs
 HUGS_FLAGS       = -98 -P:../Lib:../Lib/Parser
 SVN              = svn
-DISTR            = $(HOME)/Omega/distr
+
+## DEVDIR: where is the omega/ dir?
+DEVDIR           = $(HOME)
+DISTR            = $(DEVDIR)/Omega/distr
 
 .PHONY: all cabal cabal-check cabal-pack omega-pack \
         tests clean cleaner manual update
@@ -20,16 +23,16 @@ all: *.hs
 
 cabal:
 	- rm -r $(DISTR)
-	cd ../util && runhaskell BuildDistr.hs "$(HOME)"
+	cd ../util && runhaskell BuildDistr.hs "$(DEVDIR)"
 	cd $(DISTR) && cabal configure -v && cabal build -v
 
 cabal-check:
 	@ grep -i version $(DISTR)/* | grep "1\." | grep -v "Open Font License" \
 	| grep -v "distr/OmegaManual.ps" \
-	| grep -v "Omega Interpreter: version 1.5.1.1"
+	| grep -v "Omega Interpreter: version 1.5.2"
 	@ grep /tags/ $(DISTR)/*     | grep "1\."
 	@ grep tag: $(DISTR)/*       | grep "1\."
-	@ grep 2012 $(DISTR)/*       | grep -v "2002-2012" | grep -v "CEST 2012" \
+	@ grep 2012 $(DISTR)/*       | grep -v "2002-2013" | grep -v "CEST 2013" \
 	| grep -v "distr/OmegaManual.ps"
 	@ echo
 	@ cd $(DISTR) && cabal check
