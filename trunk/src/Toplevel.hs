@@ -27,7 +27,7 @@ import Commands
 import SyntaxExt(synName,synKey)
 
 import System.Environment(getArgs)
-import System.Time(ClockTime,getClockTime)
+import Data.Time.Clock(UTCTime,getCurrentTime)
 import System.IO(hClose)
 import Control.Exception(try,IOException)
 import System.FilePath(splitFileName)
@@ -206,9 +206,9 @@ importName (Import s vs) = s
 indent n = replicate ((n-1)*3) ' '
 nameOf (name,time,deps,env) = name
  
-elabFile :: Int -> String -> TcEnv -> FIO(TcEnv,ClockTime)
+elabFile :: Int -> String -> TcEnv -> FIO(TcEnv, UTCTime)
 elabFile count file (tenv) =
-   do { time <- fio getClockTime
+   do { time <- fio getCurrentTime
       ; all <- parseDecs file
       ; let (importL,ds) = partition importP all
             (dss,pairs) = topSortR freeOfDec ds
@@ -246,14 +246,14 @@ lookupDeps nm env = case find match (imports env) of
  
 showimp message env = message++plistf nameOf "(" (imports env) "," ")."
 
-importManyFiles:: Int -> [Dec] -> TcEnv -> FIO (TcEnv, [(String, ClockTime)])
+importManyFiles:: Int -> [Dec] -> TcEnv -> FIO (TcEnv, [(String, UTCTime)])
 importManyFiles count [] tenv = return (tenv,[])
 importManyFiles count (d:ds) tenv =
   do { (next,name,time) <- importFile count d tenv
      ; (next2,ts) <- importManyFiles count ds next
      ; return(next2,(name,time):ts) }
 
-importFile :: Int -> Dec -> TcEnv -> FIO(TcEnv,String,ClockTime)
+importFile :: Int -> Dec -> TcEnv -> FIO(TcEnv,String,UTCTime)
 importFile count (Import name vs) tenv =
   case find (\(nm,time,deps,env)->name==nm) (imports tenv) of
      Just (nm,time,deps,env) -> 

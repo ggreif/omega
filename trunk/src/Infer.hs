@@ -8,8 +8,7 @@ import Data.Char(isAlpha,isUpper)
 import qualified Data.Map as Map
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import System.IO.Unsafe(unsafePerformIO)
-import System.Time(getClockTime)
-import System.Time(ClockTime)
+import Data.Time.Clock(UTCTime)
 
 import PureReadline
 
@@ -232,7 +231,7 @@ data TcEnv
           , rules :: FiniteMap String [RWrule] -- Proposition simplifying rules
           , refutations :: FiniteMap String Refutation
           , runtime_env :: Ev            -- current value bindings
-          , imports :: [(String,ClockTime,[(String,ClockTime)],TcEnv)]  -- already imported Modules
+          , imports :: [(String,UTCTime,[(String,UTCTime)],TcEnv)]  -- already imported Modules
           , tyfuns :: [(String,DefTree TcTv Tau)]
           , sourceFiles :: [String]
           , syntaxExt :: [SynExt String]
