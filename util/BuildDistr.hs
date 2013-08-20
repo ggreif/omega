@@ -57,6 +57,7 @@ sources libDir parseDir srcDir testsDir rootDir utilDir =
    (srcDir, "Version", ".hs"),
 
    (srcDir, "LangPrelude", ".prg"),
+   (srcDir, "Parsing", ".prg"),
    (rootDir, "LICENSE", ".txt"),
    (srcDir, "Makefile",""),
    (utilDir, "omega",".cabal"), 
