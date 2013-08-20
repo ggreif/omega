@@ -326,5 +326,6 @@ freshRho (Rarrow s r) = do { s2 <- freshSig s; r2 <- freshRho r; return(Rarrow s
 freshRho (Rpair s r) = do { s2 <- freshSig s; r2 <- freshSig r; return(Rpair s2 r2)}
 freshRho (Rsum s r) = do { s2 <- freshSig s; r2 <- freshSig r; return(Rsum s2 r2)}
 
+freshPred :: TyCh m => Pred -> m Pred
 freshPred (Rel t) = do { t2 <- freshN t; return(Rel t2)}
 freshPred (Equality x y) = do { a <- freshN x; b <- freshN y; return(Equality a b)}
