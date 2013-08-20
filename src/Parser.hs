@@ -556,6 +556,7 @@ stringHelp s
 symbol name
     = lexeme (string name)
 
+lexeme :: Parser t -> Parser t
 lexeme p
     = do{ x <- p; whiteSpace; return x  }
 
