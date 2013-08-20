@@ -293,6 +293,7 @@ skip p (x @ (input,name,line,col,tabs)) =
      Ok _ state _ -> state
      Error _ -> (State input (SourcePos name line col tabs))
 
+parse2 :: Parser p -> String -> Either String (p, String)
 parse2 p input
     = case parserReply (runP (whiteSpace >> p) (State input (initialPos "keyboard input"))) of
         Ok x (State cs _) _    -> Right(x,cs)
@@ -329,7 +330,7 @@ instance Monad Parser where
   return x
     = Parser (\state -> Empty (Ok x state (unknownError state)))
 
-  (Parser p) >>= f
+  Parser p >>= f
     = Parser (\state ->
         case (p state) of
           Consumed reply1
