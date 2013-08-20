@@ -1,21 +1,21 @@
 module BuildDistr  where
 
-import Directory ( doesFileExist, doesDirectoryExist, removeFile
-                 , getCurrentDirectory,setCurrentDirectory
-                 , getDirectoryContents)
-import System.Directory (createDirectoryIfMissing)
+import System.Directory ( doesFileExist, doesDirectoryExist, removeFile
+                        , getCurrentDirectory,setCurrentDirectory
+                        , getDirectoryContents, createDirectoryIfMissing )
 import System.Environment (getArgs)
 import System.Process (system)
-import Time (getClockTime, toCalendarTime, calendarTimeToString)
+import Data.Time.LocalTime(getZonedTime)
+
 import BuildSpecific ( defaultHome, distrDir, srcDir, utilDir, parseDir, libDir
                      , manualDir, testsDir, rootDir, extension, version)
 import System.IO.Unsafe (unsafePerformIO)
 
 license =
- "-- Copyright (c) 2002-2011, Tim Sheard\n" ++
+ "-- Copyright (c) 2002-2013, Tim Sheard, Gabor Greif\n" ++
  "-- OGI School of Science & Engineering, Oregon Health & Science University\n" ++
  "-- Maseeh College of Engineering, Portland State University\n" ++
- "-- Subject to conditions of distribution and use; see LICENSE.txt for details.\n"
+ "-- See LICENSE.txt for details.\n"
 ---------------------------------------------------------------------
 
 sources libDir parseDir srcDir testsDir rootDir utilDir =
@@ -90,12 +90,12 @@ cleanTarget distrDir =
 
 
 getTime =
-  do { clockt <- getClockTime
-     ; calendart <- toCalendarTime clockt
-     ;let shave (' ':xs) = shave xs
-          shave ('\n':xs) = shave xs
-          shave xs = xs
-     ; return(shave(calendarTimeToString calendart))
+  do { clockt <- getZonedTime
+     ; let calendart = show clockt
+           shave (' ':xs) = shave xs
+           shave ('\n':xs) = shave xs
+           shave xs = xs
+     ; return (shave calendart)
      }
 
 
