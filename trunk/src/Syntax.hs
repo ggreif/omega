@@ -494,7 +494,7 @@ state0 (d:ds) = case dt d of
   Syn -> do { xs <- state0 ds; return(d:xs) }
   Thm -> do { xs <- state0 ds; return(d:xs) }
   TFun s ->  state2 s [d] [] ds -- state2 is collecting contiguous clauses with same Type function name
-  other -> fail ("Unknown Dec in state0: "++(show d))
+  other -> fail ("Unknown Dec in state0: " ++ show d)
 
 
 state2 nm cls grps [] = final2 cls grps []
