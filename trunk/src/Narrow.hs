@@ -341,6 +341,7 @@ subRels u (EqR(x,y)) =
      ; return ans}
 subRels u (AndR rs) = do { ans <- mapM (subRels u) rs; return(AndR ans)}
 
+simpRel :: Check m => Rel Tau -> m (Rel Tau)
 simpRel (EqR(x,y)) =
   do { ans <- handleM 5 (stepEq (10,2,initDI,False) (x,y) (AndR []))
                         (\ s -> return([],(0,0,undefined,True)))
