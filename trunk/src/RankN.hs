@@ -153,7 +153,7 @@ unifyLev s x y = walk (x,y)
 levelVars x = do { a <- pruneLv x; walk a }
   where walk (TcLv v) = return [v]
         walk (LvSucc x) = levelVars x
-        walk (LvZero) = return[]
+        walk LvZero = return[]
 
  ---  FIX ME
 instance TyCh m => TypeLike m Level where
@@ -557,7 +557,7 @@ tio x = TyApp ioT x
 tptr x = TyApp ptrT x
 teq x y = TyApp (TyApp eqT x) y
 tlabel x = TyApp labelT x
-ttag s = (TyCon Ox (lv 1) (s) tagKind)
+ttag s = (TyCon Ox (lv 1) s tagKind)
 trow (MK x) = MK(TyApp rowT x)
 tparser x = TyApp parserT x
 
@@ -829,9 +829,9 @@ instance (Swap r,Zonk m r) => Zonk m (L r) where
 
 instance Zonk m t => Zonk m (Maybe t) where
   zonkG (Just t) = do { x <- zonkG t; return(Just t)}
-  zonkG (Nothing) = return(Nothing)
+  zonkG Nothing = return Nothing
   tvs (Just t) = tvs t
-  tvs (Nothing) = return([],[])
+  tvs Nothing = return([],[])
 
 
 instance Zonk m t => Zonk m (Expected t) where
@@ -994,7 +994,7 @@ instance (Swap r,TypeLike m r,TyCh m) => TypeLike m (L r) where
 
 instance TypeLike m t => TypeLike m (Maybe t) where
   sub env (Just t) = do { x <- sub env t; return(Just t)}
-  sub env (Nothing) = return(Nothing)
+  sub env Nothing = return Nothing
 
 -- Infer objects are sometime populated with 'doNotPullOnMe'
 -- so we never want to pull on them, unless we know
@@ -1680,9 +1680,9 @@ kindOfM x = do { -- verbose <- getIoMode "verbose";
   f (TcTv (Tv u r (MK k))) = return k
   f (TyCon sx level_ s (K lvs sigma)) =
    do { info <- instanTy lvs sigma
-      ; case (info) of
+      ; case info of
         (([],Rtau k)) -> return k
-        (other) -> failM 0 [Ds "An illegal kind in a TyCon was found while computing the kind of a type: ",Dd sigma] }
+        other -> failM 0 [Ds "An illegal kind in a TyCon was found while computing the kind of a type: ",Dd sigma] }
   f (Star n) =  return (Star (LvSucc n))
   f (Karr x y) = kindOfM y
   f (TyVar n (MK k)) = return k
@@ -2073,7 +2073,7 @@ getFree bnd (Star' n Nothing) = ([],[])
 getFree bnd (Star' n (Just s)) = if elem s bnd then ([],[]) else ([],[s])
 getFree bnd (PolyLevel vs t) = getFree (vs++bnd) t
 getFree bnd (Tlamx n t) = getFree (n:bnd) t
-getFree bnd (AnyTyp) = ([],[])
+getFree bnd AnyTyp = ([],[])
 getFree bnd (Ext x) = foldr (getFreeL bnd) ([],[]) (extList x)
 getFree bnd (Forallx q xs eqs t) = f bnd xs t `unionTwo` g bnd xs eqs
   where f bnd [] t = getFree bnd t
@@ -2103,7 +2103,7 @@ getF :: (([String],[String])->([String],[String])->([String],[String])) -> PT ->
 getF union (TyVar' s) = ([s],[])
 getF union (Rarrow' x y) = union (getF union x) (getF union y)
 getF union (Karrow' x y) = union (getF union x) (getF union y)
-getF union (TyFun' (x:xs)) = foldr (getFL union) ([],[]) (xs)
+getF union (TyFun' (x:xs)) = foldr (getFL union) ([],[]) xs
 getF union (TyApp' x y) = (getF union x) `union` (getF union y)
 getF union (Kinded x y) = (getF union x) `union` (getF union y)
 getF union (TyCon' s Nothing) = ([],[])
@@ -2111,7 +2111,7 @@ getF union (TyCon' s (Just(n,lev))) = ([],[lev])
 getF union (Star' n Nothing) = ([],[])
 getF union (Star' _ (Just n)) = ([],[n])
 getF union (Tlamx n t) = getF union t
-getF union (AnyTyp) = ([],[])
+getF union AnyTyp = ([],[])
 getF union (Ext x) = foldr (getFL union) ([],[]) (extList x)
 getF union (Forallx q xs eqs t) = f xs t `union` g eqs
   where f [] t = getF union t
@@ -2153,7 +2153,7 @@ subPT sigma fresh x =
        ; newls <- mapM fresh1 ls
        ; t2 <- subPT (newls++sigma) fresh t
        ; return(PolyLevel (map snd newls) t2)}
-  (AnyTyp) -> return(AnyTyp)
+  AnyTyp -> return AnyTyp
   (Tlamx n t) ->
     do { m <- fresh n
        ; s <- subPT ((n,m):sigma) fresh t
@@ -2193,7 +2193,7 @@ ptsub sigma x =
       case lookup s sigma of
        Just(Star' _ (Just t)) -> Star' n (Just t)
        Nothing -> Star' n (Just s)
-  (AnyTyp) -> (AnyTyp)
+  AnyTyp -> AnyTyp
   (Tlamx n t) -> Tlamx n (ptsub ((n,TyVar' n):sigma) t)
   (Forallx quant xs eqs t) ->
    let sub1 (nm,kind,quant) = (nm,ptsub sigma kind,quant)
@@ -2324,7 +2324,7 @@ readTau n env (ty@(TyFun' (x:xs))) =
         _ -> failM 0 [Ds "\n",Dd ty
                      ,Ds " doesn't have a type function name in the function position of type function application: "
                      ,Dd s,Ds ("   "++sht s)]}
-readTau n env (AnyTyp) = newUniv
+readTau n env AnyTyp = newUniv
 readTau n env (t@(Forallx Ex xs eqs body)) =
    do { (_,fargs,env2) <- argsToEnv xs env
       ; r <- toTau env2 body
@@ -2579,7 +2579,7 @@ isTyConAp x = Nothing
 
 props :: Parser [PPred]
 props = (try (do { x <- proposition; symbol "=>"; return[x]})) <|>
-          (try (do { xs <- parens(sepBy (proposition) comma)
+          (try (do { xs <- parens(sepBy proposition comma)
                    ; symbol "=>"; return xs}))                     <|>
           (return [])
 
@@ -2596,7 +2596,7 @@ props = (try (do { x <- proposition; symbol "=>"; return[x]})) <|>
 typingHelp =
   do { reservedOp "::"
      ; levels <- level
-     ; prefix <- possible (allPrefix)
+     ; prefix <- possible allPrefix
      ; preds <- props
      ; body <- typN
      ; return(levels,prefix,preds,body)
@@ -2632,7 +2632,7 @@ okLevels declared found =
 
 --------------------------------------------------------
 
-pt s = case parse2 (typN) s of { Right(x,more) -> return x; Left s -> fail s }
+pt s = case parse2 typN s of { Right(x,more) -> return x; Left s -> fail s }
 parsePT s = pt s
 
 intThenTyp n = do { m <- try (possible natural); t <- typN; return (pick m,t)}
@@ -2649,7 +2649,7 @@ parseIntThenType n s =
       Right(x,more) -> return x
       Left s -> failM 1 [Ds "Ill-formed type in input.\n",Ds s]
 
-peqt s = case parse2 (arrTyp) s of { Right(x,more) -> x; Left s -> error s }
+peqt s = case parse2 arrTyp s of { Right(x,more) -> x; Left s -> error s }
 
 k = "forall a b . a -> b -> b"
 f1 = "(Int -> Int -> Int) -> Int"
@@ -2715,7 +2715,7 @@ instance Show PT where
   show (Star' 0 (Just n)) = "*"++n
   show (Star' k (Just n)) = "*("++show k++"+"++n++")"
   show (Tlamx n t) = "("++n++" . "++show t++")"
-  show (AnyTyp) = "?"
+  show AnyTyp = "?"
   show (Ext x) = show x
   show (PolyLevel ls t) = "level"++plistf id " " ls " " ". "++show t
   show (Forallx q2 xs eqs t) = showQ xs q2 ++ f xs++ g eqs ++ show t ++ close xs ")"
@@ -2754,7 +2754,7 @@ instance Sht PT where
   shtt (Star' k (Just n)) = "*("++show k++"+"++n++")"
   shtt (PolyLevel ls t) = "(level"++plistf id " " ls " " "."++shtt t++")"
   shtt (Tlamx n t) = "("++n++" . "++shtt t++")"
-  shtt (AnyTyp) = "AnyTyp"
+  shtt AnyTyp = "AnyTyp"
   shtt (Forallx q2 xs eqs t) =  "(Forallx ... )"
 
 showquant All = "(forall "
