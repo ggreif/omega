@@ -478,7 +478,7 @@ dt (AddTheorem _ _) = Thm
 
 expandTypeSigs loc pt = foldl (\ns n -> TypeSig loc [n] pt:ns)
 
-state0 :: Monad m => [Dec] -> m[Dec]
+state0 :: Monad m => [Dec] -> m [Dec]
 state0 [] = return []
 state0 (TypeSig loc ns pt:ds) | length ns > 1 = state0 (expandTypeSigs loc pt ds ns)
 state0 (d:ds) = case dt d of
@@ -497,6 +497,7 @@ state0 (d:ds) = case dt d of
   other -> fail ("Unknown Dec in state0: " ++ show d)
 
 
+state2 :: Monad m => String -> [Dec] -> [Dec] -> [Dec] -> m [Dec]
 state2 nm cls grps [] = final2 cls grps []
 state2 nm cls grps (d:ds) = case dt d of
   TFun x -> if nm==x
@@ -515,6 +516,7 @@ merge2 ((TypeFun l1 n1 k1 c1):(TypeFun l2 n2 k2 c2):ds) =
 
 
 
+state1 :: Monad m => Var -> [Dec] -> [Dec] -> [Dec] -> m [Dec]
 state1 nm cls grps [] = final cls grps []
 state1 nm cls grps (d:ds) = case dt d of
   Fn x -> if nm==x
