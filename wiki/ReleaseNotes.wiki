@@ -1,7 +1,12 @@
 #summary Added features and notable problems or improvements for each of the releases in (inverse) temporal order.
 #labels Featured
 
-= _Upcoming_ Release 1.5.2 =
+= _Upcoming_ Release 1.5.3 =
+
+Nothing notable yet.
+
+----
+= Release 1.5.2  _(2013-08-21)_ =
 
 == New Feature: _Applicative_ Syntax Extension ==
 
@@ -21,6 +26,8 @@ Now you can write terms in regular syntax in parentheses suffixed by `lc`, and t
 }}}
 
 Ωmega will take care of pretty printing them too (unlike in the response above) and you'll be able to escape out into the surrounding world by a wormhole that is opened by `$(...)`.
+
+This feature is very little tested, please report problems if you encounter any.
 
 See some of the design ideas on the wiki: IntensionalApplication.
 
