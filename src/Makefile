@@ -15,6 +15,16 @@ SVN              = svn
 DEVDIR           = $(HOME)
 DISTR            = $(DEVDIR)/Omega/distr
 
+## unset these to be serious
+##
+JUST-TEST = echo
+HACKAGE-SERIOUS = --check
+
+## Hackage credentials
+##
+HACKAGE-USER = GaborGreif
+HACKAGE-PASSW = jXXXX
+
 .PHONY: all cabal cabal-check cabal-pack omega-pack \
         tests clean cleaner manual update
 
@@ -32,7 +42,7 @@ cabal-check:
 	| grep -v "Omega Interpreter: version 1.5.2"
 	@ grep /tags/ $(DISTR)/*     | grep "1\."
 	@ grep tag: $(DISTR)/*       | grep "1\."
-	@ grep 2012 $(DISTR)/*       | grep -v "2002-2013" | grep -v "CEST 2013" \
+	@ grep "201" $(DISTR)/*       | grep -v "2002-2013" | grep -v "CEST 2013" \
 	| grep -v "distr/OmegaManual.ps"
 	@ echo
 	@ cd $(DISTR) && cabal check
@@ -41,21 +51,19 @@ cabal-pack:
 	cd $(DISTR) && cabal sdist -v
 
 cabal-upload:
-	false ### always fail!
-	cabal upload --username=GaborGreif --password=jXXXX $(DISTR)/dist/omega-1.5.1.tar.gz
+	@ $(JUST-TEST) cabal upload $(HACKAGE-SERIOUS) --username=$(HACKAGE-USER) --password=$(HACKAGE-PASSW) $(DISTR)/dist/omega-1.5.2.tar.gz
 
 omega-pack:
 	cd $(DISTR)/.. \
-	&& zip -v -r Omega151 distr -l -x \*.cabal distr/Setup.hs \*.pdf \*.ps distr/dist/\* \
-	&& zip -v -u Omega151 distr/*.pdf distr/*.ps \
+	&& zip -v -r Omega152 distr -l -x \*.cabal distr/Setup.hs \*.pdf \*.ps distr/dist/\* \
+	&& zip -v -u Omega152 distr/*.pdf distr/*.ps \
 	&& ls -l Omega1*
 
 omega-tag:
-	false ### always fail!
-	$(SVN) cp -m "tag Omega 1.5.1" ^/trunk ^/tags/omega-1.5.1 #### not tested
-	$(SVN) switch ^/tags/omega-1.5.1/src/Version.hs Version.hs
-	$(SVN) ci -m "update version to match distribution" Version.hs
-	$(SVN) switch ^/trunk/src/Version.hs Version.hs
+	$(JUST-TEST) $(SVN) cp -m "tag Omega 1.5.2" ^/trunk ^/tags/omega-1.5.2
+	$(JUST-TEST) $(SVN) switch ^/tags/omega-1.5.2/src/Version.hs Version.hs
+	$(JUST-TEST) $(SVN) ci -m "update version to match distribution" Version.hs
+	$(JUST-TEST) $(SVN) switch ^/trunk/src/Version.hs Version.hs
 
 %: %.hs *.hs
 	$(GHC) $(GHC_FLAGS) --make $*
