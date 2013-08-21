@@ -20,7 +20,7 @@ Build-Type:          Simple
 Extra-Source-Files:  ./*.hs, LangPrelude.prg Parsing.prg
 Data-Files:          OmegaManual.pdf
 Cabal-Version:       >= 1.6
-Tested-With:         GHC == 7.7.20130819
+Tested-With:         GHC == 7.6.3, GHC == 7.7.20130819
 
 Source-Repository    head
   type:     svn
