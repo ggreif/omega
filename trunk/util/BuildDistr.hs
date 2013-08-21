@@ -5,14 +5,12 @@ import System.Directory ( doesFileExist, doesDirectoryExist, removeFile
                         , getDirectoryContents, createDirectoryIfMissing )
 import System.Environment (getArgs)
 import System.Process (system)
-import Data.Time.LocalTime(getZonedTime)
+import Data.Time (getZonedTime, formatTime)
 
 import BuildSpecific ( defaultHome, distrDir, srcDir, utilDir, parseDir, libDir
-                     , manualDir, testsDir, rootDir, extension, version)
-import System.IO.Unsafe (unsafePerformIO)
+                     , manualDir, testsDir, rootDir, extension, version )
 
 import System.Locale (defaultTimeLocale)
-import Data.Time.Format (formatTime)
 
 license =
  "-- Copyright (c) 2002-2013, Tim Sheard, Gabor Greif\n" ++
