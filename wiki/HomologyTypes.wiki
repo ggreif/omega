@@ -219,6 +219,8 @@ These are tori. The first generator is by `A` and the second by `B` (which can d
 TODO: Add picture. Also disjunctions (E.g. `Maybe`)
 TODO: Spin 1/12 object depicting the dependency between hands of a clock.
 
+The topologically interesting things happen in codimension 1 (and 2). See Poincaré-duality.
+
 === Constructors ===
 
 Constructors appear at every level, and contrary to functions (at any level) they do not transform information
