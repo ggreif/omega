@@ -11,6 +11,9 @@ import BuildSpecific ( defaultHome, distrDir, srcDir, utilDir, parseDir, libDir
                      , manualDir, testsDir, rootDir, extension, version)
 import System.IO.Unsafe (unsafePerformIO)
 
+import System.Locale (defaultTimeLocale)
+import Data.Time.Format (formatTime)
+
 license =
  "-- Copyright (c) 2002-2013, Tim Sheard, Gabor Greif\n" ++
  "-- OGI School of Science & Engineering, Oregon Health & Science University\n" ++
@@ -92,11 +95,8 @@ cleanTarget distrDir =
 
 getTime =
   do { clockt <- getZonedTime
-     ; let calendart = show clockt
-           shave (' ':xs) = shave xs
-           shave ('\n':xs) = shave xs
-           shave xs = xs
-     ; return (shave calendart)
+     ; let calendart = formatTime defaultTimeLocale "%a %h %d %T %Z %Y" clockt
+     ; return calendart
      }
 
 
