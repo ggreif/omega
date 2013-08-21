@@ -32,7 +32,7 @@ Source-Repository    this
 
 Executable omega
   Main-is:           Main.hs
-  Build-Depends:     base >= 3 && < 5, directory, filepath,
+  Build-Depends:     base >= 3 && < 5, directory >= 1.2, filepath,
                      time, pretty, array,
                      containers
   Extensions:        GADTs
