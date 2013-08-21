@@ -45,6 +45,8 @@ cabal-check:
 	@ grep "201" $(DISTR)/*       | grep -v "2002-2013" | grep -v "CEST 2013" \
 	| grep -v "distr/OmegaManual.ps"
 	@ echo
+	@ echo ":q" | $(DISTR)/dist/build/omega/omega || true
+	@ echo
 	@ cd $(DISTR) && cabal check
 
 cabal-pack:
