@@ -212,21 +212,12 @@ This might be very interesting for the Equal type with its intensional proof mac
 
 === Pairs (Sigma) ===
 
-We have already seen the pairing combinator in action above, we still have to picture the corresponding type ∑x:A.B.
+We have already seen the pairing combinator in action above, we still have to picture the corresponding type ∑x::A.B.
 
-Two cones meeting in a line, both orientated either to the left or to the right
-Their boundary (the value) is two circles meeting tangentially. The meeting point
-is the pair combinator.
+These are tori. The first generator is by `A` and the second by `B` (which can depend on parts of `A`), making it a fiber over a value `a :: A`.
 
-red
-      /
-    /
-  /   blue
-.------------	A pair (in result orientation) of type <Bool, Nat>
-  \
-    \   yellow
-      \
-green
+TODO: Add picture. Also disjunctions (E.g. `Maybe`)
+TODO: Spin 1/12 object depicting the dependency between hands of a clock.
 
 === Constructors ===
 
