@@ -35,3 +35,4 @@ Executable omega
   Build-Depends:     base >= 3 && < 5, directory >= 1.2, filepath,
                      time, pretty, array, containers
   Extensions:        GADTs
+  Default-Language:  Haskell2010
