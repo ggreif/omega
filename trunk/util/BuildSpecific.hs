@@ -5,7 +5,7 @@ module BuildSpecific where
 
 defaultHome = "d:/"
 
-shortVersion = "1.5.2pre"
+shortVersion = "1.5.2"
 version = "Omega Interpreter: version " ++ shortVersion
 
 distrDir home = home ++ "/Omega/distr/"
