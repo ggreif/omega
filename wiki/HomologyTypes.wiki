@@ -214,12 +214,14 @@ This might be very interesting for the Equal type with its intensional proof mac
 
 We have already seen the pairing combinator in action above, we still have to picture the corresponding type ∑x::A.B.
 
-These are tori. The first generator is by `A` and the second by `B` (which can depend on parts of `A`), making it a fiber over a value `a :: A`.
+Let's revisit the values first. These are tori. The first generator is by `A` and the second by `B` (which can depend on parts of `A`), making it a fiber over a value `a :: A`.
 
 TODO: Add picture. Also disjunctions (E.g. `Maybe`)
 TODO: Spin 1/12 object depicting the dependency between hands of a clock.
 
 The topologically interesting things happen in codimension 1 (and 2). See Poincaré-duality.
+
+Now, how can the types look like? x::A says that x is a boundary of A, and each of these (potentially) reveal a type surface B. If the pair exists and we extract x than we know that there is a type surface determined by x whose boundary is y::B(x).
 
 === Constructors ===
 
