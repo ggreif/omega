@@ -402,4 +402,13 @@ Or should this be just the unit tree (|)?
 
 
 --TODO: prop Lambda :: Tree Hor ~> * where
+
+{-
+The slogan is: binder nodes do not count as result nodes:
+ - just consider the next node upstream
+ - incoming (external) cards, when identified to a binder do not count as inputs to application
+ - incoming (external) cards, when identified to an (iterated) application become pattern matching (sigma).
+
+In the end all identifications have a semantics (hopefully!), when the counting rules are ensured.
+-}
   
