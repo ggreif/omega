@@ -274,6 +274,20 @@ fathomable, but normally it can be scrutinized.
 When even the type is existential, then we have the black
 holes from above.
 
+==== Connection between Pi and Sigma binders ====
+
+The connection is currying:
+
+  * non-dependent: A -> (B -> C) == (A, B) -> C
+  * dependent: a::A -> (b::B(a) -> C(a,b)) vs. (a::A, b::B(a)) -> C(a, b)
+
+So technically, B appears on the equation's RHS, forming a partial application, or in the LHS' pattern. Same thing in cartesian closed categories.
+
+Since (unary) constructors name a bijection between input and bound name, it is possible to regard sigma as identifying the input with the constructor application, effectively peeling off the constructor:
+
+INPUT == ctor <bound-name>.
+In the dependently-curried case when peeling twice this is sigma.
+
 ==== Higher ranks ====
 
 dynamic color scheme (varying), rainbow-like
