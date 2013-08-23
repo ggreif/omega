@@ -99,7 +99,7 @@ data Tree :: Dir ~> *1 where
 
 data Tree' :: Tree d ~> * where
   In :: Tree' ()tr
-  Fork :: Tree' head -> Tree' tail -> Tree' [head; tail]tr
+  Fork :: treelike head -> Tree' tail -> Tree' [head; tail]tr
   Done :: Tree' []tr
  deriving syntax (ar) List(Done, Fork) Unit(In) -- "arbre"
 -- http://www.papoulipoesique.com/wp-content/uploads/2013/06/arbre.jpg
@@ -375,12 +375,15 @@ prop Reference :: Tree Hor ~> * where
   Stop :: Reference []tr
   Up :: Reference tr -> Reference [tr]tr
 
+prop Teleport :: Tree Hor ~> * where
+  Gate :: Teleport [()tr]tr
+  Tele :: Teleport tr -> Teleport [tr]tr
+
 {-
 
-    |
-0   L  (lambda node)
+0
 |   |
-1   1
+1   L  (lambda node)
 |   |
 2   2
  \ /
@@ -391,18 +394,16 @@ prop Reference :: Tree Hor ~> * where
 
 Encodes \x.xx
 
-And this:
-
-|
-LB
-|
-
-encodes \x.x
-
-Or should this be just the unit tree (|)?
-
 -}
 
+r2 = Up $ Up $ Stop
+t2 = Tele $ Gate
+
+lamX_XX = addBinder $ [r2, t2]ar
+
+-- TODO: make sure that something teleports here
+addBinder :: Tree' tr -> Tree' [tr]tr
+addBinder term = [term]ar
 
 --TODO: prop Lambda :: Tree Hor ~> * where
 
