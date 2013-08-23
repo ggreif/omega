@@ -126,9 +126,10 @@ data Stack :: Tree d ~> Tree e ~> * where
   Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
 
   -- put a frame around a niche
-  -- TODO: Corolla out
-  -- TODO: this constructor should be called Target
-  Frame :: (Corolla out, Equal {nodes tr} {nodeValence out}) => Stack tr out -> Stack tr out
+  Frame :: (Corolla out, {nodes tr}  `Equal` {nodeValence out}) => Stack tr out -> Stack tr out
+
+  -- add another target face to a web
+  Target :: ({nodes tr} `Equal` {nodeValence out}) => Stack tr out -> Stack tr out
 
   -- the following three grab a node (and possibly its offsprings) and incorporate it into a single card
   NodeDone :: Stack []tr [()tr]tr
@@ -144,10 +145,11 @@ data Stack :: Tree d ~> Tree e ~> * where
   Also :: Pointers 1t at tr
        => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
 
- deriving syntax(z) Record(NicheDone, Also) Item(Frame)
+ deriving syntax(z) Record(NicheDone, Also) Item(Target)
 
 subDone = ({}z)z
 
+-- this is bogus, just make it compile again...
 subCont :: Stack ()tr tr -> Stack ()tr [tr]tr
 subCont inner = ({()ar=inner}z)z
 
@@ -410,5 +412,5 @@ The slogan is: binder nodes do not count as result nodes:
  - incoming (external) cards, when identified to an (iterated) application become pattern matching (sigma).
 
 In the end all identifications have a semantics (hopefully!), when the counting rules are ensured.
+
 -}
-  
