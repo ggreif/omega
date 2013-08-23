@@ -399,19 +399,24 @@ Encodes \x.xx
 -}
 
 r2 = 2d
-t2 = 1sk
+t1 = 1sk
 
-lamX_XX = addBinder $ [r2, t2]ar
+lamX_XX = addBinder $ [r2, t1]ar
 
 prop BindsUp :: Nat ~> Tree Hor ~> * where
-  LastSkip :: BindsUp 0t [()tr]tr
-  MoreSkip :: Nat' n -> Teleport tr -> BindsUp (1+n)t [tr]tr
-  HeadBindsUp :: Nat' (1+n)t -> Teleport head -> BindsUp n [head, nonempty; tail]tr
-  TailBindsUp :: Nat' (1+n)t -> BindsUp n [nonempty; tail]tr -> BindsUp n [head, nonempty; tail]tr
+  LastSkip :: BindsUp 1t [()tr]tr
+  MoreSkip :: Nat' n -> Teleport tr -> BindsUp n tr -> BindsUp (1+n)t [tr]tr
+  -- prove Application node
+  HeadBindsUp :: Nat' n -> BindsUp (1+n)t [head, nonempty; tail]tr -> BindsUp n [head, nonempty; tail]tr
+  TailBindsUp :: Nat' n -> BindsUp n [nonempty; tail]tr -> BindsUp n [head, nonempty; tail]tr
 
 -- TODO: make sure that something teleports here
-addBinder :: BindsUp 0t tr => Tree' tr -> Tree' [tr]tr
+addBinder :: {-BindsUp 1t tr =>-} Tree' tr -> Tree' [tr]tr
 addBinder term = [term]ar
+
+testB :: BindsUp 0t [[[[]tr]tr]tr]tr -> Tree' [[[[]tr]tr]tr,[()tr]tr]tr
+testB ev = [r2, 0sk]ar
+
 
 --TODO: prop Lambda :: Tree Hor ~> * where
 
