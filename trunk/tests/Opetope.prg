@@ -406,9 +406,11 @@ lamX_XX = addBinder $ [r2, t2]ar
 prop BindsUp :: Nat ~> Tree Hor ~> * where
   LastSkip :: BindsUp 0t [()tr]tr
   MoreSkip :: Nat' n -> Teleport tr -> BindsUp (1+n)t [tr]tr
+  HeadBindsUp :: Nat' (1+n)t -> Teleport head -> BindsUp n [head, nonempty; tail]tr
+  TailBindsUp :: Nat' (1+n)t -> BindsUp n [nonempty; tail]tr -> BindsUp n [head, nonempty; tail]tr
 
 -- TODO: make sure that something teleports here
-addBinder :: Tree' tr -> Tree' [tr]tr
+addBinder :: BindsUp 0t tr => Tree' tr -> Tree' [tr]tr
 addBinder term = [term]ar
 
 --TODO: prop Lambda :: Tree Hor ~> * where
