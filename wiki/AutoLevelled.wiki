@@ -274,7 +274,9 @@ data Prime :: level k . (Prime n ° (n ° Nat) ~> *k where
 
 In the levelled form only the `(a ° Nat) ~>` splitting is necessary, this looks like  a Pi, but is equi-levelled.
 
-In the sky syntax `a :: Nat :: *1` via the kind declaration, but actually a value-level object `a :: (a ° Nat)` via the `Joined` constructor. The type argument at position -1 takes care of the level business.
+In the sky syntax `a :: Nat :: *1` via the kind declaration (and as such uninhabited), but actually a value-level object `a :: (a ° Nat)` via the `Joined` constructor. The type argument at position -1 takes care of the level business.
+
+(°) binds just an ε less than (~>).
 
 == The function types ==
 
