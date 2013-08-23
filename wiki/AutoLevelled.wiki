@@ -268,7 +268,7 @@ data Prime :: Nat -> * where
 
 which would be rewritten to be level-conscious as
 {{{
-data Prime :: level k . (Prime n ° (n ° Nat) ~> *k where
+data Prime :: level k . Prime n ° (n ° Nat) ~> *k where
   Joined :: (a ° Nat) ~> Factorize a ~> Prime a
 }}}
 
