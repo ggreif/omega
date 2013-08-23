@@ -122,11 +122,8 @@ kind Diagram = Closed Volume | OpenNiche
 data Stack :: Tree d ~> Tree e ~> * where
   Corolla :: Corolla tr => Tree' tr -> Stack tr ()tr
 
-  -- needed? TODO: Define Target
-  Encompass :: Subtree consumed tr => Stack consumed prod -> Stack tr prod
-
-  -- put a frame around a niche
-  Frame :: (Corolla out, {nodes tr}  `Equal` {nodeValence out}) => Stack tr out -> Stack tr out
+  -- TODO: needed?
+  --Expand :: (Subtree consumed tr, {nodeValence consumed} `Equal` {nodeValence tr}) => Stack consumed prod -> Stack tr prod
 
   -- add another target face to a web
   Target :: ({nodes tr} `Equal` {nodeValence out}) => Stack tr out -> Stack tr out
@@ -139,11 +136,15 @@ data Stack :: Tree d ~> Tree e ~> * where
 
   On :: (Subtree tr' tr, Pointers 1t at out) => Stack tr' out' -> Stack tr out -> Tree' at -> Stack tr {graft out' at out}
 
-  -- building niches
+  -- building niches (pasting diagrams)
+  -- TODO: these must produce a composite labelled Hor
   NicheDone :: Stack ()tr []tr
   Niche :: Stack tr out -> Stack tr [out]tr
   Also :: Pointers 1t at tr
        => Tree' at -> Stack tr' out' -> Stack tr out -> Stack {extgraft tr' at tr} [out'; out]tr
+
+  -- put a frame around a niche
+  Frame :: (Corolla out, {nodes tr}  `Equal` {nodeValence out}) => Stack tr out -> Stack tr out
 
  deriving syntax(z) Record(NicheDone, Also) Item(Target)
 
@@ -178,14 +179,14 @@ dolliCell = Corolla $ Fork In Done
 --   |          |
 
 lolliFrame :: Stack []tr [()tr]tr
-lolliFrame = Encompass NodeDone
+lolliFrame = Target NodeDone
 
 --   |          |
 --  [o]   --->  o
 --   |          |
 
 dolliFrame :: Stack [()tr]tr [()tr]tr
-dolliFrame = Encompass (Exclude NodeDone)
+dolliFrame = Target (Exclude NodeDone)
 
 --   |          |
 --   |          o
