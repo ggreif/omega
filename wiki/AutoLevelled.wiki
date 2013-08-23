@@ -258,6 +258,24 @@ C.f. the `nax` paper.
 
 Intuitively the `°` separates the _semantic_ portion of the type from the _ad-hoc_ portion. The ad-hoc part is directly intended by the program author, and the Hindley-Milner type inference is acting on this part. The semantic portion is however the bridgehead enabling analyses and isomorphisms to be established. For example the if we can establish an isomorphism of the semantic portions of two values that represent the same value (e.g. {{{S (S (S Z)))}}} and {{{3}}}, then we can verify a conversion function.
 
+An appealing idea is to consider `(°)` as a type former that can be omitted (left argument is inferrable), and separating the (natural side) user-defined arguments from the (negative side) semantic arguments. At position -1 one would find the isomorphic reflection of the (known part of the) value into the type level.
+
+So, in summary, one would write in the sky
+{{{
+data Prime :: Nat -> * where
+  Joined :: a -> Factorize a -> Prime a
+}}}
+
+which would be rewritten to be level-conscious as
+{{{
+data Prime :: level k . (Prime n ° (n ° Nat) ~> *k where
+  Joined :: (a ° Nat) ~> Factorize a ~> Prime a
+}}}
+
+In the levelled form only the `(a ° Nat) ~>` splitting is necessary, this looks like  a Pi, but is equi-levelled.
+
+In the sky syntax `a :: Nat :: *1` via the kind declaration, but actually a value-level object `a :: (a ° Nat)` via the `Joined` constructor. The type argument at position -1 takes care of the level business.
+
 == The function types ==
 
 With he above scheme the function arrow becomes a type constructor synonym
