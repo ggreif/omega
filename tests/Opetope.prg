@@ -405,17 +405,18 @@ lamX_XX = addBinder $ [r2, t1]ar
 
 prop BindsUp :: Nat ~> Tree Hor ~> * where
   LastSkip :: BindsUp 1t [()tr]tr
-  MoreSkip :: Nat' n -> Teleport tr -> BindsUp n tr -> BindsUp (1+n)t [tr]tr
+  MoreSkip :: Teleport tr -> BindsUp n tr -> BindsUp (1+n)t [tr]tr
   -- prove Application node
-  HeadBindsUp :: Nat' n -> BindsUp (1+n)t [head, nonempty; tail]tr -> BindsUp n [head, nonempty; tail]tr
-  TailBindsUp :: Nat' n -> BindsUp n [nonempty; tail]tr -> BindsUp n [head, nonempty; tail]tr
+  HeadBindsUp :: Nat' n -> BindsUp (1+n)t head -> BindsUp n [head; tail]tr
+  TailBindsUp :: Nat' n -> BindsUp n [head; tail]tr -> BindsUp n [nonempty, head; tail]tr
 
 -- TODO: make sure that something teleports here
 addBinder :: {-BindsUp 1t tr =>-} Tree' tr -> Tree' [tr]tr
 addBinder term = [term]ar
 
-testB :: BindsUp 0t [[[[]tr]tr]tr]tr -> Tree' [[[[]tr]tr]tr,[()tr]tr]tr
+testB :: BindsUp 0t [[[[]tr]tr]tr,[()tr]tr]tr -> Tree' [[[[]tr]tr]tr,[()tr]tr]tr
 testB ev = [r2, 0sk]ar
+testB' = testB (TailBindsUp 0v (HeadBindsUp 0v (LastSkip)))
 
 
 --TODO: prop Lambda :: Tree Hor ~> * where
