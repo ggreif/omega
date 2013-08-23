@@ -61,8 +61,9 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,morepolyPolyExpectRho)
 import SyntaxExt(SynExt(..),Extension(..),synKey,synName,extKey
                 ,buildExt,listx,pairx,natx,wExt,duplicates,checkClause,checkMany,liftEither)
-import Data.List((\\),partition,sort,sortBy,nub,union,unionBy
+import Data.List((\\),partition,sort,sortBy,nub,nubBy,union,unionBy
                 ,find,deleteFirstsBy,groupBy,intersect,intersperse)
+import Data.Maybe(fromJust,isJust)
 import Encoding
 import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
@@ -1695,7 +1696,7 @@ refute ((r@(RW nm key Axiom   _ _ _ _)):rs) term =
 
 refutable :: [Pred] -> TC (Maybe(DispElem Z))
 refutable [] = return Nothing
-refutable ((Rel term):ps) =
+refutable (Rel term:ps) =
   do { t <- zonk term
      ; s <- predNameFromTau term t
      ; rules <- getMatchingRules isBackChain s
@@ -3982,13 +3983,14 @@ solvP truths questions =
   do { steps <- getBound "backchain" 4
      ; ans <- solv steps [(truths,questions,[],([],[]))]
      ; let aMostGeneral (ts,qs,nms,(levelu,u)) = null u
+           rels = map Rel questions
            axiom [] = False
            axiom (c:cs) = isUpper c
-           axiomOnlySolution (ts,qs,nms,u) = all axiom nms
+           axiomOnlySolution (_,_,nms,_) = all axiom nms
            ambig preds = failM 2 [Ds "Ambiguous solutions to: ["
                                  ,Dl truths ",",Ds "] => ["
                                  ,Dl questions ",",Ds "]\n   "
-                                 ,Dlf (showOneAmbig questions) preds ""]
+                                 ,Dlf (showOneAmbig rels) preds ""]
            nosols = failD 3 [Ds "No solution to [",Dl truths ", ",Ds "] => [", Dl questions ",",Ds "]"]
      ; unique ans
          nosols                                          -- None
@@ -3996,14 +3998,14 @@ solvP truths questions =
          (eitherM (allRefutable ans)                     -- Many
                   (\good -> case find aMostGeneral good of
                              Just(ts,qs,nms,u) -> return(map makeRel qs,u)
-                             Nothing -> unique (filter axiomOnlySolution good)
+                             Nothing -> unique (nubBy (sameAxioms rels) $ filter axiomOnlySolution good)
                                           (ambig good)                   -- NONE
                                           (\ (ts,qs,nms,u) ->
                                               return(map makeRel qs,u))  -- Exactly One
                                           (ambig good))                  -- MANY
                   (\elem -> failM 2 [Ds "\nThere is no solution to ["
                                     ,Dl questions ", ",Ds "] because"
-                                    , elem]))
+                                    ,elem]))
      }
 
 unique x none onef many =
@@ -4012,20 +4014,23 @@ unique x none onef many =
    [ans] -> onef ans
    (_:_) -> many
 
+sameAxioms rels (_,_,_,lu) (_,_,_,ru) = sub2Pred lu rels == sub2Pred ru rels
+
 -- Given an ambiguous list of solutions to some questions, some may be
 -- refutable, so we should filter them out. If all are refutable, then
 -- the questions themselves are refutable.
 
 allRefutable :: [([Tau],[Tau],[String],Unifier2)] -> TC(Either [([Tau],[Tau],[String],Unifier2)] (DispElem Z))
-allRefutable sols = do { xs <- mapM test1 sols; check xs sols []}
+allRefutable sols = do { xs <- mapM test1 sols
+                       ; if all isJust xs
+                         then return (Right (Dr $ map fromJust xs))
+                         else check xs sols [] }
  where test1 (truths,quests,names,unifier) = refutable (map Rel quests)
-       check [] sols good = return(Left good)
-       check (Nothing : xs) (s:sols) good = check xs sols (s:good)
-       check (Just dispElem : xs) sols good = return(Right dispElem)
+       check [] _ good = return(Left good)
+       check (Nothing : xs) (s:sols) good = check xs sols (if s `elem` good then good else s:good)
+       check (Just dispElem : xs) (_:sols) good = check xs sols good
 
-
-showOneAmbig term d (ts,ps,nms,(levelu,u)) = displays d [Ds "\n   ",Dd (subPred u (map Rel term))]
-
+showOneAmbig rels d (ts,ps,_,(levelu,u)) = displays d [Ds "\n   ",Dd (subPred u rels)]
 
 expandTruths2 truths =
   do { let (eqs,rels) = splitR truths ([],[])
