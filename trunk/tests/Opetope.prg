@@ -404,7 +404,8 @@ t2 = 1sk
 lamX_XX = addBinder $ [r2, t2]ar
 
 prop BindsUp :: Nat ~> Tree Hor ~> * where
-  LastSkip :: Nat' 1t -> Teleport [()tr]tr -> BindsUp 1t [()tr]tr
+  LastSkip :: BindsUp 0t [()tr]tr
+  MoreSkip :: Nat' n -> Teleport tr -> BindsUp (1+n)t [tr]tr
 
 -- TODO: make sure that something teleports here
 addBinder :: Tree' tr -> Tree' [tr]tr
