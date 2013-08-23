@@ -418,6 +418,10 @@ testB :: BindsUp 0t [[[[]tr]tr]tr,[()tr]tr]tr -> Tree' [[[[]tr]tr]tr,[()tr]tr]tr
 testB ev = [r2, 0sk]ar
 testB' = testB (TailBindsUp 0v (HeadBindsUp 0v (LastSkip)))
 
+testC :: BindsUp 0t [[[[[]tr]tr]tr,[[()tr]tr]tr]tr]tr -> Tree' [[[[[]tr]tr]tr,[[()tr]tr]tr]tr]tr
+testC ev = lamX_XX
+testC' = testC (HeadBindsUp 0v (TailBindsUp 1v (HeadBindsUp 1v (MoreSkip 0sk LastSkip))))
+
 
 --TODO: prop Lambda :: Tree Hor ~> * where
 
