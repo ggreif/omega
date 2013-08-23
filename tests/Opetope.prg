@@ -408,19 +408,19 @@ prop BindsUp :: Nat ~> Tree Hor ~> * where
   MoreSkip :: Teleport tr -> BindsUp n tr -> BindsUp (1+n)t [tr]tr
   -- prove Application node
   HeadBindsUp :: Nat' n -> BindsUp (1+n)t head -> BindsUp n [head; tail]tr
-  TailBindsUp :: Nat' n -> BindsUp n [head; tail]tr -> BindsUp n [nonempty, head; tail]tr
+  TailBindsUp :: BindsUp n [head; tail]tr -> BindsUp n [nonempty, head; tail]tr
 
 -- TODO: make sure that something teleports here
-addBinder :: {-BindsUp 1t tr =>-} Tree' tr -> Tree' [tr]tr
+addBinder :: {- BindsUp 1t tr => -} Tree' tr -> Tree' [tr]tr
 addBinder term = [term]ar
 
 testB :: BindsUp 0t [[[[]tr]tr]tr,[()tr]tr]tr -> Tree' [[[[]tr]tr]tr,[()tr]tr]tr
 testB ev = [r2, 0sk]ar
-testB' = testB (TailBindsUp 0v (HeadBindsUp 0v (LastSkip)))
+testB' = testB (TailBindsUp (HeadBindsUp 0v (LastSkip)))
 
 testC :: BindsUp 0t [[[[[]tr]tr]tr,[[()tr]tr]tr]tr]tr -> Tree' [[[[[]tr]tr]tr,[[()tr]tr]tr]tr]tr
 testC ev = lamX_XX
-testC' = testC (HeadBindsUp 0v (TailBindsUp 1v (HeadBindsUp 1v (MoreSkip 0sk LastSkip))))
+testC' = testC (HeadBindsUp 0v (TailBindsUp (HeadBindsUp 1v (MoreSkip 0sk LastSkip))))
 
 
 --TODO: prop Lambda :: Tree Hor ~> * where
