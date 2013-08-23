@@ -374,10 +374,12 @@ class ZoomLike (int :: Tree) (out :: Tree) where
 prop Reference :: Tree Hor ~> * where
   Stop :: Reference []tr
   Up :: Reference tr -> Reference [tr]tr
+ deriving Nat(d) -- de Bruijn index
 
 prop Teleport :: Tree Hor ~> * where
   Gate :: Teleport [()tr]tr
   Tele :: Teleport tr -> Teleport [tr]tr
+ deriving Nat(sk) -- skips
 
 {-
 
@@ -385,7 +387,7 @@ prop Teleport :: Tree Hor ~> * where
 |   |
 1   L  (lambda node)
 |   |
-2   2
+2   1  (how many skips)
  \ /
   o
   |
@@ -396,8 +398,8 @@ Encodes \x.xx
 
 -}
 
-r2 = Up $ Up $ Stop
-t2 = Tele $ Gate
+r2 = 2d
+t2 = 1sk
 
 lamX_XX = addBinder $ [r2, t2]ar
 
