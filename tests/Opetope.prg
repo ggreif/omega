@@ -151,8 +151,8 @@ data Stack :: Tree d ~> Tree e ~> * where
 stop = ({}z)z
 
 -- this is bogus, just make it compile again...
-subCont :: Reference tr => Stack ()tr tr -> Stack ()tr [tr]tr
-subCont inner = ({()ar=inner}z)z
+up :: Reference tr => Stack ()tr tr -> Stack ()tr [tr]tr
+up inner = ({()ar=inner}z)z
 
 -- it remains to define corollas
 
@@ -222,7 +222,7 @@ stopetope'' = [crossed, lolliFrame, dolliCell]cplx
 --   |          |
 
 drossed :: Stack ()tr [[]tr]tr
-drossed = subCont stop
+drossed = up stop
 
 
 -- ################################
