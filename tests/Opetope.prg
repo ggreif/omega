@@ -14,6 +14,7 @@
 --          - lines disappear
 --          -                (regular) cards appear
 
+import "../src/LangPrelude.prg" (maybeM)
 import "../tests/Nat.prg"
 
 ##bounds backchain 10
@@ -469,5 +470,19 @@ data DeBrujnContext :: (value ~> *) ~> Dict Nat value ~> * where
   DeBrujnExtend :: DeBrujnContext value dict -> value v -> DeBrujnContext value {dict; {dictSize dict} = v}dict
  deriving LeftList(dtx)
 
-toDeBruijn :: DeBrujnContext Label dict -> LC Label -> LC Nat'
-toDeBruijn ctx (Var a) = Var 0v
+
+getDeBruijnIndex :: Dict key value ~> value ~> Nat ~> Nat
+{getDeBruijnIndex {pre; k = v}dict v acc} = acc
+{getDeBruijnIndex {pre; k = v'}dict v acc} = {getDeBruijnIndex pre v (1+acc)t}
+
+lookUpDeBruijn :: DeBrujnContext Label dict -> Label l -> Nat' acc -> Maybe (Nat' {getDeBruijnIndex dict l acc})
+lookUpDeBruijn []dtx _ _ = Nothing
+lookUpDeBruijn [pre; known]dtx lab acc = case sameLabel known lab of
+                                         R _ -> lookUpDeBruijn pre lab (1+acc)t
+                                         L Eq -> Just acc
+
+monad maybeM
+
+toDeBruijn :: DeBrujnContext Label dict -> LC Label -> Maybe (LC Nat')
+toDeBruijn ctx (Var a) = do idx <- lookUpDeBruijn ctx a 0t
+                            return $ Var idx
