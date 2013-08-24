@@ -408,7 +408,7 @@ funcPat ns p ps = build ns p
 elab :: Prefix -> Env -> Env -> Dec -> FIO Env
 elab prefix magic init (Pat loc nm args body) =
   return(extendV [(nm,(Vpat nm (funcPat args body) (evalPat2 args body)))] init)
-elab prefix magic init (d@(Val loc p b ds)) =
+elab prefix magic init (Val loc p b ds) =
   do { v <- vlazy(do { env2 <-  elaborate Tick ds magic
                      ; evalBody env2 b (fail "Body in Decl has no True case")})
      ; (u,frag2) <- matchPatLazy p v
