@@ -639,7 +639,6 @@ decl =   try patterndecl -- Needs to be before vdecl
      <|> vdecl
      <|> datadecl
      <|> typeFunDec
-     <|> flagdecl
      <|> monaddecl
      <|> theoremDec
      <?> "decl"
@@ -670,14 +669,6 @@ boundsDec =
      ; which <- reserved "backchain" >> return "backchain"
      ; bound <- fmap fromIntegral decimal
      ; return(Bound which bound)
-     }
-
-flagdecl =
-  do { pos <- getPosition
-     ; reserved "flag"
-     ; flag <- name
-     ; nm <- name
-     ; return(Flag flag nm)
      }
 
 vdecl =
