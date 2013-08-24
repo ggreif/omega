@@ -23,7 +23,8 @@ import RankN ( PT(..), typN, simpletyp, proposition, pt, allTyp
              , ptsub, getFree, parse_tag, props, typingHelp
              , typing, conName, arityPT,  backQuoted )
 import SyntaxExt ( Extension(..), extP, SynExt(..)
-                 , natP, SyntaxStyle(..) )
+                 , natP, SyntaxStyle(..), ApplicativeSyntax(..)
+                 , app, var, lam, lt )
 import Auxillary(Loc(..),plistf,plist)
 import Data.Char(isLower,isUpper)
 ---------------------------------------------------------
@@ -177,7 +178,20 @@ name,constructor :: Parser Var
 constructor = terminal conName Global
 name = terminal identifier Global
 
-
+instance ApplicativeSyntax Exp where
+  expandApplicative dict exp = expand exp
+    where expand (App f a) = expand f <*> expand a
+          expand (Var (Global name)) = v name
+          expand (Lam [Pvar (Global name)] e []) = lam' (sym name) (expand e)
+          expand (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) = let' (sym name) (expand e1) (expand e2)
+          expand l@(Lit _) = l
+          expand (Escape e) = e
+          expand _ = Lit Unit -- FIXME
+          (<*>) = app dict
+          v = SyntaxExt.var dict . sym
+          lam' = lam dict
+          let' = lt dict
+          sym = Lit . Tag
 
 -----------------------------------------------------------
 -- Syntactic Extensions
@@ -193,6 +207,7 @@ name = terminal identifier Global
 -- Records  {a=4, b=True}    {a=Int, b=Bool}r  {a=Int; r}r
 -- Items                     (x)i
 -- Units                     ()i
+-- Applicative               (let foo = \a -> b in foo c)i
 -----------------------------------------------------------
 -- Left{List,Pair,Record} are the left-associative variants
 --
@@ -207,10 +222,23 @@ extToExp (Natx n Nothing "") = Lit(Int n)
 extToExp (Natx n (Just exp) "") = App (App (Var (Global "+")) (Lit(Int n))) exp
 extToExp x = ExtE x
 
-extToPat (Pairx (Right xs) "") =  patTuple xs
-extToPat (Listx (Right xs) Nothing "") =  pConsUp patNil xs
-extToPat (Listx (Right xs) (Just tail) "") =  pConsUp tail xs
-extToPat (Natx n Nothing "") = Plit(Int n)
+instance ApplicativeSyntax Pat where
+  expandApplicative dict = expand
+    where expand (Pvar (Global name)) = SyntaxExt.var dict $ Plit (Tag name)
+          expand (Pcon (Global "") [f, a]) = expand f <*> expand a
+          expand (Pcon (Global "\\") [Pvar (Global name), e]) = lam' (sym name) (expand e)
+          expand (Pcon (Global "let ") [Pvar (Global name), e1, e2]) = let' (sym name) (expand e1) (expand e2)
+          expand lit@(Plit _) = lit
+          (<*>) = app dict
+          v = SyntaxExt.var dict . sym
+          lam' = lam dict
+          let' = lt dict
+          sym = Plit . Tag
+
+extToPat (Pairx (Right xs) "") = patTuple xs
+extToPat (Listx (Right xs) Nothing "") = pConsUp patNil xs
+extToPat (Listx (Right xs) (Just tail) "") = pConsUp tail xs
+extToPat (Natx n Nothing "") = Plit (Int n)
 extToPat x = ExtP x
 
 patNil = Pcon (Global "[]") []
@@ -219,6 +247,24 @@ pConsUp pnil (p:ps) = Pcon (Global ":") [p,pConsUp pnil ps]
 
 -------------------------------------------------------------
 -- Pattern parsing
+
+applicativeExp2pat (Var global) = return $ Pvar global
+applicativeExp2pat (App f a) = do { f' <- applicativeExp2pat f
+                                  ; a' <- applicativeExp2pat a
+                                  ; return $ Pcon (Global "") [f', a'] }
+applicativeExp2pat (Lam [Pvar (Global name)] e []) = do { e' <- applicativeExp2pat e
+                                                        ; return $ Pcon (Global "\\") [Pvar (Global name), e'] }
+applicativeExp2pat (Let [Val _ (Pvar (Global name)) (Normal e1) []] e2) =
+                               do { e1' <- applicativeExp2pat e1
+                                  ; e2' <- applicativeExp2pat e2
+                                  ; return $  Pcon (Global "let ") [Pvar (Global name), e1', e2'] }
+applicativeExp2pat (Lit lit) = return $ Plit lit
+applicativeExp2pat (Escape e) = applicativeExp2pat e
+applicativeExp2pat x = fail ("applicative expression cannot appear as pattern: " ++ show x)
+
+expPattern =
+      try ((lambdaExpression <|> letExpression <|> applyExpression) >>= applicativeExp2pat)
+  <|> pattern
 
 pattern =
       try asPattern
@@ -246,7 +292,7 @@ infixPattern =
 simplePattern :: Parser Pat
 simplePattern =
         literalP
-    <|> do { p <- extP pattern; return(extToPat p)}
+    <|> do { p <- extP expPattern; return(extToPat p)}
     <|> try (fmap lit2Pat (parens signedNumLiteral))
     <|> do { symbol "_"; return Pwild}
     <|> do { nm <- constructor; nullaryPcon nm }
@@ -301,7 +347,7 @@ lit2Pat (LString s) = pConsUp patNil (map (Plit . Char) s)
 -- simple expressions are one token, or surrounded by bracket-like things
 simpleExpression :: Parser Exp
 simpleExpression =
-        literalE                  -- "abc"   23.5   'x'   `d  123  #34 45n
+        literalE                  -- "abc"   23.5   'x'   `d  123  #34 45v
     <|> code                      -- [| 3 + x |]
     <|> try escapeExp             -- $x  $(f 3)
     <|> pairOper                  -- (,)
