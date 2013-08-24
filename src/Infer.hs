@@ -315,7 +315,7 @@ getBound s m =
 
 setBound s v =
   case find (\ (nm,info,ref) -> nm==s) boundRef of
-    Just(_,_,ref) -> writeRef ref v
+    Just(_,_,ref) -> do old <- readRef ref; writeRef ref (max v old)
     Nothing -> return ()
 
 --------------------------------------------------------
