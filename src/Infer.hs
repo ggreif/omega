@@ -218,7 +218,6 @@ instance TracksLoc (Mtc TcEnv Pred) Z where
 
 data Mod = Wob | Rig deriving (Eq,Show) -- a Modifier is either Wobbly or Rigid
 type CodeLevel = Int
-type Refutation = Tau -> TC ()
 
 -- The type of the internal environment of the Type Checking Monad
 data TcEnv
@@ -230,7 +229,6 @@ data TcEnv
           , bindings :: MGU              -- equality bindings
           , assumptions :: [Pred]        -- assumptions
           , rules :: FiniteMap String [RWrule] -- Proposition simplifying rules
-          , refutations :: FiniteMap String Refutation
           , runtime_env :: Ev            -- current value bindings
           , imports :: [(String,UTCTime,[(String,UTCTime)],TcEnv)]  -- already imported Modules
           , tyfuns :: [(String,DefTree TcTv Tau)]
@@ -239,7 +237,7 @@ data TcEnv
           }
 
 tcEnv0 = unsafePerformIO(runFIO (decMany preDefDec initEnv) errF)
-  where initEnv = TcEnv Map.empty toEnvX [] 0 Z [] [] Map.empty Map.empty env0 [] [] [] [listx,pairx,natx]
+  where initEnv = TcEnv Map.empty toEnvX [] 0 Z [] [] Map.empty env0 [] [] [] [listx,pairx,natx]
         errF loc n s = error ("While initializing "++show loc++"\n"++s)
 
 typeConstrEnv0 = type_env tcEnv0
