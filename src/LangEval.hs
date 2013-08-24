@@ -453,7 +453,6 @@ elab prefix magic init (Prim loc (Implicit bindings)) = foldM checkPresence init
             case lookup nm importableVals of
             Just (v,_) -> return $ extendV [(gl,v)] init
             Nothing -> fail ("Can't find implementation for primitive: "++show nm)
-elab prefix magic init (Flag _ _) = return init
 elab prefix magic init (Bound _ _) = return init
 elab prefix magic init (Reject s ds) =
    handle 4 (do { outputString ("Elaborating Reject"++show ds)

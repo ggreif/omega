@@ -160,7 +160,6 @@ data Dec
   | Prim Loc PrimBindings
   | Data Loc Bool Strata Var (Maybe PT) Targs [Constr] [Derivation] -- { data T x (y :: Nat) = B (T x) deriving (Z,W) }
   | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)] [Derivation] (SynExt String)
-  | Flag Var Var
   | Reject String [Dec]
   | Bound String Int
   | AddTheorem Loc [(Var,Maybe Exp)]
@@ -322,7 +321,6 @@ decname (AddTheorem dec xs) = []
 decname (TypeFun loc nm k ms) = [Global nm]
 decname (TypeSig loc [nm] t) = [proto nm]
 decname (Prim loc (Explicit nm t)) = [nm]
-decname (Flag s nm) = [flagNm nm]
 decname (Bound _ _) = []
 decname (Reject s ds) = concat (map decname ds)
 decname (Import s xs) = []
@@ -343,7 +341,6 @@ decloc (AddTheorem loc _) = []
 decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
 decloc (TypeSig loc [nm] t) = [(proto nm,loc)]
 decloc (Prim loc (Explicit nm t)) = [(nm,loc)]
-decloc (Flag s nm) = []
 decloc (Reject s d) = decloc (head d)
 decloc (Import s vs) = []
 
@@ -463,7 +460,7 @@ mergeM Nothing y = y
 
 mergeFun ds = state0 ds -- return(mf ds) --
 
-data DT = Fn Var | V | D | S | P | Syn | PT | TS Var | Flg | Rej | Pr | Im | TFun String | Thm
+data DT = Fn Var | V | D | S | P | Syn | PT | TS Var | Other | Rej | Pr | Im | TFun String | Thm
 dt (Fun _ x _ _) = Fn x
 dt (Val _ _ _ _) = V
 dt (TypeSig _ [n] _) = TS n
@@ -473,8 +470,7 @@ dt (GADT _  _ _ _ _ _ _) = D
 dt (TypeSyn _ _ _ _) = Syn
 dt (TypeFun _ s _ _) = TFun s
 dt (Pat _ _ _ _) = PT
-dt (Flag _ _) = Flg
-dt (Bound nm v) = Flg -- hack
+dt (Bound nm v) = Other
 dt (Reject s d) = Rej
 dt (Import s vs) = Im
 dt (AddTheorem _ _) = Thm
@@ -487,7 +483,7 @@ state0 (TypeSig loc ns pt:ds) | length ns > 1 = state0 (expandTypeSigs loc pt ds
 state0 (d:ds) = case dt d of
   Fn x -> state1 x [d] [] ds    -- state1 is collecting contiguous clauses with same function name
   V   -> do { xs <- state0 ds; return(d:xs) }    -- x = [1,2,3]
-  Flg   -> do { xs <- state0 ds; return(d:xs) }  -- flag noisy
+  Other -> do { xs <- state0 ds; return(d:xs) }  -- ignore
   PT  -> do { xs <- state0 ds; return(d:xs) }    -- C a y = (x:y:[])  -- a pattern declaration
   TS n -> do { xs <- state0 ds; return(d:xs) }   -- id :: a -> a -- a type signature
   Pr -> do { xs <- state0 ds; return(d:xs) }     -- prim f :: t
@@ -1134,7 +1130,6 @@ instance Eq Dec where
   (GADT x1 x2 x3 x4 x5 x6 x7) == (GADT y1 y2 y3 y4 y5 y6 y7) =
      x2==y2 && x3==y3 && x4==y4 && map f x5== map f y5
        where f (loc,v,cs,ps,r) = (v,cs,ps,r)
-  (Flag v1 v2) == (Flag v3 v4) = v1==v3 && v2==v4
   (Bound nm1 v1) == (Bound nm2 v2) = nm1==nm2 && v1==v2
   (Reject s1 ds1) == (Reject s2 ds2) = s1==s2 && ds1==ds2
   (Import s1 vs1) == (Import s2 vs2) = s1==s2 && vs1==vs2
@@ -1226,7 +1221,6 @@ ppDec dec =
       (text "data" <+> ppVar nm <> text "::" <+> ppPT kind <+> text "where") $$
       (PP.nest 3 (PP.vcat (map ppCs cs))) $$
       (PP.nest 2 (text "deriving" <+> PP.parens (myPP PP.hsep Back PP.comma (map ppDeriv ders))))
-    Flag v1 v2 -> text "flag" <+> ppVar v1 <+> ppVar v2
     Bound nm v -> text "##bound" <+> text nm <+> PP.int v
     Reject s ds -> PP.vcat [text "##test" <+> PP.doubleQuotes (text s), PP.nest 2 $
                    (myPP PP.vcat Back PP.empty (map ppDec ds))]
