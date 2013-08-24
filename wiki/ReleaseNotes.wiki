@@ -36,7 +36,7 @@ See some of the design ideas on the wiki: IntensionalApplication.
 Finally the `Parser` type constructor is worth something. Some basic combinators are available in the `Parsing.prg` module. Of course you can build on top of them.
 
 == Bugs fixed ==
-  * Issue TBD
+  * Issue 105, what Ωmega outputs is now more in line with what it expects the user to type in.
 
 ----
 = Release 1.5.1 _(2011-09-07)_ =
