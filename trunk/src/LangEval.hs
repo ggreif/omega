@@ -414,7 +414,7 @@ elab prefix magic init (d@(Val loc p b ds)) =
      ; (u,frag2) <- matchPatLazy p v
      ; return(extendV frag2 init)}
 elab prefix magic init (Fun loc nm _ cs) =
-     -- tranform    f x y = e1    to    f m n = case (n,m) of
+     -- transform   f x y = e1    to    f m n = case (n,m) of
      --             f a b = e2                   (x,y) -> e1
      --                                          (a,b) -> e2
   do { let new (Pvar (Global s)) = do { n <- fresh; return(Alpha s n)}
