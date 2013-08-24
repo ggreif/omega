@@ -400,7 +400,7 @@ funcPat ns p ps = build ns p
 
 ----------------------------------------------------------------------------
 -- elab "evaluates" a Dec in an environment, getting a new environment. Which
--- contain the bindings for the names defined in the Dec. Because Dec's come
+-- contains the bindings for the names defined in the Dec. Because Dec's come
 -- in mutually recursive sets, we need to handle this appropriately. By the
 -- use of the fixpoint on the monad, "magic" and the env returned are
 -- identical.
