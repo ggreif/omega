@@ -16,6 +16,8 @@
 
 import "../tests/Nat.prg"
 
+##bounds backchain 10
+
 -- GLOBAL TODOs
 ----------------
 
