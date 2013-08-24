@@ -292,7 +292,11 @@ infixPattern =
 simplePattern :: Parser Pat
 simplePattern =
         literalP
-    <|> do { p <- extP expPattern; return(extToPat p)}
+    <|> do { p <- extP pattern; return(extToPat p)} -- FIXME: should be expPattern, but then:
+                                                    --  "Library.prg" (line 19, column 7) tabs [1]:
+                                                    --  unexpected "(x:xs) = f x : map f..."
+                                                    --              ^
+                                                    --  expecting: simple pattern, "|", or "="
     <|> try (fmap lit2Pat (parens signedNumLiteral))
     <|> do { symbol "_"; return Pwild}
     <|> do { nm <- constructor; nullaryPcon nm }
