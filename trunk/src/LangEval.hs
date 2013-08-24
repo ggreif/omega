@@ -409,7 +409,7 @@ elab :: Prefix -> Env -> Env -> Dec -> FIO Env
 elab prefix magic init (Pat loc nm args body) =
   return(extendV [(nm,(Vpat nm (funcPat args body) (evalPat2 args body)))] init)
 elab prefix magic init (Val loc p b ds) =
-  do { v <- vlazy(do { env2 <-  elaborate Tick ds magic
+  do { v <- vlazy(do { env2 <- elaborate Tick ds magic
                      ; evalBody env2 b (fail "Body in Decl has no True case")})
      ; (u,frag2) <- matchPatLazy p v
      ; return(extendV frag2 init)}
@@ -456,7 +456,7 @@ elab prefix magic init (Prim loc (Implicit bindings)) = foldM checkPresence init
 elab prefix magic init (Bound _ _) = return init
 elab prefix magic init (Reject s ds) =
    handle 4 (do { outputString ("Elaborating Reject"++show ds)
-                ; env2 <-  elaborate Tick ds magic
+                ; env2 <- elaborate Tick ds magic
                 ; fail ("Reject test: "++s++" did not fail.")})
             (\ s -> return init)
 elab prefix magic init (AddTheorem loc xs) = return init
