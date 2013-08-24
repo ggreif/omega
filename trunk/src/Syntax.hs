@@ -162,6 +162,7 @@ data Dec
   | GADT Loc Bool Var PT [(Loc,Var,[([Char],PT)],[PPred],PT)] [Derivation] (SynExt String)
   | Flag Var Var
   | Reject String [Dec]
+  | Bound String Int
   | AddTheorem Loc [(Var,Maybe Exp)]
   | Import String (Maybe [ImportItem])
   | TypeSyn Loc String Targs PT
@@ -321,7 +322,8 @@ decname (AddTheorem dec xs) = []
 decname (TypeFun loc nm k ms) = [Global nm]
 decname (TypeSig loc [nm] t) = [proto nm]
 decname (Prim loc (Explicit nm t)) = [nm]
-decname (Flag s nm) =[flagNm nm]
+decname (Flag s nm) = [flagNm nm]
+decname (Bound _ _) = []
 decname (Reject s ds) = concat (map decname ds)
 decname (Import s xs) = []
 
@@ -337,11 +339,11 @@ decloc (Data loc b strata nm sig args cs ds) = [(nm,loc)] ++ map f cs
 decloc (GADT loc isProp nm knd cs ders _) = [(nm,loc)] ++ map f cs
   where f (loc,c,free,preds,typ) = (c,loc)
 decloc (TypeSyn loc nm args ty) = [(Global nm,loc)]
-decloc (AddTheorem loc _) =[]
+decloc (AddTheorem loc _) = []
 decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
 decloc (TypeSig loc [nm] t) = [(proto nm,loc)]
 decloc (Prim loc (Explicit nm t)) = [(nm,loc)]
-decloc (Flag s nm) =[]
+decloc (Flag s nm) = []
 decloc (Reject s d) = decloc (head d)
 decloc (Import s vs) = []
 
@@ -472,6 +474,7 @@ dt (TypeSyn _ _ _ _) = Syn
 dt (TypeFun _ s _ _) = TFun s
 dt (Pat _ _ _ _) = PT
 dt (Flag _ _) = Flg
+dt (Bound nm v) = Flg -- hack
 dt (Reject s d) = Rej
 dt (Import s vs) = Im
 dt (AddTheorem _ _) = Thm
@@ -488,7 +491,7 @@ state0 (d:ds) = case dt d of
   PT  -> do { xs <- state0 ds; return(d:xs) }    -- C a y = (x:y:[])  -- a pattern declaration
   TS n -> do { xs <- state0 ds; return(d:xs) }   -- id :: a -> a -- a type signature
   Pr -> do { xs <- state0 ds; return(d:xs) }     -- prim f :: t
-  D   -> do { xs <- (state0 ds); return (d:xs)}  -- data T x = C x | D Int
+  D   -> do { xs <- state0 ds; return (d:xs)}    -- data T x = C x | D Int
   Rej -> do { xs <- state0 ds; return(d:xs) }    -- ##test "test 3" x = 5
   Im -> do { xs <- state0 ds; return(d:xs) }
   Syn -> do { xs <- state0 ds; return(d:xs) }
@@ -1132,6 +1135,7 @@ instance Eq Dec where
      x2==y2 && x3==y3 && x4==y4 && map f x5== map f y5
        where f (loc,v,cs,ps,r) = (v,cs,ps,r)
   (Flag v1 v2) == (Flag v3 v4) = v1==v3 && v2==v4
+  (Bound nm1 v1) == (Bound nm2 v2) = nm1==nm2 && v1==v2
   (Reject s1 ds1) == (Reject s2 ds2) = s1==s2 && ds1==ds2
   (Import s1 vs1) == (Import s2 vs2) = s1==s2 && vs1==vs2
   (TypeSyn _ s1 targs1 pt1) == (TypeSyn _ s2 targs2 pt2) =
@@ -1223,6 +1227,7 @@ ppDec dec =
       (PP.nest 3 (PP.vcat (map ppCs cs))) $$
       (PP.nest 2 (text "deriving" <+> PP.parens (myPP PP.hsep Back PP.comma (map ppDeriv ders))))
     Flag v1 v2 -> text "flag" <+> ppVar v1 <+> ppVar v2
+    Bound nm v -> text "##bound" <+> text nm <+> PP.int v
     Reject s ds -> PP.vcat [text "##test" <+> PP.doubleQuotes (text s), PP.nest 2 $
                    (myPP PP.vcat Back PP.empty (map ppDec ds))]
     Import s Nothing -> text "import" <+> PP.doubleQuotes (text s)

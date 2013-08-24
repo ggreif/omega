@@ -154,6 +154,7 @@ instance Swap Dec where
   swaps cs (GADT x1 x2 x3 x4 x5 x6 x7) = (GADT x1 x2 x3 x4 x5 x6 x7)
   swaps cs (TypeSyn loc nm args ty) = TypeSyn loc nm args ty
   swaps cs (Flag x y) = Flag (swaps cs x) (swaps cs y)
+  swaps cs b@(Bound nm v) = b
   swaps cs (Reject s d) = Reject s (swaps cs d)
   swaps cs (AddTheorem loc xs) = AddTheorem loc (swaps cs xs)
 
