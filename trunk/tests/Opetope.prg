@@ -440,11 +440,11 @@ In the end all identifications have a semantics (hopefully!), when the counting 
 
 -- Now some fun stuff
 
-data LC :: * where
-  Var :: Label a -> LC
-  App :: LC -> LC -> LC
-  Lam :: Label a -> LC -> LC
-  LetRec :: Label a -> LC -> LC -> LC
+data LC :: (k ~> *) ~> * where
+  Var :: tf a -> LC tf
+  App :: LC tf -> LC tf -> LC tf
+  Lam :: tf a -> LC tf -> LC tf
+  LetRec :: tf a -> LC tf -> LC tf -> LC tf
  deriving syntax (lc) Applicative(Var, App, Lam, LetRec)
 
 alamX_XX = (\x->x x)lc
