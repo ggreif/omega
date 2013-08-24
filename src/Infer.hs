@@ -303,8 +303,8 @@ boundRef = unsafePerformIO $
   do { narrow <- newRef (25::Int)
      ; backchain <- newRef 4
      ; return
-        [("narrow"   ,"   Number of steps to take when narrowing.",narrow)
-        ,("backchain"," Number of times a backChain lemma can be applied.",backchain)
+        [("narrow", "    Number of steps to take when narrowing.", narrow)
+        ,("backchain", " Number of times a backChain lemma can be applied.", backchain)
         ]
      }
 
@@ -313,6 +313,10 @@ getBound s m =
     Just(_,_,ref) -> readRef ref
     Nothing -> return m
 
+setBound s v =
+  case find (\ (nm,info,ref) -> nm==s) boundRef of
+    Just(_,_,ref) -> writeRef ref v
+    Nothing -> return ()
 
 --------------------------------------------------------
 -- using Modes
@@ -2355,7 +2359,11 @@ bindingGroupNames letOrWhere ds = message
 
 inferBndrForDecs :: String -> Bool -> [Dec] -> TC (Frag,[Dec])
 inferBndrForDecs letOrWhere renam [] = return(nullFrag,[])
-inferBndrForDecs letOrWhere renam ds =  many dss
+inferBndrForDecs letOrWhere renam (Bound nm v: ds) =
+  do { setBound nm v
+     ; inferBndrForDecs letOrWhere renam ds
+     }
+inferBndrForDecs letOrWhere renam ds = many dss
   where (dss,_) = topSortR freeOfDec ds
         many [] =  return(nullFrag,[])
         many ([]:dss) = many dss
