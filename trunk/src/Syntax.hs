@@ -1221,7 +1221,7 @@ ppDec dec =
       (text "data" <+> ppVar nm <> text "::" <+> ppPT kind <+> text "where") $$
       (PP.nest 3 (PP.vcat (map ppCs cs))) $$
       (PP.nest 2 (text "deriving" <+> PP.parens (myPP PP.hsep Back PP.comma (map ppDeriv ders))))
-    Bound nm v -> text "##bound" <+> text nm <+> PP.int v
+    Bound nm v -> text "##bounds" <+> text nm <+> PP.int v
     Reject s ds -> PP.vcat [text "##test" <+> PP.doubleQuotes (text s), PP.nest 2 $
                    (myPP PP.vcat Back PP.empty (map ppDec ds))]
     Import s Nothing -> text "import" <+> PP.doubleQuotes (text s)
