@@ -618,12 +618,12 @@ pCommand =
 ----------------------------------------------------------------
 
 program =
-  do{ whiteSpace
-    ; ds <- layout decl (return "")
-    ; eof
-    ; xs <- mergeFun ds
-    ; return $ (Program xs)
-    }
+  do { whiteSpace
+     ; ds <- layout decl (return "")
+     ; eof
+     ; xs <- mergeFun ds
+     ; return $ Program xs
+     }
 
 -----------------------------------------------------------
 -- Declarations
@@ -634,6 +634,7 @@ decl =   try patterndecl -- Needs to be before vdecl
      <|> typeSyn
      <|> importDec
      <|> primDec
+     <|> try boundsDec -- Needs to be before vdecl
      <|> try testDec -- Needs to be before vdecl
      <|> vdecl
      <|> datadecl
@@ -644,16 +645,17 @@ decl =   try patterndecl -- Needs to be before vdecl
      <?> "decl"
 
 theoremDec =
-  do{ pos <- getPosition
-    ; reserved "theorem"
-    ; vs <- sepBy theorem comma
-    ; return(AddTheorem (loc pos) vs)
-    }
+  do { pos <- getPosition
+     ; reserved "theorem"
+     ; vs <- sepBy theorem comma
+     ; return(AddTheorem (loc pos) vs)
+     }
 
 theorem =
   do { v <- name
-     ; term <- (try (do {reservedOp "="; e <- expr; return(Just e)})) <|> (return Nothing)
-     ; return(v,term)}
+     ; term <- (try (do {reservedOp "="; e <- expr; return(Just e)})) <|> return Nothing
+     ; return (v,term)
+     }
 
 testDec =
   do { lexeme (string "##test")
@@ -663,24 +665,32 @@ testDec =
      ; return(Reject s xs)
      }
 
+boundsDec =
+  do { lexeme (string "##bounds")
+     ; which <- reserved "backchain" >> return "backchain"
+     ; bound <- fmap fromIntegral decimal
+     ; return(Bound which bound)
+     }
+
 flagdecl =
-  do{ pos <- getPosition
-    ; reserved "flag"
-    ; flag <- name
-    ; nm <- name
-    ; return(Flag flag nm)
-    }
+  do { pos <- getPosition
+     ; reserved "flag"
+     ; flag <- name
+     ; nm <- name
+     ; return(Flag flag nm)
+     }
 
 vdecl =
-  do{ pos <- getPosition
-    ; ps <- many1 simplePattern
-    ; e <- bodyP (reservedOp "=")
-    ; ds <- whereClause
-    ; toDecl (loc pos) (ps,e,ds) }
+  do { pos <- getPosition
+     ; ps <- many1 simplePattern
+     ; e <- bodyP (reservedOp "=")
+     ; ds <- whereClause
+     ; toDecl (loc pos) (ps,e,ds)
+     }
   where toDecl pos ((Pvar f : (args @ (p:ps))),body,ws) = return(Fun pos f Nothing [(pos,args,body,ws)])
         toDecl pos ([p],b,ws) = return(Val pos p b ws)
         toDecl pos ((Pcon c []):ps,b,ws) = return(Val pos (Pcon c ps) b ws)
-        toDecl pos (ps,b,ws) = fail ("Illegal patterns to start value decl:" ++(show ps))
+        toDecl pos (ps,b,ws) = fail ("Illegal patterns to start value decl:" ++ show ps)
 
 importDec =
   do { reserved "import"
