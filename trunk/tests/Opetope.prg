@@ -411,7 +411,7 @@ prop BindsUp :: Nat ~> Tree Hor ~> * where
   TailBindsUp :: BindsUp n [head; tail]tr -> BindsUp n [nonempty, head; tail]tr
 
 -- TODO: make sure that something teleports here
-addBinder :: {- BindsUp 1t tr => -} Tree' tr -> Tree' [tr]tr
+addBinder :: BindsUp 1t tr => Tree' tr -> Tree' [tr]tr
 addBinder term = [term]ar
 
 testB :: BindsUp 0t [[[[]tr]tr]tr,[()tr]tr]tr -> Tree' [[[[]tr]tr]tr,[()tr]tr]tr
@@ -434,3 +434,11 @@ The slogan is: binder nodes do not count as result nodes:
 In the end all identifications have a semantics (hopefully!), when the counting rules are ensured.
 
 -}
+
+
+-- Now some fun stuff
+
+data LC :: * where
+  App :: LC -> LC
+  Lam :: Label a -> LC -> LC
+ deriving syntax (lc) Applicative(Lam, App)
