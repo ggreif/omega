@@ -486,3 +486,8 @@ monad maybeM
 toDeBruijn :: DeBrujnContext Label dict -> LC Label -> Maybe (LC Nat')
 toDeBruijn ctx (Var a) = do idx <- lookUpDeBruijn ctx a 0t
                             return $ Var idx
+toDeBruijn ctx (Lam l a) = do a' <- toDeBruijn [ctx; l]dtx a
+                              return $ Lam 0t a'
+toDeBruijn ctx (App f a) = do f' <- toDeBruijn ctx f
+                              a' <- toDeBruijn ctx a
+                              return $ App f' a'
