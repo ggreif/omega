@@ -32,7 +32,7 @@ This feature is very little tested, please report problems if you encounter any.
 See some of the design ideas on the wiki: IntensionalApplication.
 
 == Bugs fixed ==
-  * Issue ???
+  * Issue 107, which caused backchaining to fail when one alternative (of ambiguous solutions) was refutable, while others succeeded.
 
 ----
 = Release 1.5.2  _(2013-08-21)_ =
