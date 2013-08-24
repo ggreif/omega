@@ -79,10 +79,10 @@ Since primitive movements only affect _free references_ (those into the context)
 
 There is only one binder (in the spirit of [http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=331521 Kamareddine, JFP 2005]) and by resorting to level inference, it can be recovered whether it is a π, λ or Λ.
 
-Later there will be a ∑-like binder too.
+Later there will be a ∑-like binder too. (Actually, ∑ is the same thing as π, only being _uncurried_, i.e. it has moved into the pattern).
 
 The application node could come equipped with a natural number, signifying the number of iterated applications, i.e. S^n^Z, for constant `n`. Fixpoints can also be encoded by f @ {up}. In this case
-non-zero `n`would collapse to `1`, and for `n=1` it would be a common loop.
+non-zero `n` would collapse to `1`, and for `n=1` it would be a common loop.
 
 So an application node with `n=0` would normally be eliminable, unless there are {up.left} etc. references in the right subgraph.
 
