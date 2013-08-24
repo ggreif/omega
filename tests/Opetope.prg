@@ -468,3 +468,6 @@ data DeBrujnContext :: (value ~> *) ~> Dict Nat value ~> * where
   DeBrujnEmpty :: DeBrujnContext value {}dict
   DeBrujnExtend :: DeBrujnContext value dict -> value v -> DeBrujnContext value {dict; {dictSize dict} = v}dict
  deriving LeftList(dtx)
+
+toDeBruijn :: DeBrujnContext Label dict -> LC Label -> LC Nat'
+toDeBruijn ctx (Var a) = Var 0v
