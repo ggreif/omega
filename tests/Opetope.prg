@@ -448,3 +448,23 @@ data LC :: (k ~> *) ~> * where
  deriving syntax (lc) Applicative(Var, App, Lam, LetRec)
 
 alamX_XX = (\x->x x)lc
+
+kind Dict key value = Dempty | Dextend (Dict key value) key value deriving LeftRecord(dict)
+
+-- Contexts map keys to some value
+--
+data Context :: (key ~> *) ~> (value ~> *) ~> Dict key value ~> * where
+  Empty :: Context key value {}dict
+  Extend :: Context key value dict -> key k -> value v -> Context key value {dict; k = v}dict
+ deriving LeftRecord(ctx)
+
+-- DeBrujn levels as keys
+--
+dictSize :: Dict key value ~> Nat
+{dictSize {}dict} = 0t
+{dictSize {pre; k = v}dict} = (1+{dictSize pre})t
+
+data DeBrujnContext :: (value ~> *) ~> Dict Nat value ~> * where
+  DeBrujnEmpty :: DeBrujnContext value {}dict
+  DeBrujnExtend :: DeBrujnContext value dict -> value v -> DeBrujnContext value {dict; {dictSize dict} = v}dict
+ deriving LeftList(dtx)
