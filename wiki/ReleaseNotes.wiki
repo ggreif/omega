@@ -33,6 +33,7 @@ See some of the design ideas on the wiki: IntensionalApplication.
 
 == Bugs fixed ==
   * Issue 107, which caused backchaining to fail when one alternative (of ambiguous solutions) was refutable, while others succeeded.
+  * Issue 108, caused the type checker to error out because the outer binding was not in scope.
 
 ----
 = Release 1.5.2  _(2013-08-21)_ =
