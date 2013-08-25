@@ -8,7 +8,7 @@ Nothing notable yet.
 ----
 = _Upcoming_ Release 1.5.3 =
 
-== New Feature: _Applicative_ Syntax Extension ==
+== New Feature: `Applicative` Syntax Extension ==
 
 The new syntax extension, like e.g. `Pair` and `LeftRecord`, will map standard application and lambda syntax to a data type:
 {{{
@@ -30,6 +30,14 @@ Now you can write terms in regular syntax in parentheses suffixed by `lc`, and t
 This feature is very little tested, please report problems if you encounter any.
 
 See some of the design ideas on the wiki: IntensionalApplication.
+
+== New Feature: Source-file Determined Bounds ==
+
+Using the syntax
+{{{
+##bounds backchain 10
+}}}
+in a program file, the given bound can be _increased_ to fit the typechecker's need for the problem at hand. The bounds cannot be _decreased_.
 
 == Bugs fixed ==
   * Issue 107, which caused backchaining to fail when one alternative (of ambiguous solutions) was refutable, while others succeeded.
