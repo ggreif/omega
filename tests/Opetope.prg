@@ -491,3 +491,18 @@ toDeBruijn ctx (Lam l a) = do a' <- toDeBruijn [ctx; l]dtx a
 toDeBruijn ctx (App f a) = do f' <- toDeBruijn ctx f
                               a' <- toDeBruijn ctx a
                               return $ App f' a'
+
+
+pattern Let n v exp = App (Lam n v) exp
+
+-- fun with church encoding
+
+true = (\t f->t)lc
+false = (\t f->f)lc
+
+-- church 'if'
+chif = (\v iftrue iffalse->v iftrue iffalse)lc
+
+chtest = (chif true false true)lc -- will not do what you expect
+--chtest' = ($chif $true $false $true)lc -- not ready yet!
+
