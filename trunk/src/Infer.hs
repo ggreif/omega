@@ -682,7 +682,7 @@ typeExp mod (exp@(Lam ps e _)) (Check t) =
         ; return(Lam ps2 e2 []) }
 typeExp mod (exp@(Lam ps e _)) (Infer ref) =
      do { (ts2,frag,ps2) <- inferBndrs localRename nullFrag ps
-        ; (t,e2) <-  underFrag (show ps,starR) (markLambda  frag) (infer e)
+        ; (t,e2) <- underFrag (show ps,starR) (markLambda frag) (infer e)
         -- ESCAPE CHECK
         ; escapeCheck exp t frag
         ; writeRef ref (foldr arrow t ts2)
@@ -970,7 +970,7 @@ peek x = do { (a,eqs) <- collectPred x; injectA " peek " eqs; return(a,eqs) }
 instance Typable (Mtc TcEnv Pred) (Body Exp) Rho where
   tc = typeBody Wob
 
-typeBody :: Mod -> Body Exp -> (Expected Rho) -> TC(Body Exp)
+typeBody :: Mod -> Body Exp -> Expected Rho -> TC(Body Exp)
 typeBody mod (Normal e) expect =
      do { e' <- typeExp mod e expect
         ; return(Normal e')}
@@ -1580,7 +1580,7 @@ instance TypableBinder [Dec] where
   inferBndr renm frag1 ds | all isValFunPat ds =
     do { let decs = useTypeSig ds
        ; (frag2,triples) <- getDecTyp renm decs -- Step 1
-       ; frag3 <-  frag2 +++ frag1
+       ; frag3 <- frag2 +++ frag1
        ; ds2 <- mapM (checkDec frag3) triples   -- Step 2
        ; frag4 <- genFrag frag3
        ; return(simpleSigma unitT,frag4,ds2)
@@ -1609,7 +1609,7 @@ checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
   do { let frag = markLambda (addSkol skols mutRecFrag)
      ; let hasRho (loc,ps,bod,ds) =
              case rho of
-               Rtau(tau @(TcTv _)) ->
+               Rtau(tau@(TcTv _)) ->
                    do { ref <- newRef (error "no rho yet")
                       ; ans <- typeMatchPs mod (show nm,loc,ps,bod,ds) (Infer ref)
                       ; inferred <- readRef ref
@@ -1625,9 +1625,10 @@ checkDec mutRecFrag (mod,rho,Fun loc nm hint ms,skols) = newLoc loc $
      ; return(Fun loc nm hint (map stripName ms2)) }
 checkDec mutRecFrag (mod,rho,Val loc pat body ds,skols) = newLoc loc $
   do { let lhsString = bodyName pat body
-     ; (declFrag,ds2) <- inferBndrForDecs lhsString localRename ds
-     ; frag <- (declFrag +++ (addSkol skols mutRecFrag))
-     ; (body2,oblig) <- collectPred (underFrag (lhsString,rho)(markLambda frag)
+     ; (declFrag,ds2) <- underFrag (show pat,starR) mutRecFrag
+                                   (inferBndrForDecs lhsString localRename ds)
+     ; frag <- declFrag +++ addSkol skols mutRecFrag
+     ; (body2,oblig) <- collectPred (underFrag (lhsString,rho) (markLambda frag)
                                                (typeBody mod body (Check rho)))
      ; solveDecObligations lhsString rho (getEqs frag) oblig
      ; return(Val loc pat body2 ds2) }
@@ -2378,7 +2379,7 @@ inferBndrForDecs letOrWhere renam ds = many dss
 -- Used in Step 1 (of inferBndr), to get a frag for the names bound in a single decl
 -- In a mutually recursive nest, these Frags are all (+++) together.
 
-frag4OneDeclsNames rename (d@(Val loc (Pann pat pt) body ds)) = newLoc loc $
+frag4OneDeclsNames rename (Val loc (Pann pat pt) body ds) = newLoc loc $
   do { (sigma,(rho,assump,skol)) <- checkPT (show pat) loc pt    -- use the hint to get rho and display
      ; (frag,pat2) <- checkBndr rename Rig nullFrag sigma pat
      ; return(addPred assump (addSkol skol frag),Rig,rho,Val loc pat2 body ds,skol)}
@@ -3451,7 +3452,7 @@ tryCooper truths x =
          Just (allform, form) ->
            do { warnM [Ds "\nUsing the decision procedure to check:\n"
                       ,Ds (show allform)]
-              ; ans <-  handleM 3 (integer_qelim allform)
+              ; ans <- handleM 3 (integer_qelim allform)
                          (\ mess -> warnM [Ds ("The decision procedure failed with the message: "++mess)]
                           >> return FalseF)
 
