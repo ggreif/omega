@@ -492,17 +492,31 @@ toDeBruijn ctx (App f a) = do f' <- toDeBruijn ctx f
                               a' <- toDeBruijn ctx a
                               return $ App f' a'
 
-
+-- Let :: tf a -> LC tf -> LC tf -> LC tf -- not needed!
 pattern Let n v exp = App (Lam n v) exp
 
 -- fun with church encoding
 
-true = (\t f->t)lc
-false = (\t f->f)lc
+true = (\t->\f->t)lc
+--false = (\t f->f)lc -- BUG!
+false = (\t->\f->f)lc
 
 -- church 'if'
-chif = (\v iftrue iffalse->v iftrue iffalse)lc
+chif = (\v->\iftrue->\iffalse->v iftrue iffalse)lc
 
 chtest = (chif true false true)lc -- will not do what you expect
 --chtest' = ($chif $true $false $true)lc -- not ready yet!
 
+chtest'' = (let { true = \t->\f->t
+                ; false = \t->\f->f
+                ; chif = \v->\iftrue->\iffalse -> v iftrue iffalse
+                }
+            in chif true false true)lc -- this still does not work :-(
+
+letrecToLet :: LC Label -> LC Label
+letrecToLet (App f a) = App (letrecToLet f) (letrecToLet a)
+letrecToLet (v@Var _) = v
+letrecToLet (l@Lam _ _) = l
+letrecToLet (LetRec n v e) = App (Lam n v) e -- Let n v e -- Omega pattern bug???
+
+l2l = letrecToLet (let a = a in a)lc
