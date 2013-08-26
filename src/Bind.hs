@@ -5,6 +5,7 @@ module Bind(Fresh(..),Freshen(..),Swap(..),Name,Perm
            ,M,runM
            ,unsafeUnBind,reset,name1,name2,name3,name4,name5,name2Int,integer2Name) where
 
+import Control.Monad.Fix(MonadFix(..))
 import Monads
 
 class (Monad m, HasNext m) => Fresh m where
@@ -158,6 +159,6 @@ instance HasNext M where
 instance HasOutput M where
   outputString = error
 
-instance HasFixpoint M where
-  fixpoint = undefined
+instance MonadFix M where
+  mfix = undefined
 
