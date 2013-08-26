@@ -5,6 +5,7 @@ module Auxillary where
 
 import Data.Char(isAlpha)
 import Data.List(find,union)
+import Control.Monad(foldM)
 
 
 whenM :: Monad m => m Bool -> m b -> [Char] -> m b
@@ -24,13 +25,13 @@ allM p xs = do { bs <- mapM p xs; return(and bs) }
 orM :: Monad m => m Bool -> m Bool -> m Bool
 orM x y = do { a <- x; b <- y; return (a || b) }
 
-foldrM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
-foldrM acc base [] = return base
-foldrM acc base (x:xs) = do { b <- acc x base; foldrM acc b xs}
+-- use foldM
+--foldrM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
+--foldrM f = foldM $ flip f
 
 foldlM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
 foldlM acc base [] = return base
-foldlM acc base (x:xs) = do { b <- foldrM acc base xs; acc x b; }
+foldlM acc base (x:xs) = do { b <- foldM (flip acc) base xs; acc x b; }
 
 maybeM :: Monad m => m(Maybe a) -> (a -> m b) -> (m b) -> m b
 maybeM mma f mb = do { x <- mma; case x of { Nothing -> mb ; Just x -> f x }}
@@ -45,8 +46,8 @@ filterM p (x:xs) =
 -}
 
 splitM ::  Monad m => (a -> m Bool) -> [a] -> m([a],[a])
-splitM p xs = foldrM acc ([],[]) xs
-  where acc x (ys,zs) = ifM (p x) (return(x:ys,zs)) (return(ys,x:zs))
+splitM p xs = foldM acc ([],[]) xs
+  where acc (ys,zs) x = ifM (p x) (return(x:ys,zs)) (return(ys,x:zs))
 
 --------------------------------------------------------
 
@@ -241,7 +242,7 @@ displays :: DispInfo a -> [DispElem a] -> (DispInfo a,String)
 displays d xs = help d (reverse xs) "" where
   help:: DispInfo a -> [DispElem a] -> String -> (DispInfo a,String)
   help d [] s = (d,s)
-  help d ((Dr xs):ys) s = help d (reverse xs++ys) s
+  help d (Dr xs:ys) s = help d (reverse xs++ys) s
   help d (x:xs) s = help d2 xs (s2++s)
     where (d2,s2) =
              case x of
