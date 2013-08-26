@@ -13,15 +13,14 @@ import ParserDef(getInt,pCommand,parseString,Command(..)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Monads(FIO(..),unFIO,runFIO,fixFIO,fio,resetNext
              ,write,writeln,readln,unTc,tryAndReport,fio,fioFailD
-             ,errF,report,writeRef)
-import Auxillary(plist,plistf,foldrM,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
+             ,errF,report,writeRef,handleP)
+import Auxillary(plist,plistf,backspace,Loc(..),extendL,DispInfo,DispElem(..),eitherM)
 import SCC(topSortR)
 import Control.Monad(when)
 import Infer(TcEnv(sourceFiles,tyfuns),completionEntry,lineEditReadln,initTcEnv
              ,mode0,modes,checkDecs,imports,addListToFM,appendFM2
              ,var_env,type_env,rules,runtime_env,syntaxExt)
 import RankN(pprint,Z,failD,disp0,dispRef)
-import Monads(handleP)
 import Manual(makeManual)
 import Commands
 import SyntaxExt(synName,synKey)
