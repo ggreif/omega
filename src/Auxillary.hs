@@ -252,7 +252,7 @@ displays di xs = help di (reverse xs) "" where
              case x of
                Dd y -> disp d y
                Ds s -> (d,s)
-               Dn y -> let (d2,s) = disp d y in (d2, s ++ "\n")               
+               Dn y -> let (d2,s) = disp d y in (d2, s ++ "\n")
                Dl ys sep -> dispL disp d ys sep
                Dwrap max prefix xs sep -> wrap 0 n max n xs sep [prefix, "\n"] d
                   where n = length prefix
