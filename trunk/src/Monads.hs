@@ -29,9 +29,6 @@ class Monad m => HasNext m where
 class Monad m => HasOutput m where
   outputString :: String -> m ()
 
-fixpoint :: MonadFix m => (a -> m a) -> m a
-fixpoint = mfix
-
 class Monad m => HasIORef m where
   newRef :: a -> m (IORef a)
   readRef :: IORef a -> m a
