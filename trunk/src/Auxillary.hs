@@ -240,7 +240,6 @@ displays di xs = help di (reverse xs) "" where
   help d (Dr xs:ys) s = help d (reverse xs++ys) s
   help d (Dnub xs:ys) s = help d' (Dr (map Ds $ nub xs') : ys) s
     where (d', xs') = weakNub d [] $ reverse xs
-          weakNub :: DispInfo a -> [String] -> [DispElem a] -> (DispInfo a, [String])
           weakNub i acc [] = (i, acc)
           weakNub i acc d@[_] = (i', d':acc)
             where (i', d') = displays i d
