@@ -4030,7 +4030,7 @@ sameAxioms rels (_,_,_,lu) (_,_,_,ru) = sub2Pred lu rels == sub2Pred ru rels
 allRefutable :: [([Tau],[Tau],[String],Unifier2)] -> TC(Either [([Tau],[Tau],[String],Unifier2)] (DispElem Z))
 allRefutable sols = do { xs <- mapM test1 sols
                        ; if all isJust xs
-                         then return (Right (Dr $ map fromJust xs))
+                         then return (Right (Dnub $ map fromJust xs))
                          else check xs sols [] }
  where test1 (truths,quests,names,unifier) = refutable (map Rel quests)
        check [] _ good = return(Left good)
