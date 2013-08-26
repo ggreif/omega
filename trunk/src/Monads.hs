@@ -7,7 +7,8 @@ module Monads where
 
 import Data.IORef(newIORef,readIORef,writeIORef,IORef)
 import Control.Exception(IOException,try)
-import System.IO(fixIO)
+import Control.Monad.Fix(MonadFix(..))
+--import System.IO(fixIO)
 import System.IO.Unsafe(unsafePerformIO)
 import Auxillary(Loc(..),displays)
 import System.IO(hFlush,stdout)
@@ -28,8 +29,10 @@ class Monad m => HasNext m where
 class Monad m => HasOutput m where
   outputString :: String -> m ()
 
-class Monad m => HasFixpoint m where
-  fixpoint :: (a -> m a) -> m a
+--class Monad m => HasFixpoint m where
+--  fixpoint :: (a -> m a) -> m a
+fixpoint :: MonadFix m => (a -> m a) -> m a
+fixpoint = mfix
 
 class Monad m => HasIORef m where
   newRef :: a -> m (IORef a)
@@ -48,8 +51,8 @@ failP :: TracksLoc m a => String -> Int -> String -> m b
 failP k n s = do { p <- position; failN p n k s}
 
 -----------------------------------------------------
-instance HasFixpoint IO where
-  fixpoint = fixIO
+--instance HasFixpoint IO where
+--  fixpoint = fixIO
 
 instance HasOutput IO where
   outputString = putStrLn
@@ -246,7 +249,7 @@ fixFIO f = FIO(fixIO (unFIO . f . unRight))
 -}          
 
 fixFIO :: (a -> FIO a) -> FIO a
-fixFIO f = FIO(fixIO (unFIO . unRight f))
+fixFIO f = FIO(mfix (unFIO . unRight f))
   where unRight f ~(Ok x) = f x
        -- unRight f other = FIO(return other) -- Lazy match makes this useless
 
@@ -265,8 +268,8 @@ writeln = fio . putStrLn
 readln :: String -> FIO String
 readln prompt = fio (do {putStr prompt; hFlush stdout; getLine})
 
-instance HasFixpoint FIO where
-  fixpoint = fixFIO
+instance MonadFix FIO where
+  mfix = fixFIO
 
 instance HasNext FIO where
   nextInteger = fio nextInteger
@@ -370,8 +373,8 @@ report continue loc message =
 ------------------------------------------------
 -- Some instance Declarations
 
-instance HasFixpoint (Mtc e n) where
-  fixpoint = error "No fixpoint for TC"
+instance MonadFix (Mtc e n) where
+  mfix = error "No fixpoint for TC"
 
 instance HasNext (Mtc e n) where  -- Supports a unique supply of Integers
   nextInteger = Tc h where h env = fio(do { n <- nextInteger;return(n,[])})
