@@ -88,6 +88,18 @@ So an application node with `n=0` would normally be eliminable, unless there are
 
 Iterated nodes are useful for finitary sharing, as type checking etc., can process the many iterations in bulk.
 
+= Types =
+
+This is the most important thing. We have to ask where the types appear in this scheme. One could suggest that a type is living _above_ each of those nodes, forming a similar graph of nodes (albeit simpler), like this:
+
+TODO: illustration
+
+In the first floor above the the λ subtree there is a congruent ∏ subtree, etc.
+
+_But this view of the world is wrong!_
+
+The types live on the connections between the nodes, a λ _pushing_ its ∏ type (which is indeed derived from the subtree shape) up towards applications, the application in turn pushing some (a -> b) in opposite direction. Identifications of nodes induce identifications of pressure frontiers. The two connection points of the connections constitute two views (aspects) of the _same type_ with the line representing the equation (constraint). However there are inference systems (e.g. OutsideIn) which inhibit information flowing outward of certain places.
+
 = More Interesting Papers =
 
 http://gallium.inria.fr/~balabons/Recherche/Balabonski-ICFP13.pdf mentions the "sharing-via-labelling" technique.
