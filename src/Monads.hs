@@ -29,8 +29,6 @@ class Monad m => HasNext m where
 class Monad m => HasOutput m where
   outputString :: String -> m ()
 
---class Monad m => HasFixpoint m where
---  fixpoint :: (a -> m a) -> m a
 fixpoint :: MonadFix m => (a -> m a) -> m a
 fixpoint = mfix
 
@@ -51,8 +49,6 @@ failP :: TracksLoc m a => String -> Int -> String -> m b
 failP k n s = do { p <- position; failN p n k s}
 
 -----------------------------------------------------
---instance HasFixpoint IO where
---  fixpoint = fixIO
 
 instance HasOutput IO where
   outputString = putStrLn
