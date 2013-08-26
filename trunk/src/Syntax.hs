@@ -255,8 +255,8 @@ instance Freshen Var => Freshen Pat where
   freshen (Paspat v p) =
      do { (v',ns) <- freshen v; (p',ms) <- freshen p; return(Paspat v' p',ms ++ ns)}
   freshen (Pcon c ps) =
-     do { let acc2 p (ps,ns) = do { (p',ms) <- freshen p; return(p':ps,ms++ns)}
-        ; (ps',ns) <- foldrM acc2 ([],[]) ps
+     do { let acc2 (ps,ns) p = do { (p',ms) <- freshen p; return(p':ps,ms++ns)}
+        ; (ps',ns) <- foldM acc2 ([],[]) ps
         ; return(Pcon c ps',ns)}
   freshen (Pann p t) = do {(p',ns) <- freshen p; return (Pann p' t,ns)}
   freshen (ExtP xs) = do { xs' <- extM freshen xs

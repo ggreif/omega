@@ -65,7 +65,7 @@ import Data.List((\\),partition,sort,sortBy,nub,nubBy,union,unionBy
                 ,find,deleteFirstsBy,groupBy,intersect,intersperse)
 import Data.Maybe(fromJust,isJust)
 import Encoding
-import Auxillary(plist,plistf,Loc(..),report,foldrM,foldlM,extend,extendL,backspace,prefix
+import Auxillary(plist,plistf,Loc(..),report,foldlM,extend,extendL,backspace,prefix
                 ,DispInfo(..),Display(..),newDI,dispL,disp2,disp3,disp4,tryDisplay
                 ,DispElem(..),displays,ifM,anyM,allM,maybeM,eitherM,dv,dle,dmany,ns
                 ,initDI)
@@ -993,10 +993,10 @@ predsToProb (p:ps) ans = predsToProb ps (predicateToProblem p : ans)
 
 freshenVs term =
    do { (vs,_) <- get_tvs term
-      ; let new (v@(Tv un (Rigid _ _ _) k)) xs =
+      ; let new xs (v@(Tv un (Rigid _ _ _) k)) =
                 do {t <- newTau k; return((v,t):xs)}
-            new v xs = return xs
-      ; mapping <- foldrM new [] vs
+            new xs v = return xs
+      ; mapping <- foldM new [] vs
       ; freshTerm <- sub ([],mapping,[],[]) term
       ; return(mapping,freshTerm)}
 
@@ -2095,7 +2095,7 @@ kindsEnvForDataBindingGroup ds =
            parsekind levs name kind =
              do { (nmMap,vars,ps,rho) <- inferConSigma levs env loc ([],kind)
                 ; return([],Forall(windup vars (ps,rho)))}
-           addTyCon (d,(isP,name,kind,level,loc,freeLevVars)) (ds,delta,env) =
+           addTyCon (ds,delta,env) (d,(isP,name,kind,level,loc,freeLevVars)) =
             do { (levs,sigma) <- parsekind freeLevVars name kind
                -- ; warnM [Ds "\nCheck kinding ",Dd sigma,Ds ":: ",Dd (Star (LvSucc level)),Dl freeLevVars ","]
                ; sigma' <- newLoc loc $
@@ -2108,7 +2108,7 @@ kindsEnvForDataBindingGroup ds =
                         ,(name,poly,kind):delta
                         ,(isP,name,poly,kind):env)}
            delProp (isP,nm,tau,poly) = (nm,tau,poly)
-     ; foldrM addTyCon ([],env,[]) info
+     ; foldM addTyCon ([],env,[]) info
      }
 
 -------------------------------------
@@ -2517,7 +2517,7 @@ escapes :: TyCh m =>  [(String,Sigma,[TcTv])] -> [TcTv] -> m ()
 escapes trips [] = return ()
 escapes trips bad = do { as <- getBindings
                        ; d0 <- readRef dispRef
-                       ; (display,lines) <- foldrM (f as) (d0,"") bad
+                       ; (display,lines) <- foldlM (f as) (d0,"") bad
                        ; writeRef dispRef display
                        ; failK "escapes" 2 [Ds lines] }
   where f as (v@(Tv _ (Rigid All loc (s,ref)) k)) (d1,str) =
@@ -2699,8 +2699,8 @@ underErr1 patvars message =
            "\nAn existential type var: "++name++
            "\n  arising from the pattern: "++s++" at "++show loc++" escapes"
 
-getVarsFromEnv = do { env <- getGenerics; foldrM f ([],[]) env }
-  where f (name,typ) (vars,trips) =
+getVarsFromEnv = do { env <- getGenerics; foldM f ([],[]) env }
+  where f (vars,trips) (name,typ) =
           do { (vs, level_) <- get_tvs typ
              ; if null vs
                   then return (vars,trips)
@@ -4995,8 +4995,8 @@ narrowString env count s =
      ; return env
      }
 
-genericEnv free = foldrM acc ([],[],[]) free
-  where acc s (ts,vs,us) =
+genericEnv free = foldM acc ([],[],[]) free
+  where acc (ts,vs,us) s =
           do { k <- newUniv
              ; tau@(TcTv u) <- newTau (MK k)
              ; return((s,tau,poly (MK k)):ts,(ZTv u,s):vs,u:us)}

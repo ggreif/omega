@@ -14,7 +14,7 @@ import System.IO.Unsafe(unsafePerformIO)
 import Monads
 import Control.Monad(when,foldM)
 import Data.List((\\),nub,union,unionBy,sortBy,groupBy,partition,find)
-import Auxillary(Loc(..),plist,plistf,extendM,foldrM,makeNames
+import Auxillary(Loc(..),plist,plistf,extendM,makeNames
                 ,DispInfo(..),Display(..),useDisplay,initDI
                 ,disp2,disp3,disp4,disp5,dispL,DispElem(..),displays,dv,tryDisplay
                 ,maybeM)
@@ -1387,8 +1387,8 @@ unBindWithL lvs new inject b = f b []
 
 quantify :: (TypeLike m t,Quantify m t) => [TcLv] -> [TcTv] -> t -> m ([(TcLv,Level)],PolyKind)
 quantify lvs tvs ty =
-  do { let f v (env,names) = do { nm <- fresh ; return((v,TcLv(LvVar nm)):env,nm:names) }
-     ; (levelsub,names) <- foldrM f ([],[]) lvs
+  do { let f (env,names) v = do { nm <- fresh ; return((v,TcLv(LvVar nm)):env,nm:names) }
+     ; (levelsub,names) <- foldM f ([],[]) lvs
      ; (_,newbinders,ty2) <- subFreshNames levelsub tvs [] ty
      ; polyk <- for_all names newbinders ty2
      ; return (levelsub,polyk)
