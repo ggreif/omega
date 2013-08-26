@@ -98,7 +98,7 @@ In the first floor above the the λ subtree there is a congruent ∏ subtree, et
 
 _But this view of the world is wrong!_
 
-The types live on the connections between the nodes, a λ _pushing_ its ∏ type (which is indeed derived from the subtree shape) up towards applications, the application in turn pushing some (a -> b) in opposite direction. Identifications of nodes induce identifications of pressure frontiers. The two connection points of the connections constitute two views (aspects) of the _same type_ with the line representing the equation (constraint). However there are inference systems (e.g. OutsideIn) which inhibit information flowing outward of certain places.
+The types live on the connections between the nodes, a λ _pushing_ its ∏ type (which is indeed derived from the subtree shape) up towards applications, the application in turn pushing some (a -> b) in opposite direction. Identifications of nodes induce identifications of pressure frontiers. The two connection points of the connections constitute two views (aspects) of the _same type_ with the line representing the equation (constraint). However there are inference systems (e.g. !OutsideIn) which inhibit information flowing outward from certain places. A constraint solver just needs to read off the equations and arrange for a solution, iterating into higher dimensions.
 
 = More Interesting Papers =
 
