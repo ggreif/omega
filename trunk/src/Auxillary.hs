@@ -4,7 +4,7 @@
 module Auxillary where
 
 import Data.Char(isAlpha)
-import Data.List(find,union)
+import Data.List(find,union,nub)
 import Control.Monad(foldM)
 
 
@@ -25,25 +25,14 @@ allM p xs = do { bs <- mapM p xs; return(and bs) }
 orM :: Monad m => m Bool -> m Bool -> m Bool
 orM x y = do { a <- x; b <- y; return (a || b) }
 
--- use foldM
---foldrM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
---foldrM f = foldM $ flip f
-
 foldlM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
 foldlM acc base [] = return base
 foldlM acc base (x:xs) = do { b <- foldM (flip acc) base xs; acc x b; }
 
-maybeM :: Monad m => m(Maybe a) -> (a -> m b) -> (m b) -> m b
+maybeM :: Monad m => m (Maybe a) -> (a -> m b) -> (m b) -> m b
 maybeM mma f mb = do { x <- mma; case x of { Nothing -> mb ; Just x -> f x }}
 
 eitherM comp f g = do { x <- comp; case x of {Left x -> f x; Right x -> g x}}
-
-{-- Already in Monad
-filterM :: Monad m => (a -> m Bool) -> [a] -> m[a]
-filterM p [] = return []
-filterM p (x:xs) =
-   ifM (p x) (do { ys <- filterM p xs; return (x:ys)}) (filterM p xs)
--}
 
 splitM ::  Monad m => (a -> m Bool) -> [a] -> m([a],[a])
 splitM p xs = foldM acc ([],[]) xs
@@ -218,16 +207,22 @@ instance Show a => Show (DispInfo a) where
   show (DI(xs,bad,names)) = "(DI "++show xs++" "++show bad++" "++show(take 6 names)++")"
 
 data DispElem a
-  = forall x . (Display x a) =>  Dd x
+  = forall x . Display x a =>  Dd x
   | Ds String
-  | forall x . (Display x a) => Dn x
-  | forall x . (Display x a) => Dl [x] String
-  | forall x . (Display x a) => Dwrap Int String [x] String
+  | forall x . Display x a => Dn x
+  | forall x . Display x a => Dl [x] String
+  | forall x . Display x a => Dwrap Int String [x] String
   | forall x . Df (DispInfo a -> x -> (DispInfo a ,String)) x
   | forall x . Dlf (DispInfo a -> x -> (DispInfo a,String)) [x] String
   | forall x . Dlg (DispInfo a -> x -> (DispInfo a,String)) String [x] String String
   | Dr [DispElem a]
- --  | forall x . Dle (x -> [DispElem a]) [x] String
+  | Dnub [DispElem a]
+
+sameDisp :: DispInfo a -> DispElem a -> DispElem a -> (DispInfo a, Bool, String, String)
+sameDisp i (Ds l) (Ds r) = (i, l == r, l, r)
+sameDisp i l r = case displays i [l] of
+                 (i', l') -> case displays i' [r] of
+                             (i'', r') -> (i'', l' == r', l', r')
 
 drI:: DispInfo z -> [DispElem z] -> DispElem z
 drI _ xs = Dr xs
@@ -239,18 +234,27 @@ dlfI:: (DispInfo z -> x -> DispElem z) -> [x] -> String -> DispElem z
 dlfI f xs sep = Dlf (\ d x -> displays d [f d x]) xs sep
 
 displays :: DispInfo a -> [DispElem a] -> (DispInfo a,String)
-displays d xs = help d (reverse xs) "" where
-  help:: DispInfo a -> [DispElem a] -> String -> (DispInfo a,String)
+displays di xs = help di (reverse xs) "" where
+  help :: DispInfo a -> [DispElem a] -> String -> (DispInfo a,String)
   help d [] s = (d,s)
   help d (Dr xs:ys) s = help d (reverse xs++ys) s
+  help d (Dnub xs:ys) s = help d' (Dr (map Ds $ nub xs') : ys) s
+    where (d', xs') = weakNub d [] $ reverse xs
+          weakNub :: DispInfo a -> [String] -> [DispElem a] -> (DispInfo a, [String])
+          weakNub i acc [] = (i, acc)
+          weakNub i acc d@[_] = (i', d':acc)
+            where (i', d') = displays i d
+          weakNub i acc (l:r:rest) = case sameDisp i l r of
+                                     (i', True, l', _) -> weakNub i' (l':acc) rest
+                                     (i', False, l', r') -> weakNub i' (r':l':acc) rest
   help d (x:xs) s = help d2 xs (s2++s)
     where (d2,s2) =
              case x of
                Dd y -> disp d y
                Ds s -> (d,s)
-               Dn y -> let (d2,s) = disp d y in (d2,s++"\n")               
+               Dn y -> let (d2,s) = disp d y in (d2, s ++ "\n")               
                Dl ys sep -> dispL disp d ys sep
-               Dwrap max prefix xs sep -> wrap 0 n max n xs sep [prefix,"\n"] d
+               Dwrap max prefix xs sep -> wrap 0 n max n xs sep [prefix, "\n"] d
                   where n = length prefix
                Df f ys  -> f d ys
                Dlf f ys sep -> dispL f d ys sep
@@ -260,7 +264,7 @@ displays d xs = help d (reverse xs) "" where
                  in (d2,open++inner++close)
                Dr xs -> help d (reverse xs) s
 
-dle f xs sep = Dr(intersperse (map f xs))
+dle f xs sep = Dr (intersperse (map f xs))
   where intersperse [] = []
         intersperse [x] = x
         intersperse (x:xs) = x ++ Ds sep : intersperse xs
@@ -277,7 +281,7 @@ wrap count current max indent (x:xs) sep ans info =
                          then wrap (count + 1) (current + l + s) max indent xs sep (sep:str:ans) info2
                          else wrap 1 (l + indent) max indent xs sep
                                    ([sep,str,spaces indent,"\n"]++ans) info2
-spaces n | n<= 0 = []
+spaces n | n <= 0 = []
 spaces n = ' ': spaces (n-1)
 
 ns :: [Int]
