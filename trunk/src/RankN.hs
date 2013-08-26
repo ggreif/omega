@@ -1847,7 +1847,7 @@ captured sig1 sig2 rho mess =
 
 
 ----------------------------------------------------------------
--- Subsumption 
+-- Subsumption
 
 -- A pair of types can be in subsumption relation if we can
 -- ask if one is more polymorphic than another.
@@ -1872,7 +1872,7 @@ morepolySigmaSigma s sigma1 sigma2 =
             zs -> failM 0 [Ds "Not more poly",Dl zs ", "]
         }
 
-morepolySigmaExpectedRho s s1 (Check e2) = 
+morepolySigmaExpectedRho s s1 (Check e2) =
     do { -- warnM [Ds "In subsumption Sigma ExpectedRho Check ",Dd s1,Ds "=?=" ,Dd e2];
          morepolySigmaRho s s1 e2
        }
@@ -1882,18 +1882,18 @@ morepolySigmaExpectedRho s s1 (Infer ref) =
          ; injectA " morepoly Sigma (Expected Rho) " preds -- ## DO THIS WITH THE PREDS?
          ; writeRef ref rho1
          }
-         
+
 instanLevel lvs sig1 = do { env <- mapM f lvs; sub ([],[],[],env) sig1 }
   where f name = do { n <- newLevel; return(LvVar name,n)}
 
-morepolyPolyExpectRho:: TyCh m => String -> PolyKind -> Expected Rho -> m ()  
-morepolyPolyExpectRho s (K lvs sig1) rho = 
+morepolyPolyExpectRho:: TyCh m => String -> PolyKind -> Expected Rho -> m ()
+morepolyPolyExpectRho s (K lvs sig1) rho =
    do { sigma <- instanLevel lvs sig1
       ; morepolySigmaExpectedRho s sigma rho}
 
 morepolySigmaRho :: TyCh m => String -> Sigma -> Rho -> m ()
 morepolySigmaRho s (Forall(Nil([],rho1))) rho2 = morepolyRhoRho s rho1 rho2
-morepolySigmaRho s (sigma1@(Forall sig)) rho2 = 
+morepolySigmaRho s (sigma1@(Forall sig)) rho2 =
      do {  ts <- getTruths
         ; whenM False [Ds "Entering morepoly Sigma Rho \n Sigma = "
                ,Dd sigma1,Ds "\n Rho = ",Dd rho2
@@ -1908,7 +1908,7 @@ morepolySigmaRho s (sigma1@(Forall sig)) rho2 =
         ; gen2 <- sub ([],unifier,[],ls) general
         ; injectA " morepoly Sigma Rho 2 " (gen2++preds2)
         }
- 
+
 localPreds vs [] = return ([],[])
 localPreds vs (p:ps) =
   do { (loc,gen) <- localPreds vs ps
@@ -2338,8 +2338,8 @@ readTau n (env@(zs,loc,_,_)) (t@(Forallx All xs [] body)) =
      ; warnM [Ds ("\n\n"++ show loc),Ds "\n****** Just a warning ******\n\n",Ds "Sigma type in Tau context: ", Dd t]
      ; warnM [Ds "is being generalized. This might not be what you expect."]
      ; ans <- readTau n env2 body
-     ; zonk  ans }     
-readTau n (env@(_,loc,_,_)) (t@(Forallx q xs eqs body)) =     
+     ; zonk  ans }
+readTau n (env@(_,loc,_,_)) (t@(Forallx q xs eqs body)) =
   failM 1 [Ds ("\n\n"++ show loc),Ds "\nSigma type in Tau context: ", Dd t]
 readTau n (env@(_,loc,_,_)) (t@(PolyLevel _ _)) =
   failM 1 [Ds ("\n\n"++ show loc),Ds "\nLevel polymorphic type in Tau context: ", Dd t]
@@ -2364,14 +2364,14 @@ argsToEnv ((s,k,quant):xs) (env@(toenv,loc,exts,levels)) =
     ; (ns,zs,env2) <- argsToEnv xs ((s,TyVar nm k2,poly k2):toenv,loc,exts,levels)
     ; return ((s,nm):ns,(nm,k2,quant):zs,env2)
     }
-    
+
 generalizePTargs :: TyCh m => [(String,PT,Quant)] -> TransEnv -> m TransEnv
 generalizePTargs [] env = return env
 generalizePTargs ((s,k,quant):xs) (env@(toenv,locs,exts,levels)) =
  do { kind <- toTau env k
     ; let k2 = MK kind
     ; tau <- newTau k2
-    ; generalizePTargs xs ((s,tau,poly k2):toenv,locs,exts,levels) }    
+    ; generalizePTargs xs ((s,tau,poly k2):toenv,locs,exts,levels) }
 
 ------------------------------------------------------
 tunit' = TyCon' "()" Nothing
@@ -4349,4 +4349,3 @@ subtermsSigma (Forall l) ans = subtermsRho rho ans
 
 
 ------------------------------------------------------------------
-

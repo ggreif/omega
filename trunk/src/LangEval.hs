@@ -123,7 +123,7 @@ evalZ env (Case x ms) = do { v <- eval env x; caseV ms env v ms }
                   do { let env1 = (extendV es env)
                      ; env2 <- elaborate Tick ds env1
                      ; evalBody env2 body (caseV ms env v ps) } }
-        caseErr (env@(Ev xs)) v ps = 
+        caseErr (env@(Ev xs)) v ps =
              fail("\nCase match failure\nThe value: "++show v++"\ndoesn't match any of the patterns:\n  "++
                   plist "" ps "\n  " "\n"++(pv v))
 evalZ env (Let ds e) = do { env' <- elaborate Tick ds env; eval env' e }
@@ -604,7 +604,7 @@ vals =
  ,("freshLabel",(freshLabelV,gen(typeOf(undefined:: IO HiddenLabel))))
  ,("newLabel",(newLabelV,gen(typeOf(undefined:: String -> HiddenLabel))))
  ,("LabelNotEq",(labelNotEq,sigmaLabelNotEq))
- 
+
  ,("freshen",(freshenV,gen(typeOf(undefined :: A -> (A,[(Symbol,Symbol)])))))
  ,("run",(to run,runType))
  ,("lift",(reifyV,liftType))
@@ -645,7 +645,7 @@ listVals =
 -- A pseudo compare, help make a Ord like instance inside Omega
 
 compV (Vlit m) (Vlit n) = compLit m n
-compV (Vsum i m) (Vsum j n) = 
+compV (Vsum i m) (Vsum j n) =
   case compare i j of
     EQ -> compV m n
     x -> Just x
@@ -656,18 +656,18 @@ compV (Vprod x y) (Vprod m n) =
     Nothing -> Nothing
 compV (Vcon (Global "[]",_) []) (Vcon (Global ":",_) [_,_]) = Just LT
 compV (Vcon (Global ":",_) [_,_]) (Vcon (Global "[]",_) []) = Just GT
-compV (Vcon (c,x) y) (Vcon (d,m) n) = 
+compV (Vcon (c,x) y) (Vcon (d,m) n) =
   case compare c d of
     EQ -> compVL y n
     x -> Just x
  where compVL [] [] = Just EQ
        compVL [] (x:xs) = Just LT
        compVL (x:xs) [] = Just GT
-       compVL (x:xs) (y:ys) = 
+       compVL (x:xs) (y:ys) =
           case compV x y of
             Just EQ -> compVL xs ys
             t -> t
-compV x y = Nothing 
+compV x y = Nothing
 
 compareV = lift2 "compare" g
   where g x y = case compV x y of
@@ -738,9 +738,9 @@ reify (Vcon (c,exts) vs) = do { us <- mapM reify vs; return(f constr us)}
   where constr = Reify (show c) (mkFun (show c) (Vcon (c,exts)) (length vs) [])
         f g [] = g
         f g (x:xs) = f (App g x) xs
-        
-        
---        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))        
+
+
+--        f (Constr loc exs cname args eqs) = (cname,(mkFun (show cname) (Vcon (cname,exts)) (length args) []))
 reify v = return(Lit(CrossStage v))
 -- reify v = fail ("\nRun-time error ******\nCannot reify: "++show v)
 
@@ -917,19 +917,19 @@ primitives = map f xs where
 -- syntactically Labels can be created by using back-tick (`)
 --  at the value level -- `abc :: Label `abc
 --  at the type  level -- `abc :: Tag
--- 
+--
 -- where
 -- Label :: Tag ~> *0
 -- Tag :: *1
--- 
+--
 -- Labels can also be created by the following functions
 -- freshLabel : IO HiddenLabel
 -- newLabel : [Char] -> HiddenLabel
 --
 -- Where
--- data HiddenLabel :: *0 where 
+-- data HiddenLabel :: *0 where
 --   HideLabel:: Label t -> HiddenLabel
--- 
+--
 -- Labels can be compared using the function
 -- sameLabel:: Label a -> Label b -> Either (Equal a b) (DiffLabel a b)
 --
@@ -963,7 +963,7 @@ newLabelV =  Vprimfun "newLabel" (analyzeWith f) where
 labelNotEq = Vprimfun "LabelNotEq" (analyzeWith f) where
   f str = fail "\n*** Error ***\nLabelNotEq is abstract and cannot be applied. \nUse sameLabel to create values of type DiffLabel."
 
--- Type descriptions for Labels 
+-- Type descriptions for Labels
 
 
 sigmaLabelNotEq = sigma
@@ -971,4 +971,3 @@ sigmaLabelNotEq = sigma
        sigma = gen tau
 
 tyconLabelNotEq = TyCon Ox LvZero "LabelNotEq" (K [] sigmaLabelNotEq)
-

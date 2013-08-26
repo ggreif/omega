@@ -625,7 +625,7 @@ inferExp :: Exp -> TC(Rho,Exp)
 inferExp = infer
 
 typeExp :: Mod -> Exp -> Expected Rho -> TC Exp
-typeExp mod (Lit x) expect = 
+typeExp mod (Lit x) expect =
      do { -- warnM [Ds "Checking literal ",Dd x];
           x' <- tc x expect; return (Lit x') }
 typeExp mod (x@(Var v)) expectRho =
@@ -633,7 +633,7 @@ typeExp mod (x@(Var v)) expectRho =
           m <- getLevel
         ; (polyk,mod,n,exp) <- lookupVar v
         ; when (n > m) (failD 2 [Ds (show v++" used at level "++show m++" but defined at level "++show n)])
-        ; when False -- True -- (show v=="[]") 
+        ; when False -- True -- (show v=="[]")
             (do { truths <- getTruths
                 ; showKinds (varsOfPair varsOfPoly varsOfExpectRho) (polyk,expectRho)
 
@@ -670,7 +670,7 @@ typeExp mod (Prod x y) expect =
 
 typeExp mod (e@(App fun arg)) expect =
      do { (fun_ty,f) <- infer fun
-        ; (arg_ty, res_ty) <- handleM 2 (unifyFun fun_ty) (notfun e fun_ty)                  
+        ; (arg_ty, res_ty) <- handleM 2 (unifyFun fun_ty) (notfun e fun_ty)
         ; x <- handleM 2 (check arg arg_ty) (badarg e arg arg_ty)
         ; ns4 <- handleM 2 (morepolyRhoExpectedRho (show e) res_ty expect)
                            (resulterr e res_ty expect)
@@ -4821,7 +4821,7 @@ checkDecs env ds =
 
 checkAndCatchGroundPred ds =
   do { ((ds2,env),ground::[Pred]) <- extractAccum(checkBndGroup ds)
-     
+
      ; let message = "Solving toplevel ground terms"
      ; (u,unsolved,_,_) <- solveConstraints (message,starR) env ground
      ; injectA " checkAndCatch " unsolved
