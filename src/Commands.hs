@@ -13,8 +13,8 @@ import Data.List(find)
 import LangEval(Env(..),env0,eval,elaborate,Prefix(..),mPatStrict,extendV)
 import Data.Char(isAlpha,isDigit)
 import ParserDef(getInt,getBounds,expr,parseString)
-import Auxillary(plist,plistf,DispElem(..),prefix,maybeM,anyM,ifM,foldrM,initDI)
-import Control.Monad(when)
+import Auxillary(plist,plistf,DispElem(..),prefix,maybeM,anyM,ifM,initDI)
+import Control.Monad(when,foldM)
 import Value(pv)
 import SCC(topSortR)
 import Data.Time.Clock(UTCTime)
@@ -49,12 +49,11 @@ tCom tenv x =
 -- :env map
 envCom tenv s = envArg tenv s
 
-filterOutDatedDeps tenv = foldrM acc [] zs
+filterOutDatedDeps tenv = foldM acc [] zs
   where f (name,date,deps,env) = ([(name,date)],deps)
         (topSortedList,_) = topSortR f (imports tenv)
         zs = transClosure complete (concat topSortedList)
-        acc x ans = ifM (outDated x) (return ans) (return(x:ans))
-        
+        acc ans x = ifM (outDated x) (return ans) (return(x:ans))
 
 transClosure f [] = []
 transClosure f (x:xs) = work [x] xs

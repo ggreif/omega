@@ -338,10 +338,10 @@ matchPatLazy (Pcon c ps) (val@(Vlazy _ _)) =
    do { let get i (v @ (Vcon (m,exts) vs))
                  | c==m = return(vs !! i)
                  | True = fail ("\nMismatch on lazy pattern match of constructor, "++show c++" does not match "++show v)
-            acc (p,v) (us,xs) = do { (u,x) <- matchPatLazy p v; return(u:us,x++xs)}
+            acc (us,xs) (p,v) = do { (u,x) <- matchPatLazy p v; return(u:us,x++xs)}
       ; vs <- mapM (\ i -> vlazy (analyzeWith (get i) val))
                    [0 .. length ps - 1]
-      ; (us,xs) <- foldrM acc ([],[]) (zip ps vs)
+      ; (us,xs) <- foldM acc ([],[]) (zip ps vs)
       ; return(Vcon (c,Ox) us,xs)  ---EXT
       }
 matchPatLazy p v = fail ("Non lazy value passed to matchPatLazy\n"++show p++"\n"++show v)
