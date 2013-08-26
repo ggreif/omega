@@ -30,7 +30,7 @@ qCom tenv _ = error "quitting"
 -- :t (4 + 2)
 tCom tenv x =
   maybeM (varTyped (Global x) tenv)
-         (\(sigma,mod,lev,exp,subpairs) -> 
+         (\(sigma,mod,lev,exp,subpairs) ->
                         do { writeln (x++" :: "++(pprint sigma)++"\n")
                            ; verbose <- getM "kind" False
                            ; when verbose (mapM_ writeln subpairs)
@@ -61,7 +61,7 @@ transClosure f (x:xs) = work [x] xs
         work done (m:more) = work (f m done: done) more
 
 complete (name,date,deps,env) done = (name,date,foldr acc deps deps,env)
-  where acc (nm,time) ans = 
+  where acc (nm,time) ans =
             case find (\(s,d,ds,e)->nm==s) done of
               Nothing -> ans
               Just (s,d,ds,e) -> plus ds ans
@@ -69,32 +69,32 @@ complete (name,date,deps,env) done = (name,date,foldr acc deps deps,env)
         plus ((nm,d):more) ans = case find (\(s,d)->nm==s) ans of
                                        Nothing -> plus more ((nm,d):ans)
                                        Just _ ->  plus more ans
-                                       
+
 outDated (nm,time,deps,env) = anyM bad ((nm,time):deps)
   where bad (nm,time) = do { date <- getModificationTime nm
                            ; return(date > time) }
 
-nums time = take 12 (drop 11 (show time))   
-showImports xs = plistf f "\n   " xs "\n   " ""          
+nums time = take 12 (drop 11 (show time))
+showImports xs = plistf f "\n   " xs "\n   " ""
   where f (nm,time,deps,env) = basename nm ++" "++nums time++ plistf h " =\n      " deps "\n      " ""
         h (nm,time) = basename nm++" "++nums time
-        
-        
+
+
 basename nm = base where (dir,base) = splitFileName nm
 
 -- :r
 rCom elab tenv s =
   do { let sources = sourceFiles tenv
      ; zs <- fio (filterOutDatedDeps tenv)
-     ; (new,ws) <- elabManyFiles elab sources 
+     ; (new,ws) <- elabManyFiles elab sources
                   (initTcEnv{sourceFiles = sources,imports = zs})
      ; return new }
-     
+
 elabManyFiles elabFile [] env = return (env,[])
 elabManyFiles elabFile (x:xs) env =
   do { (env2,ws) <- elabManyFiles elabFile xs env
      ; (env3,w) <- elabFile x env2
-     ; return(env3,w:ws)}     
+     ; return(env3,w:ws)}
 
 -- :v
 vCom tenv s =

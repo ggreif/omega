@@ -1487,4 +1487,3 @@ instance Show (Body Exp) where
   show b = render(ppBody b)
 instance Show (Stmt Pat Exp Dec) where
   show s = render(ppStmt s)
-
