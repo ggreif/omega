@@ -69,3 +69,10 @@ etalon' = l2w etalon
 
 countAlongTheWay = foldw tupled [(0,[]w)]
   where tupled m (l@[(_,w);_]) = (countSteps [m;w]w,[m;w]w) : l
+
+prepend :: Int -> Way -> Way
+prepend 0 acc = acc
+prepend n acc | n `mod` 4 == 0 = prepend (n `div` 4) [Digit OO; acc]w
+prepend n acc | n `mod` 4 == 1 = prepend (n `div` 4) [Digit OI; acc]w
+prepend n acc | n `mod` 4 == 2 = prepend (n `div` 4) [Digit IO; acc]w
+prepend n acc | n `mod` 4 == 3 = prepend (n `div` 4) [Digit II; acc]w
