@@ -513,7 +513,7 @@ chtest'' = (let { true = \t->\f->t
                 }
             in chif true false true)lc -- this still does not work :-(
 
-letrecToLet :: LC Label -> LC Label
+letrecToLet :: LC k -> LC k
 letrecToLet (App f a) = App (letrecToLet f) (letrecToLet a)
 letrecToLet (v@Var _) = v
 letrecToLet (l@Lam _ _) = l
