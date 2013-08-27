@@ -44,7 +44,6 @@ w2l = foldw ((:) . m2c) []
 etalon' = l2w etalon
 
 
-countAlongTheWay = foldw tupled (0,[[]w])
-  where tupled FullStop (0,[[]w]) = (1,[[FullStop]w, []w])
-        tupled m (_, l@[w;_]) = (countSteps [m;w]w, [m;w]w : l)
+countAlongTheWay = foldw tupled (0,[(0,[]w)])
+  where tupled m (c, l@[(_,w);_]) = (countSteps [m;w]w, (countSteps [m;w]w,[m;w]w) : l)
 
