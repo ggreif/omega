@@ -14,7 +14,7 @@ countSteps = howmanysteps 0
 
 howmanysteps :: Int -> Way -> Int
 howmanysteps corr [FullStop]w = corr + 1
-howmanysteps corr [Stop; way]w = corr + pickupMarks way 1
+howmanysteps corr [Stop, Digit True; way]w = corr + pickupMarks way 1
   where pickupMarks [FullStop]w acc = acc
         pickupMarks [Stop; _]w acc = acc
         pickupMarks [Digit False; more]w acc = pickupMarks more $ acc + acc
@@ -22,9 +22,10 @@ howmanysteps corr [Stop; way]w = corr + pickupMarks way 1
 howmanysteps corr [Digit _; more]w = howmanysteps (corr + 1) more
 
 
-
-etalon' = foldr (Step . c2m) Arrived etalon
+l2w = foldr (Step . c2m) Arrived
   where c2m 'S' = FullStop
         c2m 's' = Stop
         c2m '0' = Digit False
         c2m '1' = Digit True
+
+etalon' = l2w etalon
