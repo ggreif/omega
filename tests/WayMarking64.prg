@@ -23,21 +23,19 @@ w14 = [Digit II, Digit OO, Stop II, Stop IO, Stop OI, Digit OI, Digit II, Stop I
 w15 = [Stop OI, Digit II, Digit OO, Stop II, Stop IO, Stop OI, Digit OI, Digit II, Stop II, Stop IO, Stop OI, Digit II, Stop IO, Stop OI, FullStop]w
 
 countSteps (way@[_;_]w) = howmanysteps 0 way
-
-howmanysteps :: Int -> Way -> Int
-howmanysteps 0 []w = 0
-howmanysteps corr [FullStop]w = corr + 1
-howmanysteps corr [Stop OI; way]w = pickupMarks (corr + 1) way 0
-howmanysteps corr [Stop IO, Stop OI; way]w = pickupMarks (corr + 2) way 0
-howmanysteps corr [Stop II, Stop IO, Stop OI; way]w = pickupMarks (corr + 3) way 0
-howmanysteps corr [Digit _,_,_; more]w = howmanysteps (corr + 3) more
-
-pickupMarks corr [FullStop]w acc = corr + 1
-pickupMarks corr [Stop _; _]w acc = corr + acc
-pickupMarks corr [Digit OO; more]w acc = pickupMarks (corr + 1) more $ 4 * acc
-pickupMarks corr [Digit OI; more]w acc = pickupMarks (corr + 1) more $ 4 * acc + 1
-pickupMarks corr [Digit IO; more]w acc = pickupMarks (corr + 1) more $ 4 * acc + 2
-pickupMarks corr [Digit II; more]w acc = pickupMarks (corr + 1) more $ 4 * acc + 3
+  where howmanysteps :: Int -> Way -> Int
+        howmanysteps 0 []w = 0
+        howmanysteps corr [FullStop]w = corr + 1
+        howmanysteps corr [Stop OI; way]w = pickupMarks (corr + 1) way 0
+        howmanysteps corr [Stop IO, Stop OI; way]w = pickupMarks (corr + 2) way 0
+        howmanysteps corr [Stop II, Stop IO, Stop OI; way]w = pickupMarks (corr + 3) way 0
+        howmanysteps corr [Digit _,_,_; more]w = howmanysteps (corr + 3) more
+        pickupMarks corr [FullStop]w acc = corr + 1
+        pickupMarks corr [Stop _; _]w acc = corr + acc
+        pickupMarks corr [Digit OO; more]w acc = pickupMarks (corr + 1) more $ 4 * acc
+        pickupMarks corr [Digit OI; more]w acc = pickupMarks (corr + 1) more $ 4 * acc + 1
+        pickupMarks corr [Digit IO; more]w acc = pickupMarks (corr + 1) more $ 4 * acc + 2
+        pickupMarks corr [Digit II; more]w acc = pickupMarks (corr + 1) more $ 4 * acc + 3
 
 l2w = foldr (Step . c2m) Arrived
   where c2m 'S' = FullStop
@@ -73,18 +71,18 @@ etalon' = l2w etalon
 countAlongTheWay = foldw tupled [(0,[]w)]
   where tupled m (l@[(_,w);_]) = (countSteps [m;w]w,[m;w]w) : l
 
-prepend :: Int -> Way -> Way
-prepend 0 acc = acc
-prepend n acc | n `mod` 4 == 0 = prepend (n `div` 4) [Digit OO; acc]w
-prepend n acc | n `mod` 4 == 1 = prepend (n `div` 4) [Digit OI; acc]w
-prepend n acc | n `mod` 4 == 2 = prepend (n `div` 4) [Digit IO; acc]w
-prepend n acc | n `mod` 4 == 3 = prepend (n `div` 4) [Digit II; acc]w
 
 -- builds a way of length at least 'min'
 -- maintains the invariant, that the way starts with 'Stop II'
 --
 construct :: Int -> Way -> Way
-construct min (acc@[Stop II; _]w) = if l < min
-                                    then construct min $ [Stop II, Stop IO, Stop OI; prepend l acc]w
+construct min (acc@[Stop II; _]w) = if len < min
+                                    then construct min $ [Stop II, Stop IO, Stop OI; prepend len acc]w
                                     else acc
-  where l = waylen acc
+  where len = waylen acc
+        prepend :: Int -> Way -> Way
+        prepend 0 acc = acc
+        prepend n acc | n `mod` 4 == 0 = prepend (n `div` 4) [Digit OO; acc]w
+        prepend n acc | n `mod` 4 == 1 = prepend (n `div` 4) [Digit OI; acc]w
+        prepend n acc | n `mod` 4 == 2 = prepend (n `div` 4) [Digit IO; acc]w
+        prepend n acc | n `mod` 4 == 3 = prepend (n `div` 4) [Digit II; acc]w
