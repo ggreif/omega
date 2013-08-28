@@ -341,6 +341,7 @@ decloc (AddTheorem loc _) = []
 decloc (TypeFun loc nm ty ms) = [(Global nm,loc)]
 decloc (TypeSig loc [nm] t) = [(proto nm,loc)]
 decloc (Prim loc (Explicit nm t)) = [(nm,loc)]
+decloc (Bound _ _) = []
 decloc (Reject s d) = decloc (head d)
 decloc (Import s vs) = []
 
