@@ -520,3 +520,42 @@ letrecToLet (l@Lam _ _) = l
 letrecToLet (LetRec n v e) = App (Lam n v) e -- Let n v e -- Omega pattern bug???
 
 l2l = letrecToLet (let a = a in a)lc
+
+-- shapes
+
+kind Shape = Lm Shape | Ap Shape Shape | Rf Nat
+
+--- ####### LC should be (primarily) parametrized in shape
+
+data Shape' :: Shape ~> * where
+  Ref :: Nat' n -> Shape' (Rf n)
+  Lm :: Shape' inner -> Shape' (Lm inner)
+  --Lm :: Shape' inner -> Shape' (Lm inner)
+
+shape :: LC Nat' -> LC Shape'
+shape (Var n) = Var (Ref n)
+--shape (Lam n e) = Lam (Lm $ shape' e) $ shape e
+shape (Lam n e) = Lam (Lm $ undefined) $ shape e
+
+--shape' :: LC Nat' -> Shape' sh
+--shape (Var n) = Ref n
+--shape' (Var n) = Ref n
+
+
+{-
+data Shape :: *1 where
+  Lm :: Shape ~> Shape
+  Ap :: Shape ~> Shape ~> Shape
+  Rf :: 
+-}
+
+data Dictionary :: Dict a b ~> * where
+  Funny :: Dictionary {}dict
+
+context :: DeBrujnContext Nat' dict -> LC Nat' -> LC Dictionary
+context ctx (Var n) = Var undefined
+
+-- abstractly interpret
+-- this should be parameterized by a monad!
+
+--interp :: Monad m -> LC (context tr) -> m (LC (context tr))
