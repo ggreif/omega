@@ -441,11 +441,11 @@ In the end all identifications have a semantics (hopefully!), when the counting 
 
 -- Now some fun stuff
 
-data LC :: (k ~> *) ~> * where
-  Var :: tf a -> LC tf
-  App :: LC tf -> LC tf -> LC tf
-  Lam :: tf a -> LC tf -> LC tf
-  LetRec :: tf a -> LC tf -> LC tf -> LC tf
+data LC :: Shape ~> (k ~> *) ~> * where
+  Var :: tf a -> LC (Rf a') tf
+  App :: LC fsh tf -> LC ash tf -> LC (fsh `Ap` ash) tf
+  Lam :: tf a -> LC sh tf -> LC (Lm sh) tf
+  LetRec :: tf a -> LC ish tf -> LC esh tf -> LC ((Lm esh) `Ap` ish) tf
  deriving syntax (lc) Applicative(Var, App, Lam, LetRec)
 
 alamX_XX = (\x->x x)lc
@@ -483,7 +483,7 @@ lookUpDeBruijn [pre; known]dtx lab acc = case sameLabel known lab of
 
 monad maybeM
 
-toDeBruijn :: DeBrujnContext Label dict -> LC Label -> Maybe (LC Nat')
+toDeBruijn :: DeBrujnContext Label dict -> LC sh Label -> Maybe (LC sh Nat')
 toDeBruijn ctx (Var a) = do idx <- lookUpDeBruijn ctx a 0t
                             return $ Var idx
 toDeBruijn ctx (Lam l a) = do a' <- toDeBruijn [ctx; l]dtx a
@@ -493,7 +493,7 @@ toDeBruijn ctx (App f a) = do f' <- toDeBruijn ctx f
                               return $ App f' a'
 
 -- Let :: tf a -> LC tf -> LC tf -> LC tf -- not needed!
-pattern Let n v exp = App (Lam n v) exp
+pattern Let n v exp = App (Lam n exp) v
 
 -- fun with church encoding
 
@@ -513,11 +513,11 @@ chtest'' = (let { true = \t->\f->t
                 }
             in chif true false true)lc -- this still does not work :-(
 
-letrecToLet :: LC k -> LC k
+letrecToLet :: LC sh k -> LC sh k
 letrecToLet (App f a) = App (letrecToLet f) (letrecToLet a)
 letrecToLet (v@Var _) = v
 letrecToLet (l@Lam _ _) = l
-letrecToLet (LetRec n v e) = App (Lam n v) e -- Let n v e -- Omega pattern bug???
+letrecToLet (LetRec n v e) = App (Lam n e) v -- Let n v e -- Omega pattern bug???
 
 l2l = letrecToLet (let a = a in a)lc
 
@@ -532,13 +532,12 @@ data Shape' :: Shape ~> * where
   Lm :: Shape' inner -> Shape' (Lm inner)
   --Lm :: Shape' inner -> Shape' (Lm inner)
 
-shape :: LC Nat' -> LC Shape'
+shape :: LC sh Nat' -> LC sh Shape'
 shape (Var n) = Var (Ref n)
 --shape (Lam n e) = Lam (Lm $ shape' e) $ shape e
 shape (Lam n e) = Lam (Lm $ undefined) $ shape e
 
 --shape' :: LC Nat' -> Shape' sh
---shape (Var n) = Ref n
 --shape' (Var n) = Ref n
 
 
@@ -552,7 +551,7 @@ data Shape :: *1 where
 data Dictionary :: Dict a b ~> * where
   Funny :: Dictionary {}dict
 
-context :: DeBrujnContext Nat' dict -> LC Nat' -> LC Dictionary
+context :: DeBrujnContext Nat' dict -> LC sh Nat' -> LC sh Dictionary
 context ctx (Var n) = Var undefined
 
 -- abstractly interpret
