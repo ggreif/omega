@@ -2751,9 +2751,7 @@ instance Sht PT where
           f (x@(Rarrow' _ _)) = "("++shtt x++")"
           f (x@(Karrow' _ _)) = "("++shtt x++")"
           f x = shtt x
-  shtt (Star' n Nothing) = "*"++show n
-  shtt (Star' 0 (Just n)) = "*"++n
-  shtt (Star' k (Just n)) = "*("++show k++"+"++n++")"
+  shtt s@(Star' _ _) = show s
   shtt (PolyLevel ls t) = "(level"++plistf id " " ls " " "."++shtt t++")"
   shtt (Tlamx n t) = "("++n++" . "++shtt t++")"
   shtt AnyTyp = "AnyTyp"
