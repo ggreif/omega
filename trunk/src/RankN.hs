@@ -1753,7 +1753,7 @@ zapPoly :: TyCh m => Tau -> PolyKind -> Expected Tau -> m Tau
 zapPoly (term@(TyCon sx level s k)) (K lvs sig) expect =
     do { (preds2,rho2) <- instanTy lvs sig  -- ## WHAT DO WE DO WITH THE PREDS?
        ; case rho2 of
-            Rtau w -> do { ans <- mustBe ("Constructor","type") term w expect
+            Rtau w -> do { ans <- mustBe ("constructor","type") term w expect
                          ; let (cname,lev) = getTyConLevel w
                          -- ; warnM [Ds "\nin zapPoly ",Ds (s++"("),Dd level,Ds "):",Ds cname,Ds "(",Dd lev,Ds ")"]
                          ; unifyLevel ("Checking level of constructor: "++s) (LvSucc level) lev
