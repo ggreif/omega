@@ -525,12 +525,10 @@ l2l = letrecToLet (let a = a in a)lc
 
 kind Shape = Lm Shape | Ap Shape Shape | Rf Nat
 
---- ####### LC should be (primarily) parametrized in shape
-
 data Shape' :: Shape ~> * where
   Ref :: Nat' n -> Shape' (Rf n)
   Lm :: Shape' inner -> Shape' (Lm inner)
-  --Lm :: Shape' inner -> Shape' (Lm inner)
+  Ap :: Shape' f -> Shape' a -> Shape' (f `Ap` a)
 
 shape :: LC sh Nat' -> LC sh Shape'
 shape (Var n) = Var (Ref n)
@@ -540,13 +538,6 @@ shape (Lam n e) = Lam (Lm $ undefined) $ shape e
 --shape' :: LC Nat' -> Shape' sh
 --shape' (Var n) = Ref n
 
-
-{-
-data Shape :: *1 where
-  Lm :: Shape ~> Shape
-  Ap :: Shape ~> Shape ~> Shape
-  Rf :: 
--}
 
 data Dictionary :: Dict a b ~> * where
   Funny :: Dictionary {}dict
