@@ -445,7 +445,7 @@ Has somebody already embarked on visualizing (and/or topologizing) the lambda ca
 [yes, I have seen an animation of the (\a.aa)(\a.aa) reduction as a repetitive deformation]
 
 Visual canons in
-  * (molecular) chemistry
+  * (molecular) [http://arxiv.org/ftp/arxiv/papers/1307/1307.6360.pdf chemistry]
   * visual notations (UML?)
 
 Diagrams of moving 'particles/waves' in [https://www.cs.indiana.edu/~sabry/papers/rational.pdf negative and reciprocal types].
