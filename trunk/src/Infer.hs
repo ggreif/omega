@@ -37,7 +37,7 @@ import RankN(Sht(..),sht,univLevelFromPTkind,pp
             ,makeRel,equalPartsM
             ,failD,failK,failM,warnM,handleM,whenM
             ,dispRef,subTau,subRho,subSigma,sub2Tau,sub2Rho,sub2Sigma,sub2Pred,subTcTv
-            ,extendref, failIfInConsistent
+            ,extendref, failIfInConsistent, definesValueConstr
             ,mguStar,star1,star,star_star,starR,shtt,shtP,newUniv
             ,newKind,newSigma,newFlexiTyVar,newRigidTyVar,newTau,newRigid,newRho,newFlexi,newStar
             ,existsInstance,rigidInstance,rigidInstanceL,generalize,instanL,newSkolem
@@ -1870,7 +1870,7 @@ introLorR (loc,Global "R",args,preds,typ) = True
 introLorR (loc,var,args,preds,typ) = False
 
 
-kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) | any introLorR cs =
+kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) | definesValueConstr k && any introLorR cs =
   failM 1 [Ds "\n\nThe data decl: ",Ds name,Ds " has a constructor named 'L' or 'R'."
           ,Ds "\nThese names are reserved for the sum type. L:: a -> (a+b), R:: b -> (a+b)"]
 kindOfTyConFromDec (decl@(GADT loc isP (Global name) k cs ds _)) = newLoc loc $
