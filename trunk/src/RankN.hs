@@ -2021,8 +2021,7 @@ univLevelFromPTkind name pt =
   do { n <- getLevel name pt []; return([],n,pt)}
 
 
-definesValueConstr (Star' n Nothing) = n==0
-definesValueConstr (Star' n (Just s)) = True
+definesValueConstr (Star' 0 _) = True
 definesValueConstr (Karrow' dom rng) = definesValueConstr rng
 definesValueConstr (Forallx q vs preds t) = definesValueConstr t
 definesValueConstr (PolyLevel ns t) = definesValueConstr t
