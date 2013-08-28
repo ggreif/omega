@@ -23,8 +23,7 @@ w14 = [Digit II, Digit OO, Stop II, Stop IO, Stop OI, Digit OI, Digit II, Stop I
 w15 = [Stop OI, Digit II, Digit OO, Stop II, Stop IO, Stop OI, Digit OI, Digit II, Stop II, Stop IO, Stop OI, Digit II, Stop IO, Stop OI, FullStop]w
 
 countSteps (way@[_;_]w) = howmanysteps 0 way
-  where howmanysteps :: Int -> Way -> Int
-        howmanysteps 0 []w = 0
+  where howmanysteps 0 []w = 0
         howmanysteps corr [FullStop]w = corr + 1
         howmanysteps corr [Stop OI; way]w = pickupMarks (corr + 1) way 0
         howmanysteps corr [Stop IO, Stop OI; way]w = pickupMarks (corr + 2) way 0
@@ -80,7 +79,6 @@ construct min (acc@[Stop II; _]w) = if len < min
                                     then construct min $ [Stop II, Stop IO, Stop OI; prepend len acc]w
                                     else acc
   where len = waylen acc
-        prepend :: Int -> Way -> Way
         prepend 0 acc = acc
         prepend n acc | n `mod` 4 == 0 = prepend (n `div` 4) [Digit OO; acc]w
         prepend n acc | n `mod` 4 == 1 = prepend (n `div` 4) [Digit OI; acc]w
