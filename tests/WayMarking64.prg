@@ -84,3 +84,8 @@ construct min (acc@[Stop II; _]w) = if len < min
         prepend n acc | n `mod` 4 == 1 = prepend (n `div` 4) [Digit OI; acc]w
         prepend n acc | n `mod` 4 == 2 = prepend (n `div` 4) [Digit IO; acc]w
         prepend n acc | n `mod` 4 == 3 = prepend (n `div` 4) [Digit II; acc]w
+
+
+isDescending l = snd $ foldr (\n (m, b)->(n, b && n == m + 1)) (-1, True) l
+
+isCorrect min = (isDescending . map fst . countAlongTheWay . construct min) etalon'
