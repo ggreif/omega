@@ -65,6 +65,9 @@ w2l = foldw ((:) . m2c) []
         m2c (Digit IO) = '2'
         m2c (Digit II) = '3'
 
+
+waylen = foldw (\_ n->n+1) 0
+
 etalon' = l2w etalon
 
 countAlongTheWay = foldw tupled [(0,[]w)]
@@ -76,3 +79,12 @@ prepend n acc | n `mod` 4 == 0 = prepend (n `div` 4) [Digit OO; acc]w
 prepend n acc | n `mod` 4 == 1 = prepend (n `div` 4) [Digit OI; acc]w
 prepend n acc | n `mod` 4 == 2 = prepend (n `div` 4) [Digit IO; acc]w
 prepend n acc | n `mod` 4 == 3 = prepend (n `div` 4) [Digit II; acc]w
+
+-- builds a way of length at least 'min'
+-- maintains the invariant, that the way starts with 'Stop II'
+--
+construct :: Int -> Way -> Way
+construct min (acc@[Stop II; _]w) = if l < min
+                                    then construct min $ [Stop II, Stop IO, Stop OI; prepend l acc]w
+                                    else acc
+  where l = waylen acc
