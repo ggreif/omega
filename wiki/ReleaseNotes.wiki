@@ -42,6 +42,7 @@ in a program file, the given bound can be _increased_ to fit the typechecker's n
 == Bugs fixed ==
   * Issue 107, which caused backchaining to fail when one alternative (of ambiguous solutions) was refutable, while others succeeded.
   * Issue 108, caused the type checker to error out because the outer binding was not in scope.
+  * Issue 111, rejected GADT definitions that had `L` or `R` constructors, even if these never affected the value stratum.
 
 ----
 = Release 1.5.2  _(2013-08-21)_ =
