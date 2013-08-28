@@ -15,7 +15,7 @@ countSteps (way@[_;_]w) = howmanysteps 0 way
 howmanysteps :: Int -> Way -> Int
 howmanysteps 0 []w = 0
 howmanysteps corr [FullStop]w = corr + 1
-howmanysteps corr [Stop, Digit True; way]w = pickupMarks (trace ("corr: "++show corr) corr + 2) way 1
+howmanysteps corr [Stop, Digit True; way]w = pickupMarks (corr + 2) way 1
   where pickupMarks corr [FullStop]w acc = corr + acc
         pickupMarks corr [Stop; _]w acc = trace (show corr) corr + acc
         pickupMarks corr [Digit False; more]w acc = pickupMarks (corr + 1) more $ acc + acc
@@ -44,6 +44,6 @@ w2l = foldw ((:) . m2c) []
 etalon' = l2w etalon
 
 
-countAlongTheWay = foldw tupled (0,[(0,[]w)])
-  where tupled m (c, l@[(_,w);_]) = (countSteps [m;w]w, (countSteps [m;w]w,[m;w]w) : l)
+countAlongTheWay = foldw tupled [(0,[]w)]
+  where tupled m (l@[(_,w);_]) = (countSteps [m;w]w,[m;w]w) : l
 
