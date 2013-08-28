@@ -2077,13 +2077,12 @@ genConstrFunFrag tyConInfo (d2,tag,stratum,isProp,conFunInfo) = mapM f conFunInf
         levelsub = concat(map (\ (nm,tau,polykind,levs) -> levs) tyConInfo)
 
 
--- genTyCon :: (Bool,String,Tau,PolyKind) -> TC (String,Tau,PolyKind,[(TcLv,Level)])
+genTyCon :: (Bool,String,Tau,PolyKind) -> TC (String,Tau,PolyKind,[(TcLv,Level)])
 genTyCon (isprop,nm,TyCon sx level _ _ ,K lvs k) =  -- Ignore the current lvs,
   do { (levs,K names k2) <- generalize k     -- we'll compute a more accurate one
      ; return(nm,TyCon sx level nm (K names k2),K names k2,levs) }
 
 
--- kindsEnvForDataBindingGroup:: [Dec] -> TC(ToEnv,[(Bool,String,Tau,PolyKind)])
 kindsEnvForDataBindingGroup ds =
   do { env <- getTypeEnv
      ; loc <- getLoc
