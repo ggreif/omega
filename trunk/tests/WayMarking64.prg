@@ -78,7 +78,7 @@ construct :: Int -> Way -> Way
 construct min (acc@[Stop II; _]w) = if len < min
                                     then construct min $ [Stop II, Stop IO, Stop OI; prepend len acc]w
                                     else acc
-  where len = waylen acc
+  where len = countSteps acc
         prepend 0 acc = acc
         prepend n acc | n `mod` 4 == 0 = prepend (n `div` 4) [Digit OO; acc]w
         prepend n acc | n `mod` 4 == 1 = prepend (n `div` 4) [Digit OI; acc]w
