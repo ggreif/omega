@@ -878,7 +878,7 @@ instance Binds Dec where
 
   boundBy (Data l b 0 nm sig vs cs ders) = bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (Constr loc skol c ts eqs) = c
-  boundBy (GADT loc isProp nm knd cs ders _)| definesValueConstr knd =
+  boundBy (GADT loc isProp nm knd cs ders _) | definesValueConstr knd =
             bindDs ders (FX (map get cs) [] [] [nm] [proto nm])
      where get (loc,c,free,preds,typ) = c
 
