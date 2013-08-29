@@ -68,3 +68,7 @@ What about supplies?
 = Surface Language =
 
 Contrary to [InductionPrinciples#Set-_and_Bag-like_Theorems] I now believe that we need a `deriving semantics` clause for `data` declarations. These would instantiate the exotic constructors.
+
+= Connection to Species =
+
+[http://www.cis.upenn.edu/~byorgey/pub/species-pearl.pdf Species] are data types that quotiented out the automorphisms, that is only the data's shape counts. These perfectly describe `Set`s. Remains to clarify how they relate to `Supply`s and the rest.
