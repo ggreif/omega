@@ -1002,7 +1002,7 @@ instance Vars Pat where  -- Modifies only the "binds" and "depends" fields
   vars bnd (ExtP a) = depExt a . varsL bnd (extList a)
 
 instance Vars Var where
-  vars bnd v = addFree bnd v
+  vars = addFree
 
 instance Vars Exp where
   vars bnd (Var v) = addFree bnd v
