@@ -492,6 +492,14 @@ toDeBruijn ctx (App f a) = do f' <- toDeBruijn ctx f
                               a' <- toDeBruijn ctx a
                               return $ App f' a'
 
+-- we should get a pair (Nat, Context) -- TODO
+-- this is not good yet!
+--
+toFullContext :: DeBruijnContext Nat' dict -> LC sh Nat' -> LC sh (DeBruijnContext Nat')
+toFullContext ctx (Var a) = Var ctx
+toFullContext ctx (Lam l a) = Lam ctx $ toFullContext [ctx; l]dtx a
+toFullContext ctx (App f a) = App (toFullContext ctx f) (toFullContext ctx a)
+
 -- Let :: tf a -> LC tf -> LC tf -> LC tf -- not needed!
 pattern Let n v exp = App (Lam n exp) v
 
