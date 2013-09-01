@@ -442,7 +442,7 @@ In the end all identifications have a semantics (hopefully!), when the counting 
 -- Now some fun stuff
 
 data LC :: Shape ~> (k ~> *) ~> * where
-  Var :: tf a -> LC (Rf a') tf
+  Var :: tf a -> LC (Rf a) tf
   App :: LC fsh tf -> LC ash tf -> LC (fsh `Ap` ash) tf
   Lam :: tf a -> LC sh tf -> LC (Lm sh) tf
   LetRec :: tf a -> LC ish tf -> LC esh tf -> LC ((Lm esh) `Ap` ish) tf
@@ -483,7 +483,12 @@ lookUpDeBruijn [pre; known]dtx lab acc = case sameLabel known lab of
 
 monad maybeM
 
-toDeBruijn :: DeBruijnContext Label dict -> LC sh Label -> Maybe (LC sh Nat')
+l2n :: Shape ~> Shape
+{l2n (Lm sh)} = Lm {l2n sh}
+{l2n (Ap f a)} = Ap {l2n f} {l2n a}
+{l2n (Rf t)} = Rf n -- getDeBruijnIndex!!! FIXME
+
+toDeBruijn :: DeBruijnContext Label dict -> LC sh Label -> Maybe (LC {l2n sh} Nat')
 toDeBruijn ctx (Var a) = do idx <- lookUpDeBruijn ctx a 0t
                             return $ Var idx
 toDeBruijn ctx (Lam l a) = do a' <- toDeBruijn [ctx; l]dtx a
@@ -492,13 +497,16 @@ toDeBruijn ctx (App f a) = do f' <- toDeBruijn ctx f
                               a' <- toDeBruijn ctx a
                               return $ App f' a'
 
+
 -- we should get a pair (Nat, Context) -- TODO
 -- this is not good yet!
 --
-toFullContext :: DeBruijnContext Nat' dict -> LC sh Nat' -> LC sh (DeBruijnContext Nat')
-toFullContext ctx (Var a) = Var ctx
-toFullContext ctx (Lam l a) = Lam ctx $ toFullContext [ctx; l]dtx a
-toFullContext ctx (App f a) = App (toFullContext ctx f) (toFullContext ctx a)
+{-
+toFullContext :: DeBruijnContext Nat' dict -> Shape' sh -> LC sh Nat' -> LC sh (Context Nat' Shape')
+toFullContext ctx (Rf a') (Var a) = Var ctx
+toFullContext ctx sh (Lam l a) = Lam ctx $ toFullContext [ctx; l]dtx a
+toFullContext ctx sh (App f a) = App (toFullContext ctx f) (toFullContext ctx a)
+-}
 
 -- Let :: tf a -> LC tf -> LC tf -> LC tf -- not needed!
 pattern Let n v exp = App (Lam n exp) v
@@ -531,27 +539,26 @@ l2l = letrecToLet (let a = a in a)lc
 
 -- shapes
 
-kind Shape = Lm Shape | Ap Shape Shape | Rf Nat
+kind Shape = Lm Shape | Ap Shape Shape | Rf k
 
 data Shape' :: Shape ~> * where
   Ref :: Nat' n -> Shape' (Rf n)
+  Nam :: Label n -> Shape' (Rf n)
   Lm :: Shape' inner -> Shape' (Lm inner)
   Ap :: Shape' f -> Shape' a -> Shape' (f `Ap` a)
 
-shape :: LC sh Nat' -> LC sh Shape'
-shape (Var n) = Var (Ref n)
---shape (Lam n e) = Lam (Lm $ shape' e) $ shape e
-shape (Lam n e) = Lam (Lm $ undefined) $ shape e
+shape :: LC sh Nat' -> Shape' sh
+shape (Var n) = Ref n
+shape (Lam n e) = Lm $ shape e
+shape (App f a) = shape f `Ap` shape a
 
---shape' :: LC Nat' -> Shape' sh
---shape' (Var n) = Ref n
-
-
+{-
 data Dictionary :: Dict a b ~> * where
   Funny :: Dictionary {}dict
 
 context :: DeBruijnContext Nat' dict -> LC sh Nat' -> LC sh Dictionary
 context ctx (Var n) = Var undefined
+-}
 
 -- abstractly interpret
 -- this should be parameterized by a monad!
