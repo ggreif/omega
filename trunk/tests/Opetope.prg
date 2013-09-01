@@ -459,15 +459,15 @@ data Context :: (key ~> *) ~> (value ~> *) ~> Dict key value ~> * where
   Extend :: Context key value dict -> key k -> value v -> Context key value {dict; k = v}dict
  deriving LeftRecord(ctx)
 
--- DeBrujn levels as keys
+-- DeBruijn levels as keys
 --
 dictSize :: Dict key value ~> Nat
 {dictSize {}dict} = 0t
 {dictSize {pre; k = v}dict} = (1+{dictSize pre})t
 
-data DeBrujnContext :: (value ~> *) ~> Dict Nat value ~> * where
-  DeBrujnEmpty :: DeBrujnContext value {}dict
-  DeBrujnExtend :: DeBrujnContext value dict -> value v -> DeBrujnContext value {dict; {dictSize dict} = v}dict
+data DeBruijnContext :: (value ~> *) ~> Dict Nat value ~> * where
+  DeBruijnEmpty :: DeBruijnContext value {}dict
+  DeBruijnExtend :: DeBruijnContext value dict -> value v -> DeBruijnContext value {dict; {dictSize dict} = v}dict
  deriving LeftList(dtx)
 
 
@@ -475,7 +475,7 @@ getDeBruijnIndex :: Dict key value ~> value ~> Nat ~> Nat
 {getDeBruijnIndex {pre; k = v}dict v acc} = acc
 {getDeBruijnIndex {pre; k = v'}dict v acc} = {getDeBruijnIndex pre v (1+acc)t}
 
-lookUpDeBruijn :: DeBrujnContext Label dict -> Label l -> Nat' acc -> Maybe (Nat' {getDeBruijnIndex dict l acc})
+lookUpDeBruijn :: DeBruijnContext Label dict -> Label l -> Nat' acc -> Maybe (Nat' {getDeBruijnIndex dict l acc})
 lookUpDeBruijn []dtx _ _ = Nothing
 lookUpDeBruijn [pre; known]dtx lab acc = case sameLabel known lab of
                                          R _ -> lookUpDeBruijn pre lab (1+acc)t
@@ -483,7 +483,7 @@ lookUpDeBruijn [pre; known]dtx lab acc = case sameLabel known lab of
 
 monad maybeM
 
-toDeBruijn :: DeBrujnContext Label dict -> LC sh Label -> Maybe (LC sh Nat')
+toDeBruijn :: DeBruijnContext Label dict -> LC sh Label -> Maybe (LC sh Nat')
 toDeBruijn ctx (Var a) = do idx <- lookUpDeBruijn ctx a 0t
                             return $ Var idx
 toDeBruijn ctx (Lam l a) = do a' <- toDeBruijn [ctx; l]dtx a
@@ -542,7 +542,7 @@ shape (Lam n e) = Lam (Lm $ undefined) $ shape e
 data Dictionary :: Dict a b ~> * where
   Funny :: Dictionary {}dict
 
-context :: DeBrujnContext Nat' dict -> LC sh Nat' -> LC sh Dictionary
+context :: DeBruijnContext Nat' dict -> LC sh Nat' -> LC sh Dictionary
 context ctx (Var n) = Var undefined
 
 -- abstractly interpret
