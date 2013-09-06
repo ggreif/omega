@@ -172,18 +172,18 @@ display ss = plistf id "(" ss " " ")"
 
 parseDecs :: String -> FIO [Dec]
 parseDecs file =
-  do { hndl <- eitherM (fio (try(openFile file ReadMode)))
+  do { hndl <- eitherM (fio (try $ openFile file ReadMode))
                  (\ err -> fail ("\nProblem opening file: "++file++"  ("++show (err :: IOException)++")"))
                  return
-     ; let err mess = fio((hClose hndl) >> fail mess)
-           -- if parsing fails, we should close the file
+     ; let err mess = fio (hClose hndl >> fail mess) -- if parsing fails, we should close the file
      ; x <- handleP (const True) 10
-                    (fio (parseHandle program file hndl)) err
-     ; fio(hClose hndl)
+                    (fio $ parseHandle program file hndl) err
+     ; fio (hClose hndl)
      ; case x of
         Left s -> fail s
-        Right(Program ds) -> return ds   -- mapM gadt2Data ds
+        Right (Program ds) -> return ds
      }
+
 -------------------------------------------------------------------------
 -- Omega has a very simple importing mechanism. A user writes:
 -- import "xx.prg" (f,g,T)
