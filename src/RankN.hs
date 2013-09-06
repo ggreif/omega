@@ -2020,6 +2020,14 @@ univLevelFromPTkind name (PolyLevel ls (pt@(Forallx q vs preds t))) =
 univLevelFromPTkind name pt =
   do { n <- getLevel name pt []; return([],n,pt)}
 
+{-
+rightMostStar :: (PT -> Bool) -> PT -> Bool
+rightMostStar p s@(Star' _ _) = p s
+rightMostStar p (Karrow' _ rng) = rightMostStar p rng
+rightMostStar p (Forallx _ _ _ t) = rightMostStar p t
+rightMostStar p (PolyLevel _ t) = rightMostStar p t
+rightMostStar p _ = False
+-}
 
 definesValueConstr (Star' 0 _) = True
 definesValueConstr (Karrow' dom rng) = definesValueConstr rng
@@ -2407,20 +2415,12 @@ parse_tag inject =
              ; notFollowedBy (char '`')
              ; whiteSpace
              ; return(inject v)})
-  where ident = do{ c <- identStart tokenDef
-                  ; cs <- many (identLetter tokenDef)
-                  ; return (c:cs)
-                  } <?> "identifier"
 
 extToPT (Pairx (Right xs) "") = tprods' xs
 extToPT (Listx (Right [x]) Nothing "") = list' x
 extToPT x = Ext x
 
 conName = lexeme (try construct)
-  where construct = do{ c <- upper
-                      ; cs <- many (identLetter tokenDef)
-                      ; return(c:cs)}
-                    <?> "Constructor name"
 
 explicitCon = lexeme (try construct)
   where construct = do{ cs <- conName
@@ -2436,7 +2436,6 @@ trailing x =
     ('_' : more) -> ('_',reverse more)
     other -> ('#',x)
 
-conlevel:: Char -> Parser(Maybe(Int,String))
 conlevel '#' = return Nothing
 conlevel '_' = (underbar <|> (return Nothing)) <?> "Explicit constructor level"
   where underbar = (parens plusexp) <|> (return Nothing)
@@ -2463,7 +2462,6 @@ applied item op = do { item1 <- item
                     ; item2 <- item
                     ; return (Left [v, item2]) } <?> "quoted infix type operator"
 
-parseStar :: Parser PT
 parseStar = lexeme(do{char '*'; (n,k) <- star; return(Star' n k)})
   where star = (do { s <- ident; return(0,Just s)}) <|>                -- This comes first, otherwise we'd always get just "*"
                (parens (fmap fix (prefixPlus <|> postfixPlus))) <|>    -- then this. Order matters
@@ -2478,7 +2476,6 @@ tyCon0 x = TyCon' x Nothing
 
 tyIdentifier = fmap TyVar' identifier
 
-simpletyp :: Parser PT
 simpletyp =
        fmap extToPT (extP typN)                          -- [x,y ; zs]i  (a,b,c)i
    <|> lexeme explicitCon                                -- T
@@ -2511,7 +2508,6 @@ data ArrowSort
   | Fat      -- =>
   | InfixEq  -- ==
 
-arrTyp :: Parser PT
 arrTyp =
    do { ts <- applied simpletyp explicitCon -- "f x y -> z" or "x `f` y" parses as "(f x y) -> z"
       ; let d = (applyT' ts)                -- since (f x y) binds tighter than (->)
@@ -2527,7 +2523,6 @@ arrTyp =
            Just(InfixEq,r) -> return(TyFun' [TyCon' infixEqName Nothing,d,r])
       }
 
-allPrefix:: Parser (Quant,[(String,PT,Quant)])
 allPrefix =
     do { q2 <- (reserved "forall" >> return All) <|>
                (reserved "exists" >> return Ex)
@@ -2536,7 +2531,6 @@ allPrefix =
        ; return(q2,ns)
        }
 
-allTyp :: Parser PT
 allTyp =
   do { (q2,ns) <- allPrefix
      ; eqs <- props
@@ -2544,7 +2538,6 @@ allTyp =
      ; return (Forallx q2 ns eqs t)
      }
 
-argument:: Quant -> Parser(String,PT,Quant)
 argument q =
   (do { x <- identifier; return(x,AnyTyp,q)}) <|>
   (parens (do { x <- identifier
@@ -2553,7 +2546,6 @@ argument q =
               ; return(x,k,q) }))
 
 
-typN :: Parser PT
 typN = allTyp <|> arrTyp <|> parens typN
 
 ------------------------------------------------
@@ -2578,7 +2570,6 @@ isTyConAp (TyApp' (TyVar' t) x) = Just t
 isTyConAp (TyApp' f x) = isTyConAp f
 isTyConAp x = Nothing
 
-props :: Parser [PPred]
 props = (try (do { x <- proposition; symbol "=>"; return[x]})) <|>
           (try (do { xs <- parens(sepBy proposition comma)
                    ; symbol "=>"; return xs}))                     <|>
@@ -2603,7 +2594,6 @@ typingHelp =
      ; return(levels,prefix,preds,body)
      }
 
-level :: Parser [String]
 level = try (do { symbol "level"; ls <- many1 identifier; symbol "."; return ls})
         <|> (return [])
 
@@ -2633,6 +2623,7 @@ okLevels declared found =
 
 --------------------------------------------------------
 
+pt :: Monad m => String -> m PT
 pt s = case parse2 typN s of { Right(x,more) -> return x; Left s -> fail s }
 parsePT s = pt s
 
@@ -2640,11 +2631,13 @@ intThenTyp n = do { m <- try (possible natural); t <- typN; return (pick m,t)}
   where pick Nothing = (n::Int)
         pick (Just i) = fromInteger i
 
+parseType :: (TracksLoc m a, HasIORef m) => String -> m PT
 parseType s =
   case parse2 typN s of
     Right(x,more) -> return x
     Left s -> failM 1 [Ds "Ill-formed type in input.\n",Ds s]
 
+parseIntThenType :: (TracksLoc m a, HasIORef m) => Int -> String -> m (Int, PT)
 parseIntThenType n s =
   case parse2 (intThenTyp n) s of
       Right(x,more) -> return x
