@@ -1,7 +1,7 @@
 module ParserDef ( pp, pe, pd, name, getExp, getInt, getBounds
                  , pattern, expr, decl
                  , program, parse2, parse, parseString, parseFile
-                 , parseHandle, Handle
+                 , parseHandle --, Handle
                  , Command(..), pCommand )
                 where
 
@@ -34,12 +34,15 @@ loc p = SrcLoc (sourceName p) (sourceLine p) (sourceColumn p)
 -------------------------------------------------------------
 -- Parsers exported, and those defined for easy testing
 
+{-
 go s = parse expr "" s
 g s = parse pattern "" s
 f p s = parse p "" s
+-}
 pp = parse2 pattern
 pe = parse2 expr
 pd = parse2 decl
+{-
 
 pds = parse2(layout decl (return ""))
 
@@ -48,6 +51,7 @@ p2 p s = case parse2 p s of
   Right (x,left) -> putStrLn (show x) >> putStrLn left
 
 pa = parse2 arm
+-}
 
 getInt :: Monad m => (String -> m Int) -> String -> m Int
 getInt failf s = case parse2 natural s of
@@ -75,10 +79,10 @@ pprog x = parseFromFile program x
 
 ------------------------------------------------------------------
 
-parseString :: Monad a => Parser b -> [Char] -> a (Either [Char] (b,[Char]))
-parseString p s = (case parse2 p s of
+--parseString :: Monad a => Parser b -> [Char] -> a (Either [Char] (b,[Char]))
+parseString p s = case parse2 p s of
                     Right(x,s) -> return(Right(x,s))
-                    Left s -> return(Left s))
+                    Left s -> return(Left s)
 
 parseFile p s = comp
   where comp =  do { x <- parseFromFile p s
@@ -123,7 +127,7 @@ doubleToFloat n = encodeFloat a b
 -- Terminals of the grammar. I.e. Literals, variables, and constructors
 -----------------------------------------------------------
 
-literal :: (Literal -> a) -> (Extension a -> a) -> Parser a
+--literal :: (Literal -> a) -> (Extension a -> a) -> Parser a
 literal fromLit fromExt = lexeme
    (try (fmap fromLit floatLit) <|>  -- float before natP or 123.45 leaves the .45
     try (fmap fromExt natP) <|>
@@ -155,7 +159,7 @@ signedNumLiteral =
 
 terminal p inject = do { v <- p; return (inject v)}
 
-expvariable,expconstructor :: Parser Exp
+--expvariable,expconstructor :: Parser Exp
 expvariable = terminal identifier (Var . Global)
 
 conNameUnreserved = conName >>= \s -> if isReservedName s then
@@ -168,13 +172,13 @@ expconstructor = terminal conNameUnreserved prepareCon
                          buildLambda s = Lam [Pvar (Global "x")] (Sum s $ var "x") []
                          var = Var . Global
 
-patvariable :: Parser Pat
+--patvariable :: Parser Pat
 patvariable = do { (result@(Pvar x)) <- terminal identifier (Pvar . Global)
                  ; let (Global (patname@(init:_))) = x
                  ; if isUpper init
                    then fail ("pattern bindings must be lowercase, but this is not: " ++ patname)
                    else return result}
-name,constructor :: Parser Var
+--name,constructor :: Parser Var
 constructor = terminal conName Global
 name = terminal identifier Global
 
@@ -289,7 +293,7 @@ infixPattern =
      ; return $ Pcon x [p1,p2]
      }
 
-simplePattern :: Parser Pat
+--simplePattern :: Parser Pat
 simplePattern =
         literalP
     <|> do { p <- extP pattern; return(extToPat p)} -- FIXME: should be expPattern, but then:
@@ -327,14 +331,11 @@ conApp = {- try quotedInfix <|> -} regular
         pcon n ps = Pcon n ps
 
 
-resOp x = reservedOp x >> return ""
-
 constrOper = lexeme $ try $
-    (do{ c <- char ':'
-       ; cs <- many (opLetter tokenDef)
-       ; return (c:cs)
-       }
-     <?> "infix constructor operator")
+    (do { c <- char ':'
+        ; cs <- many opLetter
+        ; return (c:cs)
+        } <?> "infix constructor operator")
 
 lit2Pat (LInt n) = Plit(Int n)
 lit2Pat (LChar c) = Plit(Char c)
@@ -349,7 +350,7 @@ lit2Pat (LString s) = pConsUp patNil (map (Plit . Char) s)
 -----------------------------------------------------------
 
 -- simple expressions are one token, or surrounded by bracket-like things
-simpleExpression :: Parser Exp
+--simpleExpression :: Parser Exp
 simpleExpression =
         literalE                  -- "abc"   23.5   'x'   `d  123  #34 45v
     <|> code                      -- [| 3 + x |]
@@ -365,7 +366,7 @@ simpleExpression =
     <?> "simple expression"
 
 
-expr :: Parser Exp
+--expr :: Parser Exp
 expr =  lambdaExpression
     <|> letExpression
     <|> circExpression
@@ -386,12 +387,12 @@ pairOper = (try (string "(,)" >> return(Var (Global "(,)"))))
 
 
 lambdaExpression =
-    do{ reservedOp "\\"
-      ; pats <- many1 simplePattern
-      ; symbol "->"
-      ; e <- expr
-      ; return $ Lam pats e []
-      }
+    do { reservedOp "\\"
+       ; pats <- many1 simplePattern
+       ; symbol "->"
+       ; e <- expr
+       ; return $ Lam pats e []
+       }
 
 ifExpression =
    do { reserved "if"
@@ -431,7 +432,7 @@ caseExpression =
       ; return $ Case e alts
       }
 
-bodyP :: Parser a -> Parser (Body Exp)
+--bodyP :: Parser a -> Parser (Body Exp)
 bodyP equal = (fmap Guarded (many1 guard)) <|>
               (equal >> ((reserved "unreachable" >> return Unreachable) <|>
                          (fmap Normal expr)))
@@ -514,17 +515,17 @@ opList prefix op left right none =
 
 operators = opList prefix op AssocLeft AssocRight AssocNone
     where
-      op ":" assoc    = Infix (do{ var <- try (reservedOp ":")
-                                 ; return consExp}) assoc
-      op "$" assoc    = Infix (do{ var <- try (reservedOp "$")
-                                 ; return (\x y -> binop "$" x y)}) assoc
-      op "." assoc    = Infix (do{ var <- try (reservedOp ".")
-                                 ; return (\x y -> binop "." x y)}) assoc
-      op name assoc   = Infix (do{ var <- try (reservedOp name)
-                                 ; return (\x y -> binop name x y)}) assoc
-      prefix name     = Prefix(do{ var <- try (reservedOp name)
-                                 ; return (buildPrefix name)
-                                 })
+      op ":" assoc    = Infix (do { var <- try (reservedOp' ":")
+                                  ; return consExp}) assoc
+      op "$" assoc    = Infix (do { var <- try (reservedOp' "$")
+                                  ; return (\x y -> binop "$" x y)}) assoc
+      op "." assoc    = Infix (do { var <- try (reservedOp' ".")
+                                  ; return (\x y -> binop "." x y)}) assoc
+      op name assoc   = Infix (do { var <- try (reservedOp' name)
+                                  ; return (\x y -> binop name x y)}) assoc
+      prefix name     = Prefix(do { var <- try (reservedOp' name)
+                                  ; return (buildPrefix name)
+                                  })
 
 buildPrefix :: String -> Exp -> Exp
 buildPrefix "-" (Lit (Int n)) = Lit(Int (-  n))
@@ -572,10 +573,10 @@ escapeExp = escVar <|> escParen  where
 
 -- [| 3 + x |]
 code =
-  do { resOp "[|"
+  do { reservedOp "[|"
      ; e <- expr
-     ; resOp "|]"
-     ; return(Bracket e)}
+     ; reservedOp "|]"
+     ; return (Bracket e)}
 
 -------------------------------------------------------------------------
 ----------------- Read-eval-print loop commands ------------
@@ -595,7 +596,7 @@ instance Show Command where
   show (ExecCom e) = show e
   show EmptyCom = ""
 
-pCommand :: Parser Command    -- Parse a command
+--pCommand :: Parser Command    -- Parse a command
 pCommand =
   (try (eof >> return EmptyCom))
   <|>
@@ -674,7 +675,7 @@ boundsDec =
 vdecl =
   do { pos <- getPosition
      ; ps <- many1 simplePattern
-     ; e <- bodyP (reservedOp "=")
+     ; e <- bodyP (reservedOp' "=")
      ; ds <- whereClause
      ; toDecl (loc pos) (ps,e,ds)
      }
@@ -732,7 +733,7 @@ primDec =
 
 primName = name <|> parens operator
   where operator =
-          do { cs <- many1 (opLetter tokenDef)
+          do { cs <- many1 opLetter
              ; return $ Global cs }
 
 primTypedDec = 
@@ -817,7 +818,7 @@ targs = many arg
 
 -- Deriving clauses, both new and old style
 
-derive :: [(String,Int)] -> Parser [Derivation]
+--derive :: [(String,Int)] -> Parser [Derivation]
 derive arityCs =
   (do { reserved "deriving"
       ; (do {c <- extension arityCs ; return [c]}) 

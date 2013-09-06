@@ -55,7 +55,7 @@ import Monads(fio,fio2Mtc)
 
 -- To import ParserAll you must define CommentDef.hs and TokenDef.hs
 -- These should be in the same directory as this file.
-import ParserAll(Parser,symbol,try,identifier,integer,comma,reserved
+import ParserAll(symbol,try,identifier,integer,comma,reserved
                 ,parens, sepBy, (<?>), (<|>),parse,parse2,chainl1,many1)
 
 ------------------------------------------------
@@ -745,32 +745,32 @@ lift_qelimM afn nfn qfn fm = do {x <- qelift (fv fm) fm
 oneOf p [] = fail "oneOf"
 oneOf p (s:ss) = (try (p s)) <|> oneOf p ss
 
-lit :: Parser Term
+--lit :: Parser Term
 lit =
   do {n <- integer; return(mk_numeral(fromInteger n))}
 
-var:: Parser Term
+--var:: Parser Term
 var =
   do { x <- identifier; return(Var x)}
 
-factor:: Parser Term
+--factor:: Parser Term
 factor =
        lit
    <|> var
    <|> parens term
 
 
-prod:: Parser Term
+--prod:: Parser Term
 prod = chainl1 factor (symbol "*" >> return times)
   where times x y = Fn("*",[x,y])
 
-term:: Parser Term
+--term:: Parser Term
 term = chainl1 prod oper
   where op name x y = Fn(name,[x,y])
         oper = do { x <- oneOf symbol ["+","-"]
                   ; return(op x)}
 
-rel:: Parser (Formula Fol)
+--rel:: Parser (Formula Fol)
 rel = (try (symbol "true" >> return TrueF)) <|>
       (try (symbol "false" >> return FalseF)) <|>
       (try quant) <|>
@@ -785,7 +785,7 @@ rel = (try (symbol "true" >> return TrueF)) <|>
 
 keyword s = reserved s >> return s
 
-quant:: Parser (Formula Fol)
+--quant:: Parser (Formula Fol)
 quant = do { f <- oneOf symbol ["exists","forall"]
            ; vs <- many1 identifier
            ; symbol "."
@@ -799,7 +799,7 @@ exF (v:vs) body = Exists(v,exF vs body)
 allF [] body = body
 allF (v:vs) body = Forall(v,allF vs body)
 
-form:: Parser (Formula Fol)
+--form:: Parser (Formula Fol)
 form = (chainl1 rel oper)
   where op "&&" x y = And(x,y)
         op "||" x y = Or(x,y)

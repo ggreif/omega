@@ -1,6 +1,7 @@
 module TokenDef ( tokenDef ) where
 
-import StdTokenDef
+import Text.Parsec.Token
+import Text.Parsec.Language
 import CommentDef
 
 

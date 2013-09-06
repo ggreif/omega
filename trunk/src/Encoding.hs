@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Encoding where
 
 import Data.Maybe
@@ -10,7 +10,7 @@ import Value
 import Data.List(unionBy)
 import Bind
 import SyntaxExt(SynExt(..),listx,normalList)
-import Parser
+import ParserAll
 
 type Symbol = Name
 

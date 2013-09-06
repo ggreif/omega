@@ -17,8 +17,8 @@ import ParserDef(pe)
 import System.IO.Unsafe(unsafePerformIO)
 import Data.List(union,unionBy,(\\),find)
 import Bind
-import Parser( (<|>),(<?>),Parser, satisfy, char, string, many, many1
-             , try, between, sepBy, symbol )
+import ParserAll ( (<|>),(<?>),Parser, satisfy, char, string, many, many1
+                 , try, between, sepBy, symbol )
 import PrimParser( charLiteral, intLiteral, stringLiteral, identifierV
                  , parserPairs, runParser, parens )
 import SyntaxExt(Extension(..),SynExt(..),listx,listCons,listNil)
@@ -409,7 +409,11 @@ elab :: Prefix -> Env -> Env -> Dec -> FIO Env
 elab prefix magic init (Pat loc nm args body) =
   return(extendV [(nm,(Vpat nm (funcPat args body) (evalPat2 args body)))] init)
 elab prefix magic init (Val loc p b ds) =
-  do { v <- vlazy(do { env2 <- elaborate Tick ds magic
+  do { 
+                     --; fail ("DS: ######### " ++ show ds ++ show loc) ;
+       v <- vlazy(do { env2 <- elaborate Tick ds magic
+                     ; --fail ("DS: ######### " ++ show ds ++ show loc ++ show magic) ;
+                     ; --displays $ Dr [Ds "DSinnen: ######### ", Dl ds ",", Ds "   ", Ds $ show loc]
                      ; evalBody env2 b (fail "Body in Decl has no True case")})
      ; (u,frag2) <- matchPatLazy p v
      ; return(extendV frag2 init)}
@@ -524,7 +528,7 @@ importableVals =
  ,("parens",make1(parens :: Parser A -> Parser A))
  ,("try",make1(try :: Parser A -> Parser A))
  ,("between",make3(between :: Parser C -> Parser B -> Parser A -> Parser A))
- ,("sepBy",make2(Parser.sepBy :: Parser A -> Parser B -> Parser [A]))
+ ,("sepBy",make2(ParserAll.sepBy :: Parser A -> Parser B -> Parser [A]))
  ,("symbol",make1(symbol :: String -> Parser String))
  --,("satisfy",(make1(satisfy :: (Char -> Bool) -> Parser Char)))
  ,("parseChar",make(charLiteral :: Parser Char))

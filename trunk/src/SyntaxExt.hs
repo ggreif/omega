@@ -467,7 +467,7 @@ semiHeadSeq left right head elem buildf =
      ; tag <- many (lower <|> char '\'')
      ; return(buildf (Just x) xs tag)}
 
-extP :: Parser a -> Parser (Extension a)
+extP :: Parsec [Char] u a -> Parsec [Char] u (Extension a)
 extP p = try(lexeme(try(listP p) <|> leftListP p <|> parensP p <|> try(recP p) <|> leftRecP p))
   where listP p = semiTailSeq (char '[') (char ']') p p (\xs x t -> Listx (Right xs) x t)
         leftListP p = semiHeadSeq (char '[') (char ']') p p (\x xs t -> Listx (Left xs) x t)
@@ -506,7 +506,7 @@ seqX p =
         pairlike [x] tag = Itemx x tag
         pairlike xs tag = Pairx (Right xs) tag
 
-natP :: Parser (Extension a)
+natP :: Parsec [Char] u (Extension a)
 natP = try $ lexeme $
        (do{ satisfy ('#'==); n <- natNoSpace; return(Natx n Nothing "n")}) <|>
        (do{ n <- natNoSpace; tag <- many lower; return(Natx n Nothing tag)})
