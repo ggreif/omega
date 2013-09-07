@@ -13,11 +13,8 @@ module ParserAll
   , reservedOp', possible, parse2, integer, charLiteral, stringLiteral
   , layout, sourceName, sourceLine, sourceColumn, float, naturalOrFloat
   , isReservedName, prefixIdentifier, parseFromFile, opLetter, operator
-  , oper, parseFromHandle, getPosition, {-setPosition,-} Parser --, runParser
-
-, res, res'
-
- ) where
+  , oper, parseFromHandle, getPosition, Parser
+  ) where
 
 -- Note to use this module, the modules CommentDef.hs and TokenDef.hs
 -- must exist usually in the same directory as the file that imports
@@ -47,17 +44,15 @@ relax = unsafeCoerce fst
 omegaTokens :: P.GenTokenParser (Layout String Identity) u Identity
 omegaTokens = P.makeTokenParser tokenDef'
 
+tokenDef'' :: Stream s Identity Char => P.GenLanguageDef s u Identity
 tokenDef'' = (relax (tokenDef, undefined))
                { P.identStart = letter -- these do not cast benignly :-(
                , P.identLetter = alphaNum <|> oneOf "_'"
                , P.opStart = opLetters
-               --, P.opLetter = opLetters
                }
-   where opLetters :: Parsec (Layout String Identity) u Char
-         opLetters = oneOf ":!#$%&*+./<=>?@\\^|-~"
+   where opLetters = oneOf ":!#$%&*+./<=>?@\\^|-~"
 
-tokenDef' = tokenDef'' { P.opLetter = P.opStart tokenDef'' }
-
+tokenDef' = tokenDef'' { P.opLetter = P.opStart tokenDef' }
 
 lexeme = P.lexeme omegaTokens
 comma = P.comma omegaTokens
@@ -126,34 +121,22 @@ getPosition = do (sourceParts -> (cs, line, col)) <- Prim.getPosition
                  return $ SourcePos cs line col tabs
     where sourceParts s = (Pos.sourceName s, Pos.sourceLine s, Pos.sourceColumn s)
 
---setPosition (SourcePos cs line col tabs) = Prim.setPosition $ Pos.newPos cs line col
-
 indent :: Parsec (Layout String Identity) u ()
 indent = indent'
---  do { SourcePos cs line col tabs <- getPosition
---     ; setPosition (SourcePos cs line col (col : tabs))
---     }
 
---undent :: Parsec s u ()
 undent :: Parsec (Layout String Identity) u ()
 undent = undent'
---  do { SourcePos cs line col (p:ps) <- getPosition
---     ; setPosition (SourcePos cs line col ps)
---     }
 
---align :: Parsec [Char] u a -> Parsec [Char] u b -> Parsec [Char] u [a]
 align p stop =
-  do { x <- p --; error "got DECL"
+  do { x <- p
      ; whiteSpace
      ; (do { try layoutSep; xs <- align p stop; return (x:xs)}) <|>
        (do { try layoutEnd; stop; return [x]}) <|>
            -- removing indentation happens automatically
-           -- in function "update" (in Parser.hs), if we see layoutEnd
+           -- while consuming 'virtualEnd'
        (do { stop; undent; return [x]})
      }
 
---layout :: Parser a -> Parser b -> Parser [a]
---layout :: Parsec [Char] u a -> Parsec [Char] u b -> Parsec [Char] u [a]
 layout p stop =
   (do { try layoutBegin; xs <- P.semiSep omegaTokens p
       ; explicitBrace; stop; return xs}) <|>
@@ -200,8 +183,6 @@ type Parser a = Parsec (Layout String Identity) () a
 data Layout s m where
   Indent :: (Monad m, Stream s m Char) => ![Int] -> !Int -> !Bool -> s -> Layout s m
 
---deriving instance Show (Layout String m)
-
 class Stream s m t => LayoutStream s m t l where
   virtualSep :: ParsecT (l s m) u m ()
   virtualEnd :: ParsecT (l s m) u m ()
@@ -225,6 +206,8 @@ instance Stream s m Char => LayoutStream s m Char Layout where
                   traceShow ("virtualEnd:", out, col) $ setInput $ Indent out col False s
 
 
+-- are instances of @Stream@
+--
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
   uncons (Indent tabs col c'ed s) = do un <- uncons s
                                        case un of
@@ -232,31 +215,6 @@ instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
                                          Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) False s')
                                          Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
                                          Just (t, s') -> case (tabs, c'ed) of
-                                                         ((tab:_), False) | t /= ' ' && col == tab -> return Nothing
-                                                         _ -> traceShow (tabs, col+1, c'ed, t, take 50 (unsafeCoerce s' :: String)) (return $ Just (t, Indent tabs (col + 1) False s'))
+                                                         ((tab:_), False) | t /= ' ' && col <= tab -> return Nothing
+                                                         _ -> return $ Just (t, Indent tabs (col + 1) False s')
 
-{-
- a = let
-  b = id
-   1
-  c = 2 in b
- f = 3
- 
- 3 = let in 6
--}
-
-inp :: Layout String Identity
-inp = intoLayout " a = let\n  b = id\n   1\n  c = 2 in b\n f = 3\n \n 3 = let in 6\n"
-
-lexeme' p = do good <- p ; many (oneOf " \n\t"); return good
-identifier' = identifier -- lexeme' (many1 $ oneOf "abcdi")
-num' = lexeme' (many1 $ oneOf ['0' .. '9'])
-prgm  = space >> identifier' >> lexeme' (string "= let") >> indent' >> virtualSep >> identifier'
-prgm' = space >> identifier' >> lexeme' (string "= let") >> indent'
-              >> identifier' >> lexeme' (string "=") >> identifier' >> num'
-              >> virtualSep >> lexeme' identifier'
-
-res,res' :: Either ParseError String
-res = parse prgm "<inp>" inp
-
-res' = parse prgm' "<inp>" inp
