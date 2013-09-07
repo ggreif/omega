@@ -127,7 +127,7 @@ align p stop =
   do { x <- p
      ; whiteSpace
      ; (do { try layoutSep; xs <- align p stop; return (x:xs)}) <|>
-       (do { try layoutEnd; stop; return[x]}) <|>
+       (do { try layoutEnd; stop; return [x]}) <|>
            -- removing indentation happens automatically
            -- in function "update" (in Parser.hs), if we see layoutEnd
        (do { stop; undent; return [x]})
@@ -188,8 +188,11 @@ type Parser a = ParsecT String () Identity a
 data Layout s m where
   Indent :: (Monad m, Stream s m Char) => [Int] -> Int -> s -> Layout s m
 
-class (Monad m, Stream s m Char) => LayoutStream s m where
-  virtualSemi :: ParsecT s u m ()
+class (Monad m, Stream s m Char) => LayoutStream l s m where
+  virtualSep :: ParsecT s u m ()
+  virtualEnd :: ParsecT s u m ()
+  intoLayout :: s -> l s
+  outofLayout :: l s -> s
 
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
   uncons (Indent tabs col s) = do un <- uncons s
