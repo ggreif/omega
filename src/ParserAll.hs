@@ -188,6 +188,9 @@ type Parser a = ParsecT String () Identity a
 data Layout s m where
   Indent :: (Monad m, Stream s m Char) => [Int] -> Int -> s -> Layout s m
 
+class (Monad m, Stream s m Char) => LayoutStream s m where
+  virtualSemi :: ParsecT s u m ()
+
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
   uncons (Indent tabs col s) = do un <- uncons s
                                   case un of
