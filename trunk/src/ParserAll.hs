@@ -107,8 +107,10 @@ parse2 p input
 -- see http://stackoverflow.com/questions/3023439/parsing-indentation-based-syntaxes-in-haskells-parsec/3023615#3023615
 -- and the resulting package: https://github.com/luqui/parsec-layout
 
-layoutSep   = symbol ";" <?> "inserted layout separator (;)"
-layoutEnd   = symbol "}" <?> "inserted layout closing brace"
+layoutSep :: ParsecT (Layout String Identity) u Identity ()
+layoutSep   = virtualSep <?> "inserted layout separator (;)"
+layoutEnd :: ParsecT (Layout String Identity) u Identity ()
+layoutEnd   = virtualEnd <?> "inserted layout closing brace"
 layoutBegin = symbol "{" <?> "layout opening brace"
 explicitBrace = symbol "}" <?> "explicit layout closing brace"
 
@@ -214,10 +216,10 @@ instance Stream s m Char => LayoutStream s m Char Layout where
                setInput $ Indent tabs col False s
   virtualSep = do (Indent tabs@(tab:_) col False s) <- getInput
                   guard $ col == tab
-                  traceShow ("virtualSep", tabs, col) $ setInput $ Indent tabs col True s
+                  traceShow ("virtualSep:", tabs, col) $ setInput $ Indent tabs col True s
   virtualEnd = do (Indent (tab:out) col False s) <- getInput
                   guard $ col < tab
-                  setInput $ Indent out col False s
+                  traceShow ("virtualEnd:", out, col) $ setInput $ Indent out col False s
 
 
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
@@ -228,7 +230,7 @@ instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
                                          Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
                                          Just (t, s') -> case (tabs, c'ed) of
                                                          ((tab:_), False) | t /= ' ' && col == tab -> return Nothing
-                                                         _ -> traceShow (tabs, col+1, c'ed, t, unsafeCoerce s' :: String) (return $ Just (t, Indent tabs (col + 1) False s'))
+                                                         _ -> traceShow (tabs, col+1, c'ed, t, take 50 (unsafeCoerce s' :: String)) (return $ Just (t, Indent tabs (col + 1) False s'))
 
 {-
  a = let
