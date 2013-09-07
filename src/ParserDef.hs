@@ -34,24 +34,9 @@ loc p = SrcLoc (sourceName p) (sourceLine p) (sourceColumn p)
 -------------------------------------------------------------
 -- Parsers exported, and those defined for easy testing
 
-{-
-go s = parse expr "" s
-g s = parse pattern "" s
-f p s = parse p "" s
--}
 pp = parse2 pattern
 pe = parse2 expr
 pd = parse2 decl
-{-
-
-pds = parse2(layout decl (return ""))
-
-p2 p s = case parse2 p s of
-  Left s -> putStrLn s
-  Right (x,left) -> putStrLn (show x) >> putStrLn left
-
-pa = parse2 arm
--}
 
 getInt :: Monad m => (String -> m Int) -> String -> m Int
 getInt failf s = case parse2 natural s of
@@ -408,7 +393,7 @@ ifExpression =
 
 letExpression =
     do{ reserved "let"
-      ; decls <- layout decl (reserved "in")
+      ; decls <- layout decl $ reserved "in"
       ; xs <- mergeFun decls
       ; e <- expr
       ; return $ Let xs e
@@ -419,7 +404,7 @@ circExpression =
       ; vs <- (parens(many name)) <|> return []
       ; e <- expr
       ; reserved "where"
-      ; decls <- layout decl (return ())
+      ; decls <- layout decl $ return ()
       ; xs <- mergeFun decls
       ; return $ Circ vs e xs
       }
@@ -428,7 +413,7 @@ caseExpression =
     do{ reserved "case"
       ; e <- expr
       ; reserved "of"
-      ; alts <- layout arm (return ())
+      ; alts <- layout arm $ return ()
       ; return $ Case e alts
       }
 
@@ -444,7 +429,7 @@ bodyP equal = (fmap Guarded (many1 guard)) <|>
 
 whereClause =
       (do { reserved "where"
-          ; ds <- layout decl (return ())
+          ; ds <- layout decl $ return ()
           ; xs <- mergeFun ds
           ; return xs})
   <|> (return [])
@@ -471,7 +456,7 @@ section = try(do { symbol "("
 draw = letD <|> bind <|> exp where
  letD = do { pos <- getPosition
            ; reserved "let"
-           ; decls <- layout decl (return ())
+           ; decls <- layout decl $ return ()
            ; xs <- mergeFun decls
            ; return(LetSt (loc pos) xs) }
  bind = try $
@@ -485,7 +470,7 @@ draw = letD <|> bind <|> exp where
 
 doexpr =
   do { reserved "do"
-     ; zs <- layout draw (return ())
+     ; zs <- layout draw $ return ()
      ; return(Do (Var (Global "bind"), Var (Global "fail")) zs)
      }
 
@@ -620,7 +605,7 @@ pCommand =
 
 program =
   do { whiteSpace
-     ; ds <- layout decl (return "")
+     ; ds <- layout decl $ return ()
      ; eof
      ; xs <- mergeFun ds
      ; return $ Program xs
@@ -660,7 +645,7 @@ theorem =
 testDec =
   do { lexeme (string "##test")
      ; s <- stringLiteral
-     ; ds <- layout decl (return ())
+     ; ds <- layout decl $ return ()
      ; xs <- mergeFun ds
      ; return(Reject s xs)
      }
@@ -793,7 +778,7 @@ polyLevel xs t = PolyLevel xs t
 explicit b pos tname =
   do { (levels,kind) <- typing
      ; reserved "where"
-     ; cs <- layout explicitConstr (return ())
+     ; cs <- layout explicitConstr $ return ()
      ; ds <- derive (map getCArity2 cs)
      ; let gadt = (GADT (loc pos) b tname (polyLevel levels kind) cs ds Ox)
      ; return(gadt)
