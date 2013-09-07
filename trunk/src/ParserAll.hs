@@ -14,6 +14,9 @@ module ParserAll
   , layout, sourceName, sourceLine, sourceColumn, float, naturalOrFloat
   , isReservedName, prefixIdentifier, parseFromFile, opLetter, operator
   , oper, parseFromHandle, getPosition, setPosition, Parser --, runParser
+
+, res
+
  ) where
 
 -- Note to use this module, the modules CommentDef.hs and TokenDef.hs
@@ -192,17 +195,21 @@ data Layout s m where
 class Stream s m t => LayoutStream s m t l where
   virtualSep :: ParsecT (l s m) u m ()
   virtualEnd :: ParsecT (l s m) u m ()
+  indent' :: ParsecT (l s m) u m ()
   intoLayout :: s -> l s m
   outofLayout :: l s m -> s
 
 instance Stream s m Char => LayoutStream s m Char Layout where
   intoLayout = Indent [] 0
   outofLayout (Indent _ _ s) = s
+  indent' = do (Indent tabs col s) <- getInput
+               setInput $ Indent (col:tabs) col s
   virtualSep = do (Indent (tab:_) col _) <- getInput
                   guard $ col == tab
   virtualEnd = do (Indent (tab:out) col s) <- getInput
                   guard $ col < tab
                   setInput $ Indent out col s
+
 
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
   uncons (Indent tabs col s) = do un <- uncons s
@@ -211,3 +218,23 @@ instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
                                     Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) s')
                                     Just (t, s') -> return $ Just (t, Indent tabs (col + 1) s')
                                     Nothing -> return Nothing
+
+{-
+ a = let
+  b = id
+   1
+  c = 2 in b
+ f = 3
+ 
+ 3 = let in 6
+-}
+
+inp :: Layout String Identity
+inp = intoLayout " a = let\n  b = id\n   1\n  c = 2 in b\n f = 3\n \n 3 = let in 6\n"
+
+lexeme' p = do good <- p ; many (oneOf " \n\t"); return good
+identifier' = many1 $ oneOf "abcdi"
+prgm = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent' >> virtualSep >> lexeme' identifier'
+
+res :: Either ParseError String --Parsec (Layout String Identity) () String
+res = parse prgm "<inp>" inp
