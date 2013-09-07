@@ -33,6 +33,7 @@ import TokenDef
 import Data.Functor.Identity
 import System.IO (hGetContents, Handle)
 import Unsafe.Coerce (unsafeCoerce)
+import Control.Monad (guard)
 
 natNoSpace :: Parsec String u Int
 natNoSpace = fmap fromInteger natural -- TODO: fmap fromInteger nat -- do not eat space!!!!
@@ -186,16 +187,27 @@ type Parser a = ParsecT String () Identity a
 -- Layout Streams
 
 data Layout s m where
-  Indent :: (Monad m, Stream s m Char) => [Int] -> Int -> s -> Layout s m
+  Indent :: (Monad m, Stream s m Char) => ![Int] -> !Int -> s -> Layout s m
 
-class (Monad m, Stream s m Char) => LayoutStream l s m where
-  virtualSep :: ParsecT s u m ()
-  virtualEnd :: ParsecT s u m ()
-  intoLayout :: s -> l s
-  outofLayout :: l s -> s
+class Stream s m t => LayoutStream s m t l where
+  virtualSep :: ParsecT (l s m) u m ()
+  virtualEnd :: ParsecT (l s m) u m ()
+  intoLayout :: s -> l s m
+  outofLayout :: l s m -> s
+
+instance Stream s m Char => LayoutStream s m Char Layout where
+  intoLayout = Indent [] 0
+  outofLayout (Indent _ _ s) = s
+  virtualSep = do (Indent (tab:_) col _) <- getInput
+                  guard $ col == tab
+  virtualEnd = do (Indent (tab:out) col s) <- getInput
+                  guard $ col < tab
+                  setInput $ Indent out col s
 
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
   uncons (Indent tabs col s) = do un <- uncons s
                                   case un of
-                                    Just (t, s') -> return $ Just (t, Indent tabs col s')
+                                    Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 s')
+                                    Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) s')
+                                    Just (t, s') -> return $ Just (t, Indent tabs (col + 1) s')
                                     Nothing -> return Nothing
