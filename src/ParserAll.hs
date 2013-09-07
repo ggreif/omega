@@ -1,4 +1,5 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, FlexibleContexts, FlexibleInstances
+           , GADTs, MultiParamTypeClasses #-}
 
 module ParserAll
   ( module Text.Parsec.Combinator
@@ -109,16 +110,19 @@ getPosition = do (sourceParts -> (cs, line, col)) <- Prim.getPosition
 
 setPosition (SourcePos cs line col tabs) = Prim.setPosition $ Pos.newPos cs line col
 
+indent :: Parsec [Char] u ()
 indent =
   do { SourcePos cs line col tabs <- getPosition
      ; setPosition (SourcePos cs line col (col : tabs))
      }
+
+undent :: Parsec [Char] u ()
 undent =
   do { SourcePos cs line col (p:ps) <- getPosition
      ; setPosition (SourcePos cs line col ps)
      }
 
---align :: Parser a -> Parser b -> Parser [a]
+align :: Parsec [Char] u a -> Parsec [Char] u b -> Parsec [Char] u [a]
 align p stop =
   do { x <- p
      ; whiteSpace
@@ -177,3 +181,15 @@ prefixIdentifier c =
 
 
 type Parser a = ParsecT String () Identity a
+
+
+-- Layout Streams
+
+data Layout s m where
+  Indent :: (Monad m, Stream s m Char) => [Int] -> Int -> s -> Layout s m
+
+instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
+  uncons (Indent tabs col s) = do un <- uncons s
+                                  case un of
+                                    Just (t, s') -> return $ Just (t, Indent tabs col s')
+                                    Nothing -> return Nothing
