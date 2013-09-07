@@ -1,5 +1,5 @@
 {-# LANGUAGE ViewPatterns, FlexibleContexts, FlexibleInstances
-           , GADTs, MultiParamTypeClasses, StandaloneDeriving #-}
+           , GADTs, MultiParamTypeClasses #-}
 
 module ParserAll
   ( module Text.Parsec.Combinator
@@ -7,7 +7,7 @@ module ParserAll
   , module Text.Parsec.Char
   , module Text.Parsec.Expr
   , module TokenDef
-  , LayoutStream(..), Identity, natNoSpace
+  , Identity, natNoSpace
   , lexeme, comma, symbol, semi, whiteSpace, ident, construct, decimal
   , natural, identifier, parens, squares, braces, reserved, reservedOp
   , reservedOp', possible, parse2, integer, charLiteral, stringLiteral
@@ -33,7 +33,6 @@ import Data.Functor.Identity
 import System.IO (hGetContents, Handle)
 import Unsafe.Coerce (unsafeCoerce)
 import Control.Monad (guard)
-import Debug.Trace
 
 natNoSpace :: Parsec (Layout String Identity) u Int
 natNoSpace = fmap fromInteger natural -- TODO: fmap fromInteger nat -- do not eat space!!!!
@@ -106,26 +105,19 @@ parse2 p input
 -- and the resulting package: https://github.com/luqui/parsec-layout
 
 layoutSep :: ParsecT (Layout String Identity) u Identity ()
-layoutSep   = virtualSep <?> "inserted layout separator (;)"
+layoutSep = virtualSep <?> "inserted layout separator (;)"
 layoutEnd :: ParsecT (Layout String Identity) u Identity ()
-layoutEnd   = virtualEnd <?> "inserted layout closing brace"
+layoutEnd = virtualEnd <?> "inserted layout closing brace"
 layoutBegin = symbol "{" <?> "layout opening brace"
 explicitBrace = symbol "}" <?> "explicit layout closing brace"
 
-data SourcePos  = SourcePos { sourceName :: Pos.SourceName, sourceLine :: Pos.Line, sourceColumn :: Pos.Column, layoutTabs :: [Pos.Column] }
+data SourcePos  = SourcePos { sourceName :: Pos.SourceName, sourceLine :: Pos.Line, sourceColumn :: Pos.Column }
     deriving (Eq, Ord)
 
 getPosition :: Parsec (Layout String Identity) u SourcePos
 getPosition = do (sourceParts -> (cs, line, col)) <- Prim.getPosition
-                 (Indent tabs col _ _) <- getInput
-                 return $ SourcePos cs line col tabs
+                 return $ SourcePos cs line col
     where sourceParts s = (Pos.sourceName s, Pos.sourceLine s, Pos.sourceColumn s)
-
-indent :: Parsec (Layout String Identity) u ()
-indent = indent'
-
-undent :: Parsec (Layout String Identity) u ()
-undent = undent'
 
 align p stop =
   do { x <- p
@@ -186,24 +178,24 @@ data Layout s m where
 class Stream s m t => LayoutStream s m t l where
   virtualSep :: ParsecT (l s m) u m ()
   virtualEnd :: ParsecT (l s m) u m ()
-  indent' :: ParsecT (l s m) u m ()
-  undent' :: ParsecT (l s m) u m ()
+  indent :: ParsecT (l s m) u m ()
+  undent :: ParsecT (l s m) u m ()
   intoLayout :: s -> l s m
   outofLayout :: l s m -> s
 
 instance Stream s m Char => LayoutStream s m Char Layout where
   intoLayout = Indent [] 0 False
   outofLayout (Indent _ _ _ s) = s
-  indent' = do (Indent tabs col c'ed s) <- getInput
-               setInput $ Indent (col:tabs) col True s
-  undent' = do (Indent (_:tabs) col c'ed s) <- getInput
-               setInput $ Indent tabs col False s
-  virtualSep = do (Indent tabs@(tab:_) col False s) <- getInput
+  indent = do Indent tabs col c'ed s <- getInput
+              setInput $ Indent (col:tabs) col True s
+  undent = do Indent (_:tabs) col c'ed s <- getInput
+              setInput $ Indent tabs col False s
+  virtualSep = do Indent tabs@(tab:_) col False s <- getInput
                   guard $ col == tab
-                  traceShow ("virtualSep:", tabs, col) $ setInput $ Indent tabs col True s
-  virtualEnd = do (Indent (tab:out) col False s) <- getInput
+                  setInput $ Indent tabs col True s
+  virtualEnd = do Indent (tab:out) col False s <- getInput
                   guard $ col < tab
-                  traceShow ("virtualEnd:", out, col) $ setInput $ Indent out col False s
+                  setInput $ Indent out col False s
 
 
 -- are instances of @Stream@
