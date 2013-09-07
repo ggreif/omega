@@ -112,9 +112,9 @@ fromChrSeqV = lift1 "toChrSeq" f where
 -- Running a parser (simplistic, suppress error messages)
 
 runParser :: Parser a -> String -> Maybe a
-runParser p str = case parse p "<omega input>" str of
-                  Left _ -> Nothing
-                  Right y -> Just y
+runParser p str = undefined -- case parse p "<omega input>" str of
+                  --Left _ -> Nothing
+                  --Right y -> Just y
 
 ---------------------------------------------------------------
 -- The list of pairs that is exported
