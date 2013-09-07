@@ -47,7 +47,7 @@ relax = unsafeCoerce fst
 omegaTokens :: P.GenTokenParser (Layout String Identity) u Identity
 omegaTokens = P.makeTokenParser tokenDef'
 
-tokenDef' = (relax (tokenDef, undefined))
+tokenDef'' = (relax (tokenDef, undefined))
                { P.identStart = letter -- these do not cast benignly :-(
                , P.identLetter = alphaNum <|> oneOf "_'"
                , P.opStart = opLetters
@@ -55,6 +55,9 @@ tokenDef' = (relax (tokenDef, undefined))
                }
    where opLetters :: Parsec (Layout String Identity) u Char
          opLetters = oneOf ":!#$%&*+./<=>?@\\^|-~"
+
+tokenDef' = tokenDef'' { P.opLetter = P.opStart tokenDef'' }
+
 
 lexeme = P.lexeme omegaTokens
 comma = P.comma omegaTokens
