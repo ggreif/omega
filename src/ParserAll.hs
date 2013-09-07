@@ -7,7 +7,7 @@ module ParserAll
   , module Text.Parsec.Char
   , module Text.Parsec.Expr
   , module TokenDef
-  , natNoSpace
+  , LayoutStream(..), Identity, natNoSpace
   , lexeme, comma, symbol, semi, whiteSpace, ident, construct, decimal
   , natural, identifier, parens, squares, braces, reserved, reservedOp
   , reservedOp', possible, parse2, integer, charLiteral, stringLiteral
@@ -38,10 +38,21 @@ import System.IO (hGetContents, Handle)
 import Unsafe.Coerce (unsafeCoerce)
 import Control.Monad (guard)
 
-natNoSpace :: Parsec String u Int
+natNoSpace :: Parsec (Layout String Identity) u Int
 natNoSpace = fmap fromInteger natural -- TODO: fmap fromInteger nat -- do not eat space!!!!
 
-omegaTokens = P.makeTokenParser tokenDef
+--relax :: Stream s Identity Char => (P.LanguageDef u -> P.GenTokenParser String u Identity) -> (P.GenLanguageDef s u Identity -> P.GenTokenParser s u Identity)
+relax :: Stream s Identity Char => (P.LanguageDef u, P.GenLanguageDef s u Identity) -> P.GenLanguageDef s u Identity
+relax = unsafeCoerce fst
+
+
+
+----omegaTokens :: Stream (Layout String Identity) Identity Char => P.GenTokenParser s u Identity
+omegaTokens :: P.GenTokenParser (Layout String Identity) u Identity
+omegaTokens = P.makeTokenParser tokenDef' -- ---$ relax (tokenDef, undefined)
+
+tokenDef' = relax (tokenDef, undefined)
+
 lexeme = P.lexeme omegaTokens
 comma = P.comma omegaTokens
 symbol = P.symbol omegaTokens
@@ -60,16 +71,16 @@ stringLiteral = P.stringLiteral omegaTokens
 decimal = P.decimal omegaTokens
 float = P.float omegaTokens
 naturalOrFloat = P.naturalOrFloat omegaTokens
-opLetter = P.opLetter tokenDef
+opLetter = P.opLetter tokenDef'
 operator = P.operator omegaTokens
 
-ident = do { c <- P.identStart tokenDef
-           ; cs <- many (P.identLetter tokenDef)
+ident = do { c <- P.identStart tokenDef'
+           ; cs <- many (P.identLetter tokenDef')
            ; return (c:cs)
            } <?> "identifier"
 
 construct = do { c <- upper
-               ; cs <- many (P.identLetter tokenDef)
+               ; cs <- many (P.identLetter tokenDef')
                ; return (c:cs)
                } <?> "Constructor name"
 
@@ -78,9 +89,16 @@ possible p = fmap Just (try p) <|> return Nothing
 runParser :: Parser a -> String -> Maybe a
 runParser = undefined4
 
-parse2 :: Parsec [Char] u p -> String -> Either String (p, String)
+unitState :: Parsec (ParserAll.Layout String Identity) u a -> Parsec (ParserAll.Layout String Identity) () a
+unitState = unsafeCoerce
+
+unitState' :: Parsec s u a -> Parsec s () a
+unitState' = unsafeCoerce
+
+-----parse2 :: Stream s Identity Char => Parsec s u p -> u -> Either String (p, String)
+parse2 :: Parsec (Layout String Identity) u p -> String -> Either String (p, String)
 parse2 p input
-    = case parse (unsafeCoerce (whiteSpace >> p)) "keyboard input" input of
+    = case runP (unitState' (whiteSpace >> p)) () "keyboard input" (intoLayout input) of
         Left err -> Left (show err)
         Right p -> Right (p, "")
 
@@ -114,19 +132,19 @@ getPosition = do (sourceParts -> (cs, line, col)) <- Prim.getPosition
 
 setPosition (SourcePos cs line col tabs) = Prim.setPosition $ Pos.newPos cs line col
 
-indent :: Parsec [Char] u ()
+indent :: Parsec s u ()
 indent =
   do { SourcePos cs line col tabs <- getPosition
      ; setPosition (SourcePos cs line col (col : tabs))
      }
 
-undent :: Parsec [Char] u ()
+undent :: Parsec s u ()
 undent =
   do { SourcePos cs line col (p:ps) <- getPosition
      ; setPosition (SourcePos cs line col ps)
      }
 
-align :: Parsec [Char] u a -> Parsec [Char] u b -> Parsec [Char] u [a]
+--align :: Parsec [Char] u a -> Parsec [Char] u b -> Parsec [Char] u [a]
 align p stop =
   do { x <- p
      ; whiteSpace
@@ -138,17 +156,17 @@ align p stop =
      }
 
 --layout :: Parser a -> Parser b -> Parser [a]
-layout :: Parsec [Char] u a -> Parsec [Char] u b -> Parsec [Char] u [a]
+--layout :: Parsec [Char] u a -> Parsec [Char] u b -> Parsec [Char] u [a]
 layout p stop =
   (do { try layoutBegin; xs <- P.semiSep omegaTokens p
       ; explicitBrace; stop; return xs}) <|>
   (do { indent; xs <- align p stop; return xs})
 
 
-isReservedName = (`elem` P.reservedNames tokenDef)
+isReservedName = (`elem` P.reservedNames tokenDef')
 
-oper = do { c <- (P.opStart tokenDef)
-          ; cs <- many (P.opLetter tokenDef)
+oper = do { c <- (P.opStart tokenDef')
+          ; cs <- many (P.opLetter tokenDef')
           ; return (c:cs)
           } <?> "operator"
 
@@ -160,16 +178,16 @@ undefined3 = error "undefined3"
 undefined4 = error "undefined4"
 undefined5 = error "undefined5"
 
-parseFromFile :: Parsec [Char] u a -> Pos.SourceName -> IO (Either ParseError a)
+parseFromFile :: Parsec (Layout String Identity) u a -> Pos.SourceName -> IO (Either ParseError a)
 parseFromFile p fname
-    = do{ input <- readFile fname
-        ; return (parse (unsafeCoerce p) fname input)
-        }
+    = do { input <- readFile fname
+         ; return (runP (unitState' p) () fname $ intoLayout input)
+         }
 
-parseFromHandle :: Parsec [Char] u a -> Pos.SourceName -> Handle -> IO (Either ParseError a)
+parseFromHandle :: Parsec (Layout String Identity) u a -> Pos.SourceName -> Handle -> IO (Either ParseError a)
 parseFromHandle p fname h
     = do { input <- hGetContents h
-         ; return $ parse (unsafeCoerce p) fname input
+         ; return (runP (unitState' p) () fname $ intoLayout input)
          }
 --parseFromHandle :: t -> u -> u -> IO (Either String b)
 --parseFromHandle = undefined
@@ -184,7 +202,7 @@ prefixIdentifier c =
        }
 
 
-type Parser a = ParsecT String () Identity a
+type Parser a = Parsec (Layout String Identity) () a
 
 
 -- Layout Streams
