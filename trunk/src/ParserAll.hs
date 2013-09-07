@@ -236,11 +236,11 @@ inp :: Layout String Identity
 inp = intoLayout " a = let\n  b = id\n   1\n  c = 2 in b\n f = 3\n \n 3 = let in 6\n"
 
 lexeme' p = do good <- p ; many (oneOf " \n\t"); return good
-identifier' = many1 $ oneOf "abcdi"
+identifier' = lexeme' (many1 $ oneOf "abcdi")
 num' = lexeme' (many1 $ oneOf ['0' .. '9'])
-prgm  = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent' >> virtualSep >> lexeme' identifier'
-prgm' = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent'
-              >> lexeme' identifier' >> lexeme' (string "=") >> lexeme' identifier' >> num'
+prgm  = space >> identifier' >> lexeme' (string "= let") >> indent' >> virtualSep >> identifier'
+prgm' = space >> identifier' >> lexeme' (string "= let") >> indent'
+              >> identifier' >> lexeme' (string "=") >> identifier' >> num'
               >> virtualSep >> lexeme' identifier'
 
 res,res' :: Either ParseError String
