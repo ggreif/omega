@@ -190,7 +190,7 @@ type Parser a = ParsecT String () Identity a
 -- Layout Streams
 
 data Layout s m where
-  Indent :: (Monad m, Stream s m Char) => ![Int] -> !Int -> s -> Layout s m
+  Indent :: (Monad m, Stream s m Char) => ![Int] -> !Int -> !Bool -> s -> Layout s m
 
 class Stream s m t => LayoutStream s m t l where
   virtualSep :: ParsecT (l s m) u m ()
@@ -200,24 +200,26 @@ class Stream s m t => LayoutStream s m t l where
   outofLayout :: l s m -> s
 
 instance Stream s m Char => LayoutStream s m Char Layout where
-  intoLayout = Indent [] 0
-  outofLayout (Indent _ _ s) = s
-  indent' = do (Indent tabs col s) <- getInput
-               setInput $ Indent (col:tabs) col s
-  virtualSep = do (Indent (tab:_) col _) <- getInput
+  intoLayout = Indent [] 0 False
+  outofLayout (Indent _ _ _ s) = s
+  indent' = do (Indent tabs col c'ed s) <- getInput
+               setInput $ Indent (col:tabs) col c'ed s
+  virtualSep = do (Indent tabs@(tab:_) col False s) <- getInput
                   guard $ col == tab
-  virtualEnd = do (Indent (tab:out) col s) <- getInput
+                  setInput $ Indent tabs col True s
+  virtualEnd = do (Indent (tab:out) col False s) <- getInput
                   guard $ col < tab
-                  setInput $ Indent out col s
+                  setInput $ Indent out col False s
 
 
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
-  uncons (Indent tabs col s) = do un <- uncons s
-                                  case un of
-                                    Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 s')
-                                    Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) s')
-                                    Just (t, s') -> return $ Just (t, Indent tabs (col + 1) s')
-                                    Nothing -> return Nothing
+  uncons (Indent (tab:_) col False s) | col == tab = return Nothing -- unconsumed layout separator
+  uncons (Indent tabs col _ s) = do un <- uncons s
+                                    case un of
+                                      Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
+                                      Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) False s')
+                                      Just (t, s') -> return $ Just (t, Indent tabs (col + 1) False s')
+                                      Nothing -> return Nothing
 
 {-
  a = let
@@ -234,7 +236,10 @@ inp = intoLayout " a = let\n  b = id\n   1\n  c = 2 in b\n f = 3\n \n 3 = let in
 
 lexeme' p = do good <- p ; many (oneOf " \n\t"); return good
 identifier' = many1 $ oneOf "abcdi"
-prgm = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent' >> virtualSep >> lexeme' identifier'
+prgm  = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent' >> virtualSep >> lexeme' identifier'
+prgm' = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent' >> lexeme' identifier'
 
-res :: Either ParseError String --Parsec (Layout String Identity) () String
+res,res' :: Either ParseError String
 res = parse prgm "<inp>" inp
+
+res' = parse prgm' "<inp>" inp
