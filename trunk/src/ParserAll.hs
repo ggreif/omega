@@ -203,7 +203,7 @@ instance Stream s m Char => LayoutStream s m Char Layout where
   intoLayout = Indent [] 0 False
   outofLayout (Indent _ _ _ s) = s
   indent' = do (Indent tabs col c'ed s) <- getInput
-               setInput $ Indent (col:tabs) col c'ed s
+               setInput $ Indent (col:tabs) col True s
   virtualSep = do (Indent tabs@(tab:_) col False s) <- getInput
                   guard $ col == tab
                   setInput $ Indent tabs col True s
@@ -213,13 +213,14 @@ instance Stream s m Char => LayoutStream s m Char Layout where
 
 
 instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
-  uncons (Indent (tab:_) col False s) | col == tab = return Nothing -- unconsumed layout separator
-  uncons (Indent tabs col _ s) = do un <- uncons s
-                                    case un of
-                                      Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
-                                      Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) False s')
-                                      Just (t, s') -> return $ Just (t, Indent tabs (col + 1) False s')
-                                      Nothing -> return Nothing
+  uncons (Indent tabs col c'ed s) = do un <- uncons s
+                                       case un of
+                                         Nothing -> return Nothing
+                                         Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) False s')
+                                         Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
+                                         Just (t, s') -> case (tabs, c'ed) of
+                                                         ((tab:_), False) | t /= ' ' && col == tab -> return Nothing
+                                                         _ -> return $ Just (t, Indent tabs (col + 1) False s')
 
 {-
  a = let
@@ -236,8 +237,11 @@ inp = intoLayout " a = let\n  b = id\n   1\n  c = 2 in b\n f = 3\n \n 3 = let in
 
 lexeme' p = do good <- p ; many (oneOf " \n\t"); return good
 identifier' = many1 $ oneOf "abcdi"
+num' = lexeme' (many1 $ oneOf ['0' .. '9'])
 prgm  = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent' >> virtualSep >> lexeme' identifier'
-prgm' = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent' >> lexeme' identifier'
+prgm' = space >> lexeme' identifier' >> lexeme' (string "= let") >> indent'
+              >> lexeme' identifier' >> lexeme' (string "=") >> lexeme' identifier' >> num'
+              >> virtualSep >> lexeme' identifier'
 
 res,res' :: Either ParseError String
 res = parse prgm "<inp>" inp
