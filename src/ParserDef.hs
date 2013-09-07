@@ -642,7 +642,7 @@ decl =   try patterndecl -- Needs to be before vdecl
      <|> typeFunDec
      <|> monaddecl
      <|> theoremDec
-     <?> "decl"
+     <?> "declaration"
 
 theoremDec =
   do { pos <- getPosition
