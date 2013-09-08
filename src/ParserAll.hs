@@ -215,6 +215,8 @@ instance (Monad m, Stream s m Char) => Stream (Layout s m) m Char where
                                          Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) False s')
                                          Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
                                          Just (t, s') -> case (tabs, c'ed) of
+                                                         _ | otherWhiteSpace s t -> return $ Just (t, Indent tabs (col + 1) False s')
                                                          ((tab:_), False) | t /= ' ' && col <= tab -> return Nothing
                                                          _ -> return $ Just (t, Indent tabs (col + 1) False s')
-
+    where otherWhiteSpace s '-' = True
+          otherWhiteSpace _ _ = False
