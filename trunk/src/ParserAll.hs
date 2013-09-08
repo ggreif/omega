@@ -42,9 +42,6 @@ zeroNumber = do { char '0'
 
 natNoSpace :: Parsec (Layout String Identity) u Int
 natNoSpace = fmap fromInteger nat
---natNoSpace = do nat <- decimal
---                return $ fromInteger nat
-
 
 relax :: Stream s Identity Char => (P.LanguageDef u, P.GenLanguageDef s u Identity) -> P.GenLanguageDef s u Identity
 relax = unsafeCoerce fst
