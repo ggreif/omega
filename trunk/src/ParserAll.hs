@@ -209,7 +209,7 @@ instance Stream s m Char => LayoutStream s m Char Layout where
 
 -- are instances of @Stream@
 --
-instance (Monad m, Stream String m Char) => Stream (Layout String m) m Char where
+instance Monad m => Stream (Layout String m) m Char where
   uncons (Indent tabs col c'ed s) = do un <- uncons s
                                        case un of
                                          Nothing -> return Nothing
@@ -217,14 +217,14 @@ instance (Monad m, Stream String m Char) => Stream (Layout String m) m Char wher
                                          Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
                                          Just (t, s') -> case (tabs, c'ed) of
                                                          ([], _) -> justAdvance -- deactivated layout
-                                                         _ | otherWhiteSpace s t -> justAdvance
-                                                         ((tab:_), False) | t /= ' ' && col <= tab -> return Nothing
+                                                         _ | notSpace t && otherWhiteSpace s -> justAdvance
+                                                         ((tab:_), False) | notSpace t && col <= tab -> return Nothing
                                                          _ -> justAdvance
                                             where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
-    where otherWhiteSpace s t | notSpace t = case parse (P.whiteSpace P.haskell >> Prim.getPosition) "" s of
-                                             Right pos | not $ atStart pos -> True
-                                             _ -> False
-          otherWhiteSpace _ _ = False
+    where otherWhiteSpace s = case parse (P.whiteSpace P.haskell >> Prim.getPosition) "" s of
+                              Right pos | not $ atStart pos -> True
+                              _ -> False
+          otherWhiteSpace _ = False
           notSpace ' ' = False
           notSpace _ = True
-          atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1 -- error ("at: " ++ show (Pos.sourceLine pos, Pos.sourceColumn pos))
+          atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
