@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, FlexibleInstances
+{-# LANGUAGE ViewPatterns, FlexibleContexts, FlexibleInstances
            , GADTs, MultiParamTypeClasses #-}
 
 module ParserAll
@@ -178,8 +178,9 @@ class Stream s m t => LayoutStream s m t l where
   undent :: ParsecT (l s m) u m ()
   intoLayout :: s -> l s m
   outofLayout :: l s m -> s
+  otherWhiteSpace :: l s m -> s -> Bool
 
-instance Stream s m Char => LayoutStream s m Char Layout where
+instance Stream String m Char => LayoutStream String m Char Layout where
   intoLayout = Indent [] 0 False
   outofLayout (Indent _ _ _ s) = s
   indent = do Indent tabs col c'ed s <- getInput
@@ -192,25 +193,26 @@ instance Stream s m Char => LayoutStream s m Char Layout where
   virtualEnd = do Indent (tab:out) col False s <- getInput
                   guard $ col < tab
                   setInput $ Indent out col False s
+  otherWhiteSpace _ s = case parse (P.whiteSpace P.haskell >> P.getPosition) "" s of
+                        Right pos | not $ atStart pos -> True
+                        _ -> False
+    where atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
 
 
 -- are instances of @Stream@
 --
 instance Monad m => Stream (Layout String m) m Char where
-  uncons (Indent tabs col c'ed s) = do un <- uncons s
-                                       case un of
-                                         Nothing -> return Nothing
-                                         Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) False s')
-                                         Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
-                                         Just (t, s') -> case (tabs, c'ed) of
-                                                         ([], _) -> justAdvance -- deactivated layout
-                                                         _ | notSpace t && otherWhiteSpace s -> justAdvance
-                                                         ((tab:_), False) | notSpace t && col <= tab -> return Nothing
-                                                         _ -> justAdvance
-                                            where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
-    where otherWhiteSpace s = case parse (P.whiteSpace P.haskell >> P.getPosition) "" s of
-                              Right pos | not $ atStart pos -> True
-                              _ -> False
-          notSpace ' ' = False
-          notSpace _ = True
-          atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
+  uncons i@(Indent tabs col c'ed s) = do un <- uncons s
+                                         case un of
+                                           Nothing -> return Nothing
+                                           Just ('\t', s') -> let over = col + 8 in return $ Just ('\t', Indent tabs (over - over `mod` 8) False s')
+                                           Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
+                                           Just (t, s') -> case (tabs, c'ed) of
+                                                           ([], _) -> justAdvance -- deactivated layout
+                                                           _ | notSpace t && otherWhiteSpace i s -> justAdvance
+                                                           ((tab:_), False) | notSpace t && col <= tab -> return Nothing
+                                                           _ -> justAdvance
+                                              where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
+
+notSpace ' ' = False
+notSpace _ = True
