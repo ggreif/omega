@@ -409,11 +409,7 @@ elab :: Prefix -> Env -> Env -> Dec -> FIO Env
 elab prefix magic init (Pat loc nm args body) =
   return(extendV [(nm,(Vpat nm (funcPat args body) (evalPat2 args body)))] init)
 elab prefix magic init (Val loc p b ds) =
-  do { 
-                     --; fail ("DS: ######### " ++ show ds ++ show loc) ;
-       v <- vlazy(do { env2 <- elaborate Tick ds magic
-                     ; --fail ("DS: ######### " ++ show ds ++ show loc ++ show magic) ;
-                     ; --displays $ Dr [Ds "DSinnen: ######### ", Dl ds ",", Ds "   ", Ds $ show loc]
+  do { v <- vlazy(do { env2 <- elaborate Tick ds magic
                      ; evalBody env2 b (fail "Body in Decl has no True case")})
      ; (u,frag2) <- matchPatLazy p v
      ; return(extendV frag2 init)}
