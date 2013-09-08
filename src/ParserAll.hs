@@ -13,7 +13,7 @@ module ParserAll
   , possible, parse2, integer, charLiteral, stringLiteral
   , layout, sourceName, sourceLine, sourceColumn, float, naturalOrFloat
   , isReservedName, prefixIdentifier, parseFromFile, opLetter, operator
-  , oper, parseFromHandle, getPosition, Parser
+  , oper, parseFromHandle, getPosition, Parser, runParser
   ) where
 
 -- Note to use this module, the modules CommentDef.hs and TokenDef.hs
