@@ -34,8 +34,11 @@ import System.IO (hGetContents, Handle)
 import Unsafe.Coerce (unsafeCoerce)
 import Control.Monad (guard)
 
+--natNoSpace = fmap fromInteger natural -- TODO: fmap fromInteger nat -- do not eat space!!!!
 natNoSpace :: Parsec (Layout String Identity) u Int
-natNoSpace = fmap fromInteger natural -- TODO: fmap fromInteger nat -- do not eat space!!!!
+natNoSpace = do nat <- decimal
+                return $ fromInteger nat
+
 
 relax :: Stream s Identity Char => (P.LanguageDef u, P.GenLanguageDef s u Identity) -> P.GenLanguageDef s u Identity
 relax = unsafeCoerce fst
