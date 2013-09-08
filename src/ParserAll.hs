@@ -224,7 +224,6 @@ instance Monad m => Stream (Layout String m) m Char where
     where otherWhiteSpace s = case parse (P.whiteSpace P.haskell >> Prim.getPosition) "" s of
                               Right pos | not $ atStart pos -> True
                               _ -> False
-          otherWhiteSpace _ = False
           notSpace ' ' = False
           notSpace _ = True
           atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
