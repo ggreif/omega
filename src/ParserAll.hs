@@ -1,5 +1,5 @@
 {-# LANGUAGE ViewPatterns, FlexibleContexts, FlexibleInstances
-           , GADTs, MultiParamTypeClasses, InstanceSigs #-}
+           , GADTs, MultiParamTypeClasses #-}
 
 module ParserAll
   ( module Text.Parsec.Combinator
@@ -183,10 +183,15 @@ class Stream s m t => LayoutStream s m t l where
 -- Minor Hack:
 
 genHaskellDef :: P.GenLanguageDef s u Identity
-genHaskellDef = P.LanguageDef { P.commentStart   = "{-"
-                              , P.commentEnd     = "-}"
-                              , P.commentLine    = "--"
-                              , P.nestedComments = True }
+genHaskellDef = P.LanguageDef { P.commentStart   = P.commentStart P.haskellDef
+                              , P.commentEnd     = P.commentEnd P.haskellDef
+                              , P.commentLine    = P.commentLine P.haskellDef
+                              , P.nestedComments = P.nestedComments P.haskellDef
+                              , P.identStart = undefined, P.identLetter = undefined
+                              , P.opStart = undefined , P.opLetter = undefined
+                              , P.reservedNames = P.reservedNames P.haskellDef
+                              , P.reservedOpNames = P.reservedOpNames P.haskellDef
+                              , P.caseSensitive = P.caseSensitive P.haskellDef }
 
 genHaskell :: Stream s Identity Char => P.GenTokenParser s u Identity
 genHaskell = P.makeTokenParser genHaskellDef
@@ -205,11 +210,10 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
   virtualEnd = do Indent (tab:out) col False s <- getInput
                   guard $ col < tab
                   setInput $ Indent out col False s
-  otherWhiteSpace :: Layout s Identity -> s -> Identity Bool
-  otherWhiteSpace (Indent _ _ _ s') s = do p <- runParserT (P.whiteSpace genHaskell >> P.getPosition) () "" s
-                                           return $ case p of
-                                             Right pos | not $ atStart pos -> True
-                                             _ -> False
+  otherWhiteSpace _ s = do p <- runParserT (P.whiteSpace genHaskell >> P.getPosition) () "" s
+                           return $ case p of
+                                      Right pos | not $ atStart pos -> True
+                                      _ -> False
     where atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
 
 
@@ -225,7 +229,6 @@ instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char w
                                                            ([], _) -> justAdvance -- deactivated layout
                                                            conf | notSpace t -> do white <- otherWhiteSpace i s
                                                                                    if white then justAdvance else mayBlock conf
-                                                           
                                                            conf -> mayBlock conf
                                               where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
                                                     mayBlock ((tab:_), False) | notSpace t && col <= tab = return Nothing
