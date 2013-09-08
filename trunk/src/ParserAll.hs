@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, FlexibleContexts, FlexibleInstances
+{-# LANGUAGE ViewPatterns, FlexibleInstances
            , GADTs, MultiParamTypeClasses #-}
 
 module ParserAll
