@@ -1,5 +1,5 @@
 {-# LANGUAGE ViewPatterns, FlexibleContexts, FlexibleInstances
-           , GADTs, MultiParamTypeClasses #-}
+           , GADTs, MultiParamTypeClasses, InstanceSigs #-}
 
 module ParserAll
   ( module Text.Parsec.Combinator
@@ -169,7 +169,7 @@ type Parser a = Parsec (Layout String Identity) () a
 -- Layout Streams
 
 data Layout s m where
-  Indent :: (Monad m, Stream s m Char) => ![Int] -> !Int -> !Bool -> s -> Layout s m
+  Indent :: Stream s m Char => ![Int] -> !Int -> !Bool -> s -> Layout s m
 
 class Stream s m t => LayoutStream s m t l where
   virtualSep :: ParsecT (l s m) u m ()
@@ -178,9 +178,21 @@ class Stream s m t => LayoutStream s m t l where
   undent :: ParsecT (l s m) u m ()
   intoLayout :: s -> l s m
   outofLayout :: l s m -> s
-  otherWhiteSpace :: l s m -> s -> Bool
+  otherWhiteSpace :: l s m -> s -> m Bool
 
-instance Stream String m Char => LayoutStream String m Char Layout where
+-- Minor Hack:
+
+genHaskellDef :: P.GenLanguageDef s u Identity
+genHaskellDef = P.LanguageDef { P.commentStart   = "{-"
+                              , P.commentEnd     = "-}"
+                              , P.commentLine    = "--"
+                              , P.nestedComments = True }
+
+genHaskell :: Stream s Identity Char => P.GenTokenParser s u Identity
+genHaskell = P.makeTokenParser genHaskellDef
+
+
+instance Stream s Identity Char => LayoutStream s Identity Char Layout where
   intoLayout = Indent [] 0 False
   outofLayout (Indent _ _ _ s) = s
   indent = do Indent tabs col c'ed s <- getInput
@@ -193,15 +205,17 @@ instance Stream String m Char => LayoutStream String m Char Layout where
   virtualEnd = do Indent (tab:out) col False s <- getInput
                   guard $ col < tab
                   setInput $ Indent out col False s
-  otherWhiteSpace _ s = case parse (P.whiteSpace P.haskell >> P.getPosition) "" s of
-                        Right pos | not $ atStart pos -> True
-                        _ -> False
+  otherWhiteSpace :: Layout s Identity -> s -> Identity Bool
+  otherWhiteSpace (Indent _ _ _ s') s = do p <- runParserT (P.whiteSpace genHaskell >> P.getPosition) () "" s
+                                           return $ case p of
+                                             Right pos | not $ atStart pos -> True
+                                             _ -> False
     where atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
 
 
 -- are instances of @Stream@
 --
-instance Monad m => Stream (Layout String m) m Char where
+instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char where
   uncons i@(Indent tabs col c'ed s) = do un <- uncons s
                                          case un of
                                            Nothing -> return Nothing
@@ -209,10 +223,13 @@ instance Monad m => Stream (Layout String m) m Char where
                                            Just ('\n', s') -> return $ Just ('\n', Indent tabs 0 False s')
                                            Just (t, s') -> case (tabs, c'ed) of
                                                            ([], _) -> justAdvance -- deactivated layout
-                                                           _ | notSpace t && otherWhiteSpace i s -> justAdvance
-                                                           ((tab:_), False) | notSpace t && col <= tab -> return Nothing
-                                                           _ -> justAdvance
+                                                           conf | notSpace t -> do white <- otherWhiteSpace i s
+                                                                                   if white then justAdvance else mayBlock conf
+                                                           
+                                                           conf -> mayBlock conf
                                               where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
+                                                    mayBlock ((tab:_), False) | notSpace t && col <= tab = return Nothing
+                                                    mayBlock _ = justAdvance
 
 notSpace ' ' = False
 notSpace _ = True
