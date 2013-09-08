@@ -23,7 +23,7 @@ module ParserAll
 import Text.Parsec.Combinator
 import Text.Parsec.Prim hiding (Ok, getPosition, setPosition, runParser)
 import Text.Parsec.Error
-import qualified Text.Parsec.Prim as Prim
+import qualified Text.Parsec.Prim as P
 import Text.Parsec.Char
 import qualified Text.Parsec.Token as P
 import qualified Text.Parsec.Language as P
@@ -32,7 +32,6 @@ import qualified Text.Parsec.Pos as Pos
 import TokenDef
 import Data.Functor.Identity
 import System.IO (hGetContents, Handle)
-import Unsafe.Coerce (unsafeCoerce)
 import Control.Monad (guard)
 
 nat = zeroNumber <|> decimal
@@ -44,21 +43,12 @@ zeroNumber = do { char '0'
 natNoSpace :: Parsec (Layout String Identity) u Int
 natNoSpace = fmap fromInteger nat
 
-relax :: Stream s Identity Char => (P.LanguageDef u, P.GenLanguageDef s u Identity) -> P.GenLanguageDef s u Identity
-relax = unsafeCoerce fst
+
+tokenDef' :: P.GenLanguageDef (Layout String Identity) u Identity
+tokenDef' = tokenDef
 
 omegaTokens :: P.GenTokenParser (Layout String Identity) u Identity
 omegaTokens = P.makeTokenParser tokenDef'
-
-tokenDef'' :: Stream s Identity Char => P.GenLanguageDef s u Identity
-tokenDef'' = (relax (tokenDef, undefined))
-               { P.identStart = letter -- these do not cast benignly :-(
-               , P.identLetter = alphaNum <|> oneOf "_'"
-               , P.opStart = opLetters
-               }
-   where opLetters = oneOf ":!#$%&*+./<=>?@\\^|-~"
-
-tokenDef' = tokenDef'' { P.opLetter = P.opStart tokenDef' }
 
 lexeme = P.lexeme omegaTokens
 comma = P.comma omegaTokens
@@ -100,9 +90,6 @@ runParser p s = case runP (unitState p) () "<internal>" $ intoLayout s of
                 Right res -> Just res
                 _ -> Nothing
 
-unitState :: Parsec s u a -> Parsec s () a
-unitState = unsafeCoerce
-
 parse2 :: Parsec (Layout String Identity) u p -> String -> Either String (p, String)
 parse2 p input
     = case runP (unitState (do whiteSpace; result <- p; eof; return result)) () "keyboard input" (intoLayout input) of
@@ -126,7 +113,7 @@ data SourcePos  = SourcePos { sourceName :: Pos.SourceName, sourceLine :: Pos.Li
     deriving (Eq, Ord)
 
 getPosition :: Parsec (Layout String Identity) u SourcePos
-getPosition = do (sourceParts -> (cs, line, col)) <- Prim.getPosition
+getPosition = do (sourceParts -> (cs, line, col)) <- P.getPosition
                  return $ SourcePos cs line col
     where sourceParts s = (Pos.sourceName s, Pos.sourceLine s, Pos.sourceColumn s)
 
@@ -149,7 +136,7 @@ layout p stop =
 isReservedName = (`elem` P.reservedNames tokenDef')
 
 oper = do { c <- (P.opStart tokenDef')
-          ; cs <- many (P.opLetter tokenDef')
+          ; cs <- many opLetter
           ; return (c:cs)
           } <?> "operator"
 
@@ -221,7 +208,7 @@ instance Monad m => Stream (Layout String m) m Char where
                                                          ((tab:_), False) | notSpace t && col <= tab -> return Nothing
                                                          _ -> justAdvance
                                             where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
-    where otherWhiteSpace s = case parse (P.whiteSpace P.haskell >> Prim.getPosition) "" s of
+    where otherWhiteSpace s = case parse (P.whiteSpace P.haskell >> P.getPosition) "" s of
                               Right pos | not $ atStart pos -> True
                               _ -> False
           notSpace ' ' = False
