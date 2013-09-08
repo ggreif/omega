@@ -10,7 +10,7 @@ module ParserAll
   , Identity, natNoSpace
   , lexeme, comma, symbol, semi, whiteSpace, ident, construct, decimal
   , natural, identifier, parens, squares, braces, reserved, reservedOp
-  , reservedOp', possible, parse2, integer, charLiteral, stringLiteral
+  , possible, parse2, integer, charLiteral, stringLiteral
   , layout, sourceName, sourceLine, sourceColumn, float, naturalOrFloat
   , isReservedName, prefixIdentifier, parseFromFile, opLetter, operator
   , oper, parseFromHandle, getPosition, Parser
@@ -70,7 +70,7 @@ parens = P.parens omegaTokens
 squares = P.squares omegaTokens
 braces = P.braces omegaTokens
 reserved = P.reserved omegaTokens
-reservedOp = P.reservedOp omegaTokens
+reservedOp' = P.reservedOp omegaTokens
 integer = P.integer omegaTokens
 charLiteral = P.charLiteral omegaTokens
 stringLiteral = P.stringLiteral omegaTokens
@@ -150,7 +150,7 @@ oper = do { c <- (P.opStart tokenDef')
           ; return (c:cs)
           } <?> "operator"
 
-reservedOp' op = reservedOp op >> return op
+reservedOp op = reservedOp' op >> return op
 
 undefined4 = error "undefined4"
 

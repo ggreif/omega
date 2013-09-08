@@ -500,15 +500,15 @@ opList prefix op left right none =
 
 operators = opList prefix op AssocLeft AssocRight AssocNone
     where
-      op ":" assoc    = Infix (do { var <- try (reservedOp' ":")
+      op ":" assoc    = Infix (do { var <- try (reservedOp ":")
                                   ; return consExp}) assoc
-      op "$" assoc    = Infix (do { var <- try (reservedOp' "$")
+      op "$" assoc    = Infix (do { var <- try (reservedOp "$")
                                   ; return (\x y -> binop "$" x y)}) assoc
-      op "." assoc    = Infix (do { var <- try (reservedOp' ".")
+      op "." assoc    = Infix (do { var <- try (reservedOp ".")
                                   ; return (\x y -> binop "." x y)}) assoc
-      op name assoc   = Infix (do { var <- try (reservedOp' name)
+      op name assoc   = Infix (do { var <- try (reservedOp name)
                                   ; return (\x y -> binop name x y)}) assoc
-      prefix name     = Prefix(do { var <- try (reservedOp' name)
+      prefix name     = Prefix(do { var <- try (reservedOp name)
                                   ; return (buildPrefix name)
                                   })
 
@@ -660,7 +660,7 @@ boundsDec =
 vdecl =
   do { pos <- getPosition
      ; ps <- many1 simplePattern
-     ; e <- bodyP (reservedOp' "=")
+     ; e <- bodyP (reservedOp "=")
      ; ds <- whereClause
      ; toDecl (loc pos) (ps,e,ds)
      }
