@@ -34,10 +34,16 @@ import System.IO (hGetContents, Handle)
 import Unsafe.Coerce (unsafeCoerce)
 import Control.Monad (guard)
 
---natNoSpace = fmap fromInteger natural -- TODO: fmap fromInteger nat -- do not eat space!!!!
+nat = zeroNumber <|> decimal
+
+zeroNumber = do { char '0'
+                ; hexadecimal <|> octal <|> decimal <|> return 0
+                } <?> ""
+
 natNoSpace :: Parsec (Layout String Identity) u Int
-natNoSpace = do nat <- decimal
-                return $ fromInteger nat
+natNoSpace = fmap fromInteger nat
+--natNoSpace = do nat <- decimal
+--                return $ fromInteger nat
 
 
 relax :: Stream s Identity Char => (P.LanguageDef u, P.GenLanguageDef s u Identity) -> P.GenLanguageDef s u Identity
@@ -71,7 +77,9 @@ reservedOp = P.reservedOp omegaTokens
 integer = P.integer omegaTokens
 charLiteral = P.charLiteral omegaTokens
 stringLiteral = P.stringLiteral omegaTokens
+hexadecimal = P.hexadecimal omegaTokens
 decimal = P.decimal omegaTokens
+octal = P.octal omegaTokens
 float = P.float omegaTokens
 naturalOrFloat = P.naturalOrFloat omegaTokens
 opLetter = P.opLetter tokenDef'
