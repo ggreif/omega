@@ -15,7 +15,7 @@ primitive import ((<|>), (<?>))
 
 -- parsers for basic things
 --
-primitive import (char, {-satisfy,-} string, many, parens
+primitive import (char, {-satisfy,-} string, many, many1, parens
                  , try, between, sepBy)
 
 

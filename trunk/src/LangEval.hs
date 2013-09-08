@@ -520,7 +520,7 @@ importableVals =
  ,("char",(make1(char :: Char -> Parser Char)))
  ,("string",(make1(string :: String -> Parser String)))
  ,("many",(make1(many :: Parser A -> Parser [A])))
- ,("many1",(make1(many :: Parser A -> Parser [A])))
+ ,("many1",(make1(many1 :: Parser A -> Parser [A])))
  ,("parens",make1(parens :: Parser A -> Parser A))
  ,("try",make1(try :: Parser A -> Parser A))
  ,("between",make3(between :: Parser C -> Parser B -> Parser A -> Parser A))
