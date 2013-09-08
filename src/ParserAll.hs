@@ -96,14 +96,16 @@ construct = do { c <- upper
 possible p = fmap Just (try p) <|> return Nothing
 
 runParser :: Parser a -> String -> Maybe a
-runParser = undefined4
+runParser p s = case runP (unitState p) () "<internal>" $ intoLayout s of
+                Right res -> Just res
+                _ -> Nothing
 
 unitState :: Parsec s u a -> Parsec s () a
 unitState = unsafeCoerce
 
 parse2 :: Parsec (Layout String Identity) u p -> String -> Either String (p, String)
 parse2 p input
-    = case runP (unitState (whiteSpace >> p)) () "keyboard input" (intoLayout input) of
+    = case runP (unitState (do whiteSpace; result <- p; eof; return result)) () "keyboard input" (intoLayout input) of
         Left err -> Left (show err)
         Right p -> Right (p, "")
 
@@ -152,8 +154,6 @@ oper = do { c <- (P.opStart tokenDef')
           } <?> "operator"
 
 reservedOp op = reservedOp' op >> return op
-
-undefined4 = error "undefined4"
 
 parseFromFile :: Parsec (Layout String Identity) u a -> Pos.SourceName -> IO (Either ParseError a)
 parseFromFile p fname
