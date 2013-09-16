@@ -1,0 +1,74 @@
+\begin{thebibliography}{10}
+
+\bibitem{MetaOCaml-paper}
+Cristiano Calcagno, Walid Taha, Liwen Huang, and Xavier Leroy.
+\newblock A bytecode-compiled, type-safe, multi-stage language.
+\newblock Technical report, Rice University, 2002.
+
+\bibitem{Hinze:03:Phantom}
+James Cheney and Ralf Hinze.
+\newblock First-class phantom types.
+\newblock Technical Report TR2003-1901, Cornell University, 2003.
+\newblock Also available from:\\ {\tt {\scriptsize
+  http://www.informatik.uni-bonn.de/\verb+~+ralf/publications/Phantom.pdf}}.
+
+\bibitem{koen2001}
+Koen Claessen.
+\newblock {\em An Embedded Language Approach to Hardware Description and
+  Verification}.
+\newblock PhD thesis, Chalmers University of Technology, 2000.
+
+\bibitem{fluet-02}
+Matthew Fluet and Riccardo Pucella.
+\newblock Phantom types and subtyping.
+\newblock In {\em IFIP International Conference on Theoretical Computer Science
+  (TCS)}, pages 448--460, August 2002.
+
+\bibitem{wobbly}
+Simon~Peyton Jones, Geoffrey Washburn, and Stephanie Weirich.
+\newblock Wobbly types: type inference for generalised algebraic data types.
+\newblock {\scriptsize {\tt http://research.microsoft.com/Users/simonpj/}},
+  2004.
+
+\bibitem{Leijen:2000:DSE}
+Daan Leijen and Erik Meijer.
+\newblock Domain-specific embedded compilers.
+\newblock {\em ACM SIG{\-}PLAN Notices}, 35(1):109--122, January 2000.
+
+\bibitem{Sheard:2004:LF}
+Tim Sheard.
+\newblock Languages of the future.
+\newblock {\em Onward Track, OOPSLA'04. Reprinted in: ACM SIG{\-}PLAN Notices,
+  Dec. 2004.}, 39(10):116--119, October 2004.
+
+\bibitem{sheard02template}
+Tim Sheard and Simon~Peyton Jones.
+\newblock Template meta-programming for haskell.
+\newblock In {\em {ACM} {SIGPLAN} Workshop on Haskell}, pages 1--16. ACM Press,
+  2002.
+
+\bibitem{clever}
+Mary Sheeran.
+\newblock Generating fast multipliers using clever circuits.
+\newblock In {\em FMCAD'04}, volume 3312 of {\em Lecture Notes in Computer
+  Science}. Springer-Verlag, 2004.
+
+\bibitem{Taha99}
+Walid Taha.
+\newblock {\em Multi-Stage Programming: Its Theory and Applications}.
+\newblock PhD thesis, Oregon Graduate Institute of Science and Technology,
+  November 1999.
+
+\bibitem{T00}
+Walid Taha.
+\newblock A sound reduction semantics for untyped {CBN} mutli-stage
+  computation. {O}r, the theory of {MetaML} is non-trivial.
+\newblock In {\em 2000 SIGPLAN Workshop on Partial Evaluation and
+  Semantics-Based Program Manipulation (PEPM'00)}, January 2000.
+
+\bibitem{TS00}
+Walid Taha and Tim Sheard.
+\newblock {MetaML}: Multi-stage programming with explicit annotations.
+\newblock {\em Theoretical Computer Science}, 248(1-2), 2000.
+
+\end{thebibliography}

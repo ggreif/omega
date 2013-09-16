@@ -1,0 +1,1403 @@
+\documentclass[10pt,twoside]{article}
+\usepackage{makeidx,multicol,amssymb}
+\include{psinput}
+\include{psfig}
+\usepackage{epsf}
+\usepackage{epsfig}
+\usepackage{graphics,color}
+
+\newcommand{\om}{$\Omega$mega}
+
+\setlength{\textheight}{8.5in}
+\setlength{\textwidth}{6.4in}
+\setlength{\oddsidemargin}{-.2in}
+\setlength{\evensidemargin}{-.2in}
+\setlength{\topmargin}{-0.25in}
+
+
+%\setcounter   {topnumber}{3}
+%\renewcommand {\topfraction}{1.0}
+%\setcounter   {totalnumber}{4}
+%\renewcommand {\textfraction}{0.2}
+%\renewcommand {\floatpagefraction}{0.99} 
+%\renewcommand {\floatsep}{0.1}
+ 
+
+
+%\setlength{\linewidth}{0.2cm}
+
+\begin{document}
+
+
+
+\title{Another Look at Hardware Design Languages:\\
+\large{Freeing ourselves from the tyranny of the host language}\\
+\ \\
+%\bf{*** DRAFT ***\\do not distribute}
+}
+\author{
+Tim Sheard\\
+Computer Science Department\\
+Maseeh College of Engineering and Computer Science\\
+Portland State University\\
+sheard@cs.pdx.edu
+}
+
+\maketitle
+
+\section{Introduction}\label{intro}
+
+Using a functional language (mostly Haskell) as a host language for embedding
+hardware description languages is a popular theme. Examples include Ruby,
+Hydra, Hawk, and Lava. The reasons\cite{koen2001} for this approach to hardware description
+language design are numerous:
+
+\begin{itemize}
+
+\item The syntax of the host language can be reused. There is no need to
+invent a new syntax or write parsers.
+
+\item All the machinery of the host language can be reused. Tools for the
+language such as compilers and debuggers, and language features such as its
+module system and type system.
+
+\item Even the programmers who already know the host language can be reused
+without re-training.
+
+\item Finally, hardware descriptions are now first class objects in the
+host language and are subject to all the properties of host language objects.
+\end{itemize}
+
+Of course there are disadvantages to such an approach, and these cannot be
+overlooked. They include:
+
+\begin{itemize}
+
+\item The syntax of the two languages may be radically different. So users of
+the hardware description language feel that they are being forced into an
+unnatural programing style.
+
+\item The features of the host language may not match the features of the
+embedded language. Type systems, in particular are an example of this kind of
+mismatch. In this case, unnatural or awkward embeddings must be used. These
+embeddings increase the complexity of the system, and make it
+harder to use and maintain.
+
+\end{itemize}
+
+Most proponents of the embedded language approach recognize these
+disadvantages, and note that a stand-alone language (as opposed to an
+embedding) with its own syntax, type system, and implementation might be
+more useful. But most, pay only lip service to actually building such
+an implementation. We believe it is time to actually take such a leap.
+
+\section{Advantages of a stand-alone implementation.}
+
+A stand-alone implementation of an HDL could provide its users with
+several important advantages. These advantages include a type system
+(or systems, see Section \ref{static}) specific to the domain of
+hardware description, and a cleaner distinction between the multiple
+stages inherent in the design of hardware. An embedded approach is
+stuck with the type system of the host language. A stand-alone system
+is free from this constraint. A stand-alone implementation is also
+free to address the phase distinction in new and novel ways. We now
+discuss some of the problems inherent in choosing an embedded
+approach.
+
+\subsection{Intertwined recursion}
+
+In many current embedded HDLs two different forms of recursion are
+implemented with the same mechanism in the host language. These two
+forms play very different roles, and because they are implemented
+with the same mechanism, they cannot later be easily separated. The
+two forms of recursion are:
+
+\begin{itemize}
+
+\item Constructing large circuits with repeated patterns from smaller
+ones can be described by writing inductive functions that induct over
+some index that describes the connection pattern between the
+patterns. This index is often something as simple as an integer, but
+can be much more complicated, such as a tree.
+
+\item Feed back loops in sequential circuits can be described by
+recursive equations.
+
+\end{itemize}
+
+There is a phase distinction between the two kinds of recursion.
+The first describes a computation in the first phase when we are
+constructing the design. It is a real program. It should be inductive,
+in that such programs should always terminate (we don't want to wait
+forever for our design to be produced). We may, or may not, want to
+enforce this.
+
+The second describes the recurring behavior described in the design.
+This behavior ``runs" in the second phase when the design is
+implemented. As far as the HDL is concerned, the second is a piece of
+data. These are truly recursive, in that they define infinite behavior
+patterns, but they should always be captured by a finite description
+(after all, we cannot build infinitely large hardware devices).
+
+Current embedded approaches mix these two types of recursion in ways
+that are hard to separate. They are both implemented by recursion in
+the host language. This has two unfortunate consequences. First it
+forces us to use a lazy semantics. This may or may not be a good
+thing, but we should have a choice. Second, hardware designs with
+feedback loops always create infinite structures (why we need
+laziness). This forces us to use ``tricks" to observe the sharing in
+the cyclic heap objects that represent the data, so that we can recover the
+finite description (of the infinite behavior) we should have built
+in the first place.
+ 
+\subsection{Type Systems that are to Weak.}
+
+An embedded approach forces the HDL to share the host languages type
+system. Even the rich type system of Haskell (the most common host
+language) with its rich class mechanism and rank-N polymorphism is
+too weak to capture some simple static properties of HDL programs.
+Examples include:
+
+\begin{itemize}
+
+\item{\bf Typed HDL Object Descriptions.} HDL programs produce
+hardware descriptions. Such descriptions are data in the HDL, but
+they also represent programs (or hardware). Such descriptions could
+have types, and we would like to ensure that the designer only
+produce well-typed designs. Current languages use {\em phantom-types}
+\cite{Hinze:03:Phantom,fluet-02,Leijen:2000:DSE} to help ensure that we only {\em build} well typed designs,
+but phantom types are truly phantom when {\em analyzing} designs.
+Type information is lost in the analysis phase and cannot be
+recovered.
+
+\item{\bf Structures with Fixed Width.}
+Hardware is full of structures with fixed width: 32-bit registers,
+64-bit busses, 8-bit adders. Can we specify generic algorithms that
+manipulate n-bit entities, then specialize them to a fixed width, and be
+sure we never mix two similar objects with different widths?
+
+\item{\bf Powers of 2.} Many abstract designs (such as a butterfly
+circuit) can be precisely described using regular patterns only
+when the size of the design is a power of 2, (or in some examples
+a perfect square). Such a property can be statically enforced, but
+the type system of the host language is usually too weak.
+
+\item{\bf Interface Types.} Many signals have directionality
+(input v.s. output). A static type system could prevent the error
+of connecting two inputs, or leaving a signal dangling.
+
+\item{\bf Protocol Types.} Many hardware descriptions must behave
+according to a certain protocol. For example, a simple
+handshake protocol depends on {\em request} and {\em acknowledge}
+signals strictly alternating. Some protocols look more like
+complex automata than types. Can a static type system enforce
+such behavior?
+
+\item{\bf Counting the Delay in a Circuit.} Good designs follow patterns.
+For example, some design patterns insist that every cyclic loop nest
+includes a delay. Can we statically enforce such design patterns?
+
+\end{itemize}
+
+
+\section{The next HDL.}
+
+A stand-alone implementation of a HDL should have a number of
+desirable properties. We discuss these properties at a high level of
+abstraction here, and then in the ensuing sub-sections, describe how
+these properties might be implemented.
+
+
+\begin{itemize} 
+
+\item{\bf Descriptions as first class data.} Hardware descriptions
+are both data and programs. But, it is important that they be first
+class data structures. Their very purpose is to be manipulated as
+data. Anything that makes this hard is in direct competition with
+their primary role. In particular, they should not be encoded as
+functions or as cyclic heap structures, because this makes it
+difficult, if not impossible, to perform the analyses they were
+designed for.
+
+\item{\bf Typed representations.} Hardware descriptions should be
+typed. It should be possible to describe rich abstractions such as
+tuples, and busses of width {\it n}. These abstractions should be
+available in all stages. In particular it should be possible to
+construct both tuples of circuits,  and circuits of tuples (as well as
+other richer data structures). The type system should apply in the
+analysis phase as well as the construction phase of the descriptions.
+
+\item{\bf Special syntactic sugar.} A stand-alone implementation
+should support syntactic sugar to make it easy to capture  
+hardware descriptions.
+
+\item{\bf Multiple static analyses.} A stand-alone implementation can
+support multiple static analyses, one for each important static
+property. The specification and checking of different analyses
+should be separable to minimize the conceptual effort needed to
+``debug" errors when they occur.
+
+\item{\bf Multiple interpretations.} A hardware description has
+multiple interpretations. The same piece of data should be
+interpretable in multiple ways.
+
+\end{itemize}
+
+Haskell makes an excellent host language. Its support for abstraction
+and first class functions make it an excellent meta-language to
+describe the manipulation of HDL object-language programs. But, its
+type system is too weak, and its syntax is too restrictive to
+describe the phase distinction between the meta-programs and the
+hardware descriptions as data. For these reasons, we propose building
+a stand-alone HDL with much the same look and feel of Haskell, but
+with features that allow it to overcome these
+restrictions. Imagine an Haskell-like language with a stronger type
+system, a slightly altered syntax, and features designed for
+describing hardware. We have, and this paper describes what we came up with.
+
+\subsection{Generalized Algebraic Datatypes}
+
+A hardware description is a piece of data. We will represent it as a {\em
+type-indexed} algebraic datatype. Algebraic data types (ADT's) are an
+abstraction available in many functional languages (such as Haskell, ML, or
+O'Caml) that allow users to define inductively formed structured data. A
+type-indexed algebraic datatype is an extension to ADTs we will explain in a
+moment.
+
+ADTs generalize other forms of structuring data such as enumerations,
+records, and tagged variants. For example,
+in Haskell we might write:
+
+\begin{verbatim}
+-- An enumeration type
+data Color = Red | Blue | Green
+-- A record structure
+data Address = MakeAddress Number Street Town 
+-- A tagged Variant
+data Person = Teacher [Class]  | Student Major
+\end{verbatim}
+
+We assume the reader has a certain familiarity with ADTs. In
+particular that values of ADTs are constructed by {\em constructors}
+and that they are taken apart by the use of {\em pattern matching}.
+Two valuable features of ADTS are their ability to be {\em
+parameterized by a type} and to be {\em recursive}. A simple example
+that employs both these features is:
+\begin{verbatim}
+data Tree a 
+   = Fork (Tree a) (Tree a) 
+   | Node a 
+   | Tip
+\end{verbatim}
+This declaration defines the polymorphic {\tt Tree} type constructor. Example tree
+types include {\tt (Tree Int)} and {\tt (Tree Bool)}. In fact the
+type constructor {\tt Tree} can be applied to any type whatsoever.
+Note how the constructor functions ({\tt Fork},\ {\tt Node}) and constants ({\tt Tip})
+are given polymorphic types.
+
+\noindent
+{\tt Fork :: forall a . Tree a -> Tree a -> \underline{Tree a}}\\
+{\tt Node :: forall a . a -> \underline{Tree a}}\\
+{\tt Tip :: forall a . \underline{Tree a}}
+
+When we define a parameterized algebraic datatype, the syntactic
+formation rules of the {\tt data} declaration
+enforce the following restriction: The range of every constructor function,
+and the type of every constructor constant must be a polymorphic instance of
+the new type constructor being defined. Notice how the constructors for {\tt
+Tree} all have range ({\tt Tree {\it a}}) with a polymorphic type variable
+{\it a}.  We can remove this restriction by strengthening the type system of the
+language. The restriction is {\bf syntactically} removed by the following mechanism. In a 
+{\tt data} declaration, rather than leaving the range of the constructor functions
+implicit, the user replaces the enumeration of the constructors and the
+type of their domains with a full explicit typing of each constructor.
+The only restriction being that the range must be some instance of
+the type being defined. {\bf Semantically}, this requires new type checking
+rules. This simple extension allows us to build indexed-datatypes. A simple example
+with relevance to hardware design can be found in Figure \ref{simple}.
+
+\begin{figure}
+\hrule
+{\small
+\begin{verbatim}
+
+data Exp ::  *0 ~> *0 where
+  O      :: Exp Bit                             -- Bits
+  I      :: Exp Bit
+  And    :: Exp Bit -> Exp Bit -> Exp Bit
+  Or     :: Exp Bit -> Exp Bit -> Exp Bit
+  Not    :: Exp Bit -> Exp Bit
+  Xor    :: Exp Bit -> Exp Bit -> Exp Bit
+  
+  Lit    :: Int -> Exp Int                      -- Integers
+  Equal  :: Exp Int -> Exp Int -> Exp Bit
+  Plus   :: Exp Int -> Exp Int -> Exp Int
+  Minus  :: Exp Int -> Exp Int -> Exp Int
+  Times  :: Exp Int -> Exp Int -> Exp Int
+\end{verbatim}}
+\vspace*{-0.2in}
+\caption{Type-indexed ADT capturing simple circuit descriptions.
+Notice how the full type of every constructor is explicitly supplied, and how the range of
+each constructor is not necessarily a polymorphic instance of {\tt Exp}.}\label{simple}
+\hrule
+\end{figure}
+
+Circuits are nothing more than a data structure. They are built
+by the constructor functions of their datatype. Simple combinational
+circuits can be described as values of the {\tt Exp}
+datatype which is defined in Figure \ref{simple}. The type constructor
+{\tt Exp} takes a type as an argument (which we call its type index). 
+The type index of {\tt Exp} tells us what kind of circuit it encodes --
+{\tt (Exp Bit)} if it represents a combinational circuit of bits,
+and {\tt (Exp Int)} if it represents a combinational circuit of integers.
+To fully understand this we need to take a short side trip into the
+world of kinds.
+
+\subsection{Values, Types, Kinds, and Sorts}
+
+
+The kind of {\tt Exp} is \verb+*0 ~> *0+.
+Kinds are similar to types in that, while types classify values, kinds classify
+types. We indicate this by the overloaded {\em classifies} relation ({\tt ::}). For example:
+{\tt 5::Int}, and {\tt Int::*0 }. We say {\tt 5} is classified by {\tt Int}, and {\tt Int}
+is classified by {\tt *0} (star-zero). The kind {\tt *0} classifies all
+types that classify values (things we actually can compute).
+
+{\bf New types} are introduced by the {\bf data} declaration along with the
+value constructors that produce values of that type. {\bf New kinds}
+are introduced by the {\bf kind} declaration along with the
+type constructors that produce types of that kind. Several declarations,
+for types and kinds of interest in this paper follow:
+\begin{verbatim}
+kind Nat = Z | S Nat
+
+data Nat':: Nat ~> *0 where
+   Z:: Nat' Z 
+   S::  (Nat' x) -> Nat' (S x)
+
+kind Row (x :: *0) = RNil | RCons x (Row x)
+
+kind Ctype = Comb | Seq 
+\end{verbatim}
+
+The {\tt Nat} declaration introduces two new
+type constructors {\tt Z} and {\tt S} which encode the natural
+numbers at the type level.
+The type {\tt Z} has kind {\tt Nat}, and {\tt S} has kind {\tt Nat \verb+~+>
+Nat}. The type {\tt S} is a type constructor, so it has a higher-order kind. We
+indicate this using the classifies relation as follows:
+\begin{verbatim}
+Z :: Nat
+S :: Nat ~> Nat
+Nat :: *1
+\end{verbatim}
+
+The classification {\tt Nat::*1} indicates that {\tt Nat} is at the same
+``level" as {\tt *0} --- they are both classified by {\tt *1}.
+The kinds {\tt Ctype} and {\tt Row} are also kinds different from {\tt *0}. We summarize the relationship
+between values, types, kinds, and sorts in the table below.\\
+
+{\small
+\begin{tabular}{|ccccccc|}
+{\scriptsize value name space} & $\mid$ & {\scriptsize type name space} \\ \hline
+value & $\mid$ & type & $\mid$ & kind &$\mid$ & sort \\ \hline
+5     &::& Int  &::& *0  &::& *1  \\ \hline
+[2]   &::& [Int]&::& *0  &::& *1  \\ \hline
+      &  & []   &::& *0 $\leadsto$ *0 &::& *1\\ \hline
+      &  &      &  & Nat &::& *1\\ \hline  
+      &  &  Z   &::& Nat &::& *1\\ \hline   
+      &  &  S   &::& Nat $\leadsto$ Nat &::& *1\\ \hline 
+      &  & Nat'   &::& Nat $\leadsto$ *0 &::& *1 \\ \hline  
+  Z   &::& Nat' Z &::& * 0               &::& *1 \\ \hline   
+  S   &::& Nat' m $\leadsto$ Nat' (S m)  &::& *0 &::& *1\\ \hline        
+      &  & Exp  &::&  *0 $\leadsto$ * 0 &::& *1\\ \hline
+      &  &      &  & Ctype   &::& *1\\ \hline
+      &  & Comb &::& Ctype   &::& *1\\ \hline
+      &  & Seq  &::& Ctype   &::& *1\\ \hline
+      &  &      &  & Row  &::& *1 $\leadsto$ *1\\ \hline
+      &  & RCons&::& k $\leadsto$ Row k $\leadsto$ Row k &::& *1\\ \hline
+      &  & RNil &::& Row k &::& *1\\ \hline      
+\end{tabular}} \\
+
+Note that the table is somewhat incomplete. Not all types classify values.
+For example there are no values of type \verb+[]+ (list) or \verb+Z+, but
+there are values of type \verb+[Int]+. The same holds at the kind level.
+Not all kinds classify types. For example, there are no types classified
+by \verb+Row+, but {\tt RNil} could be classified by \verb+(Row Int)+. As
+is done in Haskell, there are two name spaces. One name space names
+values, and the other name space names types, kinds, sorts etc. Two
+objects can have the same name if they live in different name spaces.
+
+We put this principal to work in the {\tt Nat'} datatype. {\tt Nat'} is a
+reflection of the {\tt Nat} type into the value world where the value
+constructors of the {\tt data} declaration for {\tt Nat'} mirror the type
+constructors in the {\tt kind} declaration of {\tt Nat}, and the type index
+of {\tt Nat'} exactly captures the kind reflected. We are able to use the
+same names for the constructor functions of {\tt Nat'} as the type
+constructors of {\tt Nat} because the name space for values and types is
+separate. {\tt Nat'} is a singleton type. There is only one element of any
+singleton type. For example only {\tt S (S Z)} inhabits the type {\tt Nat' (S
+(S Z))}. Using the same names for the type constructors of kind {\tt Nat}
+({\tt S} and {\tt Z}),
+and the constructor functions of {\tt data} type {\tt Nat'} ({\tt S} and {\tt Z}), is deliberate.
+This is possible because of the separate name spaces for values and types.
+
+
+We will find natural numbers at the type level (and their {\tt Nat'}
+reflections at the value level) to be so useful we introduce some syntactic
+sugar for constructing such types (or values). For example:
+{\tt \#0 = Z}, and {\tt \#1 = (S Z)}, and {\tt \#2 = (S (S Z))} etc.
+We also support the syntax {\tt \#(n + x) = (S$_1$(S$_2$ ... (S$_n$ x)))}.
+This is one advantage of not using an embedded approach, the ability to
+introduce new syntax for commonly used idioms. This is analogous to
+the use of square brackets to describe lists in addition to the use
+of the constructor \verb+(:)+.
+
+\subsection{Returning to Hardware Descriptions as First Class Type-Indexed Data}
+
+A value of type {\tt (Exp Bit)} is interpreted as a 
+combinational circuit with type {\tt Bit}. A simple example of a
+function that manipulates circuits is:
+
+\begin{verbatim} 
+halfAdd :: (Exp Bit) -> (Exp Bit) -> (Exp Bit, Exp Bit)
+halfAdd a b = (Xor a b,And a b) 
+\end{verbatim} 
+
+We can give meaning to such a data structure by writing a meaning
+or evaluation function for values of type {\tt (Exp t)}. Note
+how the meaning of a value of type {\tt (Exp t)} is a value of type {\tt t}.
+\begin{verbatim}
+data Bit = Low | High
+
+eval :: Exp t -> t
+eval O = Low
+eval I = High
+eval (And x y) = andB (eval x) (eval y)
+eval (Or x y) = orB (eval x) (eval y)
+eval (Xor x y) = xorB (eval x) (eval y)
+eval (Not x) = notB (eval x)
+eval (Lit n) = n
+eval (Plus x y) = (eval x) + (eval y)
+eval (Minus x y) = (eval x) - (eval y)
+eval (Times x y) = (eval x) * (eval y)
+eval (Equal x y) = if (eval x)==(eval y) then High else Low
+\end{verbatim}
+
+Note how the types of the constructor functions of {\tt Exp} play a role when
+they are analyzed as well when they are constructed. The types are not
+phantom here. Type-indexed ADTs are an instance of a more general mechanism
+called Generalized Algebraic Datatypes (GADTs). The typing rules for GADT's
+are beyond the scope of this short paper, but they are well
+understood\cite{wobbly,Sheard:2004:LF}.
+
+\subsection{Composite Data at the Circuit Level}
+
+The function
+{\tt halfAdd} produces a pair of circuits of type {\tt Bit} from two
+circuits of type {\tt Bit}. Its type is \verb+halfAdd :: Exp Bit -> Exp Bit -> (Exp Bit, Exp Bit)+.
+Notice how it returns a tuple of two circuits. Can we build circuits which
+encode tuples and other data structures inside the circuit? Such a function might have
+type: \verb+Exp Bit -> Exp Bit -> Exp(Bit,Bit)+. This would allow designers
+to build structured circuits. To do this we would just enrich the 
+GADT describing circuits.
+\begin{verbatim}
+data Vec:: *0 ~> Nat ~> *0 where
+  Empty:: Vec a Z
+  Add:: a -> Vec a m -> Vec a (S m)
+
+data Exp ::  *0 ~> *0 where
+  . . .
+  Pair   :: Exp a -> Exp b -> Exp (a,b)
+  CEmpty :: Exp (Vec a Z)
+  CAdd   :: Exp a -> Exp (Vec a m) -> Exp (Vec a (S m))
+\end{verbatim}
+Now we can build circuits of four
+different kinds of data: bits, integers, heterogeneous products, and
+homogeneous vectors of fixed width. Here are some examples
+\begin{verbatim}
+#2         :: Nat' #2           -- (S (S Z))
+I          :: Exp Bit           -- I
+(Lit 5)    :: Exp Int           -- (Lit 5)
+#(I,Lit 5) :: Exp (Bit,Int)     -- (Pair I (Lit 5))
+#[I,O,I]   :: Exp (Vec Bit #3)  -- (CAdd I (CAdd O (CAdd I CEmpty)))
+\end{verbatim}
+
+In addition to the new constructors for \verb+Exp+ ({\tt Pair}, {\tt CAdd},
+and {\tt CEmpty}) we are also illustrating a considerable amount of syntactic
+sugar as well. The syntax on the left expands to the calls to the
+constructor function expressions after the comment marks ({\tt --}) on the right. Notice
+how we use syntactic sugar to model object-level numbers, tuples, and
+vectors using the meta-level syntax, just by prefixing them with the object level
+marker hash (\verb+#+). This is just another thing we couldn't do in an embedded
+approach. Here
+is second version of the half-adder that returns a single circuit
+representing a pair of wires.
+
+\begin{verbatim} 
+halfAdd2 :: (Exp Bit) -> (Exp Bit) -> Exp(Bit,Bit)
+halfAdd2 a b = #(Xor a b,And a b) 
+\end{verbatim}
+
+We can also mix and match between meta-level and object-level data.
+Consider constructing a full adder from a n-bit adder
+
+\begin{verbatim}
+bitAdder :: Exp Bit -> Vec (Exp Bit) n -> (Vec (Exp Bit) n, Exp Bit)
+bitAdder carry_in Empty = (Empty,carry_in) 
+bitAdder carry_in (Add x xs) = (Add y ys,carry_out)
+  where #(y,carry) = halfAdd2 carry_in x
+        (ys,carry_out) = bitAdder carry xs
+\end{verbatim}
+Note how the {\tt halfAdd2} returns a structured circuit, which we take apart
+using pattern matching, and then reassemble into a meta-level pair. Note also that the size of the
+adder is indicated in the type of the function that constructs it!
+
+\subsection{Binding and Naming Circuits}
+Reconsider the half-adder function.
+\begin{verbatim} 
+halfAdd :: (Exp Bit) -> (Exp Bit) -> (Exp Bit, Exp Bit)
+halfAdd a b = (Xor a b,And a b) 
+\end{verbatim} 
+Note how the inputs {\tt a} and {\tt b} are duplicated by the function.
+If they represented large circuits the size of the output might be
+larger than one might naively expect. Of course duplicating circuits
+is not always bad. One might want to duplicate a small circuit to improve
+the delay in a larger one, of which it is a part. The point is, duplication
+is neither inherently good nor bad. What the designer needs is control over
+naming and duplication.
+
+Introducing naming into the object-level means the object-level data
+structure must have binding constructs. Binding constructs are notoriously
+hard to use if exposed naively to the user. The study of meta-programming
+systems has provided a number of excellent solutions to this problem. These
+solutions require some syntactic sugar, and are thus not available in an
+embedded approach. Fortunately, we have avoided that trap by our initial
+design choices. Consider
+\begin{verbatim} 
+halfAdd :: (Exp Bit) -> (Exp Bit) -> Exp(Bit,Bit)
+halfAdd a b = circuit #(carry,sum) 
+  where carry = Xor a b
+        sum = And a b
+\end{verbatim} 
+Here we introduce the {\tt circuit} syntactic sugar for introducing
+named circuits. It looks and behaves a like a meta-level {\tt where}
+clause, except it builds an {\tt Exp} data-structure and names 
+some of its sub-expressions. Further uses
+of the named sub-expressions will mention the name of the structure
+not their value, so duplication can be controlled.
+To implement this we again need to enrich the GADT that represents circuits
+by adding variables, patterns, and binding constructs. 
+
+\begin{verbatim} 
+data Pat :: *0 ~> *0 where
+  PVar :: String -> (Rep t) -> Pat t
+  PPair :: Pat a -> Pat b -> Pat (a,b)
+  
+data Exp ::  *0 ~> *0 where
+  . . .
+  Var    :: String -> Rep t -> Exp t
+  Let    :: Decs t -> Exp t
+  
+Decs :: *0 ~> *0 
+data Decs t 
+   = In (exp t) 
+   | exists s . Decl (Pat s) (Exp s) (Decs t)
+\end{verbatim}
+We introduce the {\tt Pat} type, and add two new constructors to the {\tt Exp} datatype ({\tt Var}, and {\tt
+Let}), and a new auxiliary datatype {\tt Dec} to represent declarations. So
+the definition of the circuit in the half adder function above
+might expand into the data structure:
+\begin{verbatim}
+Let (Decl (PVar "carry" Bit) (Xor a b)
+    (Decl (PVar "sum" Bit) (And a b)
+    (In #(Var "carry" Bit,Var "sum" Bit))))
+\end{verbatim}
+Because we want our variables to be typed, we must introduce the 
+representation for types {\tt Rep}.
+\begin{verbatim}
+data Rep:: *0 ~> *0 where
+  Bit:: Rep Bit
+  Int:: Rep Int
+  Prod:: (Rep a) -> (Rep b) -> Rep (a,b)
+  Vec:: Rep a -> Nat' n -> Rep(Vec a n)
+\end{verbatim}
+A value of type {\tt (Rep t)} is a value isomorphic in
+shape to the type {\tt (t)}, but is a value rather than a type.
+Like {\tt Nat'}, {\tt Rep} is a singleton type, because there is exactly one value
+with type {\tt Rep t} and that value is isomorphic in shape to the type {\tt t}.
+For example:
+\begin{verbatim}
+Bit :: Rep Bit
+Prod Bit Int :: Rep (Bit,Int)
+Vec Int #1 :: Rep (Vec Int #1)
+\end{verbatim}
+This allows users to create run-time values that encode
+types. By storing these singletons in {\tt Var} and {\tt PVar} objects
+the user can encode the type of the variables they are representing.
+Again, this uses the trick of naming the constructors of the {\tt Rep}
+values with the same name as the types they represent, by exploiting
+the distinction between the value and type name space.
+
+Patterns are a subset of expressions, essentially those expressions
+constructed from only variables and products. Many times it is useful
+to convert between patterns and this subset of expressions.
+
+\begin{verbatim}
+exp2pat :: Exp t -> Pat t
+exp2pat (Var nm t) = PVar nm t
+exp2pat (Pair x y) = PPair (exp2pat x) (exp2pat y)
+
+pat2exp :: Pat t -> Exp t  
+pat2exp (PVar nm t) = Var nm t
+pat2exp (PPair x y) = Pair (pat2exp x) (pat2exp y)
+\end{verbatim}
+
+Including {\tt Rep}s inside of variables and patterns makes it possible
+to compute the type of any expression. The function {\tt typeOf} is
+an example of a function that analyzes an {\tt Exp} to compute some
+property of that expression.
+
+\begin{verbatim}
+typeOf :: Exp t -> Rep t
+typeOf (Var s t) = t
+typeOf (If x y z) = typeOf y
+typeOf O = Bit
+typeOf I = Bit
+typeOf (And x y) = Bit
+typeOf (Or x y) = Bit
+typeOf (Xor x y) = Bit
+typeOf (Not x) = Bit
+typeOf (Lit n) = Int
+typeOf (Plus x y) = Int
+typeOf (Minus x y) = Int
+typeOf (Times x y) = Int
+typeOf (Equal x y) = Bit
+typeOf (Pair  x y) = Prod (typeOf x) (typeOf y)
+typeOf (CAdd x y) = case typeOf  y of Vec _ n -> Vec (typeOf x) (S n)
+typeOf (Let (In e)) = typeOf e 
+typeOf (Let (Decl p e ds)) = typeOf (Let ds) 
+typeOf (RLet ds) = typeOf (last ds)
+  where last (Decl p e ds) = last ds
+        last (In e) = e
+\end{verbatim}
+
+Note, that because all {\tt Exp}s are well formed, in some instance
+it is not necessary to compute the type of a an expression's
+sub-expressions to compute its type.
+
+\subsection{Sequential Circuits}
+
+Feed back loops capture recursion inside the circuit and are semantically
+different than the recursion we used in {\tt bitAdder}. There the recursion
+indicated that the circuit producing function was being called repeatedly,
+not that the circuit being built had a feed back loop. Sequential circuits
+also require several new primitives to capture the semantics of a circuit as
+an infinite sequence of values one for each clock cycle. These primitive
+include the {\tt (Const n)} operator that returns a sequential circuit that
+returns {\tt n} on all clock cycles, and the {\tt (Delay n x)}, which returns
+{\tt n} in the first clock cycle, and then returns the values returned by {\tt x},
+only delayed by one clock cycle. To do this, we again enrich the {\tt Exp}
+GADT.
+
+\begin{verbatim}
+ data Exp ::  *0 ~> *0 where
+   . . .
+   Delay  :: a -> Exp a -> Exp a
+   Const  :: a -> Exp  a
+   RLet   :: Decs t -> Exp t       -- Like "Let" but denotes recursive binding
+\end{verbatim}
+
+We can indicate feed back loops by expanding the
+use of named circuits. If we allow the definition of names
+inside of a {\tt circuit} to be mutually recursive, then feed back loops
+become possible with no additional syntax. Consider:
+\begin{verbatim}
+toggle change = 
+  circuit  out2  where
+     out1 = Delay Low out2
+     out2 = Xor change out1
+\end{verbatim}
+
+This is transformed by the compiler into a definition that replaces the
+recursive equations by an expression built by using the constructor
+functions of the {\tt Exp} datatype. These constructor functions
+make explicit the recursion implicit in the equations. There
+is considerable analysis going on here, and this is one reason
+why an embedded approach comes up short. The expanded declaration
+produced is as follows:
+
+\begin{verbatim}
+toggle change = 
+  (RLet (Decl (PVar "out1" Bit) (Delay Low (Var "out2" Bit)) 
+        (Decl (PVar "out2" Bit) (Xor (Input "x" Bit) (Var "out1" Bit)) 
+        (In (Var "out2" Bit)))))
+\end{verbatim}
+
+The translation process is the same as for named circuits, except here the 
+naming is mutually recursive, as expressed by the use of {\tt RLet}
+instead of {\tt Let}. The analysis discovers the recursion and
+inserts the {\tt RLet}. Note also, that the {\tt Rep} types inside of
+{\tt Var} and {\tt PVar}, which is only implicit in the unexpanded 
+{\tt circuit} syntactic sugar, is made explicit by the expansion process.
+The type checker reconstructs these so that the user does not have to.
+It would be possible to have only one kind of
+naming, where all naming is potentially recursive. We intend to
+explore that design decision in the near future.
+
+\subsection{The Importance of Syntactic Sugar}
+
+We wish to emphasize that users of the HDL need know nothing about the constructors
+for declarations ({\tt In} and {\tt Decl}), variables ({\tt Var} and {\tt PVar}),
+and binding ({\tt Let} and {\tt RLet}). These constructors are
+completely abstracted by the {\tt circuit} syntactic sugar. In an embedded
+approach none of this would be possible.
+
+\subsection{The Truth Revealed}\label{truth}
+
+The story of named circuits is plausible, but it doesn't quite stand
+up to inspection. First, it is susceptible to inadvertent name capture.
+Second, it doesn't really solve the duplication problem. To illustrate
+the first point consider.
+\begin{verbatim}
+f x = circuit (halfAdd carry x)
+       where carry = I
+\end{verbatim}
+This expression uses nested {\tt circuit} syntax. It expands to nested
+{\tt Let} expressions, but they both employ the same local name {\tt carry}.
+\begin{verbatim}
+f x = 
+  Let (Decl (PVar "carry" Bit) I
+      (In (Let (Decl (PVar "carry" Bit) (Xor (Var "carry" Bit) x)
+               (Decl (PVar "sum" Bit) (And (Var "carry" Bit) x)
+               (In #(Var "carry" Bit,Var "sum" Bit)))))))
+\end{verbatim}
+Note how the second {\tt Decl} for {\tt carry} hides the first one.
+To illustrate the second problem consider.
+\begin{verbatim}
+f x = And x x
+g x y = f (halfAdd x y)
+\end{verbatim}
+
+This just duplicates the {\tt Let} expression in each argument of the {\tt
+And} constructor. What we need is to push the {\tt And x x} inside the body
+of the {\tt Let} expression. Fortunately, the meta-programming community has
+developed standard solutions to both of these problems.  The first is solved
+by a generative approach to naming. I.e. every time a {\tt circuit}
+expression is expanded, a fresh version for each name is generated. This
+approach has been well studied in both MetaML\cite{MetaOCaml-paper,TS00,T00} and Template
+Haskell\cite{sheard02template}. There are even techniques for proving properties of programs
+generated in this way\cite{Taha99}. The second is solved by the use of
+continuations. The great thing about both these approaches is that users can
+be completely unaware of the implementation mechanism. Using these approaches
+the first example expands to:
+
+\begin{verbatim}
+f x = 
+  Let (Decl (PVar "carry_1" Bit) I
+      (In (Let (Decl (PVar "carry_2" Bit) (Xor (Var "carry_1" Bit) x)
+               (Decl (PVar "sum_3" Bit) (And (Var "carry_1" Bit) x)
+               (In #(Var "carry_2" Bit,Var "sum_3" Bit)))))))
+\end{verbatim}
+And the second: \verb+f (halfAdd x y)+  expands to:
+\begin{verbatim}
+Let (Decl (PVar "carry_1" Bit) (Xor x y)
+    (Decl (PVar "sum_2" Bit) (And x y)
+    (In (And (Var "carry_1" Bit) (Var "sum_2" Bit)))))
+\end{verbatim}
+We discuss the implementation details of a generative approach to name generation
+and the use of continuations in more detail in Section \ref{implement}
+
+\section{The Signal Datatype}\label{implement}
+To handle possible inadvertent name capture and to control duplication, we
+introduce the {\tt Sig} type constructor. A signal is just an abstraction
+which produces an {\tt Exp} datatype, but which hides a few details. These
+details solve the problems discussed in Section \ref{truth}.
+Signals employ a combination of two techniques: the state monad, and the
+continuation monad. It is useful to discuss each technique in isolation.
+
+\paragraph{The state monad for name generation.} The generative approach
+to naming must generate new, unique names when a named signal is created.
+To do this we need a little bit of state from which to generate new names.
+For example, if we were only interested in name generation we might
+define {\tt Sig} as follows:
+\begin{verbatim}
+data Sig t = Sig (Int -> (Exp t,Int))
+
+and :: Sig Bit -> Sig Bit -> Sig Bit
+and (Sig f) (Sig g) = Sig h  
+    where h n = let (x,n1) = f n
+                    (y,n2) = g n1
+                in (And x y,n2)
+\end{verbatim}
+Each of the operators of primitive circuits ({\tt And}, {\tt Or}, {\tt Xor}, etc.)
+are easily lifted to the signal type as illustrated for the {\tt And}
+case. Each signal (implicit in the function {\tt f} and {\tt g}), is
+called, possibly generating a new integer ({\tt n1} and {\tt n2}) which
+is propagated unchanged inside the definition of {\tt And} because it
+does no naming. To illustrate how generative naming is performed
+consider the simple named circuit.
+\begin{verbatim}
+f :: Sig Bit -> Sig Bit -> Sig Bit
+f x y = circuit z where z = and x y
+\end{verbatim}
+This might be expanded to 
+\begin{verbatim}
+f x y = Sig h
+  where h n = let (z,zpat) = gensym n "z" Bit
+                  (ans,n2) = runSig (and x y) (n+1)
+              in (Let (Decl zpat (In ans)),n2)
+                            
+runSig (Sig f) n = f n
+
+gensym :: Int -> String -> Rep t -> (Exp t,Pat t)
+gensym s t = (Var name t,PVar name t)
+  where name = s++show n              
+\end{verbatim}
+The current integer ({\tt n}) is used to generate a new name, and the
+body of the {\tt circuit} is ``run" with the next integer ({\tt n+1}). The resulting
+{\tt Exp} ({\tt ans}), and the ultimate integer ({\tt n2}) are used
+to assemble the result.
+
+\paragraph{The continuation monad.} To avoid duplication, naming a 
+sub-circuit must propagate the name of the circuit to all possible
+future circuits. To do this we use continuations.
+For example, if we were only interested in name propagation we might
+define {\tt Sig} as follows:
+\begin{verbatim}
+data Sig a = Sig (forall c . (Exp a -> Decs c) -> Decs c)
+
+and :: Sig Bit -> Sig Bit -> Sig Bit
+and (Sig f) (Sig g) = Sig h  
+    where h k = f (\ x -> 
+                g (\ y -> k(And x y)))
+\end{verbatim}
+Here we lift each primitive into the {\tt Sig} type as illustrated
+by the definition of {\tt and}. Note how the continuation {\tt k}
+is pushed inside on the result of anding together the result of
+running the two input computations. 
+Now,  to propagate new names to all future computations we proceed
+by using the new {\tt name} operation.
+\begin{verbatim}
+name :: Pat a -> Sig a -> Sig a
+name p (x@(Sig f)) = Sig h
+  where h k = Decl p (Let (f In)) (k (pat2exp p))
+\end{verbatim}
+Given a name {\tt p} and a computation {\tt x} we want to name in all
+future circuit expressions, we start by building a new declaration
+for {\tt p}. Note how all future signals will be in the scope
+of this name since these signals are implicit in the continuation {\tt k},
+and {\tt k} expands in the body of the new declaration. The tricky part
+is to run {\tt x} in the simplest continuation {\tt In}, and then
+use the resulting declarations to build an {\tt Exp} whose
+value will be bound to the name {\tt p}. Note that when {\tt f} is applied
+to a continuation, it  always expands into its own sequence of {\tt Decl}s.
+Thus the shape of the result will be something like.
+
+\begin{verbatim}
+Decl p (Let (Decl_1 p_1 e_1 ... (Decl_n p_n e_n (In f_result))))
+       (k (Var nm ty))
+\end{verbatim}
+In many interpretations of {\tt Exp} this is equivalent to the following
+expression which normalizes the form of declarations:
+\begin{verbatim}
+(Decl_1 p_1 e_1 ... 
+(Decl_n p_n e_n
+(Decl p f_result
+(In (k (Var nm ty))))))
+\end{verbatim}
+so it might be ok to define a {\tt name} function that builds declarations
+in normal form.
+\begin{verbatim}
+name :: Pat a -> Sig2 a -> Sig2 a
+name p (Sig2 f) = Sig2 h
+  where h k = f (\ res -> Decl p res (k (pat2exp p)))
+\end{verbatim}
+
+\paragraph{The combined approach.} So while this propagates names, it doesn't
+generate fresh ones. To do this we need to combine name generation and
+continuations. Thus we might consider defining a signal as follows
+\begin{verbatim}
+Sig a = (forall c . Int -> (Int -> Exp a -> Decs c) -> Decs c)
+\end{verbatim}
+It turns out that it is more convenient to define a slightly more
+generic type, which is a monad, and then to define a signal as an
+instance of this monadic type.
+\begin{verbatim}
+data M a = M (forall c . Int -> (Int -> a -> Decs c) -> Decs c)
+unM (M x) = x
+runM (M f) = f 0 (\ s -> \x -> x)
+
+return x = M h where h s k = k s x
+bind (M a) f = M h where h s k = a s (\ s' b -> unM (f b) s' k)
+fail s = error s
+monadM = Monad return bind fail
+next s = M h where h n k = k (n+1) (s++"_"++show n) 
+
+data Sig a = Sig (M (Exp a))
+unSig (Sig x) = x
+\end{verbatim}
+All of the primitive circuit constructors are easily lifted to this new
+type. We follow the convention that the lifted operators (except in a few
+cases) use the same name as the {\tt Exp} constructor functions,
+but don't use an uppercase letter as the first character in their name.
+\begin{verbatim}
+lift0 :: Exp a -> Sig a
+lift0 x = Sig(return x)
+
+lift1 :: (Exp a -> Exp b) -> (Sig a -> Sig b)
+lift1 f (Sig x) = 
+  Sig(do { a <- x; return(f a)}) where monad monadM
+
+lift2 :: (Exp a -> Exp b -> Exp c) -> (Sig a -> Sig b -> Sig c)
+lift2 f (Sig x) (Sig y) = 
+  Sig(do { a <- x; b <- y; return(f a b)}) where monad monadM
+ 
+mux = lift3 If
+pair = lift2 Pair
+cempty = lift0 CEmpty
+cadd = lift2 CAdd
+o = lift0 O
+i = lift0 I
+and = lift2 And
+or = lift2 Or
+xor = lift2 Xor
+not1 = lift1 Not
+xor2 = lift2 Xor
+lit n = lift0(Lit n)
+equal = lift2 Equal
+plus = lift2 Plus
+minus  = lift2 Minus
+times  = lift2 Times
+delay a = lift1 (Delay a)
+const a = lift0 (Const a)
+\end{verbatim}
+Because the new definition of signals includes a mechanism for generating
+fresh names, we can define a {\tt name} operation that does not need
+a name as input, but generates a fresh one on demand.
+\begin{verbatim}
+name (Sig (M f)) = Sig(M h) where
+  h n k = f n (\ n2 res -> 
+                 let t = (typeOf res)
+                     name = ("x"++"_"++show n2)
+                 in Decl (PVar name t) res (k (n2+1) (Var name t)))
+\end{verbatim}
+Now the user simply uses the lifted versions of the primitive operators.
+All the naming machinery is still hidden inside the {\tt circuit}
+syntactic sugar. 
+\begin{verbatim}
+toggle3 change = 
+  circuit out2 where
+     out1 = delay Low out2
+     out2 = xor change out1
+\end{verbatim}
+
+\subsection{Obtaining Expressions from Signals}
+Now suppose we wish to test one of our signal description
+generators. We will need two things: (1) a way of generating
+abstract inputs, and (2) a way of turning {\tt (Sig t)} into {\tt (Exp t)}.
+Both are easy. First enrich the {\tt Exp} datatype with a notion of
+an abstract input with a new constructor {\tt Input}, and
+then define the function {\tt go} that turns a signal into a data
+structure and then prints out the result.
+\begin{verbatim}
+data Exp ::  *0 ~> *0 where
+  . . .
+  Input :: String -> Rep t -> Exp t
+
+arg :: String -> (Rep a) -> Sig a
+arg s t = lift0 (Input s t)
+
+go :: Sig a -> String
+go (Sig (M f)) = showC(RLet (f 0 (\ n x -> In x)))
+\end{verbatim}
+The function {\tt arg} lifts abstract inputs from the {\tt Exp} level
+to the {\tt Sig} level. The function {\tt go} forces the computation
+inside a signal by applying it to an initial integer {\tt 0}, and
+an initial continuation {\tt In}, and then prints the result.
+We can now test one of our circuit descriptions
+by evaluating \verb+go (toggle3 (arg "A" Bit))+
+which produces the following string as output
+\begin{verbatim}
+"circuit out2_1 where
+   out1_0::Bit = (Delay Low out2_1)
+   out2_1::Bit = (Xor A out1_0)" 
+\end{verbatim}   
+If we want to analyze a circuit description, we simply skip the use
+of the printing function {\tt showC}. Note that expressions are
+still typed, and the types help us ensure that are analysis
+are correct.
+
+
+\section{Static Analyses}\label{static}
+A static analysis computes a static property of a value or function.
+The property can be determined by looking at the program without running it.
+Type systems are one type of static analysis. An easy way to specify
+a static analysis is by using an inference system. The inference system
+states how to build the property of a large program from the
+properties of its smaller sub-programs. We have already seen a simple
+static property of {\tt Exp}. That property is its type index. It states
+that {\it every} expression with type {\tt (Exp t)} denotes a circuit
+with type {\tt t}. Note that functions over {\tt Exp} propagate
+this property. For example: \verb+halfAdd2 :: (Exp Bit) -> (Exp Bit) -> Exp(Bit,Bit)+
+states that given two expressions with static property {\tt Bit} it
+creates an expression with static property {\tt (Bit,Bit)}. 
+
+We specified the property for the constructors of {\tt Exp} using the {\tt
+data} declaration and then we inferred (or checked) the property for every
+function. There is no reason we cannot duplicate this process. Give rules
+for inferring the property for each constructor, then infer (or check)
+the rules for every function. For example, a circuit built without
+using the {\tt RLet}, {\tt Const}, or {\tt Delay} constructor
+can always be given an interpretation as a combinational circuit. Can we track
+this property statically? The answer is yes.
+
+\begin{verbatim}
+kind Ctype = Comb | Seq 
+
+property circuitType of 
+  Pat :: Ctype ~> *0 where
+    PVar :: String -> (Rep t) -> Pat ct
+    PPair :: Pat ct -> Pat ct -> Pat ct
+  
+  Exp ::  Ctype ~> *0 where
+    Var    :: String -> Rep t -> Exp ct
+    If     :: Exp ct -> Exp ct -> Exp ct -> Exp ct
+    Let    :: Decs ct -> Exp ct
+    Pair   :: Exp ct -> Exp ct -> Exp ct
+    CEmpty :: Exp ct
+    CAdd   :: Exp ct -> Exp ct -> Exp ct
+    O      :: Exp ct
+    I      :: Exp ct
+    And    :: Exp ct -> Exp ct -> Exp ct
+    Or     :: Exp ct -> Exp ct -> Exp ct
+    Not    :: Exp ct -> Exp ct
+    Xor    :: Exp ct -> Exp ct -> Exp ct
+    Lit    :: ct -> Exp ct
+    Equal  :: Exp ct -> Exp ct -> Exp ct
+    Plus   :: Exp ct -> Exp ct -> Exp ct
+    Minus  :: Exp ct -> Exp ct -> Exp ct
+    Times  :: Exp ct -> Exp ct -> Exp ct
+    Delay  :: a -> Exp ct -> Exp Seq
+    Const  :: a -> Exp  Seq
+    RLet   :: Decs t -> Exp Seq
+    Input :: String -> Rep t -> Exp ct
+  
+    
+  Decs :: Ctype ~> *0  where
+    In :: Exp t -> Decs ct
+    Decl :: Pat ct -> Exp ct -> Decs ct -> Decs ct
+\end{verbatim}
+To introduce a new property, define a new kind ({\tt Ctype}) whose
+structure is the carrier of the property. Here we have two
+kinds of circuits: combinatorial ({\tt Comb}), and sequential ({\tt Seq}).
+Then for each datatype involved ({\tt Pat}, {\tt Exp}, and {\tt Decs}),
+give an inference system where the new property is an index of
+the datatype. The similarity between {\tt data} declaration and
+{\tt property} declaration is intentional. The property defines an alternate
+type system for the constructors. In the property {\tt circuitType} most
+of the constructors are polymorphic in their {\tt Ctype} index. Only
+{\tt RLet}, {\tt Const}, and {\tt Delay} force the introduction
+of the {\tt Seq} type index. Thus an expression without one of these
+constructors will have a polymorphic type in the alternate {\tt circuitType}
+inference system.
+
+When we define a new function we can give multiple prototype declarations.
+One for its type, and one for each static property we want to check. For example:
+
+\begin{verbatim}
+circuitType bitAdder :: Exp a -> Vec (Exp a) n -> (Vec (Exp a) n, Exp a)
+
+bitAdder :: Exp Bit -> Vec (Exp Bit) n -> (Vec (Exp Bit) n, Exp Bit)
+
+bitAdder carry_in Empty = (Empty,carry_in) 
+bitAdder carry_in (Add x xs) = (Add y ys,carry_out)
+  where #(y,carry) = halfAdd2 carry_in x
+        (ys,carry_out) = bitAdder carry xs
+\end{verbatim}
+Here we state that {\tt bitAdder} does not necessarily force
+its output to be a sequential circuit, but propagates the {\tt Ctype}
+property of its inputs. The compiler checks this property by
+type checking the body twice. First checking that it has the normal
+type, and second by using the alternate {\tt circuitType} types for
+the constructors ({\tt Add}), and helper functions ({\tt halfAdd2}). An error
+in either check causes a compile-time error.
+
+
+\section{Multiple Interpretations}\label{multinterp}
+
+Once a circuit description is built, users want to interpret it
+in many ways. It should be possible to do this, in fact this is
+why we build descriptions in the first place. We've already
+seen several interpretations of {\tt Exp}: {\tt eval} and {\tt typeOf}.
+Other examples of
+interpretations are:
+\begin{verbatim}
+eval1 :: Exp t -> Env1 -> [t]             -- an infinite sequence of t values
+                                          -- one for each clock cycle
+                                        
+eval2 :: Exp t -> Env2 -> (Time -> t)     -- A function from Time to t
+
+eval3 :: Exp t -> Env3 -> Code(Time -> t) -- The Haskell code of a function 
+                                          -- from Time to t
+
+numGates :: Exp t -> Int                  -- Number of primitive gates
+
+depth :: Exp t -> Int                     -- depth of the circuit
+\end{verbatim}
+In the first three examples we need an environment to handle
+free variables in expressions. The structure of the environment
+will differ, depending on what the function is doing. For space
+reasons we illustrate only {\tt eval2}, and we only show some
+of the cases. The missing cases are all similar to the {\tt And}
+and {\tt Plus} cases.
+\begin{verbatim}
+type Time = Int
+data Entry2 = exists t . E2 String (Rep t) (Time -> t)
+type Env2 = [Entry2]
+
+find2 :: String -> Rep t -> Env2 -> (Time -> t)
+find2 s t [] = error ("Not found: "++show s)
+find2 s t ((E2 nm z v):xs) = case (eqStr s nm,testRep t z) of
+                               (True,Just Eq) -> v
+                                _ -> find2 s t xs
+
+eval2 :: Exp t -> Env2 -> (Time -> t)
+eval2 (Var s t) env = find2 s t env 
+eval2 (And x y) env = \ t -> andB (eval2 x env t) (eval2 y env t)      
+eval2 (Plus x y) env = \ t -> (eval2 x env t) + (eval2 y env t)
+eval2 (Pair x y) env = \ t -> (eval2 x env t, eval2 y env t)
+eval2 (Const n) env = \ t -> n
+eval2 (Delay n x) env = \ t -> if t==0 then n else (eval2 x env (t-1))
+eval2 (Let (In e)) env = eval2 e env
+eval2 (Let (Decl (PVar nm t) e ds)) env = 
+  eval2 (Let ds) ((E2 nm t (eval2 e env)):env)
+eval2 (RLet ds) env = eval2 (last ds) env2
+  where env2 = map ds
+        map (Decl p e ds) =  bindPat2 p (lazy(eval2 e env2)) (map ds)
+        map (In e) = env      
+        last (Decl p e ds) = last ds
+        last (In e) = e
+
+bindPat2 :: Pat t -> (Time -> t) -> Env2 -> Env2
+bindPat2 (PVar nm t) v env = (E2 nm t v):env
+\end{verbatim}
+
+\section{Smart Circuits}
+Recently Mary Sheeran has described how to use clever circuits\cite{clever}
+to build not-quite regular structures. The key idea here is to tag each
+circuit with a value that circuit building combinators can observe
+to direct how they should combine the smaller circuits into
+larger ones. We can accommodate this by adding an extra slot
+in each expression to store the tag.
+
+\begin{verbatim}
+data TagExp ::  *0 ~> *0 ~> *0 where
+  Var    :: tag -> String -> Rep t -> Exp tag t
+  If     :: tag -> Exp tag Bit -> Exp tag b -> Exp tag b -> Exp tag b
+  Let    :: tag -> Decs tag t -> Exp tag t
+  O      :: tag -> Exp tag Bit
+  I      :: tag -> Exp tag Bit
+  And    :: tag Exp Bit -> Exp tag Bit -> Exp tag Bit
+\end{verbatim}
+Of course, each combinator that does something special with the
+tags will have to be individually encoded.
+
+
+
+\section{Hardware Description and Domain Specific Languages}
+
+A Hardware description language (HDL) is a domain specific language. As
+such it can have a number of advantages over using a
+general purpose language for hardware design. In this section we try
+to open a discussion about the future of DSL's for hardware design. I am
+deeply indebted to John O'Leary for many of the ideas discussed
+in this section. First let's take stock of the current state of affairs.
+
+\begin{itemize}
+
+\item A HDL should adopt an existing notation,
+and allow designers to create large designs with little or
+no programming experience. The HDL language syntax is often
+different than that of existing notation because high-level HDL's
+attempt to do things existing notations were not designed to do.
+
+While syntactical issues are important, a bigger problem is achieving a
+smooth {\tt semantic} integration between a high-level HDL and an
+existing notation. Ideally one should not have to switch mind sets when
+switching between ``existing notation mode" and ``meta mode". This is a
+challenge in any meta-programming system. 
+
+
+\item A HDL program provides a common language that allows different
+database users to share precisely the description of the hardware they are
+interested in. An HDL communicates ideas. 
+
+\item A HDL program relieves the designer from needing to know about
+various aspects of the hardware design process, such as the data
+structures that store the low level description, or the layout process
+that maps the design onto silicon. These issues must eventually be
+addressed, but they can be abstracted away in early steps of the
+design. 
+
+\item A HDL program encodes constraints. Constraints could include area,
+timing, and power requirements. It's not clear how analysis of these
+properties would fit with type checking, or even whether it should. In
+general, design constraints get handed down from management or marketing
+(e.g. it has to be an x86, consume less than 100 watts of power, run at 3 GHz,
+and fit on a die so big). As the implementation is developed the
+constraints need to be maintained and pushed down to sub-blocks, but
+there's often not enough good information to say for certain whether a
+block fulfills its constraints. This is because the most accurate
+estimates come bottom-up from the detailed levels of design, and you
+don't get there until the final few months of a project.
+
+Also, some things are quite difficult to estimate statically - we might
+be interested not in worst-case power but in average power over some
+benchmark suite. In this case there's no substitute for dynamic
+simulation. 
+
+\item A HDL program can take advantage of domain specific properties.
+Especially in the logic synthesis process. Given a Boolean
+function and a set of constraints (e.g. area, power, delay), generate a
+gate-level implementation meeting the constraints. The constraints (and
+physics) are what make it more than just simplification, and design
+principles used here would be hard to encode in a general
+purpose programming language.  There's a
+whole research community built around ``physically aware synthesis",
+and an HDL should incorporate this knowledge.
+
+\item A HDL program is a rapid prototype. An HDL description should be
+easy to write and lets designer experiment with different solutions. If
+the results of a design does not have the properties intended, the
+designer is free to throw the original design away and try another
+without excessive losses in time or resources. 
+
+\item An HDL design should integrate with a number of existing contexts
+or environments, such as timing analysis, and layout systems. 
+
+\item An HDL design should support a natural notion of refinement.
+For example, 
+may design a sequential circuit over integers, and later refine integer
+to a fixed 32-bit, twos-complement bus. The vision is that one
+writes high level models of various blocks, validates that they work
+together correctly, and then uses these models as a test harness for more
+detailed designs (e.g. by substituting a gate-level block for one of the
+high level blocks and running simulation again).
+
+But what is missing from this picture is a formal account of refinement -
+when can a block be said to refine another? Does refinement preserve
+properties that were verified on the abstract model?  Besides data
+refinement designers are interested in refinement in several other dimensions.
+\begin{enumerate}
+ \item{\bf Temporal refinement.} An abstract model of a pipeline might have an
+    incompletely-specified delay from input to output (e.g. between four
+    and six cycles). A more concrete model may have the delays nailed
+    down.
+    
+ \item{\bf Interface refinement.} An abstract model might communicate via
+    CSP-style channels:\\
+
+        c!v   - send value v along channel c\\
+        c?x   - receive a value on channel c and bind it to variable x\\
+        
+    A more concrete model would implement some sort of handshaking
+    scheme. 
+    There are several interesting things here. At the abstract level, the
+    sender views a channel as an output and the receiver views it as an
+    input. At the concrete level, channel\_imp has a mixture of inputs and
+    outputs - to the sender, request and data are outputs while
+    acknowledge is an input (and vice versa for the receiver). A type
+    system supporting interface abstraction had better account for this.
+    Another interesting thing is that the abstract level has atomic send
+    and receive operations (! and ?). The concrete level implements
+    these by a protocol involving a sequence of events. What does
+    refinement mean here?
+\end{enumerate}    
+
+
+
+\item A HDL design is an efficient division of labor. Programming
+language experts design the HDL  language, algorithm experts design the
+algorithms used, and domain
+experts design the devices. 
+\begin{enumerate}
+  \item HDLs facilitate division of labor in a design project because a
+    small set of architects can develop the overall product design as an
+    interconnection of major blocks with each block modeled abstractly,
+    and farm the detailed design of each block to specialists. This also
+    occurs within major blocks as they are partitioned into sub-blocks.
+
+  \item HDLs facilitate division of labor in CAD tool development. The
+    intermediate data format or "data model" is more important.
+    The data model is the object code for the HDL compiler, and should
+    preserve all the content of the original HDL description - logical
+    functionality, constraints, etc.  With a perfect data
+    model experts in the backend tasks of synthesis, optimization, layout
+    can all do their thing without having to understand the whole
+    problem. 
+\end{enumerate}    
+
+
+\end{itemize}
+
+
+\subsection{Domain-Specific Language Evolution}
+
+The life cycle of a DSL may be thought of as having three stages, each
+calling for different implementation approaches.
+
+\paragraph{Infancy.} 
+
+In this stage, language design ideas are in flux and domain 
+abstractions are not well understood.  While some domains have 
+existing conceptual frameworks and notations that can be used for 
+problem specification, many domains must be analyzed and studied to 
+identify the key abstractions.  At this stage, modeling flexibility is 
+at a premium, performance is less important, and embedded 
+implementations are likely to be cost-effective. {\em I believe
+we have passed this point in the life-cycle of HDLs.}
+
+\paragraph{Adolescence.} 
+
+In this stage, domain abstractions stabilize and become better-understood
+as the language begins to be exercised by end-users. Implementation 
+flexibility is still necessary.  Actual use uncovers the limits of the
+implementation, which leads to new features, abstractions, and
+implementation techniques. In this stage users begin to develop 
+domain-specific logics for their DSLs.  As more users
+exercise the system, the need for specialized language syntax, type
+discipline, and error reporting become more apparent. These are
+difficult or impossible to provide in a conventional host language.
+Because most host languages lack the ability to reflect on their own
+code -- \textit{i.e.}, to analyze it as well as execute it -- they make
+it very difficult to enhance an embedded DSL implementation with
+validation or optimization passes. {\em I believe this is exactly where
+we currently stand in the HDL life cycle. Consider the work on
+monads\cite{ruby}, observable sharing\cite{koen2001}, and labeling\cite{odonnel}, as
+attempts to over come this restriction.}
+
+
+
+\paragraph{Maturity.}
+
+In this stage, domain abstractions are well-understood, and the DSL
+design is fixed.  Features that enhance usability -- such as type systems,
+debuggers, and programming environments -- become important as the DSL
+gains adherents.  Performance of the DSL implementation itself may
+become a problem as DSL program size and complexity increase.
+
+A stand-alone implementation for a DSL can have its own syntax and type system
+appropriate for just that domain. The DSL can be ``restricted" to enforce
+constraints on what can be expressed, and it can have its own optimizer that
+relies on domain-specific knowledge so that performance bottlenecks
+can be addressed. If investing in a stand-alone DSL implementation ever makes
+sense, it will be at this phase, when the language has become relatively
+stable and user tools are important. {\em This is where we are headed, but we need to rethink
+a few of our assumptions if we're ever to get here.}
+
+
+\bibliographystyle{plain}
+\bibliography{proposal}
+
+\end{document}
