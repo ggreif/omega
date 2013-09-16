@@ -1,0 +1,266 @@
+\begin{thebibliography}{10}
+
+\bibitem{conf/alp/Antoy92}
+Sergio Antoy.
+\newblock Definitional trees.
+\newblock In {\em ALP}, pages 143--157, 1992.
+
+\bibitem{Augustsson:1999:CLD}
+Lennart Augustsson.
+\newblock {Cayenne} --- a language with dependent types.
+\newblock {\em ACM SIG{\-}PLAN Notices}, 34(1):239--250, January 1999.
+
+\bibitem{oai:CiteSeerPSU:339817}
+Lennart Augustsson.
+\newblock Equality proofs in {Cayenne}, July~11 2000.
+\newblock \\ \verb+http://www.cs.chalmers.se/~augustss/cayenne/eqproof.ps+.
+
+\bibitem{BaSw02}
+Arthur~I. Baars and S.~Doaitse Swierstra.
+\newblock Typing dynamic typing.
+\newblock In S.~Peyton~Jones, editor, {\em Proceedings of the seventh ACM
+  SIGPLAN international conference on Functional programming}, pages 157--166.
+  ACM Press, 2002.
+
+\bibitem{BenaissaBLR96}
+Zine-El-Abidine Benaissa, Daniel Briaud, Pierre Lescanne, and Jocelyne
+  Rouyer-Degli.
+\newblock lambda-nu, {A} calculus of explicit substitutions which preserves
+  strong normalisation.
+\newblock {\em J. Funct. Program}, 6(5):699--722, 1996.
+
+\bibitem{Cardelli-Wegner85}
+Luca Cardelli and Peter Wegner.
+\newblock On understanding types, data abstraction and polymorphism.
+\newblock {\em ACM Computing Surveys}, 17(4):471--522, December 1985.
+
+\bibitem{ATS2005}
+Chiyan Chen and Hongwei Xi.
+\newblock Combining programming with theorem proving.
+\newblock In {\em ICFP 2005}, 2005.
+\newblock \verb+http://www.cs.bu.edu/~hwxi/+.
+
+\bibitem{Agda}
+Catarina Coquand.
+\newblock Agda is a system for incrementally developing proofs and programs.
+\newblock Web page describing AGDA: \\ {\small {\tt
+  http://www.cs.chalmers.se/\verb+~+catarina/agda/ }}.
+
+\bibitem{Coquand:1994:IDT}
+T.~Coquand and P.~Dybjer.
+\newblock Inductive definitions and type theory: an introduction. (preliminary
+  version).
+\newblock {\em Lecture Notes in Computer Science}, 880:60--76, 1994.
+
+\bibitem{DamasThesis}
+L.~Damas.
+\newblock {\em Type assignment in programming languages}.
+\newblock PhD thesis, Edinburgh University CST-33-85, 1985.
+
+\bibitem{Davies97}
+Rowan Davies.
+\newblock A refinement-type checker for {S}tandard {ML}.
+\newblock In {\em International Conference on Algebraic Methodology and
+  Software Technology}, volume 1349 of {\em Lecture Notes in Computer Science}.
+  Springer-Verlag, 1997.
+
+\bibitem{Dybjer:1999:FAI}
+P.~Dybjer and A.~Setzer.
+\newblock A finite axiomatization of inductive-recursive definitions.
+\newblock {\em Lecture Notes in Computer Science}, 1581:129--146, 1999.
+
+\bibitem{HinzeHaskellWorkshop02}
+Ralf Hinze and James Cheney.
+\newblock A lightweight implementation of generics and dynamics.
+\newblock In Manuel Chakravarty, editor, {\em Proceedings of the ACM SIGPLAN
+  2002 Haskell Workshop}, pages 90--104. ACM SIGPLAN, October 2002.
+
+\bibitem{LuoPollack92}
+Zhaohui Luo and Robert Pollack.
+\newblock {LEGO} proof development system: User's manual.
+\newblock Technical Report ECS-LFCS-92-211, LFCS, Computer Science Dept.,
+  University of Edinburgh, The King's Buildings, Edinburgh EH9 3JZ, May 1992.
+\newblock Updated version.
+
+\bibitem{epigram}
+Connor McBride.
+\newblock Epigram: Practical programming with dependent types.
+\newblock In {\em Notes from the 5th International Summer School on Advanced
+  Functional Programming}, August 2004.
+\newblock Available at:\\ {\scriptsize {\tt
+  http://www.dur.ac.uk/CARG/epigram/epigram-afpnotes.pdf }}.
+
+\bibitem{Milner78}
+Robin Milner.
+\newblock A theory of type polymorphism in programming languages.
+\newblock {\em Journal of Computer and System Science}, 17(3):348--375, 1978.
+
+\bibitem{oai:CiteSeerPSU:38734}
+Bengt Nordstrom.
+\newblock The {ALF} proof editor, March~20 1996.
+\newblock \\ \verb+ftp://ftp.cs.chalmers.se/pub/users/ilya/FMC/alfintro.ps.gz+.
+
+\bibitem{PasalicLingerGpce}
+Emir Pasalic and Nathan Linger.
+\newblock Meta-programming with typed object-language representations.
+\newblock In {\em Generative Programming and Component Engineering (GPCE'04)},
+  pages 136 -- 167, October 2004.
+\newblock LNCS volume 3286.
+
+\bibitem{SheardPasalic2002}
+Emir Pasalic, Walid Taha, and Tim Sheard.
+\newblock Tagless staged interpreters for typed languages.
+\newblock In {\em Proceedings of the Seventh {ACM} {SIGPLAN} International
+  Conference on Functional Programming ({ICFP}-02).}, pages 218--229,
+  Pittsburgh, PA., October ~4--6 2002. ACM Press.
+
+\bibitem{Paulson90lacs}
+Lawrence~C. Paulson.
+\newblock {Isabelle}: The next 700 theorem provers.
+\newblock In P.~Odifreddi, editor, {\em Logic and Computer Science}, pages
+  361--386. Academic Press, 1990.
+
+\bibitem{peyton-jones:haskell98}
+Simon {Peyton Jones}.
+\newblock Special issue: {H}askell 98 language and libraries.
+\newblock {\em Journal of Functional Programming}, 13, January 2003.
+
+\bibitem{CADE99*202}
+Frank Pfenning and Carsten Sch\"{u}rmann.
+\newblock System description: Twelf --- {A} meta-logical framework for
+  deductive systems.
+\newblock In Harald Ganzinger, editor, {\em Proceedings of the 16th
+  International Conference on Automated Deduction ({CADE}-16)}, volume 1632 of
+  {\em LNAI}, pages 202--206, Berlin, July~7--10, 1999. Springer-Verlag.
+
+\bibitem{Shao:2002:TSC}
+Zhong Shao, Bratin Saha, Valery Trifonov, and Nikolaos Papaspyrou.
+\newblock A type system for certified binaries.
+\newblock {\em ACM SIG{\-}PLAN Notices}, 37(1):217--232, January 2002.
+
+\bibitem{Sheard:1999:UMS}
+T.~Sheard.
+\newblock Using {MetaML}: {A} staged programming language.
+\newblock {\em Lecture Notes in Computer Science}, 1608:207--239, 1999.
+
+\bibitem{Sheard02}
+T.~Sheard and S.~Peyton-Jones.
+\newblock Template meta-programming for {Haskell}.
+\newblock In {\em Proc. of the workshop on Haskell}, pages 1--16. ACM, 2002.
+
+\bibitem{Sheard01}
+Tim Sheard.
+\newblock Accomplishments and research challenges in meta-programming.
+\newblock In Walid Taha, editor, {\em Proceedings of the Workshop on Semantics,
+  Applications and Implementation of Program Generation (SAIG'01)}, volume 2196
+  of {\em LNCS}, pages 2--44, Berlin, September 2001. Springer Verlag.
+\newblock Invited talk.
+
+\bibitem{Playing}
+Tim Sheard.
+\newblock Playing with types.
+\newblock Technical report, Portland State University, 2005.
+\newblock {\tt http://www.cs.pdx.edu/\verb+~+sheard}.
+
+\bibitem{CurryHoward}
+Tim Sheard.
+\newblock Putting {Curry}-{Howard} to work.
+\newblock In {\em Proceedings of the ACM SIGPLAN 2005 Haskell Workshop}, pages
+  74--85, 2005.
+
+\bibitem{OmegaGuide}
+Tim Sheard.
+\newblock Omega users' gude.
+\newblock Technical report, Portland Stage University, 2005-2007.
+\newblock Available at:\\ {\small {\tt
+  http://web.cecs.pdx.edu/\verb+~+sheard/Omega/index.html}}.
+
+\bibitem{HFL07}
+Tim Sheard.
+\newblock Types and hardware description languages.
+\newblock In {\em Proceedings of the Hardware design and Functional Languages
+  workshop}, March 2007.
+\newblock Available online at \verb+http://web.cecs.pdx.edu/~sheard/+.
+
+\bibitem{GenProgOmega}
+Tim Sheard.
+\newblock Generic programming in omega.
+\newblock {\em To appear in Lecture Notes in Computer Science}, ??, Notes from
+  the Spring School on Datatype-Generic Programming 2006.
+
+\bibitem{StoneHar00}
+Christopher~A. Stone and Robert Harper.
+\newblock Deciding type equivalence in a language with singleton kinds.
+\newblock In {\em Conference Record of {POPL}'00: The 27th {ACM}
+  {SIGPLAN}-{SIGACT} Symposium on Principles of Programming Languages}, pages
+  214--227, Boston, Massachusetts, January 19--21, 2000.
+
+\bibitem{Rogue}
+Aaron Stump.
+\newblock Imperative {LF} meta-programming.
+\newblock In {\em Logical Frameworks and Meta-Languages workshop}, July 2004.
+\newblock Available at:\\ {\small {\tt
+  http://cs-www.cs.yale.edu/homes/carsten/lfm04/}}.
+
+\bibitem{TahaTag2000}
+Walid Taha.
+\newblock Tag elimination - or - type specialisation is a type-indexed effect.
+\newblock In {\em APPSEM Workshop on Subtyping \& Dependent Types in
+  Programming. Ponte de Lima Portugal.}, July 2000.
+\newblock Available online at
+  http://www-sop.inria.fr/oasis/DTP00/Proceedings/proceedings.html.
+
+\bibitem{Taha:2001:TEJ}
+Walid Taha, Henning Makholm, and John Hughes.
+\newblock Tag elimination and jones-optimality.
+\newblock {\em Lecture Notes in Computer Science}, 2053:257--??, 2001.
+
+\bibitem{TS00}
+Walid Taha and Tim Sheard.
+\newblock {MetaML}: Multi-stage programming with explicit annotations.
+\newblock {\em Theoretical Computer Science}, 248(1-2), 2000.
+
+\bibitem{COQ74}
+{The Coq Development Team}.
+\newblock {\em The Coq Proof Assistant Reference Manual, Version 7.4}.
+\newblock INRIA, 2003.
+\newblock \verb+http://pauillac.inria.fr/coq/doc/main.html+.
+
+\bibitem{RSP1}
+Edwin Westbrook, Aaron Stump, and Ian Wehrman.
+\newblock A language-based approach to functionally correct inperative
+  programming.
+\newblock Technical report, Washington University in St. Louis, 2005.
+\newblock Available at:\\ {\small {\tt http://cl.cse.wustl.edu/}}.
+
+\bibitem{Wright:94}
+Andrew~K. Wright and Matthias Felleisen.
+\newblock A syntactic approach to type soundness.
+\newblock {\em Information and Computation}, 115(1):38--94, 15~November 1994.
+
+\bibitem{XiThesis}
+Hongwei Xi.
+\newblock {\em Dependent Types in Practical Programming}.
+\newblock PhD thesis, Carnegie Mellon University, 1997.
+
+\bibitem{ATS2004}
+Hongwei Xi.
+\newblock Applied type systems (extended abstract).
+\newblock In {\em In post-workshop proceedings of TYPES 2003}, pages 394 --
+  408, 2004.
+\newblock Springer-Verlag LNCS 3085.
+
+\bibitem{Xi:1998:EAB}
+Hongwei Xi and Frank Pfenning.
+\newblock Eliminating array bound checking through dependent types.
+\newblock {\em ACM SIG{\-}PLAN Notices}, 33(5):249--257, May 1998.
+
+\bibitem{Xi:1999:DTP}
+Hongwei Xi and Frank Pfenning.
+\newblock Dependent types in practical programming.
+\newblock In {ACM}, editor, {\em {POPL} '99. Proceedings of the 26th {ACM}
+  {SIGPLAN-SIGACT} on Principles of programming languages, January 20--22,
+  1999, San Antonio, {TX}}, ACM SIG{\-}PLAN Notices, pages 214--227, New York,
+  NY, USA, 1999. ACM Press.
+
+\end{thebibliography}

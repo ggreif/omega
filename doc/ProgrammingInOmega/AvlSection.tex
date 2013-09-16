@@ -1,0 +1,480 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% macros
+
+%\newcommand{\avl}[1]{\includegraphics{avl.#1}}         % use with pdflatex
+\newcommand{\avl}[1]{\includegraphics{avl.#1.eps}}      % use with latex
+\newcommand{\lift}[1]{\raise 0.48cm \hbox{#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% introduction
+
+Binary search trees are a classic data structure for implementing 
+finite maps or sets in a purely functional way.  To guarantee efficient
+operations, we want our trees to be somewhat balanced.  There are several
+ways to define what it means for a tree to be balanced, each leading to 
+different data structures such as Red-Black trees, AVL trees, B-trees, etc.
+In this section we implement AVL trees in such a way that \om's type system
+guarantees compliance with the balancing invariant.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Types Expressing Invariants.}
+
+The balancing invariant for AVL trees is simple: any internal node in the tree
+has children whose heights differ by no more than one.  In this section, 
+we define types that express this invariant.
+Here is our core data structure for AVL trees (indexed by tree height).
+{\small
+\begin{verbatim}
+data Avl :: Nat ~> *0 where
+  Leaf :: Avl Z
+  Node :: Balance hL hR hMax -> Avl hL -> Int -> Avl hR -> Avl (S hMax)
+\end{verbatim}
+}
+\noindent
+A binary tree has two constructors -- one for (empty) leaves 
+and one for internal nodes carrying data.
+An auxiliary type captures the balancing constraints.
+{\small
+\begin{verbatim}
+data Balance:: Nat ~> Nat ~> Nat ~> *0 where
+  Less :: Balance h     (S h) (S h)
+  Same :: Balance h     h     h
+  More :: Balance (S h) h     (S h)
+\end{verbatim}
+}
+\noindent
+Think of the type \verb|Balance hL hR hMax| as a predicate stating
+(1) that \verb|hL| and \verb|hR| differ by at most one, and
+(2) that \verb|hMax| is the maximum of \verb|hL| and \verb|hR|.
+For any given internal node, there are only three possibilities for 
+the relative heights of its subtrees:
+\[
+1 + \verb|hL| = \verb|hR| \quad \textrm{or} \quad
+    \verb|hL| = \verb|hR| \quad \textrm{or} \quad
+    \verb|hL| = \verb|hR| + 1 
+\]
+
+These three possibilities correspond to the three constructors of the
+datatype \verb|Balance|.
+Under this interpretation of \verb|Balance|, we see that the \verb|h| in 
+\verb|(Avl h)| really does capture the height of the tree (leaves have height 
+zero and the height of an internal node is the successor of the maximum of 
+the heights of its children).
+
+Finally, we would like to protect users of our library from having to 
+deal with height indices in their own code.  To this end, we define a 
+wrapper type that hides away the height index.
+
+{\small
+\begin{verbatim}
+data AVL:: *0 where
+  AVL:: (Avl h) -> AVL
+\end{verbatim}
+}
+\noindent
+In this type the {\tt h} is existentially quantified.
+This is the type that users will see.
+
+The {\tt data} declarations are all the code we ever need write to guarantee that every AVL tree 
+in our library is well-balanced.  Because these type declarations express the
+balancing invariants, the problem of deciding whether our implementation 
+respects those invariants reduces to the problem of deciding type-correctness,
+which the \om{} type-checker does for us automatically.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Basic operations.}
+
+The two most basic operations are constructing an empty tree and testing 
+an element for membership in the tree.
+{\small
+\begin{verbatim}
+empty :: AVL
+empty = AVL Leaf
+\end{verbatim}
+
+\begin{verbatim}
+element :: Int -> AVL -> Bool
+element x (AVL t) = elem x t
+
+elem :: Int -> Avl h -> Bool
+elem x Leaf = False
+elem x (Node _ l y r)
+  | x == y  = True
+  | x < y   = elem x l
+  | x > y   = elem x r
+\end{verbatim}
+}
+\noindent
+The remaining operations of insertion and deletion are much more interesting.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Balancing Constructors.}
+
+The algorithms for insertion and deletion each follow the same basic pattern: 
+First do the insertion (or deletion) as you would for any other binary 
+search tree.  Then re-balance any subtree that became unbalanced in the 
+process.  The tool used for re-balancing is tree rotation, which is best
+described visually.
+\begin{center}
+\begin{tabular}{m{80pt}m{2em}m{80pt}}
+\avl{0} & 
+\vbox{\hbox{$\Longrightarrow$}\hbox{$\Longleftarrow$}} & 
+\avl{1} 
+\end{tabular}
+\end{center}
+The transformation of the tree on the left to the tree on the 
+right is \emph{right rotation} and the opposite transformation 
+is called \emph{left rotation}.  This operation preserves the BST
+invariant.   However, they do \emph{not} preserve the balancing invariant, 
+which is precisely why they are useful for rebalancing.
+
+It turns out that we can package up all necessary rotations into a
+couple of \emph{smart constructors}, \verb|rotr| and \verb|rotl|.
+Think of \verb|rotr lc x rc| as a smart version of \verb|Node ? lc x rc| where
+\begin{enumerate}
+\item We don't have to say (or know) how the resulting tree is balanced, and
+\item The subtrees, \verb|lc| and \verb|rc|, don't quite balance out because
+        \verb|height(lc)| $=$ \verb|height(rc) + 2|
+     and therefore we must do some rightward rebalancing rotation(s).
+\end{enumerate}
+
+
+\begin{figure*}
+{\tt \small
+\begin{tabular}{ccc}
+rotr (Node Same a x b) y c & = & R(Node Less a x (Node More b y c)) \\ 
+\avl{2} & & \avl{3} \\ \\
+rotr (Node More a x b) y c & = & L(Node Same a x (Node Same b y c)) \\ 
+\avl{4} & & \lift{\avl{5}} \\ \\
+{
+\parbox{5.5cm}{
+rotr (Node Less a x \\
+\phantom{rotr (Node)}(Node Same b y c)) z d} }
+ & = &
+{
+\parbox{5.5cm}{
+         L(Node Same  (Node Same a x b) y \\
+\phantom{L(Node Same)}(Node Same c z d) )} } \\ \\
+\avl{6} & & \lift{\avl{7}} \\ 
+%rotr (Node Less a x (Node Less b y c)) z d
+{
+\parbox{5.5cm}{
+rotr (Node Less a x \\
+\phantom{rotr (Node)}(Node Less b y c)) z d} }
+ & = &
+%L(Node Same (Node More a x b) y (Node Same c z d)) \\ \\
+{
+\parbox{5.5cm}{
+         L(Node Same  (Node More a x b) y \\
+\phantom{L(Node Same)}(Node Same c z d) )} } \\ \\
+\avl{8} & & \lift{\avl{9}} \\ \\
+%rotr (Node Less a x (Node More b y c)) z d
+{
+\parbox{5.5cm}{
+rotr (Node Less a x \\
+\phantom{rotr (Node)}(Node More b y c)) z d} }
+ & = &
+%L(Node Same (Node Same a x b) y (Node Less c z d)) \\ \\
+{
+\parbox{5.5cm}{
+         L(Node Same  (Node Same a x b) y \\
+\phantom{L(Node Same)}(Node Less c z d) )} } \\ \\
+\avl{10} & & \lift{\avl{11}} \\
+\end{tabular}
+}
+\caption{Each substantive case in the definition of {\tt rotr}.}
+\label{fig:rotr}
+\end{figure*}
+
+
+The only wrinkle in the ``smart constructor'' story is that the height of the
+resulting tree depends on what rotations were performed.  However, the result
+height ranges over merely two values, so we just return a value of a sum 
+type\footnote{In \om{} the value constructors {\tt L ::~a -> (a+b)} 
+and {\tt R ::~b -> (a+b)} are used to construct sums.}.
+Here is the code:
+
+{\small
+\begin{verbatim}
+rotr :: Avl (2+n)t -> Int -> Avl n -> ( Avl(2+n)t + Avl (3+n)t )
+rotr Leaf x a = unreachable
+rotr (Node Less a x Leaf) y b = unreachable
+-- single rotations
+rotr (Node Same a x b) y c = R(Node Less a x (Node More b y c))
+rotr (Node More a x b) y c = L(Node Same a x (Node Same b y c))
+-- double rotations
+rotr (Node Less a x (Node Same b y c)) z d = 
+   L(Node Same (Node Same a x b) y (Node Same c z d))
+rotr (Node Less a x (Node Less b y c)) z d = 
+   L(Node Same (Node More a x b) y (Node Same c z d))
+rotr (Node Less a x (Node More b y c)) z d = 
+   L(Node Same (Node Same a x b) y (Node Less c z d))
+\end{verbatim}
+}
+\noindent
+Figure~\ref{fig:rotr} depicts the rotation for each substantive case in the
+        definition of \verb|rotr|.
+The algorithm for \verb|rotl| is perfectly symmetric to that for \verb|rotr|.
+
+{\small
+\begin{verbatim}
+rotl :: Avl n -> Int -> Avl (2+n)t -> ( Avl (2+n)t + Avl (3+n)t )
+rotl a x Leaf = unreachable
+rotl a x (Node More Leaf y b) = unreachable
+-- single rotations
+rotl a u (Node Same b v c) = R(Node More (Node Less a u b) v c)
+rotl a u (Node Less b v c) = L(Node Same (Node Same a u b) v c)
+-- double rotations
+rotl a u (Node More (Node Same x m y) v c) = 
+   L(Node Same (Node Same a u x) m (Node Same y v c))
+rotl a u (Node More (Node Less x m y) v c) = 
+   L(Node Same (Node More a u x) m (Node Same y v c))
+rotl a u (Node More (Node More x m y) v c) = 
+   L(Node Same (Node Same a u x) m (Node Less y v c))
+\end{verbatim}
+}
+\noindent
+As these functions are both self-contained and non-recursive, we see that
+they operate in constant time.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Insertion.}
+
+When we insert an element into an AVL tree, the height of the
+tree either remains the same or increases by at most one.
+We therefore arrive at the following type for insertion:
+
+{\small
+\begin{verbatim}
+ins :: Int -> Avl n -> (Avl n + Avl (S n))
+\end{verbatim}
+}
+The code for \verb|ins| is an elaborate case analysis.
+The first decision to make is whether we're at the right spot for 
+insertion.  If so, then do the insertion (or not, depending on whether 
+the value already exists in the tree), and then return.  If not, make the 
+appropriate recursive call and then rebalance.
+Most of the work goes into determining how to rebuild a balanced tree 
+by choosing the correct \verb|Balance| value or rebalancing constructor.
+
+{\small
+\begin{verbatim}
+ins :: Int -> Avl n -> (Avl n + Avl (S n))
+ins x Leaf = R(Node Same Leaf x Leaf)
+ins x (Node bal a y b)
+  | x == y = L(Node bal a y b)
+  | x < y  = case ins x a of
+               L a -> L(Node bal a y b)
+               R a ->
+                 case bal of
+                   Less -> L(Node Same a y b)
+                   Same -> R(Node More a y b)
+                   More -> rotr a y b -- rebalance!
+  | x > y  = case ins x b of
+               L b -> L(Node bal a y b)
+               R b -> 
+                 case bal of
+                   Less -> rotl a y b -- rebalance!
+                   Same -> R(Node Less a y b)
+                   More -> L(Node Same a y b)
+\end{verbatim}
+}
+\noindent
+Figure~\ref{fig:ins} depicts each case in the \verb|x < y| branch.
+Now we wrap this function up to work on user-level AVL trees.
+
+{\small
+\begin{verbatim}
+insert :: Int -> AVL -> AVL
+insert x (AVL t) = case ins x t of L t -> AVL t; R t -> AVL t
+\end{verbatim}
+}
+
+\begin{figure*}
+\begin{center}
+\begin{tabular}{ccc}
+INPUT & & OUTPUT \\ \\
+\avl{12} & \lift{\lift{\parbox{2.4in}{\begin{center} Post-insertion height is the same. \\ Keep the same {\tt Balance}\end{center}}}} & \avl{13}
+\\ \\
+\lift{\avl{14}} & \lift{\lift{\parbox{2.4in}{\begin{center} Height increases. \\ Change {\tt Balance} from {\tt Same} to {\tt More} \end{center}}}} & \avl{15}
+\\ \\
+\avl{16} & \lift{\lift{\parbox{2.4in}{\begin{center} Height increases. \\ Change {\tt Balance} from {\tt Less} to {\tt Same} \end{center}}}} & \avl{17}
+\\ \\
+\lift{\avl{18}} & \lift{\lift{\lift{\parbox{2.4in}{\begin{center} Height increases. \\ Rebalance with {\tt rotr} \end{center}}}}} & \avl{19}
+\\ \\
+\end{tabular}
+\caption{Rebalancing after insertion into the left child.}
+\label{fig:ins}
+\end{center}
+\end{figure*}
+
+\hide{
+Consider the case marked by the comment above. Here the variables in scope
+have the following types.
+{\small
+\begin{verbatim}
+tree :: Avl (2+_b)t
+a :: Avl _b
+rc :: Avl (1+_b)t
+x :: Avl _b
+\end{verbatim}
+}
+\noindent
+The resulting tree must have either the type \verb$(Avl (2+_b)t)$
+or \verb$(Avl (3+_b)t)$. One way to construct such a result is
+{\small
+\begin{verbatim}
+Less x y rc :: Avl (2+_b)t
+\end{verbatim}
+}
+\noindent
+Thus we use the left injection (\verb+L+) of the sum type to return
+a value with the correct type. Almost all of the other cases are similar.
+There are two interesting cases that are not so simple, labeled 
+{\tt Rotate Right} and {\tt Rotate Left} in comments. Consider the
+first lableled {\tt Rotate Left}. Here the variables in scope
+have the types.
+{\small
+\begin{verbatim}
+tree :: Avl (2+_b)t
+a :: Avl _b
+rc :: Avl (1+_b)t
+tSn :: Avl (2+_b)t
+\end{verbatim}
+}
+}% END \hide
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Deletion.}
+
+Whereas insertion always places an element in the fringe of a 
+tree, deletion may find the targeted element somewhere in the interior.
+For this reason, deletion is a more complex operation.  The strategy for 
+deleting the value $x$ at an interior node is to first replace its value with 
+that of the minimum value $z$ of its right child (or the maximum value of its
+left child, depending on the policy).  Then delete $z$ (which is always at a leaf) 
+from the right child.
+
+We will calculate the minimum value in a tree and delete it in a single pass.
+The operation only works on trees of height $\geq 1$ (which are therefore
+non-empty).  The returned tree might have decreased in size by one.
+
+{\small
+\begin{verbatim}
+delMin :: Avl (S n) -> (Int, (Avl n + Avl (S n)))
+delMin Leaf = unreachable
+delMin (Node Less Leaf x r) = (x,L r)
+delMin (Node Same Leaf x r) = (x,L r)
+delMin (Node More Leaf x r) = unreachable
+delMin (Node bal (l@(Node _ _ _ _)) x r) =
+      case delMin l of
+        (y,R l) -> (y,R(Node bal l x r))
+        (y,L l) ->
+          case bal of
+            Same -> (y,R(Node Less l x r))
+            More -> (y,L(Node Same l x r))
+            Less -> (y,rotl l x r) -- rebalance!
+\end{verbatim}
+}
+\noindent
+Deletion of the minimum element requires rebalancing operations on the way 
+up, just as in insertion.
+
+When we delete an element from an AVL tree, the height of the
+tree either remains the same or decreases by at most one.
+We therefore arrive at the following type for deletion:
+
+{\small
+\begin{verbatim}
+del :: Int -> Avl (S n) -> (Avl n + Avl (S n))
+\end{verbatim}
+}
+The code for \verb|del| is an elaborate case analysis.
+The first decision to make is whether we're at the right spot for 
+deletion.  If so, then do the deletion (or not, depending on whether 
+the value exists in the tree) and return.  If not, make the appropriate 
+recursive call and then rebalance.
+Most of the work goes into determining how to rebuild a balanced tree 
+by choosing the correct \verb|Balance| value or rebalancing constructor.
+
+{\small
+\begin{verbatim}
+del :: Int -> Avl n -> (Avl n + exists m .(Equal (S m) n,Avl m))
+del y Leaf = L Leaf
+del y (Node bal l x r)
+  | y == x = case r of
+               Leaf ->  
+                 case bal of
+                   Same -> R(Ex(Eq,l))
+                   More -> R(Ex(Eq,l))
+                   Less -> unreachable
+               Node _ _ _ _ ->
+                 case (bal,delMin r) of
+                   (_,z,R r) -> L(Node bal l z r)
+                   (Same,z,L r) -> L(Node More l z r)
+                   (Less,z,L r) -> R(Ex(Eq,Node Same l z r))
+                   (More,z,L r) -> 
+                      case rotr l z r of -- rebalance!
+                        L t -> R(Ex(Eq,t))
+                        R t -> L t
+  | y < x = case del y l of
+              L l -> L(Node bal l x r)
+              R(Ex(Eq,l)) -> 
+                case bal of
+                  Same -> L(Node Less l x r)
+                  More -> R(Ex(Eq,Node Same l x r))
+                  Less -> 
+                     case rotl l x r of -- rebalance!
+                       L t -> R(Ex(Eq,t))
+                       R t -> L t
+  | y > x = case del y r of
+              L r -> L(Node bal l x r)
+              R(Ex(Eq,r)) -> 
+                case bal of
+                  Same -> L(Node More l x r)
+                  Less -> R(Ex(Eq,Node Same l x r))
+                  More -> 
+                     case rotr l x r of -- rebalance!
+                       L t -> R(Ex(Eq,t))
+                       R t -> L t
+\end{verbatim}
+}
+
+\hide{
+AN ALTERNATIVE \ldots
+{\small
+\begin{verbatim}
+data DelAns:: Nat ~> *0 where
+ SameHeight :: Avl n -> DelAns n
+ ShrunkBy1 :: Avl n -> DelAns (S n)
+
+del :: Int -> Avl n -> DelAns n
+del y Leaf = SameHeight Leaf
+del y (Node bal l x r)
+  | y==x = case r of
+             Leaf ->  
+               case bal of
+                 Same -> ShrunkBy1 l
+                 More -> ShrunkBy1 l
+                 Less -> unreachable
+             Node _ _ _ _ ->
+               case (bal,delMin r) of
+                 (_,z,R r) -> SameHeight(Node bal l z r)
+                 (Same,z,L r) -> SameHeight(Node More l z r)
+                 (Less,z,L r) -> ShrunkBy1(Node Same l z r)
+                 (More,z,L r) -> 
+                    case rotr l z r of -- rebalance!
+                      L t -> ShrunkBy1 t
+                      R t -> SameHeight t
+\end{verbatim}
+}
+}
+\noindent
+Now we wrap this function up to work on user-level AVL trees.
+
+{\small
+\begin{verbatim}
+delete :: Int -> AVL -> AVL
+delete x (AVL t) = case del x t of L t -> AVL t; R t -> AVL t
+\end{verbatim}
+}
