@@ -1,0 +1,2426 @@
+\documentclass[10pt]{article}
+%% ODER: format ==         = "\mathrel{==}"
+%% ODER: format /=         = "\neq "
+\makeatletter
+
+\usepackage{amstext}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\DeclareFontFamily{OT1}{cmtex}{}
+\DeclareFontShape{OT1}{cmtex}{m}{n}
+  {<5><6><7><8>cmtex8
+   <9>cmtex9
+   <10><10.95><12><14.4><17.28><20.74><24.88>cmtex10}{}
+\DeclareFontShape{OT1}{cmtex}{m}{it}
+  {<-> ssub * cmtt/m/it}{}
+\newcommand{\texfamily}{\fontfamily{cmtex}\selectfont}
+\DeclareFontShape{OT1}{cmtt}{bx}{n}
+  {<5><6><7><8>cmtt8
+   <9>cmbtt9
+   <10><10.95><12><14.4><17.28><20.74><24.88>cmbtt10}{}
+\DeclareFontShape{OT1}{cmtex}{bx}{n}
+  {<-> ssub * cmtt/bx/n}{}
+\newcommand{\tex}[1]{\text{\texfamily#1}}	% NEU
+
+\newcommand{\Sp}{\hskip.33334em\relax}
+
+
+\newcommand{\Conid}[1]{\mathit{#1}}
+\newcommand{\Varid}[1]{\mathit{#1}}
+\newcommand{\anonymous}{\kern0.06em \vbox{\hrule\@width.5em}}
+\newcommand{\plus}{\mathbin{+\!\!\!+}}
+\newcommand{\bind}{\mathbin{>\!\!\!>\mkern-6.7mu=}}
+\newcommand{\sequ}{\mathbin{>\!\!\!>}}
+\renewcommand{\leq}{\leqslant}
+\renewcommand{\geq}{\geqslant}
+\usepackage{polytable}
+
+%mathindent has to be defined
+\@ifundefined{mathindent}%
+  {\newdimen\mathindent\mathindent\leftmargini}%
+  {}%
+
+\def\resethooks{%
+  \global\let\SaveRestoreHook\empty
+  \global\let\ColumnHook\empty}
+\newcommand*{\savecolumns}[1][default]%
+  {\g@addto@macro\SaveRestoreHook{\savecolumns[#1]}}
+\newcommand*{\restorecolumns}[1][default]%
+  {\g@addto@macro\SaveRestoreHook{\restorecolumns[#1]}}
+\newcommand*{\aligncolumn}[2]%
+  {\g@addto@macro\ColumnHook{\column{#1}{#2}}}
+
+\resethooks
+
+\newcommand{\onelinecommentchars}{\quad-{}- }
+\newcommand{\commentbeginchars}{\enskip\{-}
+\newcommand{\commentendchars}{-\}\enskip}
+
+\newcommand{\visiblecomments}{%
+  \let\onelinecomment=\onelinecommentchars
+  \let\commentbegin=\commentbeginchars
+  \let\commentend=\commentendchars}
+
+\newcommand{\invisiblecomments}{%
+  \let\onelinecomment=\empty
+  \let\commentbegin=\empty
+  \let\commentend=\empty}
+
+\visiblecomments
+
+\newlength{\blanklineskip}
+\setlength{\blanklineskip}{1mm}
+
+\newcommand{\hsindent}[1]{\quad}% default is fixed indentation
+\newcommand{\NB}{\textbf{NB}}
+\newcommand{\Todo}[1]{$\langle$\textbf{To do:}~#1$\rangle$}
+
+\makeatother
+
+\usepackage{latexsym}
+\usepackage{fancyvrb}
+\usepackage{graphics}
+\usepackage{multicol}
+
+\newcommand{\Wmega}{\ensuremath{\Omega}mega}
+\def\NN{\mathbb{N}}
+
+% author commands
+\newcommand{\hide}[1]{}
+\newcommand{\edit}[1]{\marginpar{\raggedright\footnotesize{#1}}}
+%\newcommand{\edit}[1]{} % when we're done
+
+\newcommand{\fig}[2]{\parbox[c]{#1}{\includegraphics{#2}}}
+
+
+
+\title{Programming with Static Invariants in \Wmega{}}
+\author{Nathan Linger \& Tim Sheard}
+
+\begin{document}
+\maketitle 
+
+\begin{abstract}
+We present an implementation of binomial heaps that 
+enforces the balancing invariants at compile time.
+We present an implementation of a \emph{typed} CPS transform 
+that enforces the typing invariants of both the source and target terms.
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+There has been a lot of interest recently in generalizing algebraic
+datatypes as found in most functional programming languages. These
+generalizations have been called {\it First Class Phantom Types}
+~\cite{FirstClassPhantomTypes} {\it Guarded ADTs}~\cite{xi-gadt,
+simonet-pottier-hmg} {\it Wobbly types}~\cite{peytonjones-wobbly},
+and in our own work {\it Equality Qualified Types}~\cite{GPCE,ONWARD,sheardLFM04}.
+Such types allow users to parameterize types with descriptions of 
+static properties of their values.
+A simple example is the type constructor \ensuremath{\Conid{Seq}} which
+describes sequences of elements whose lengths are statically known. For
+example \ensuremath{[\mskip1.5mu \mathrm{1},\mathrm{45},\mathrm{2}\mskip1.5mu]\mathbin{::}\Conid{Seq}\;\mathrm{3}\;\Conid{Int}}. This says that \ensuremath{[\mskip1.5mu \mathrm{1},\mathrm{45},\mathrm{2}\mskip1.5mu]} is a
+sequence of \ensuremath{\Conid{Int}} whose length is statically known to be \ensuremath{\mathrm{3}}.
+A type system employing such a generalization can enforce strong
+static invariants.
+This leads to programs that are less likely to contain errors, and are
+easier to write, since the types often guide the construction of the
+function definitions. 
+
+In order to explore these possibilites we implemented
+a new language \Wmega. \Wmega\  is descended from Haskell -- 
+Its syntax and type system
+are similar to Haskell's, but it introduces a new kind of type
+constraint (similar to Haskell's class constraints) which constrains
+two types to be equal. A function with an equality constrained type, can
+only be applied to values whose types force the constrained types to be
+the same. This has been described elsewhere~\cite{GPCE,ONWARD,sheardLFM04}, and is
+introduced again for the convenience of the reader in 
+Section~\ref{IntroOmega}.
+
+
+This paper introduces several other features of \Wmega{} that work in
+combination with equality qualified types (and could also work in combination
+with any of the other variants of generalized datatypes) to allow even more
+expressive static invariants. These features are user-defined kinds and 
+support for functions on types.  The contributions of this paper are:
+
+\begin{itemize} 
+
+\item Demonstrating the usefulness of an extensible kind system. Introducing a new
+kind, defines a kind and new types that are classified by that kind.
+The new kind is different from the kind that classifies types that
+classify values (often called {\it star} or {\it type}). Types introduced
+by the kind mechanism make ideal {\em parameters} to equality qualified
+data types, and can be used to express a wide variety of static constraints.
+
+\item The ability to define type functions, and the ability to use such
+type functions in the types of functions manipulating values with
+equality constrained types. Type functions (as opposed to type
+constructors such as \ensuremath{\Conid{List}}, and \ensuremath{\Conid{Tree}}) describe computations
+on types.  There use is reminiscent of the use of dependent types 
+but we claim that \Wmega{}'s type system
+implements a simple subset of the dependent types that is simple to
+use, understand, and implement. Type functions require a new approach
+to unification when integrated into a system with type inference. The
+system of equality constrained types provides just the hooks necessary
+to do this in a safe and sound manner.\edit{what is meant by "safe and sound"?}
+
+
+\item We also present two examples in \Wmega{} which
+its power to soundly define functions with complex static invariants. 
+The two examples are (1) an implementation of binomial heaps and (2) a
+typed continuation-passing-style transform.
+
+\end{itemize}
+
+\section{Equality Qualified Types and Kinds in \Wmega{}}\label{IntroOmega}
+
+We introduce equality qualified types by defining the type constructor \ensuremath{\Conid{Seq}}
+from above. In order to do this we must also be able to describe natural 
+numbers at the type level. To do this we use \Wmega{}'s kind system. The code 
+below introduces a new kind \ensuremath{\Conid{Nat}}, new types \ensuremath{\Conid{Seq}}, \ensuremath{\Conid{Zero}}, and \ensuremath{\Conid{Succ}}, 
+and a new function \ensuremath{\Varid{map}}.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{4}{@{}l@{}}
+\column{14}{@{}l@{}}
+\column{21}{@{}l@{}}
+\column{32}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}{\bf kind}\;\Conid{Nat}\mathrel{=}\Conid{Zero}\mid \Conid{Succ}\;\Conid{Nat}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{Seq}\;\Varid{a}\;\Varid{n}{}}
+\nextline
+\fromto{B}{4}{{}\hsindent{4}{}}
+\fromto{4}{14}{{}\mathrel{=}{}}
+\fromto{14}{32}{{}\Conid{Nil}\;{}}
+\fromto{32}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Zero}{}}
+\nextline
+\fromto{B}{4}{{}\hsindent{4}{}}
+\fromto{4}{14}{{}\mid \exists\;\Varid{m}. {}}
+\fromto{14}{32}{{}\Conid{Cons}\;\Varid{a}\;(\Conid{Seq}\;\Varid{a}\;\Varid{m})\;{}}
+\fromto{32}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{map}\mathbin{::}(\Varid{a}\to \Varid{b})\to \Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{b}\;\Varid{n}{}}
+\nextline
+\fromto{B}{21}{{}\Varid{map}\;\Varid{f}\;(\Conid{Nil}){}}
+\fromto{21}{E}{{}\mathrel{=}\Conid{Nil}{}}
+\nextline
+\fromto{B}{21}{{}\Varid{map}\;\Varid{f}\;(\Conid{Cons}\;\Varid{x}\;\Varid{xs}){}}
+\fromto{21}{E}{{}\mathrel{=}\Conid{Cons}\;(\Varid{f}\;\Varid{x})\;(\Varid{map}\;\Varid{f}\;\Varid{xs}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\begin{figure}[t]
+%\hspace*{1.4in}
+\begin{center}
+\begin{tabular}{ccccc}\hline
+value & & type & & kind \\ \hline
+5     &::& Int  &::& *    \\ %\hline
+      &  & Zero &::& Nat \\ %\hline
+      &  & Succ &::& Nat $\leadsto$ Nat \\ %\hline      
+      &  & Seq &::& * $\leadsto$ Nat $\leadsto$ *  \\ %\hline
+Nil   &::& Seq $\,\alpha\;$ Zero &::& * \\ %\hline
+Cons  &::& $\alpha \rightarrow$ Seq $\alpha\; n \rightarrow$ Seq $\alpha\; ($Succ$\,n)$ &::& * \\ \hline
+\end{tabular}
+\end{center}
+\caption{Classification of values (Nil,Cons), and types (Zero,Succ, and Seq).}\label{kindtable}
+%\hrule
+\end{figure}   
+
+The kind declaration for \ensuremath{\Conid{Nat}} introduces two new
+type constructors \ensuremath{\Conid{Zero}} and \ensuremath{\Conid{Succ}} which encode the natural
+numbers at the type level.
+Kinds are similar to types in that, while types classify values, kinds
+classify types. We indicate this by the {\em classifies} relation \ensuremath{(\mathbin{::})}. For
+example: \ensuremath{\mathrm{5}\mathbin{::}\Conid{Int}\mathbin{::}\mathbin{*}}. We say \ensuremath{\mathrm{5}} is classified by \ensuremath{\Conid{Int}},
+and \ensuremath{\Conid{Int}} is classified by \ensuremath{\mathbin{*}} (star-zero). 
+\hide{
+The kind \ensuremath{\mathbin{*}} classifies all types that classify values (things we actually can
+compute). \ensuremath{\mathbin{*}} is classified by \ensuremath{\mathbin{*}\mathrm{1}}, etc. There is an infinite hierarchy of
+classifications.  We call this hierarchy the {\em strata}. In fact this
+infinite hierarchy is why we chose the name \Wmega. The first few strata are:
+values and expressions that are classified by types, types that are
+classified by kinds, and kinds that are classified by sorts, etc.}
+Figure~\ref{kindtable} illustrates the relationship between the 
+values, types, and kinds introduced above.
+
+Constructor functions \ensuremath{\Conid{Nil}} and \ensuremath{\Conid{Cons}}
+construct elements of the \ensuremath{\Conid{Seq}} datatype. The type of a constructor function
+is described in the datatype declaration. For example, the 
+following clause in the
+\ensuremath{\Conid{Seq}} declaration:\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\exists\;\Varid{m}. \Conid{Cons}\;\Varid{a}\;(\Conid{Seq}\;\Varid{a}\;\Varid{m})\;\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+introduces the \ensuremath{\Conid{Cons}} constructor function. Without the \ensuremath{\mathbf{where}}
+qualification, the constructor function \ensuremath{\Conid{Cons}} would have type 
+\ensuremath{\Conid{Cons}\mathbin{::}\Varid{a}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\Varid{n}}. The \ensuremath{\mathbf{where}} {\em  qualifies} \ensuremath{\Conid{Cons}}'s type, in effect
+saying \ensuremath{(\Conid{Cons}\mathbin{::}\Varid{a}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\Varid{n})} provided \ensuremath{\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}}. We
+capture this formally by writing the equality qualified type \ensuremath{\Conid{Cons}\mathbin{::}(\forall\;\Varid{a}\;\Varid{n}\;\Varid{m}. (\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m})\Rightarrow \Varid{a}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\Varid{n})}. The equations behind the {\em fat arrow} (\ensuremath{\Rightarrow }) are
+equality qualifications. Since \ensuremath{\Varid{n}} is a universally quantified type
+variable, there is only one way to {\em solve} the qualification \ensuremath{\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}}
+(by making \ensuremath{\Varid{n}} equal to \ensuremath{\Conid{Succ}\;\Varid{m}}). Because of this unique solution,
+\ensuremath{\Conid{Cons}} also has the (less general) type \ensuremath{(\forall\;\Varid{a}\;\Varid{m}. \Varid{a}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;(\Conid{S}\;\Varid{m}))}. This type guarantees that \ensuremath{\Conid{Cons}} can only be applied in contexts
+where \ensuremath{\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}}. \hide{Existential quantification of the type variable \ensuremath{\Varid{m}}
+names the intermediate length of the sublist of \ensuremath{\Conid{Cons}}, which if not
+introduced in this way would appear as an unbound type variable.
+{\em Equality Qualification} (indicated by the \ensuremath{\mathbf{where}} in the clauses for \ensuremath{\Conid{Nil}}
+and \ensuremath{\Conid{Cons}}), and {\em existential quantification} (indicated by \ensuremath{\exists}
+in the clauses for \ensuremath{\Conid{Cons}}) are the features of \Wmega{} that
+are used to encode semantic properties.}
+
+
+Each data-constructor declaration in \Wmega{} may contain a \ensuremath{\mathbf{where}}
+clause containing a list of type equations.
+The mechanism \Wmega{} uses to keep track of type equalities 
+is similar to type class system of Haskell.
+A special qualified~\cite{J92}
+type is used to assert equality between types, and a
+constraint solving system is used to track, propogate, simplify and discharge these
+assertions. Equality constraints are tracked in much the same manner as
+class constraints in Haskell. For example, 
+when assigning a type to a type constructor, the equations
+specified in the \ensuremath{\mathbf{where}} clause just become predicates in a
+qualified type. 
+Thus, the constructor \ensuremath{\Conid{Cons}} is given the
+type \ensuremath{(\forall\;\Varid{a}\;\Varid{m}\;\Varid{n}. (\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m})\Rightarrow \Varid{a}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\Varid{n})}
+The equation \ensuremath{\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}} is just another form of predicate, similar
+to the class membership predicate \ensuremath{(\Conid{Ord}\;\Varid{a})} in the Haskell type \ensuremath{(\equiv )\mathbin{::}\Conid{Ord}\;\Varid{a}\Rightarrow \Varid{a}\to \Varid{a}\to \Conid{Bool}}).
+
+{\bf Tracking equality constraints.} When type-checking an expression,
+the \Wmega{} type checker keeps two sets of equality constraints:
+{\em obligations} and {\em assumptions}.
+
+{\it Obligations.} The first set of constraints is a set of
+{\em obligations}.  Obligations are generated by the type-checker
+when (a) the program constructs data-values with constructors
+that contain equality constraints; or (b) an explicit type signature in a
+definition is encountered; or (c) when type functions are used (see Section
+\ref{typefun}).
+
+For example, consider type-checking the expression \ensuremath{\Conid{Nil}}. The constructor
+\ensuremath{\Conid{Nil}} is assigned the type \ensuremath{\forall\;\Varid{a}\;\Varid{n}. \Varid{n}\mathrel{=}\Conid{Zero}\Rightarrow \Conid{Seq}\;\Varid{a}\;\Varid{n}},
+thus \ensuremath{\Conid{Nil}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{n}} but also generates the obligation \ensuremath{\Varid{n}\mathrel{=}\Conid{Zero}}. Since \ensuremath{\Conid{Nil}} is
+polymorphic in \ensuremath{\Varid{a}} and \ensuremath{\Varid{n}}, the type variable \ensuremath{\Varid{n}} can be instantiated to \ensuremath{\Conid{Zero}}.
+Instantiating \ensuremath{\Varid{n}} to \ensuremath{\Conid{Zero}} makes the equality constraint obligation \ensuremath{\Conid{Zero}\mathrel{=}\Conid{Zero}},
+which can be trivially discharged by the type checker. Other
+constraints may require more work to discharge.
+
+{\it Assumptions.} The second set of constraints is a set of
+{\em assumptions} or {\em facts}. Whenever, a constructor 
+based pattern appears in a binding position, and the constructor
+was defined using a \ensuremath{\mathbf{where}} clause, the type equalities in
+the \ensuremath{\mathbf{where}} clause are added to the current set of assumptions in the
+scope of the pattern. These assumptions can be used to discharge
+obligations. For example, consider type checking the definition of \ensuremath{\Varid{map}}.
+Recall \ensuremath{\Varid{map}\mathbin{::}(\Varid{a}\to \Varid{b})\to \Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{b}\;\Varid{n}}.
+
+In the first equation, the pattern \ensuremath{\Conid{Nil}} of type \ensuremath{\Conid{Seq}\;\Varid{a}\;\Varid{n}} introduces the
+assumption \ensuremath{\Varid{n}\mathrel{=}\Conid{Zero}} because of \ensuremath{\Conid{Nil}}'s qualified type \ensuremath{\forall\;\Varid{a}\;\Varid{n}. \Varid{n}\mathrel{=}\Conid{Zero}\Rightarrow \Conid{Seq}\;\Varid{a}\;\Varid{n}} This assumption can be used to discharge obligations incurred on the right
+hand side of the equation.  Now, consider the second 
+equation \ensuremath{\Varid{map}\;\Varid{f}\;(\Conid{Cons}\;\Varid{x}\;\Varid{s})\mathrel{=}\Conid{Cons}\;(\Varid{f}\;\Varid{x})\;(\Varid{map}\;\Varid{f}\;\Varid{xs})}. We
+know \ensuremath{\Varid{map}}'s type, so the second pattern \ensuremath{(\Conid{Cons}\;\Varid{x}\;\Varid{xs})} must have type \ensuremath{(\Conid{Seq}\;\Varid{a}\;\Varid{n})}. This implies \ensuremath{\Varid{x}\mathbin{::}\Varid{a}} and \ensuremath{\Varid{xs}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{m}} provided \ensuremath{\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}}. This
+equation is added to the list of assumptions when typing the
+right-hand-side of the second equation: \ensuremath{\Conid{Cons}\;(\Varid{f}\;\Varid{x})\;(\Varid{map}\;\Varid{f}\;\Varid{xs})}. This right-hand-side should have type \ensuremath{(\Conid{Seq}\;\Varid{b}\;\Varid{n})} (the range of \ensuremath{\Varid{map}}'s type). Since \ensuremath{\Varid{xs}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{m}} we can compute \ensuremath{(\Varid{map}\;\Varid{f}\;\Varid{xs})\mathbin{::}\Conid{Seq}\;\Varid{b}\;\Varid{m}}, Since \ensuremath{\Varid{x}\mathbin{::}\Varid{a}} we can
+compute \ensuremath{(\Varid{f}\;\Varid{x})\mathbin{::}\Varid{b}}, thus it appears \ensuremath{(\Conid{Cons}\;(\Varid{f}\;\Varid{x})\;(\Varid{map}\;\Varid{f}\;\Varid{xs}))\mathbin{::}\Conid{Seq}\;\Varid{b}\;(\Conid{Succ}\;\Varid{m})}. But given the equality constraint \ensuremath{\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{m}} the right hand side has
+type \ensuremath{\Conid{Seq}\;\Varid{b}\;\Varid{n}} as expected.
+Equality qualified types can encode powerful static invariants about
+data. For example the type of \ensuremath{\Varid{map}} provides a proof that \ensuremath{\Varid{map}}
+returns a list of the same length as its input list.
+
+\section{Type functions in \Wmega}\label{typefun}
+
+We now introduce type-functions. To see why this is necessary
+we ask the rhetorical question: {\em What is the type of the append
+function on static-length lists}? The append function should have type
+\ensuremath{\Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;(\Varid{n}\mathbin{+}\Varid{m})}. In
+order to type such functions it is necessary to do arithmetic at
+the type level. This means defining functions over types. In \Wmega{}
+we do this by writing equations over types. We surround type-function
+application by braces (e.g. \ensuremath{\{\mskip1.5mu \Varid{sum}\;\Varid{x}\;\Varid{y}\mskip1.5mu\}}) to distinguish
+it from type-constructor application (e.g. \ensuremath{\Conid{List}\;\Conid{Int}}). We also define
+the type-function \ensuremath{\Varid{sum}} and the value-function \ensuremath{\Varid{append}} of static sequences.\\
+
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{17}{@{}l@{}}
+\column{21}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{sum}\mathbin{::}\Conid{Nat}\leadsto\Conid{Nat}\leadsto\Conid{Nat}{}}
+\nextline
+\fromto{B}{17}{{}\{\mskip1.5mu \Varid{sum}\;\Conid{Zero}\;{}}
+\fromto{17}{21}{{}\Varid{m}\mskip1.5mu\}{}}
+\fromto{21}{E}{{}\mathrel{=}\Varid{m}{}}
+\nextline
+\fromto{B}{17}{{}\{\mskip1.5mu \Varid{sum}\;(\Conid{Succ}\;\Varid{n})\;{}}
+\fromto{17}{21}{{}\Varid{m}\mskip1.5mu\}{}}
+\fromto{21}{E}{{}\mathrel{=}\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{append}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Nil})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\mathrel{=}\Varid{ys}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\mathrel{=}\Conid{Cons}\;\Varid{x}\;(\Varid{append}\;\Varid{xs}\;\Varid{ys}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+How is a function, like append, whose type includes a type-function 
+application, type checked? And, what
+role do the type function equations play in the process? Consider the second
+equation: \ensuremath{\Varid{append}\;(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\;\Varid{ys}\mathrel{=}\Conid{Cons}\;\Varid{x}\;(\Varid{append}\;\Varid{xs}\;\Varid{ys})}. From the type
+signature of \ensuremath{\Varid{append}}, we know \ensuremath{(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{n}}, and  \ensuremath{\Varid{ys}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{m}}. We
+need to check that the right-hand-side \ensuremath{\Conid{Cons}\;\Varid{x}\;(\Varid{append}\;\Varid{xs}\;\Varid{ys})} has type 
+\ensuremath{\Conid{Seq}\;\Varid{a}\;\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}}. Because \ensuremath{\Conid{Cons}} has an equality qualified type, from
+the pattern \ensuremath{(\Conid{Cons}\;\Varid{x}\;\Varid{xs})} we know \ensuremath{(\Varid{x}\mathbin{::}\Varid{a})} and \ensuremath{(\Varid{xs}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{k})} plus we
+get to add the equality \ensuremath{(\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{k})} to the set of assumptions. From this we
+can compute that \ensuremath{(\Varid{append}\;\Varid{xs}\;\Varid{ys}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\})}. Thus it appears that the
+right- hand-side \ensuremath{\Conid{Cons}\;\Varid{x}\;(\Varid{append}\;\Varid{xs}\;\Varid{ys})} actually has type \ensuremath{\Conid{Seq}\;\Varid{a}\;(\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\})}. To reconcile this apparent difference, the type checking algorithm
+unifies the type \ensuremath{\Conid{Seq}\;\Varid{a}\;\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}} with the type \ensuremath{\Conid{Seq}\;\Varid{a}\;(\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\})}. This
+unification succeeds only if the equation \ensuremath{\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}\mathrel{=}\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\}} holds. Since
+this cannot always be immediately determined, the unification algorithm
+delays unification, and generates and propagates this equation as a new obligation.
+After checking
+the rest of the right-hand-side (which propagates no additional obligations)
+we must discharge the obligation \ensuremath{\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}\mathrel{=}\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\}} under the assumption \ensuremath{(\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{k})}.
+We use the assumption by substituting \ensuremath{\Conid{Succ}\;\Varid{k}} for \ensuremath{\Varid{n}}, and then discharge \ensuremath{\{\mskip1.5mu \Varid{sum}\;(\Conid{Succ}\;\Varid{k})\;\Varid{m}\mskip1.5mu\}\mathrel{=}\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\}}. By applying the second clause in the definition of
+\ensuremath{\Varid{sum}} we get \ensuremath{\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\}\mathrel{=}\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\}} which is finally discharged.
+
+By delaying the use of both assumptions and type-function equations until
+after all other unification is performed, we avoid the problem that sometimes
+occurs when type variables are not instantiated in time. For example
+without knowing that \ensuremath{\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{k}} we could not apply the type-function
+rule reducing \ensuremath{\Varid{sum}\;\Varid{n}\;\Varid{m}} to \ensuremath{\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{k}\;\Varid{m}\mskip1.5mu\}}. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Binomial Heaps}
+
+
+Binomial Heaps are a collection
+type that support the following operations, 
+each listed with its time complexity.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{14}{@{}l@{}}
+\column{39}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{14}{{}\Varid{empty}{}}
+\fromto{14}{39}{{}\mathbin{::}\Conid{Heap}{}}
+\fromto{39}{E}{{}\mbox{\onelinecomment   $O(1)$}{}}
+\nextline
+\fromto{B}{14}{{}\Varid{singleton}{}}
+\fromto{14}{39}{{}\mathbin{::}\Conid{Elem}\to \Conid{Heap}{}}
+\fromto{39}{E}{{}\mbox{\onelinecomment   $O(1)$}{}}
+\nextline
+\fromto{B}{14}{{}\Varid{insert}{}}
+\fromto{14}{39}{{}\mathbin{::}\Conid{Elem}\to \Conid{Heap}\to \Conid{Heap}{}}
+\fromto{39}{E}{{}\mbox{\onelinecomment   $O(lg\ n)$}{}}
+\nextline
+\fromto{B}{14}{{}\Varid{merge}{}}
+\fromto{14}{39}{{}\mathbin{::}\Conid{Heap}\to \Conid{Heap}\to \Conid{Heap}{}}
+\fromto{39}{E}{{}\mbox{\onelinecomment   $O(lg\ n)$}{}}
+\nextline
+\fromto{B}{14}{{}\Varid{minElem}{}}
+\fromto{14}{39}{{}\mathbin{::}\Conid{Heap}\to \Conid{Maybe}\;\Conid{Elem}{}}
+\fromto{39}{E}{{}\mbox{\onelinecomment   $O(lg\ n)$}{}}
+\nextline
+\fromto{B}{14}{{}\Varid{extractMin}{}}
+\fromto{14}{39}{{}\mathbin{::}\Conid{Heap}\to \Conid{Maybe}\;\Conid{Heap}{}}
+\fromto{39}{E}{{}\mbox{\onelinecomment   $O(lg\ n)$}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+That every operation takes logortihmic (or better) time
+is due to a sophisticated set of invariants that structure
+the binomial heap. Correctly implementing heap operations 
+that maintain these invariants is a non-trivial task.
+Any help in this endeavor is greatly appreciated. 
+In \Wmega{} we can express almost all the invariants 
+and let the type checker enforce them.
+
+The \ensuremath{\Conid{Heap}} type should really be parameterized by the type of its 
+elements.  For simplicity of exposition, we just treat \ensuremath{\Conid{Elem}} as 
+an abstract type that supports comparison operations.  The 
+desired parameterization poses no problems but clutters
+the presentation of the static properties.
+
+\hide{\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{9}{@{}l@{}}
+\column{10}{@{}l@{}}
+\column{24}{@{}l@{}}
+\column{27}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{otherwise}\mathrel{=}\Conid{True}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{foldr}\;\Varid{c}\;\Varid{n}\;[\mskip1.5mu \mskip1.5mu]\mathrel{=}\Varid{n}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{foldr}\;\Varid{c}\;\Varid{n}\;(\Varid{x}\mathbin{:}\Varid{xs})\mathrel{=}\Varid{c}\;\Varid{x}\;(\Varid{foldr}\;\Varid{c}\;\Varid{n}\;\Varid{xs}){}}
+\nextline[\blanklineskip]
+\fromto{B}{24}{{}\Varid{min}\;\Varid{a}\;\Varid{b}\mid \Varid{b}\mathbin{<}\Varid{a}{}}
+\fromto{24}{E}{{}\mathrel{=}\Varid{b}{}}
+\nextline
+\fromto{B}{10}{{}\hsindent{10}{}}
+\fromto{10}{24}{{}\mid \Varid{otherwise}{}}
+\fromto{24}{E}{{}\mathrel{=}\Varid{a}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{minBy}\mathbin{::}(\Varid{a}\to \Conid{Elem})\to (\Varid{a}\to \Varid{a}\to \Varid{a}){}}
+\nextline
+\fromto{B}{E}{{}\Varid{minBy}\;\Varid{key}\;\Varid{a}\;\Varid{b}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{27}{{}\mid \Varid{key}\;\Varid{b}\mathbin{<}\Varid{key}\;\Varid{a}{}}
+\fromto{27}{E}{{}\mathrel{=}\Varid{b}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{27}{{}\mid \Varid{otherwise}{}}
+\fromto{27}{E}{{}\mathrel{=}\Varid{a}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Natural Numbers as Types}
+
+The datatypes we use to encode binomial heaps are indexed by natural
+numbers. These parameters encode structural invariants for each
+type. Since we do not use dependent types, we must
+develop \emph{types} whose structure mirrors that of the naturals.  For
+our purposes here, two representations of numbers are useful. The
+natural numbers (\ensuremath{\Conid{N1}}) in unary, and the positive natural numbers (\ensuremath{\Conid{N2}})
+in binary.
+
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{36}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{36}{{}{\bf kind}\;\NN_1\mathrel{=}\Conid{Zero}\mid \Conid{Succ}\;\NN_1{}}
+\fromto{36}{E}{{}\mbox{\onelinecomment  $0$ or $n+1$}{}}
+\nextline
+\fromto{B}{36}{{}{\bf kind}\;\NN_2\mathrel{=}\Conid{One}\mid \Conid{Even}\;\NN_2\mid \Conid{Odd}\;\NN_2{}}
+\fromto{36}{E}{{}\mbox{\onelinecomment  $1$ or $2n$ or $2n+1$}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+The binary representation is least-significant-bit first.
+For example, the type \ensuremath{\Conid{Odd}\;(\Conid{Even}\;(\Conid{Odd}\;\Conid{One}))} stands for the 
+number $1101_{2} = 13_{10}$.
+
+We encode only positive naturals in the binary representation.
+Instead we could include zero by defining
+\ensuremath{{\bf kind}\;\NN_2\mathrel{=}\Conid{Zero2}\mid \Conid{Even}\;\NN_2\mid \Conid{Odd}\;\NN_2}.
+The problem with this definition is that it does not rule out 
+trailing zeroes.  For example \ensuremath{\Conid{Even}\;\Conid{Zero2}} and \ensuremath{\Conid{Zero2}} both 
+stand for the number \ensuremath{\mathrm{0}}.
+
+We define increment and addition type-functions on the binary representation 
+of the naturals.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{18}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{inc}\mathbin{::}\NN_2\leadsto\NN_2{}}
+\nextline
+\fromto{B}{18}{{}\{\mskip1.5mu \Varid{inc}\;\Conid{One}\mskip1.5mu\}{}}
+\fromto{18}{E}{{}\mathrel{=}\Conid{Even}\;\Conid{One}{}}
+\nextline
+\fromto{B}{18}{{}\{\mskip1.5mu \Varid{inc}\;(\Conid{Even}\;\Varid{n})\mskip1.5mu\}{}}
+\fromto{18}{E}{{}\mathrel{=}\Conid{Odd}\;\Varid{n}{}}
+\nextline
+\fromto{B}{18}{{}\{\mskip1.5mu \Varid{inc}\;(\Conid{Odd}\;\Varid{n})\mskip1.5mu\}{}}
+\fromto{18}{E}{{}\mathrel{=}\Conid{Even}\;\{\mskip1.5mu \Varid{inc}\;\Varid{n}\mskip1.5mu\}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Addition is defined as a pair of mutually recursive functions: 
+\ensuremath{\Varid{add}} (without carry) and \ensuremath{\Varid{addc}} (with carry).
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{7}{@{}l@{}}
+\column{14}{@{}l@{}}
+\column{15}{@{}l@{}}
+\column{18}{@{}l@{}}
+\column{19}{@{}l@{}}
+\column{25}{@{}l@{}}
+\column{26}{@{}l@{}}
+\column{30}{@{}l@{}}
+\column{31}{@{}l@{}}
+\column{38}{@{}l@{}}
+\column{39}{@{}l@{}}
+\column{45}{@{}l@{}}
+\column{46}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{7}{{}\Varid{add}{}}
+\fromto{7}{E}{{}\mathbin{::}\NN_2\leadsto\NN_2\leadsto\NN_2{}}
+\nextline
+\fromto{B}{18}{{}\{\mskip1.5mu \Varid{add}\;\Conid{One}\;{}}
+\fromto{18}{30}{{}\Varid{m}\mskip1.5mu\}{}}
+\fromto{30}{E}{{}\mathrel{=}\{\mskip1.5mu \Varid{inc}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{18}{{}\{\mskip1.5mu \Varid{add}\;\Varid{n}\;{}}
+\fromto{18}{30}{{}\Conid{One}\mskip1.5mu\}{}}
+\fromto{30}{E}{{}\mathrel{=}\{\mskip1.5mu \Varid{inc}\;\Varid{n}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{14}{{}\{\mskip1.5mu \Varid{add}\;(\Conid{Even}\;{}}
+\fromto{14}{18}{{}\Varid{n})\;{}}
+\fromto{18}{25}{{}(\Conid{Even}\;{}}
+\fromto{25}{30}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{30}{38}{{}\mathrel{=}\Conid{Even}\;{}}
+\fromto{38}{45}{{}\{\mskip1.5mu \Varid{add}\;{}}
+\fromto{45}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{14}{{}\{\mskip1.5mu \Varid{add}\;(\Conid{Even}\;{}}
+\fromto{14}{18}{{}\Varid{n})\;{}}
+\fromto{18}{25}{{}(\Conid{Odd}\;{}}
+\fromto{25}{30}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{30}{38}{{}\mathrel{=}\Conid{Odd}\;{}}
+\fromto{38}{45}{{}\{\mskip1.5mu \Varid{add}\;{}}
+\fromto{45}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{14}{{}\{\mskip1.5mu \Varid{add}\;(\Conid{Odd}\;{}}
+\fromto{14}{18}{{}\Varid{n})\;{}}
+\fromto{18}{25}{{}(\Conid{Even}\;{}}
+\fromto{25}{30}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{30}{38}{{}\mathrel{=}\Conid{Odd}\;{}}
+\fromto{38}{45}{{}\{\mskip1.5mu \Varid{add}\;{}}
+\fromto{45}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{14}{{}\{\mskip1.5mu \Varid{add}\;(\Conid{Odd}\;{}}
+\fromto{14}{18}{{}\Varid{n})\;{}}
+\fromto{18}{25}{{}(\Conid{Odd}\;{}}
+\fromto{25}{30}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{30}{38}{{}\mathrel{=}\Conid{Even}\;{}}
+\fromto{38}{45}{{}\{\mskip1.5mu \Varid{addc}\;{}}
+\fromto{45}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{addc}\mathbin{::}\NN_2\leadsto\NN_2\leadsto\NN_2{}}
+\nextline
+\fromto{B}{19}{{}\{\mskip1.5mu \Varid{addc}\;\Conid{One}\;{}}
+\fromto{19}{31}{{}\Varid{m}\mskip1.5mu\}{}}
+\fromto{31}{E}{{}\mathrel{=}\{\mskip1.5mu \Varid{inc}\;\{\mskip1.5mu \Varid{inc}\;\Varid{m}\mskip1.5mu\}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{19}{{}\{\mskip1.5mu \Varid{addc}\;\Varid{n}\;{}}
+\fromto{19}{31}{{}\Conid{One}\mskip1.5mu\}{}}
+\fromto{31}{E}{{}\mathrel{=}\{\mskip1.5mu \Varid{inc}\;\{\mskip1.5mu \Varid{inc}\;\Varid{n}\mskip1.5mu\}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{15}{{}\{\mskip1.5mu \Varid{addc}\;(\Conid{Even}\;{}}
+\fromto{15}{19}{{}\Varid{n})\;{}}
+\fromto{19}{26}{{}(\Conid{Even}\;{}}
+\fromto{26}{31}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{31}{39}{{}\mathrel{=}\Conid{Odd}\;{}}
+\fromto{39}{46}{{}\{\mskip1.5mu \Varid{add}\;{}}
+\fromto{46}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{15}{{}\{\mskip1.5mu \Varid{addc}\;(\Conid{Even}\;{}}
+\fromto{15}{19}{{}\Varid{n})\;{}}
+\fromto{19}{26}{{}(\Conid{Odd}\;{}}
+\fromto{26}{31}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{31}{39}{{}\mathrel{=}\Conid{Even}\;{}}
+\fromto{39}{46}{{}\{\mskip1.5mu \Varid{addc}\;{}}
+\fromto{46}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{15}{{}\{\mskip1.5mu \Varid{addc}\;(\Conid{Odd}\;{}}
+\fromto{15}{19}{{}\Varid{n})\;{}}
+\fromto{19}{26}{{}(\Conid{Even}\;{}}
+\fromto{26}{31}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{31}{39}{{}\mathrel{=}\Conid{Even}\;{}}
+\fromto{39}{46}{{}\{\mskip1.5mu \Varid{addc}\;{}}
+\fromto{46}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{15}{{}\{\mskip1.5mu \Varid{addc}\;(\Conid{Odd}\;{}}
+\fromto{15}{19}{{}\Varid{n})\;{}}
+\fromto{19}{26}{{}(\Conid{Odd}\;{}}
+\fromto{26}{31}{{}\Varid{m})\mskip1.5mu\}{}}
+\fromto{31}{39}{{}\mathrel{=}\Conid{Odd}\;{}}
+\fromto{39}{46}{{}\{\mskip1.5mu \Varid{addc}\;{}}
+\fromto{46}{E}{{}\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\hide{
+For clarity, in the remainder of the paper we will use the usual 
+mathematical notation for the naturals.  However, the reader should 
+remember that all types of kind \ensuremath{\NN_1} or \ensuremath{\NN_2} are built up from the 
+constructors presented here.
+
+%%format Zero = "0"
+%%format One = "1"
+%%format Succ k = "{" k "+1}"
+%%format Even n = "2 \cdot " n
+%%format Odd n = "2 \cdot " n "+ 1"
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Binomial Trees}
+
+
+Binomial heaps are composed of simpler structures 
+called binomial trees, which we explain first. 
+The datatype \ensuremath{T_{\Varid{k}}} of binomial trees is based on the arithmetic identity
+\[2^k \quad = \quad 1 + (2^{k-1} + 2^{k-2} + \cdots + 2^0)
+  \quad \textrm{where } k \geq 0 \]
+We also make use of an auxillary 
+datatype \ensuremath{F_{\Varid{k}}} of forests (of tress) stored in descending order: $T_{k-1}, T_{k-2},\ldots, T_0$.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{17}{@{}l@{}}
+\column{26}{@{}l@{}}
+\column{45}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{17}{{}\mathbf{data}\;T_{\Varid{k}}{}}
+\fromto{17}{26}{{}\mathrel{=}{}}
+\fromto{26}{E}{{}\Conid{Tree}\;\Conid{Elem}\;F_{\Varid{k}}{}}
+\nextline
+\fromto{B}{17}{{}\mathbf{data}\;F_{\Varid{k}}{}}
+\fromto{17}{26}{{}\mathrel{=}{}}
+\fromto{26}{45}{{}\Conid{FNil}\;{}}
+\fromto{45}{E}{{}\mathbf{where}\;\Varid{k}\mathrel{=}\Conid{Zero}{}}
+\nextline
+\fromto{17}{26}{{}\mid \exists\;\Varid{j}. {}}
+\fromto{26}{45}{{}\Conid{FCons}\;T_{\Varid{j}}\;F_{\Varid{j}}\;{}}
+\fromto{45}{E}{{}\mathbf{where}\;\Varid{k}\mathrel{=}\Conid{Succ}\;\Varid{j}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+This definition defines type constructors \ensuremath{T_{}} and \ensuremath{F_{}} of kind \ensuremath{\NN_1\leadsto\mathbin{*}}.
+The \ensuremath{\mathbf{where}} clauses in this definition effectively give the data 
+constructors the following types:\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{9}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{9}{{}\Conid{Tree}{}}
+\fromto{9}{E}{{}\mathbin{::}\Conid{Elem}\to F_{\Varid{k}}\to T_{\Varid{k}}{}}
+\nextline
+\fromto{B}{9}{{}\Conid{FNil}{}}
+\fromto{9}{E}{{}\mathbin{::}F_{\Conid{Zero}}{}}
+\nextline
+\fromto{B}{9}{{}\Conid{FCons}{}}
+\fromto{9}{E}{{}\mathbin{::}T_{\Varid{k}}\to F_{\Varid{k}}\to F_{\Conid{Succ}\;\Varid{k}}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+
+Trees of type \ensuremath{T_{\Varid{k}}} contain exactly $2^k$ elements.
+Forests of type \ensuremath{F_{\Varid{k}}} contain exactly $2^k-1$ elements.
+Convince yourself of this by an inductive argument 
+based on the types of the data constructors.
+Note that the boundary condition $2^0=1$ holds.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{singletonT}\mathbin{::}\Conid{Elem}\to T_{\Conid{Zero}}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{singletonT}\;\Varid{a}\mathrel{=}\Conid{Tree}\;\Varid{a}\;\Conid{FNil}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Before we move to the inductive step we need to discuss
+the heap invariant.
+Binomial heaps satisfy two kinds of invariants.  The first kind of
+invariant is static and structural, having to do with the
+relative shapes and sizes of the trees in the heap, and is captured in
+the type indexs of the data structures. This is what
+the inductive proof is about. The second is the \emph{heap
+invariant}. Binomial heaps are composed of Binomial trees. The heap
+invariant states the every node in a binomial tree in a binomial heap has
+a value no greater than that of any its descendents. The heap invariant
+is captured by making the construction of binomial trees abstract.
+Singleton trees vacuously meet the heap invariant (they have only one
+element) and are made by using the abstract constructor (\ensuremath{\Varid{singletonT}}).
+Larger trees are constructed by an abstract constant-time merge function
+(\ensuremath{\Varid{mergeT}})
+corresponding to the identity $2^k + 2^k = 2^{k+1}$. We construct
+this function in two steps. First we define \ensuremath{\Varid{mergeT'}}:
+
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{mergeT'}\mathbin{::}T_{\Varid{k}}\to T_{\Varid{k}}\to T_{\Conid{Succ}\;\Varid{k}}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{mergeT'}\;(\Conid{Tree}\;\Varid{e}\;\Varid{f})\;\Varid{t}\mathrel{=}\Conid{Tree}\;\Varid{e}\;(\Conid{FCons}\;\Varid{t}\;\Varid{f}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+The top element of \ensuremath{\Varid{mergeT'}\;t_1\;t_2} is the top element of \ensuremath{t_1}. 
+A simple wrapper function ensures that merging preserves the heap property
+by swapping \ensuremath{t_1} with \ensuremath{t_2} when necessary.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{16}{@{}l@{}}
+\column{36}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{top}\mathbin{::}T_{\Varid{k}}\to \Conid{Elem}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{top}\;(\Conid{Tree}\;\Varid{i}\;\anonymous )\mathrel{=}\Varid{i}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{mergeT}\mathbin{::}T_{\Varid{k}}\to T_{\Varid{k}}\to T_{\Conid{Succ}\;\Varid{k}}{}}
+\nextline
+\fromto{B}{16}{{}\Varid{mergeT}\;t_1\;t_2{}}
+\fromto{16}{36}{{}\mid \Varid{top}\;t_1\leq \Varid{top}\;t_2{}}
+\fromto{36}{E}{{}\mathrel{=}\Varid{mergeT'}\;t_1\;t_2{}}
+\nextline
+\fromto{16}{36}{{}\mid \Varid{otherwise}{}}
+\fromto{36}{E}{{}\mathrel{=}\Varid{mergeT'}\;t_2\;t_1{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+So long as we only use \ensuremath{\Varid{singletonT}} and \ensuremath{\Varid{mergeT}} to build trees, we will
+preserve the heap invariant. The function \ensuremath{\Varid{mergeT}} also preserves the
+structural invariant, which is manifest in its type. This completes the
+inductive step of the structural proof. You can't
+construct well typed binomial trees, that don't
+meet the structural invariant. There is one other function that
+needs to break the binomial tree abstraction (used to implement
+\ensuremath{\Varid{extractMin}}) but it also preserves the heap invariant.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Binomial Heaps}
+
+As we develop the arithmetic analogy, the binary representation of 
+natural numbers is the basis for \emph{binomial heaps}.  Since there 
+is a unique binary representation for any natural number $n$, there 
+is a unique set of (distinct) binomial tree sizes that together contain 
+$n$ elements.  For example, we can contain 13 elements in a collection 
+of binomial heaps of types \ensuremath{T_{\mathrm{0}}}, \ensuremath{T_{\mathrm{2}}}, and \ensuremath{T_{\mathrm{3}}} because 
+$13 = 2^0 + 2^2 + 2^3$.  In this way, the structure of binomial heaps 
+mirrors that of binary numbers.  
+
+Here is a first attempt at defining the \ensuremath{\Conid{Heap}} datatype.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{5}{@{}l@{}}
+\column{14}{@{}l@{}}
+\column{20}{@{}l@{}}
+\column{29}{@{}l@{}}
+\column{39}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{Heap}\;\Varid{n}{}}
+\nextline
+\fromto{B}{5}{{}\hsindent{5}{}}
+\fromto{5}{14}{{}\mathrel{=}{}}
+\fromto{14}{20}{{}\Conid{Last}\;{}}
+\fromto{20}{39}{{}T_{\mathbin{?}}\;{}}
+\fromto{39}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{One}{}}
+\nextline
+\fromto{B}{5}{{}\hsindent{5}{}}
+\fromto{5}{14}{{}\mid \exists\;\Varid{m}. {}}
+\fromto{14}{29}{{}\Conid{Skip}\;{}}
+\fromto{29}{39}{{}(\Conid{Heap}\;\Varid{n})\;{}}
+\fromto{39}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Even}\;\Varid{m}{}}
+\nextline
+\fromto{B}{5}{{}\hsindent{5}{}}
+\fromto{5}{14}{{}\mid \exists\;\Varid{m}. {}}
+\fromto{14}{20}{{}\Conid{Cons}\;{}}
+\fromto{20}{29}{{}T_{\mathbin{?}}\;{}}
+\fromto{29}{39}{{}(\Conid{Heap}\;\Varid{n})\;{}}
+\fromto{39}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Odd}\;\Varid{m}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+What's missing is an accumulating parameter to specify the orders 
+of binomial trees.  We arrive at the following definition.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{9}{@{}l@{}}
+\column{18}{@{}l@{}}
+\column{30}{@{}l@{}}
+\column{52}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{SubHeap}\;\Varid{n}\;\Varid{k}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{18}{{}\mathrel{=}{}}
+\fromto{18}{52}{{}\Conid{Last}\;T_{\Varid{k}}\;{}}
+\fromto{52}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{One}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{18}{{}\mid \exists\;\Varid{m}. {}}
+\fromto{18}{30}{{}\Conid{Skip}\;{}}
+\fromto{30}{52}{{}(\Conid{SubHeap}\;\Varid{m}\;(\Conid{Succ}\;\Varid{k}))\;{}}
+\fromto{52}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Even}\;\Varid{m}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{18}{{}\mid \exists\;\Varid{m}. {}}
+\fromto{18}{30}{{}\Conid{Cons}\;T_{\Varid{k}}\;{}}
+\fromto{30}{52}{{}(\Conid{SubHeap}\;\Varid{m}\;(\Conid{Succ}\;\Varid{k}))\;{}}
+\fromto{52}{E}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Odd}\;\Varid{m}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{Heap}\mathrel{=}\exists\;\Varid{n}. \Conid{Heap}\;(\Conid{SubHeap}\;\Varid{n}\;\Conid{Zero})\mid \Conid{Empty}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+A wrapper datatype \ensuremath{\Conid{Heap}} initializes the accumulating parameter at \ensuremath{\Conid{Zero}}.  
+The wrapper type also hides the size parameter by binding it 
+existentially.  This shields users of the heap library from the 
+details of its implementation.
+
+The type constructor \ensuremath{\Conid{SubHeap}} has kind \ensuremath{\NN_2\leadsto\NN_1\leadsto\mathbin{*}}.  We use the 
+unary representation to count off the orders of the binomial trees in a heap, 
+and the binary representation to determine the shape of the subheap.
+Any \ensuremath{\Conid{SubHeap}\;\Varid{n}\;\Varid{k}} value contains $n * 2^k$ elements.  
+By corollary, a \ensuremath{\Conid{Heap}} value with hidden existential parameter $n$ 
+contains $n$ elements.  Figure~\ref{fig:heap} shows an example heap.
+
+\begin{figure*}
+\begin{tabular}{lc}
+\parbox{2.5in}{
+{\small\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{5}{@{}l@{}}
+\column{6}{@{}l@{}}
+\column{11}{@{}l@{}}
+\column{19}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{11}{{}\Conid{SubHeap}\;{}}
+\fromto{11}{E}{{}({}}
+\nextline
+\fromto{B}{5}{{}\hsindent{5}{}}
+\fromto{5}{11}{{}\Conid{Cons}\;{}}
+\fromto{11}{E}{{}(\Conid{Tree}\;\mathrm{1}\;\Conid{FNil})\;({}}
+\nextline
+\fromto{B}{5}{{}\hsindent{5}{}}
+\fromto{5}{11}{{}\Conid{Skip}\;{}}
+\fromto{11}{E}{{}({}}
+\nextline
+\fromto{B}{5}{{}\hsindent{5}{}}
+\fromto{5}{11}{{}\Conid{Last}\;{}}
+\fromto{11}{E}{{}(\Conid{Tree}\;\mathrm{2}{}}
+\nextline
+\fromto{11}{19}{{}(\Conid{FCons}\;{}}
+\fromto{19}{E}{{}(\Conid{Tree}\;\mathrm{4}{}}
+\nextline
+\fromto{19}{E}{{}(\Conid{FCons}\;(\Conid{Tree}\;\mathrm{5}\;\Conid{FNil}){}}
+\nextline
+\fromto{19}{E}{{}\Conid{FNil})){}}
+\nextline
+\fromto{11}{19}{{}(\Conid{FCons}\;{}}
+\fromto{19}{E}{{}(\Conid{Tree}\;\mathrm{3}\;\Conid{FNil})\;\Conid{FNil}))){}}
+\nextline
+\fromto{5}{6}{{}\hsindent{1}{}}
+\fromto{6}{E}{{}))){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+}}
+&
+\fig{1in}{fig.1}
+\\
+\end{tabular}
+\caption{A binomial heap of size $5_{10} = 101_{2}$.
+It contains several sub-heaps. The \ensuremath{\Conid{Cons}} heap has type \ensuremath{\Conid{SubHeap}\;(\Conid{Odd}\;(\Conid{Even}\;\Conid{One}))\;\Conid{Zero}},
+the \ensuremath{\Conid{Skip}} heap has type \ensuremath{\Conid{SubHeap}\;(\Conid{Even}\;\Conid{One})\;(\Conid{Succ}\;\Conid{Zero})}, and the
+\ensuremath{\Conid{Last}} heap has type \ensuremath{\Conid{SubHeap}\;\Conid{One}\;(\Conid{Succ}\;(\Conid{Succ}\;\Conid{Zero}))}. Translating
+the binary and unary representations in the types to decimal, we
+see \ensuremath{\Conid{Cons}} with type \ensuremath{\Conid{Subheap}\;\mathrm{5}\;\mathrm{0}}, \ensuremath{\Conid{Skip}} with type \ensuremath{\Conid{Subheap}\;\mathrm{2}\;\mathrm{1}},
+and \ensuremath{\Conid{Last}} with type \ensuremath{\Conid{Subheap}\;\mathrm{1}\;\mathrm{2}}.  Check for yourself that a heap
+with type \ensuremath{\Conid{Subheap}\;\Varid{n}\;\Varid{k}} has $n*2^k$ elements.
+}
+
+\label{fig:heap}
+\end{figure*}
+
+\subsubsection{Primitive Heaps}
+Here are primitive heaps containing 0 and 1 elements.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{empty}\mathbin{::}\Conid{Heap}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{empty}\mathrel{=}\Conid{Empty}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{singleton}\mathbin{::}\Conid{Elem}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{singleton}\;\Varid{a}\mathrel{=}\Conid{Heap}\;(\Conid{Last}\;(\Varid{singletonT}\;\Varid{a})){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\subsubsection{Insertion}
+
+Inserting a binomial tree into a binomial (sub-) heap corresponds to 
+incrementing a binary number.  The tree to be inserted corresponds to 
+the least significant ``carry'' bit that is being added on.  This is why 
+the \ensuremath{\Varid{k}} parameters of the sub-heap and the tree have to match.
+We encourage the reader to compare this definition with the definition 
+of \ensuremath{\Varid{inc}}.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{12}{@{}l@{}}
+\column{21}{@{}l@{}}
+\column{25}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{12}{{}ins{}}
+\fromto{12}{E}{{}\mathbin{::}T_{\Varid{k}}\to \Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{SubHeap}\;\{\mskip1.5mu \Varid{inc}\;\Varid{n}\mskip1.5mu\}\;\Varid{k}{}}
+\nextline
+\fromto{B}{25}{{}ins\;\Varid{t}\;(\Conid{Last}\;\Varid{x}){}}
+\fromto{25}{E}{{}\mathrel{=}\Conid{Skip}\;(\Conid{Last}\;(\Varid{mergeT}\;\Varid{x}\;\Varid{t})){}}
+\nextline
+\fromto{B}{21}{{}ins\;\Varid{t}\;(\Conid{Skip}\;{}}
+\fromto{21}{25}{{}\Varid{h}){}}
+\fromto{25}{E}{{}\mathrel{=}\Conid{Cons}\;\Varid{t}\;\Varid{h}{}}
+\nextline
+\fromto{B}{21}{{}ins\;\Varid{t}\;(\Conid{Cons}\;\Varid{x}\;{}}
+\fromto{21}{25}{{}\Varid{h}){}}
+\fromto{25}{E}{{}\mathrel{=}\Conid{Skip}\;(ins\;(\Varid{mergeT}\;\Varid{x}\;\Varid{t})\;\Varid{h}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+At top level, we call a wrapper function that inserts a single 
+element into a \ensuremath{\Conid{Heap}} as a tree of size $2^0$.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{21}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{insert}\mathbin{::}\Conid{Elem}\to \Conid{Heap}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{21}{{}\Varid{insert}\;\Varid{e}\;\Conid{Empty}{}}
+\fromto{21}{E}{{}\mathrel{=}\Varid{singleton}\;\Varid{e}{}}
+\nextline
+\fromto{B}{21}{{}\Varid{insert}\;\Varid{e}\;(\Conid{Heap}\;\Varid{h}){}}
+\fromto{21}{E}{{}\mathrel{=}\Conid{Heap}\;(ins\;(\Varid{singletonT}\;\Varid{e})\;\Varid{h}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+We will also need an insertion function corresponding to an 
+increment-by-two operation.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{12}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{26}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{12}{{}ins2{}}
+\fromto{12}{E}{{}\mathbin{::}T_{\Conid{Succ}\;\Varid{k}}\to \Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{SubHeap}\;\{\mskip1.5mu \Varid{inc}\;\{\mskip1.5mu \Varid{inc}\;\Varid{n}\mskip1.5mu\}\mskip1.5mu\}\;\Varid{k}{}}
+\nextline
+\fromto{B}{26}{{}ins2\;\Varid{t}\;(\Conid{Last}\;\Varid{x}){}}
+\fromto{26}{E}{{}\mathrel{=}\Conid{Cons}\;\Varid{x}\;(\Conid{Last}\;\Varid{t}){}}
+\nextline
+\fromto{B}{22}{{}ins2\;\Varid{t}\;(\Conid{Skip}\;{}}
+\fromto{22}{26}{{}\Varid{h}){}}
+\fromto{26}{E}{{}\mathrel{=}\Conid{Skip}\;(ins\;\Varid{t}\;\Varid{h}){}}
+\nextline
+\fromto{B}{22}{{}ins2\;\Varid{t}\;(\Conid{Cons}\;\Varid{x}\;{}}
+\fromto{22}{26}{{}\Varid{h}){}}
+\fromto{26}{E}{{}\mathrel{=}\Conid{Cons}\;\Varid{x}\;(ins\;\Varid{t}\;\Varid{h}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\subsubsection{Merging}
+Adding two binary numbers corresponds to merging two binomial heaps.
+Since addition over binary numbers, is defined by mutually 
+recursive type functions, we define two mutually recursive 
+merge functions, one with an extra binomial tree argument 
+(corresponding to a carry bit) and one without.
+We encourage the reader to compare these definitions with the definitions 
+of \ensuremath{\Varid{add}} and \ensuremath{\Varid{addc}}.
+%% shorten the name of the merge functions so they will print properly
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{9}{@{}l@{}}
+\column{16}{@{}l@{}}
+\column{19}{@{}l@{}}
+\column{23}{@{}l@{}}
+\column{30}{@{}l@{}}
+\column{33}{@{}l@{}}
+\column{37}{@{}l@{}}
+\column{47}{@{}l@{}}
+\column{67}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{mrg}\mathbin{::}\Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{SubHeap}\;\Varid{m}\;\Varid{k}\to \Conid{SubHeap}\;\{\mskip1.5mu \Varid{add}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}\;\Varid{k}{}}
+\nextline
+\fromto{B}{9}{{}\Varid{mrg}\;{}}
+\fromto{9}{16}{{}(\Conid{Last}\;{}}
+\fromto{16}{23}{{}\Varid{x})\;{}}
+\fromto{23}{37}{{}\Varid{m}{}}
+\fromto{37}{E}{{}\mathrel{=}ins\;\Varid{x}\;\Varid{m}{}}
+\nextline
+\fromto{B}{9}{{}\Varid{mrg}\;{}}
+\fromto{9}{23}{{}\Varid{n}\;{}}
+\fromto{23}{30}{{}(\Conid{Last}\;{}}
+\fromto{30}{37}{{}\Varid{y}){}}
+\fromto{37}{E}{{}\mathrel{=}ins\;\Varid{y}\;\Varid{n}{}}
+\nextline
+\fromto{B}{9}{{}\Varid{mrg}\;{}}
+\fromto{9}{19}{{}(\Conid{Skip}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{33}{{}(\Conid{Skip}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Skip}\;{}}
+\fromto{47}{67}{{}(\Varid{mrg}\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\nextline
+\fromto{B}{9}{{}\Varid{mrg}\;{}}
+\fromto{9}{19}{{}(\Conid{Skip}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{30}{{}(\Conid{Cons}\;{}}
+\fromto{30}{33}{{}\Varid{y}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Cons}\;\Varid{y}\;{}}
+\fromto{47}{67}{{}(\Varid{mrg}\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\nextline
+\fromto{B}{9}{{}\Varid{mrg}\;{}}
+\fromto{9}{16}{{}(\Conid{Cons}\;{}}
+\fromto{16}{19}{{}\Varid{x}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{33}{{}(\Conid{Skip}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Cons}\;\Varid{x}\;{}}
+\fromto{47}{67}{{}(\Varid{mrg}\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\nextline
+\fromto{B}{9}{{}\Varid{mrg}\;{}}
+\fromto{9}{16}{{}(\Conid{Cons}\;{}}
+\fromto{16}{19}{{}\Varid{x}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{30}{{}(\Conid{Cons}\;{}}
+\fromto{30}{33}{{}\Varid{y}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Skip}\;{}}
+\fromto{47}{67}{{}(\Varid{mrgc}\;(\Varid{mergeT}\;\Varid{x}\;\Varid{y})\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{mrgc}\mathbin{::}T_{\Varid{k}}\to \Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{SubHeap}\;\Varid{m}\;\Varid{k}\to \Conid{SubHeap}\;\{\mskip1.5mu \Varid{addc}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}\;\Varid{k}{}}
+\nextline
+\fromto{B}{16}{{}\Varid{mrgc}\;\Varid{x}\;(\Conid{Last}\;{}}
+\fromto{16}{23}{{}\Varid{y})\;{}}
+\fromto{23}{37}{{}\Varid{m}{}}
+\fromto{37}{E}{{}\mathrel{=}ins2\;(\Varid{mergeT}\;\Varid{x}\;\Varid{y})\;\Varid{m}{}}
+\nextline
+\fromto{B}{23}{{}\Varid{mrgc}\;\Varid{x}\;\Varid{n}\;{}}
+\fromto{23}{30}{{}(\Conid{Last}\;{}}
+\fromto{30}{37}{{}\Varid{z}){}}
+\fromto{37}{E}{{}\mathrel{=}ins2\;(\Varid{mergeT}\;\Varid{x}\;\Varid{z})\;\Varid{n}{}}
+\nextline
+\fromto{B}{19}{{}\Varid{mrgc}\;\Varid{x}\;(\Conid{Skip}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{33}{{}(\Conid{Skip}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Cons}\;\Varid{x}\;{}}
+\fromto{47}{67}{{}(\Varid{mrg}\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\nextline
+\fromto{B}{19}{{}\Varid{mrgc}\;\Varid{x}\;(\Conid{Skip}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{30}{{}(\Conid{Cons}\;{}}
+\fromto{30}{33}{{}\Varid{z}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Skip}\;{}}
+\fromto{47}{67}{{}(\Varid{mrgc}\;(\Varid{mergeT}\;\Varid{x}\;\Varid{z})\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\nextline
+\fromto{B}{16}{{}\Varid{mrgc}\;\Varid{x}\;(\Conid{Cons}\;{}}
+\fromto{16}{19}{{}\Varid{y}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{33}{{}(\Conid{Skip}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Skip}\;{}}
+\fromto{47}{67}{{}(\Varid{mrgc}\;(\Varid{mergeT}\;\Varid{x}\;\Varid{y})\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\nextline
+\fromto{B}{16}{{}\Varid{mrgc}\;\Varid{x}\;(\Conid{Cons}\;{}}
+\fromto{16}{19}{{}\Varid{y}\;{}}
+\fromto{19}{23}{{}\Varid{n})\;{}}
+\fromto{23}{30}{{}(\Conid{Cons}\;{}}
+\fromto{30}{33}{{}\Varid{z}\;{}}
+\fromto{33}{37}{{}\Varid{m}){}}
+\fromto{37}{47}{{}\mathrel{=}\Conid{Cons}\;\Varid{x}\;{}}
+\fromto{47}{67}{{}(\Varid{mrgc}\;(\Varid{mergeT}\;\Varid{y}\;\Varid{z})\;{}}
+\fromto{67}{E}{{}\Varid{n}\;\Varid{m}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Again, we define a wrapper function for merging top-level \ensuremath{\Conid{Heap}}s.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{19}{@{}l@{}}
+\column{30}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{merge}\mathbin{::}\Conid{Heap}\to \Conid{Heap}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{19}{{}\Varid{merge}\;\Conid{Empty}\;{}}
+\fromto{19}{30}{{}\Varid{h2}{}}
+\fromto{30}{E}{{}\mathrel{=}\Varid{h2}{}}
+\nextline
+\fromto{B}{19}{{}\Varid{merge}\;\Varid{h1}\;{}}
+\fromto{19}{30}{{}\Conid{Empty}{}}
+\fromto{30}{E}{{}\mathrel{=}\Varid{h1}{}}
+\nextline
+\fromto{B}{19}{{}\Varid{merge}\;(\Conid{Heap}\;\Varid{h1})\;{}}
+\fromto{19}{30}{{}(\Conid{Heap}\;\Varid{h2}){}}
+\fromto{30}{E}{{}\mathrel{=}\Conid{Heap}\;(\Varid{mrg}\;\Varid{h1}\;\Varid{h2}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\subsubsection{Retrieving and Removing the Minimum Element} 
+Due to space considerations, we omit a full exposition of 
+the \ensuremath{\Varid{minElem}} and \ensuremath{\Varid{extractMin}} operations.  
+The most interesting part of those definitions involves a 
+type-indexed ``zipper'' type~\cite{huet-zipper} that represents
+\ensuremath{\Conid{SubHeap}} contexts.  This gives evidence that Huet's zipper 
+technique scales well to indexed types.
+The interested reader may refer to the Appendix for details.
+
+\hide{\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{3}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{3}{E}{{}\mbox{\onelinecomment  FOR TESTING PURPOSES}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{inserts}\;\Varid{xs}\mathrel{=}\Varid{foldr}\;\Varid{insert}\;\Varid{empty}\;\Varid{xs}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{fromJust}\;(\Conid{Just}\;\Varid{x})\mathrel{=}\Varid{x}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{hd}\;\Varid{h}\mathrel{=}\Varid{fromJust}\;(\Varid{minElem}\;\Varid{h}){}}
+\nextline
+\fromto{B}{E}{{}\Varid{tl}\;\Varid{h}\mathrel{=}\Varid{fromJust}\;(\Varid{extractMin}\;\Varid{h}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{heap0}\mathrel{=}\Varid{inserts}\;[\mskip1.5mu \mathrm{9},\mathrm{6},\mathrm{1},\mathrm{5},\mathrm{0},\mathrm{10},\mathrm{2},\mathrm{8},\mathrm{11},\mathrm{7},\mathrm{4},\mathrm{3},\mathrm{12}\mskip1.5mu]{}}
+\nextline
+\fromto{B}{E}{{}\Varid{test}\mathrel{=}\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{tl}\;(\Varid{heap0}))))))))))))){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\section{Typed CPS Transform}
+
+\newcommand{\cpsC}[1]{\langle\hspace{-0.2em}\vert {#1} \vert\hspace{-0.2em}\rangle}
+\newcommand{\cpsV}[1]{\langle {#1} \rangle}
+\newcommand{\cpsE}[1]{\lbrace\hspace{-0.2em}\vert {#1} \vert\hspace{-0.2em}\rbrace}
+\newcommand{\lam}[2]{\lambda {#1}.\; {#2}}
+
+We now give an \Wmega{} implementation of the call-by-value CPS 
+transform as presented by Hatcliff and Danvy~\cite{hatcliff-danvy-thunks}.
+They use the following syntax:
+\[
+\begin{array}{llcl}
+(comp.)& m, n & ::= & v \mid m\ n \\
+(value) & v    & ::= & i \mid x \mid \lam{x}{n} \\
+\end{array}
+\quad
+\begin{array}{llcl}
+(type) & \tau & ::= & Int \mid \tau \to \tau \mid R \\
+(env.) &  \Gamma&::=& \cdot \mid \Gamma, x:\tau \\
+\end{array}
+\]
+Lambda terms are divided into values and computations.  
+We commit here to a call-by-value source language by categorizing 
+variables as values.  The type $R$ is a special type introduced by the 
+CPS transform as the final result type of any computation.
+
+Then they define a call-by-value CPS transform on terms.
+\[
+\begin{array}{lcl}
+\cpsC{v}     &=& \lam{k}{k\ \cpsV{v}} \\
+\cpsC{m\ n}  &=& \lam{k}{\cpsC{m}\ (\lam{y_0}{\cpsC{n}\ (\lam{y_1}{y_0\ y_1\ k})})} \\
+\end{array}
+\quad
+\begin{array}{lcl}
+\cpsV{i}     &=& i \\
+\cpsV{x}     &=& x \\
+\cpsV{\lam{x}{n}} &=& \lam{x}{\cpsC{n}} \\
+\end{array}
+\]
+The CPS transform has the following effect on types (and type environments):
+\[
+\begin{array}{lcl}
+\cpsC{\tau}    &=& (\cpsV{\tau} \to R) \to R \\
+\cpsV{Int}     &=& Int \\
+\cpsV{\tau \to \sigma}   &=& {\cpsV{\tau} \to \cpsC{\sigma}} \\
+\end{array}
+\quad
+\begin{array}{lcl}
+\cpsE{\cdot}   &=& \cdot \\
+\cpsE{\Gamma,x:\tau} &=& \cpsE{\Gamma},x:\cpsV{\tau} \\
+\end{array}
+\]
+
+Following two (impressive looking) theorems express that the
+CPS translation is type preserving:
+
+If $\Gamma \vdash n : \tau$ then $\cpsE{\Gamma} \vdash \cpsC{n} : \cpsC{\tau}$ and
+
+if $\Gamma \vdash v : \tau$ then $\cpsE{\Gamma} \vdash \cpsV{v} : \cpsV{\tau}$.
+
+\noindent
+Our implementation of CPS in \Wmega{} will prove these theorems using
+type checking alone.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Type Representations and Singleton Types} \label{single}
+
+The types of the object language can be modelled by \Wmega{} types. 
+Since \Wmega{} already has \ensuremath{\Conid{Int}} types and function types (\ensuremath{\anonymous \to \anonymous }), 
+we only need introduce a new type \ensuremath{R}.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mathbf{data}\;R\mathrel{=}\Conid{FinalAnswer}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+We can define a \emph{representation type} for the subset of \Wmega{}'s
+type language that we will employ in the CPS example. A representation
+(a.k.a. singleton) type \ensuremath{\Conid{T}} is a parameterized type. A (run-time) value
+of type \ensuremath{\Conid{T}\;\Varid{a}} represents (or mirrors the shape of) the the static type
+\ensuremath{\Varid{a}}. For example consider \ensuremath{\Conid{Type}\;\Varid{t}} below.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{9}{@{}l@{}}
+\column{20}{@{}l@{}}
+\column{43}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{Type}\;\Varid{t}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{20}{{}\mathrel{=}{}}
+\fromto{20}{43}{{}\Conid{Int}\;{}}
+\fromto{43}{E}{{}\mathbf{where}\;\Varid{t}\mathrel{=}\Conid{Int}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{20}{{}\mid \exists\;\Varid{a}\;\Varid{b}. {}}
+\fromto{20}{43}{{}\Conid{Arr}\;(\Conid{Type}\;\Varid{a})\;(\Conid{Type}\;\Varid{b})\;{}}
+\fromto{43}{E}{{}\mathbf{where}\;\Varid{t}\mathrel{=}\Varid{a}\to \Varid{b}{}}
+\nextline
+\fromto{B}{9}{{}\hsindent{9}{}}
+\fromto{9}{20}{{}\mid {}}
+\fromto{20}{43}{{}R\;{}}
+\fromto{43}{E}{{}\mathbf{where}\;\Varid{t}\mathrel{=}R{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Note how every value of type \ensuremath{\Conid{Type}\;\Varid{a}} has the same shape as \ensuremath{\Varid{a}}. For
+example: \ensuremath{\Conid{Int}\mathbin{::}\Conid{Type}\;\Conid{Int}}, and \ensuremath{R\mathbin{::}\Conid{Type}\;R}, and if \ensuremath{\Varid{a}\mathbin{::}\Conid{Type}\;\Varid{x}}
+and \ensuremath{\Varid{b}\mathbin{::}\Conid{Type}\;\Varid{y}}, then \ensuremath{\Conid{Arr}\;\Varid{a}\;\Varid{b}\mathbin{::}\Conid{Type}\;(\Varid{x}\to \Varid{y})}. For example, the value
+\mbox{\ensuremath{\Conid{Arr}\;\Conid{Int}\;R}} has type \mbox{\ensuremath{\Conid{Type}\;(\Conid{Int}\to R)}}. The useful
+property of \ensuremath{\Conid{Type}} is that there is a one-to-one correspondence between
+values of type \ensuremath{\Conid{Type}\;\Varid{t}} and types \ensuremath{\Varid{t}}. Values of type \ensuremath{\Conid{Type}\;\Varid{t}} are ordinary
+run-time values and can be computed over like any other values. Knowing
+the shape (which constructors are used to build it) of a value of type \ensuremath{\Conid{T}\;\Varid{t}} determines its type, and knowing the type of such a value determines
+its shape.This is why they are some times called singleton types.
+
+\hide{
+This allows us to substitute run-time checks for static checks
+when necessary. We will make use of this important ability
+several places in the sequel, and we will be sure and
+point this out when we do.
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Object Terms}
+
+As we describe the CPS transform we make use of two languages.
+The object-language represents the programs we are
+transforming (CPS terms) and the meta-language (\Wmega{}) describes
+the transformation. Object-programs are data in the meta-language.
+The \Wmega{} data-structures representing CPS object-programs
+are defined using equality qualified types parameterized by two type indexes:
+an environment \ensuremath{\Varid{e}}, and an object-level type \ensuremath{\Varid{t}}.  This means that 
+\Wmega{}'s type system guarantees that all well-typed
+meta-level terms representing object-level terms, represent only well-typed
+object-terms.  The technique relies on de Bruijn indices to represent variables.
+\cite{Pasalic}
+
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{17}{@{}c@{}}
+\column{17E}{@{}l@{}}
+\column{20}{@{}l@{}}
+\column{29}{@{}l@{}}
+\column{35}{@{}l@{}}
+\column{59}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{17}{{}\mathbf{data}\;\Conid{Cmp}\;\Varid{e}\;\Varid{t}{}}
+\fromto{17}{17E}{{}\mathrel{=}{}}
+\fromto{29}{35}{{}\Conid{Val}\;{}}
+\fromto{35}{E}{{}(\Conid{Val}\;\Varid{e}\;\Varid{t}){}}
+\nextline
+\fromto{17}{17E}{{}\mid {}}
+\fromto{20}{29}{{}\exists\;\Varid{s}. {}}
+\fromto{29}{35}{{}\Conid{App}\;{}}
+\fromto{35}{E}{{}(\Conid{Cmp}\;\Varid{e}\;(\Varid{s}\to \Varid{t}))\;(\Conid{Cmp}\;\Varid{e}\;\Varid{s}){}}
+\nextline[\blanklineskip]
+\fromto{B}{17}{{}\mathbf{data}\;\Conid{Val}\;\Varid{e}\;\Varid{t}{}}
+\fromto{17}{17E}{{}\mathrel{=}{}}
+\fromto{29}{35}{{}\Conid{Lit}\;{}}
+\fromto{35}{59}{{}\Conid{Int}\;{}}
+\fromto{59}{E}{{}\mathbf{where}\;\Varid{t}\mathrel{=}\Conid{Int}{}}
+\nextline
+\fromto{17}{17E}{{}\mid {}}
+\fromto{29}{35}{{}\Conid{Var}\;{}}
+\fromto{35}{E}{{}(\Conid{Var}\;\Varid{e}\;\Varid{t})\;(\Conid{Type}\;\Varid{t}){}}
+\nextline
+\fromto{17}{17E}{{}\mid {}}
+\fromto{20}{29}{{}\exists\;\Varid{a}\;\Varid{b}. {}}
+\fromto{29}{35}{{}\Conid{Lam}\;{}}
+\fromto{35}{59}{{}(\Conid{Type}\;\Varid{a})\;(\Conid{Cmp}\;(\Varid{e},\Varid{a})\;\Varid{b})\;{}}
+\fromto{59}{E}{{}\mathbf{where}\;\Varid{t}\mathrel{=}\Varid{a}\to \Varid{b}{}}
+\nextline[\blanklineskip]
+\fromto{B}{17}{{}\mathbf{data}\;\Conid{Var}\;\Varid{e}\;\Varid{t}{}}
+\fromto{17}{17E}{{}\mathrel{=}{}}
+\fromto{20}{29}{{}\exists\;\Varid{f}. {}}
+\fromto{29}{59}{{}\Conid{Zero}\;{}}
+\fromto{59}{E}{{}\mathbf{where}\;\Varid{e}\mathrel{=}(\Varid{f},\Varid{t}){}}
+\nextline
+\fromto{17}{17E}{{}\mid {}}
+\fromto{20}{29}{{}\exists\;\Varid{f}\;\Varid{s}. {}}
+\fromto{29}{35}{{}\Conid{Succ}\;{}}
+\fromto{35}{59}{{}(\Conid{Var}\;\Varid{f}\;\Varid{t})\;{}}
+\fromto{59}{E}{{}\mathbf{where}\;\Varid{e}\mathrel{=}(\Varid{f},\Varid{s}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+These datatypes correspond to typing judgments and their values
+correspond to proofs of those judgments.  We are using nested pairs
+(growing to the right) to model typing environments and a fragment of
+the \Wmega{} types (as discussed in Section \ref{single} above) to
+model object-types. Some examples are germane here.
+Shorthand for some common variable indices will prove useful.\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{8}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{8}{{}\Varid{zero}{}}
+\fromto{8}{E}{{}\mathbin{::}\Conid{Type}\;\Varid{a}\to \Conid{Cmp}\;(\Varid{e},\Varid{a})\;\Varid{a}{}}
+\nextline
+\fromto{B}{8}{{}\Varid{zero}\;{}}
+\fromto{8}{E}{{}\Varid{t}\mathrel{=}\Conid{Val}\;(\Conid{Var}\;\Conid{Zero}\;\Varid{t}){}}
+\nextline[\blanklineskip]
+\fromto{B}{8}{{}\Varid{one}{}}
+\fromto{8}{E}{{}\mathbin{::}\Conid{Type}\;\Varid{a}\to \Conid{Cmp}\;((\Varid{e},\Varid{a}),\Varid{b})\;\Varid{a}{}}
+\nextline
+\fromto{B}{8}{{}\Varid{one}\;{}}
+\fromto{8}{E}{{}\Varid{t}\mathrel{=}\Conid{Val}\;(\Conid{Var}\;(\Conid{Succ}\;\Conid{Zero})\;\Varid{t}){}}
+\nextline[\blanklineskip]
+\fromto{B}{8}{{}\Varid{two}{}}
+\fromto{8}{E}{{}\mathbin{::}\Conid{Type}\;\Varid{a}\to \Conid{Cmp}\;(((\Varid{e},\Varid{a}),\Varid{b}),\Varid{c})\;\Varid{a}{}}
+\nextline
+\fromto{B}{8}{{}\Varid{two}\;{}}
+\fromto{8}{E}{{}\Varid{t}\mathrel{=}\Conid{Val}\;(\Conid{Var}\;(\Conid{Succ}\;(\Conid{Succ}\;\Conid{Zero}))\;\Varid{t}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Consider representing the object-level term
+$\lam{x:Int \to Int}{\lam{y:Int}{x\ y}}$ 
+The meta-level term: \ensuremath{\Varid{m}\mathrel{=}\Conid{App}\;(\Varid{one}\;(\Conid{Arr}\;\Conid{Int}\;\Conid{Int}))\;(\Varid{zero}\;\Conid{Int})}
+has type \ensuremath{\Conid{Cmp}\;((\Varid{e},\Conid{Int}\to \Conid{Int}),\Conid{Int})\;\Conid{Int}}. 
+Notice how the environment is a nested pair. 
+By wrapping \ensuremath{\Varid{m}} in two lambdas \ensuremath{\Conid{Lam}\;(\Conid{Arr}\;\Conid{Int}\;\Conid{Int})\;(\Conid{Val}\;(\Conid{Lam}\;\Conid{Int}\;\Varid{m}))},
+we obtain a term with type \ensuremath{\Conid{Val}\;\Varid{e}\;((\Conid{Int}\to \Conid{Int})\to \Conid{Int}\to \Conid{Int}))}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Reading Off Types}
+
+The abstract syntax includes enough type information to recover 
+at run-time the (representation of the) type of any lambda term.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{11}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{11}{{}\Varid{expType}{}}
+\fromto{11}{E}{{}\mathbin{::}\Conid{Cmp}\;\Varid{e}\;\Varid{t}\to \Conid{Type}\;\Varid{t}{}}
+\nextline
+\fromto{B}{11}{{}\Varid{expType}\;{}}
+\fromto{11}{22}{{}(\Conid{Val}\;\Varid{v}){}}
+\fromto{22}{E}{{}\mathrel{=}\Varid{valType}\;\Varid{v}{}}
+\nextline
+\fromto{B}{11}{{}\Varid{expType}\;{}}
+\fromto{11}{22}{{}(\Conid{App}\;\Varid{m}\;\Varid{n}){}}
+\fromto{22}{E}{{}\mathrel{=}\Varid{codomain}\;(\Varid{expType}\;\Varid{m}){}}
+\nextline[\blanklineskip]
+\fromto{B}{11}{{}\Varid{valType}{}}
+\fromto{11}{E}{{}\mathbin{::}\Conid{Val}\;\Varid{e}\;\Varid{t}\to \Conid{Type}\;\Varid{t}{}}
+\nextline
+\fromto{B}{11}{{}\Varid{valType}\;{}}
+\fromto{11}{22}{{}(\Conid{Lit}\;\Varid{i}){}}
+\fromto{22}{E}{{}\mathrel{=}\Conid{Int}{}}
+\nextline
+\fromto{B}{11}{{}\Varid{valType}\;{}}
+\fromto{11}{22}{{}(\Conid{Var}\;\Varid{x}\;\Varid{t}){}}
+\fromto{22}{E}{{}\mathrel{=}\Varid{t}{}}
+\nextline
+\fromto{B}{11}{{}\Varid{valType}\;{}}
+\fromto{11}{22}{{}(\Conid{Lam}\;\Varid{t}\;\Varid{n}){}}
+\fromto{22}{E}{{}\mathrel{=}\Conid{Arr}\;\Varid{t}\;(\Varid{expType}\;\Varid{n}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{codomain}\mathbin{::}\Conid{Type}\;(\Varid{a}\to \Varid{b})\to \Conid{Type}\;\Varid{b}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{codomain}\;(\Conid{Arr}\;\Varid{a}\;\Varid{b}){}}
+\fromto{22}{E}{{}\mathrel{=}\Varid{b}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Shifting de Bruijn Indices}
+
+The CPS transform introduces new lambda binders for additional 
+continuation parameters.  This necessitates incrementing some 
+variable indices to point past any newly introduced binder, 
+an operation known as a \ensuremath{\Varid{shift}}. 
+
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{12}{@{}l@{}}
+\column{15}{@{}l@{}}
+\column{28}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{shift}\mathbin{::}\Conid{Cmp}\;\Varid{e}\;\Varid{t}\to \Conid{Cmp}\;(\Varid{e},\Varid{s})\;\Varid{t}{}}
+\nextline
+\fromto{B}{28}{{}\Varid{shift}\;\Varid{e}{}}
+\fromto{28}{E}{{}\mathrel{=}\Varid{shiftE}\;\Conid{Succ}\;\Varid{e}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{shiftE}\mathbin{::}(\forall\;\Varid{t}. \Conid{Var}\;\Varid{e}\;\Varid{t}\to \Conid{Var}\;\Varid{f}\;\Varid{t})\to \Conid{Cmp}\;\Varid{e}\;\Varid{t}\to \Conid{Cmp}\;\Varid{f}\;\Varid{t}{}}
+\nextline
+\fromto{B}{12}{{}\Varid{shiftE}\;{}}
+\fromto{12}{15}{{}\Varid{f}\;{}}
+\fromto{15}{28}{{}(\Conid{App}\;\Varid{n}\;\Varid{m}){}}
+\fromto{28}{E}{{}\mathrel{=}\Conid{App}\;(\Varid{shiftE}\;\Varid{f}\;\Varid{n})\;(\Varid{shiftE}\;\Varid{f}\;\Varid{m}){}}
+\nextline
+\fromto{B}{12}{{}\Varid{shiftE}\;{}}
+\fromto{12}{15}{{}\Varid{f}\;{}}
+\fromto{15}{28}{{}(\Conid{Val}\;\Varid{v}){}}
+\fromto{28}{E}{{}\mathrel{=}\Conid{Val}\;(\Varid{shiftV}\;\Varid{f}\;\Varid{v}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{shiftV}\mathbin{::}(\forall\;\Varid{t}. \Conid{Var}\;\Varid{e}\;\Varid{t}\to \Conid{Var}\;\Varid{f}\;\Varid{t})\to \Conid{Val}\;\Varid{e}\;\Varid{t}\to \Conid{Val}\;\Varid{f}\;\Varid{t}{}}
+\nextline
+\fromto{B}{12}{{}\Varid{shiftV}\;{}}
+\fromto{12}{15}{{}\Varid{f}\;{}}
+\fromto{15}{28}{{}(\Conid{Lit}\;\Varid{i}){}}
+\fromto{28}{E}{{}\mathrel{=}\Conid{Lit}\;\Varid{i}{}}
+\nextline
+\fromto{B}{12}{{}\Varid{shiftV}\;{}}
+\fromto{12}{15}{{}\Varid{f}\;{}}
+\fromto{15}{28}{{}(\Conid{Var}\;\Varid{x}\;\Varid{s}){}}
+\fromto{28}{E}{{}\mathrel{=}\Conid{Var}\;(\Varid{f}\;\Varid{x})\;\Varid{s}{}}
+\nextline
+\fromto{B}{12}{{}\Varid{shiftV}\;{}}
+\fromto{12}{15}{{}\Varid{f}\;{}}
+\fromto{15}{28}{{}(\Conid{Lam}\;\Varid{s}\;\Varid{n}){}}
+\fromto{28}{E}{{}\mathrel{=}\Conid{Lam}\;\Varid{s}\;(\Varid{shiftE}\;(lift\;\Varid{f})\;\Varid{n}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}lift\mathbin{::}(\forall\;\Varid{t}. \Conid{Var}\;\Varid{e}\;\Varid{t}\to \Conid{Var}\;\Varid{f}\;\Varid{t})\to \Conid{Var}\;(\Varid{e},\Varid{s})\;\Varid{t}\to \Conid{Var}\;(\Varid{f},\Varid{s})\;\Varid{t}{}}
+\nextline
+\fromto{B}{15}{{}lift\;\Varid{s}\;{}}
+\fromto{15}{28}{{}(\Conid{Zero}){}}
+\fromto{28}{E}{{}\mathrel{=}\Conid{Zero}{}}
+\nextline
+\fromto{B}{15}{{}lift\;\Varid{s}\;{}}
+\fromto{15}{28}{{}(\Conid{Succ}\;\Varid{x}){}}
+\fromto{28}{E}{{}\mathrel{=}\Conid{Succ}\;(\Varid{s}\;\Varid{x}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Since \ensuremath{\Varid{shift}} is really manipulating typing judgments, we can think of 
+its type as a kind of weakening lemma for de Bruijn terms.  In this view, 
+the \ensuremath{\Varid{shift}} function itself is a \emph{proof} of the lemma (provided it 
+terminates on all inputs).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{CPS Transform on Types}
+
+Now we define the effect of the call-by-value CPS transform on 
+the types of object terms.  This is conveniently expressed 
+with \Wmega{}'s type functions.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{8}{@{}l@{}}
+\column{9}{@{}l@{}}
+\column{23}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{8}{{}\Varid{cps}{}}
+\fromto{8}{E}{{}\mathbin{::}\mathbin{*}\leadsto\mathbin{*}\leadsto\mathbin{*}{}}
+\nextline
+\fromto{B}{9}{{}\{\mskip1.5mu \Varid{cps}\;{}}
+\fromto{9}{23}{{}\Varid{r}\;\Varid{t}\mskip1.5mu\}{}}
+\fromto{23}{E}{{}\mathrel{=}(\{\mskip1.5mu \Varid{cpsv}\;\Varid{r}\;\Varid{t}\mskip1.5mu\}\to \Varid{r})\to \Varid{r}{}}
+\nextline[\blanklineskip]
+\fromto{B}{8}{{}\Varid{cpsv}{}}
+\fromto{8}{E}{{}\mathbin{::}\mathbin{*}\leadsto\mathbin{*}\leadsto\mathbin{*}{}}
+\nextline
+\fromto{B}{9}{{}\{\mskip1.5mu \Varid{cpsv}\;{}}
+\fromto{9}{23}{{}\Varid{r}\;\Conid{Int}\mskip1.5mu\}{}}
+\fromto{23}{E}{{}\mathrel{=}\Conid{Int}{}}
+\nextline
+\fromto{B}{9}{{}\{\mskip1.5mu \Varid{cpsv}\;{}}
+\fromto{9}{23}{{}\Varid{r}\;(\Varid{a}\to \Varid{b})\mskip1.5mu\}{}}
+\fromto{23}{E}{{}\mathrel{=}\{\mskip1.5mu \Varid{cpsv}\;\Varid{r}\;\Varid{a}\mskip1.5mu\}\to \{\mskip1.5mu \Varid{cps}\;\Varid{r}\;\Varid{b}\mskip1.5mu\}{}}
+\nextline[\blanklineskip]
+\fromto{B}{8}{{}\Varid{cpse}{}}
+\fromto{8}{E}{{}\mathbin{::}\mathbin{*}\leadsto\mathbin{*}\leadsto\mathbin{*}{}}
+\nextline
+\fromto{B}{9}{{}\{\mskip1.5mu \Varid{cpse}\;{}}
+\fromto{9}{23}{{}\Varid{r}\;()\mskip1.5mu\}{}}
+\fromto{23}{E}{{}\mathrel{=}(){}}
+\nextline
+\fromto{B}{9}{{}\{\mskip1.5mu \Varid{cpse}\;{}}
+\fromto{9}{23}{{}\Varid{r}\;(\Varid{a},\Varid{b})\mskip1.5mu\}{}}
+\fromto{23}{E}{{}\mathrel{=}(\{\mskip1.5mu \Varid{cpse}\;\Varid{r}\;\Varid{a}\mskip1.5mu\},\{\mskip1.5mu \Varid{cpsv}\;\Varid{r}\;\Varid{b}\mskip1.5mu\}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+We then reflect the type functions \ensuremath{\Varid{cps}} and \ensuremath{\Varid{cpsv}} at the 
+value level.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{9}{@{}l@{}}
+\column{10}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{10}{{}\Varid{cpsT}{}}
+\fromto{10}{E}{{}\mathbin{::}\Conid{Type}\;\Varid{r}\to \Conid{Type}\;\Varid{t}\to \Conid{Type}\;\{\mskip1.5mu \Varid{cps}\;\Varid{r}\;\Varid{t}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{9}{{}\Varid{cpsT}\;{}}
+\fromto{9}{22}{{}\Varid{r}\;\Varid{t}{}}
+\fromto{22}{E}{{}\mathrel{=}\Conid{Arr}\;(\Conid{Arr}\;(\Varid{cpsTv}\;\Varid{r}\;\Varid{t})\;\Varid{r})\;\Varid{r}{}}
+\nextline[\blanklineskip]
+\fromto{B}{10}{{}\Varid{cpsTv}{}}
+\fromto{10}{E}{{}\mathbin{::}\Conid{Type}\;\Varid{r}\to \Conid{Type}\;\Varid{t}\to \Conid{Type}\;\{\mskip1.5mu \Varid{cpsv}\;\Varid{r}\;\Varid{t}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{9}{{}\Varid{cpsTv}\;{}}
+\fromto{9}{22}{{}\Varid{r}\;\Conid{Int}{}}
+\fromto{22}{E}{{}\mathrel{=}\Conid{Int}{}}
+\nextline
+\fromto{B}{9}{{}\Varid{cpsTv}\;{}}
+\fromto{9}{22}{{}\Varid{r}\;(\Conid{Arr}\;\Varid{a}\;\Varid{b}){}}
+\fromto{22}{E}{{}\mathrel{=}\Conid{Arr}\;(\Varid{cpsTv}\;\Varid{r}\;\Varid{a})\;(\Varid{cpsT}\;\Varid{r}\;\Varid{b}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{CPS Transform on Terms}
+
+Finally we define the CPS transform on terms.  The transformation 
+is given by three functions, one for each syntactic category.  
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{11}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{27}{@{}l@{}}
+\column{35}{@{}l@{}}
+\column{40}{@{}l@{}}
+\column{52}{@{}l@{}}
+\column{59}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{11}{{}\Varid{cpsC}\mathbin{::}{}}
+\fromto{11}{22}{{}\Conid{Type}\;\Varid{r}\to {}}
+\fromto{22}{27}{{}\Conid{Cmp}\;{}}
+\fromto{27}{35}{{}\Varid{e}\;\Varid{a}\to {}}
+\fromto{35}{40}{{}\Conid{Cmp}\;{}}
+\fromto{40}{52}{{}\{\mskip1.5mu \Varid{cpse}\;\Varid{r}\;\Varid{e}\mskip1.5mu\}\;{}}
+\fromto{52}{59}{{}\{\mskip1.5mu \Varid{cps}\;{}}
+\fromto{59}{E}{{}\Varid{r}\;\Varid{a}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{11}{{}\Varid{cpsV}\mathbin{::}{}}
+\fromto{11}{22}{{}\Conid{Type}\;\Varid{r}\to {}}
+\fromto{22}{27}{{}\Conid{Val}\;{}}
+\fromto{27}{35}{{}\Varid{e}\;\Varid{a}\to {}}
+\fromto{35}{40}{{}\Conid{Val}\;{}}
+\fromto{40}{52}{{}\{\mskip1.5mu \Varid{cpse}\;\Varid{r}\;\Varid{e}\mskip1.5mu\}\;{}}
+\fromto{52}{59}{{}\{\mskip1.5mu \Varid{cpsv}\;{}}
+\fromto{59}{E}{{}\Varid{r}\;\Varid{a}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{11}{{}\Varid{cpsX}\mathbin{::}{}}
+\fromto{11}{22}{{}\Conid{Type}\;\Varid{r}\to {}}
+\fromto{22}{27}{{}\Conid{Var}\;{}}
+\fromto{27}{35}{{}\Varid{e}\;\Varid{a}\to {}}
+\fromto{35}{40}{{}\Conid{Var}\;{}}
+\fromto{40}{52}{{}\{\mskip1.5mu \Varid{cpse}\;\Varid{r}\;\Varid{e}\mskip1.5mu\}\;{}}
+\fromto{52}{59}{{}\{\mskip1.5mu \Varid{cpsv}\;{}}
+\fromto{59}{E}{{}\Varid{r}\;\Varid{a}\mskip1.5mu\}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Each function has a \ensuremath{\Conid{Type}\;\Varid{r}} parameter because
+the CPS transform is parameterized by the final result type \ensuremath{\Varid{r}}.  
+We are transforming object types as well as object terms: 
+the essence of a type-respecting transformation.
+
+The \ensuremath{\Conid{Var}} and \ensuremath{\Conid{Val}} cases are straightforward.  
+In fact \ensuremath{\Varid{cpsX}} is operationally the identity function, 
+but it has a more complicated type.  
+Another curious fact about \ensuremath{\Varid{cpsX}} is that the \ensuremath{\Conid{Type}\;\Varid{r}} parameter is 
+never used, but is necessary for type-checking.  
+Otherwise, in the \ensuremath{\Conid{Succ}} case, we can't unify the \ensuremath{\Varid{r}} 
+of the calling \ensuremath{\Varid{cpsX}} with the fresh \ensuremath{\Varid{r'}} 
+resulting from the recursive call.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{11}{@{}l@{}}
+\column{20}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{27}{@{}l@{}}
+\column{35}{@{}l@{}}
+\column{40}{@{}l@{}}
+\column{52}{@{}l@{}}
+\column{59}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{11}{{}\Varid{cpsX}\mathbin{::}{}}
+\fromto{11}{22}{{}\Conid{Type}\;\Varid{r}\to {}}
+\fromto{22}{27}{{}\Conid{Var}\;{}}
+\fromto{27}{35}{{}\Varid{e}\;\Varid{a}\to {}}
+\fromto{35}{40}{{}\Conid{Var}\;{}}
+\fromto{40}{52}{{}\{\mskip1.5mu \Varid{cpse}\;\Varid{r}\;\Varid{e}\mskip1.5mu\}\;{}}
+\fromto{52}{59}{{}\{\mskip1.5mu \Varid{cpsv}\;{}}
+\fromto{59}{E}{{}\Varid{r}\;\Varid{a}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{20}{{}\Varid{cpsX}\;\Varid{r}\;(\Conid{Zero}){}}
+\fromto{20}{E}{{}\mathrel{=}\Conid{Zero}{}}
+\nextline
+\fromto{B}{20}{{}\Varid{cpsX}\;\Varid{r}\;(\Conid{Succ}\;\Varid{x}){}}
+\fromto{20}{E}{{}\mathrel{=}\Conid{Succ}\;(\Varid{cpsX}\;\Varid{r}\;\Varid{x}){}}
+\nextline[\blanklineskip]
+\fromto{B}{11}{{}\Varid{cpsV}\mathbin{::}{}}
+\fromto{11}{22}{{}\Conid{Type}\;\Varid{r}\to {}}
+\fromto{22}{27}{{}\Conid{Val}\;{}}
+\fromto{27}{35}{{}\Varid{e}\;\Varid{a}\to {}}
+\fromto{35}{40}{{}\Conid{Val}\;{}}
+\fromto{40}{52}{{}\{\mskip1.5mu \Varid{cpse}\;\Varid{r}\;\Varid{e}\mskip1.5mu\}\;{}}
+\fromto{52}{59}{{}\{\mskip1.5mu \Varid{cpsv}\;{}}
+\fromto{59}{E}{{}\Varid{r}\;\Varid{a}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{20}{{}\Varid{cpsV}\;\Varid{r}\;(\Conid{Lit}\;\Varid{i}){}}
+\fromto{20}{E}{{}\mathrel{=}\Conid{Lit}\;\Varid{i}{}}
+\nextline
+\fromto{B}{20}{{}\Varid{cpsV}\;\Varid{r}\;(\Conid{Var}\;\Varid{x}\;\Varid{t}){}}
+\fromto{20}{E}{{}\mathrel{=}\Conid{Var}\;(\Varid{cpsX}\;\Varid{r}\;\Varid{x})\;(\Varid{cpsTv}\;\Varid{r}\;\Varid{t}){}}
+\nextline
+\fromto{B}{20}{{}\Varid{cpsV}\;\Varid{r}\;(\Conid{Lam}\;\Varid{t}\;\Varid{n}){}}
+\fromto{20}{E}{{}\mathrel{=}\Conid{Lam}\;(\Varid{cpsTv}\;\Varid{r}\;\Varid{t})\;(\Varid{cpsC}\;\Varid{r}\;\Varid{n}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+The \ensuremath{\Conid{Cmp}} cases are the most involved, as they introduce 
+new binders for continuation parameters.  This is where 
+we need the \ensuremath{\Varid{shift}} operation.
+
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{6}{@{}l@{}}
+\column{13}{@{}l@{}}
+\column{20}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{25}{@{}l@{}}
+\column{50}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{cpsC}\mathbin{::}\Conid{Type}\;\Varid{r}\to \Conid{Cmp}\;\Varid{e}\;\Varid{a}\to \Conid{Cmp}\;\{\mskip1.5mu \Varid{cpse}\;\Varid{r}\;\Varid{e}\mskip1.5mu\}\;\{\mskip1.5mu \Varid{cps}\;\Varid{r}\;\Varid{a}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{20}{{}\Varid{cpsC}\;\Varid{r}\;(\Conid{Val}\;\Varid{v}){}}
+\fromto{20}{E}{{}\mathrel{=}\Conid{Val}\;(\Conid{Lam}\;\Varid{kt}\;(\Conid{App}\;(\Varid{zero}\;\Varid{kt})\;(\Varid{shift}\;(\Conid{Val}\;\Varid{v'})))){}}
+\nextline
+\fromto{B}{6}{{}\hsindent{6}{}}
+\fromto{6}{13}{{}\mathbf{where}\;{}}
+\fromto{13}{20}{{}\Varid{v'}{}}
+\fromto{20}{E}{{}\mathrel{=}\Varid{cpsV}\;\Varid{r}\;\Varid{v}{}}
+\nextline
+\fromto{13}{20}{{}\Varid{kt}{}}
+\fromto{20}{E}{{}\mathrel{=}\Conid{Arr}\;(\Varid{valType}\;\Varid{v'})\;\Varid{r}{}}
+\nextline[\blanklineskip]
+\fromto{B}{20}{{}\Varid{cpsC}\;\Varid{r}\;(\Conid{App}\;\Varid{m}\;\Varid{n}){}}
+\fromto{20}{E}{{}\mathrel{=}\mathbf{case}\;\Varid{expType}\;\Varid{m'}\;\mathbf{of}{}}
+\nextline
+\fromto{20}{22}{{}\hsindent{2}{}}
+\fromto{22}{E}{{}\Conid{Arr}\;(\Conid{Arr}\;(yt_0\mathord{@}(\Conid{Arr}\;yt_1\;(\Conid{Arr}\;\Varid{kt}\;\anonymous )))\;\anonymous )\;\anonymous \to {}}
+\nextline
+\fromto{22}{25}{{}\hsindent{3}{}}
+\fromto{25}{E}{{}\Conid{Val}\;(\Conid{Lam}\;\Varid{kt}{}}
+\nextline
+\fromto{22}{25}{{}\hsindent{3}{}}
+\fromto{25}{50}{{}(\Conid{App}\;(\Varid{shift}\;\Varid{m'})\;{}}
+\fromto{50}{E}{{}(\Conid{Val}\;(\Conid{Lam}\;yt_0{}}
+\nextline
+\fromto{22}{25}{{}\hsindent{3}{}}
+\fromto{25}{50}{{}(\Conid{App}\;(\Varid{shift}\;(\Varid{shift}\;\Varid{n'}))\;{}}
+\fromto{50}{E}{{}(\Conid{Val}\;(\Conid{Lam}\;yt_1{}}
+\nextline
+\fromto{22}{25}{{}\hsindent{3}{}}
+\fromto{25}{E}{{}(\Conid{App}\;(\Conid{App}\;(\Varid{one}\;yt_0)\;(\Varid{zero}\;yt_1))\;(\Varid{two}\;\Varid{kt})){}}
+\nextline
+\fromto{22}{25}{{}\hsindent{3}{}}
+\fromto{25}{E}{{}))))))){}}
+\nextline
+\fromto{B}{6}{{}\hsindent{6}{}}
+\fromto{6}{13}{{}\mathbf{where}\;{}}
+\fromto{13}{20}{{}\Varid{m'}{}}
+\fromto{20}{E}{{}\mathrel{=}\Varid{cpsC}\;\Varid{r}\;\Varid{m}{}}
+\nextline
+\fromto{13}{20}{{}\Varid{n'}{}}
+\fromto{20}{E}{{}\mathrel{=}\Varid{cpsC}\;\Varid{r}\;\Varid{n}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hide{\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{7}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mbox{\onelinecomment  playing}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{exp}\mathrel{=}\Conid{Val}\;(\Conid{Lam}\;\Conid{Int}{}}
+\nextline
+\fromto{B}{7}{{}\hsindent{7}{}}
+\fromto{7}{E}{{}(\Conid{Val}\;(\Conid{Lam}\;(\Conid{Arr}\;\Conid{Int}\;\Conid{Int}){}}
+\nextline
+\fromto{B}{7}{{}\hsindent{7}{}}
+\fromto{7}{E}{{}(\Conid{App}\;(\Varid{zero}\;(\Conid{Arr}\;\Conid{Int}\;\Conid{Int}))\;(\Varid{one}\;\Conid{Int}))))){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{test}\mathrel{=}\Varid{cpsC}\;R\;\Varid{exp}{}}
+\nextline
+\fromto{B}{E}{{}\mbox{\onelinecomment  lam k. k (lam a. lam k. k (lam f. lam c. (lam k. k f) (lam d. (lam k. k a) (lam e. d e c))))}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Alternatives to Type-Functions}
+
+There are a few alternatives to the use of type functions of \Wmega{}. We
+explore them here because they can be used to give a sound basis to a
+semantics for type functions. But while they are sound and do not require
+the additional mechanism required by type functions, they are often clumsy
+and hard to use. Our addition of type functions to \Wmega was inspired by
+programming these more tedious examples, and wondering how we could make our
+lives easier. Throughout this section we illustrate the techniques using the
+\ensuremath{\Varid{sum}}/\ensuremath{\Varid{append}} example.
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{17}{@{}l@{}}
+\column{21}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{sum}\mathbin{::}\Conid{Nat}\leadsto\Conid{Nat}\leadsto\Conid{Nat}{}}
+\nextline
+\fromto{B}{17}{{}\{\mskip1.5mu \Varid{sum}\;\Conid{Zero}\;{}}
+\fromto{17}{21}{{}\Varid{m}\mskip1.5mu\}{}}
+\fromto{21}{E}{{}\mathrel{=}\Varid{m}{}}
+\nextline
+\fromto{B}{17}{{}\{\mskip1.5mu \Varid{sum}\;(\Conid{Succ}\;\Varid{n})\;{}}
+\fromto{17}{21}{{}\Varid{m}\mskip1.5mu\}{}}
+\fromto{21}{E}{{}\mathrel{=}\Conid{Succ}\;\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{append}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Nil})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\mathrel{=}\Varid{ys}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\mathrel{=}\Conid{Cons}\;\Varid{x}\;(\Varid{append}\;\Varid{xs}\;\Varid{ys}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+
+One alternative is to use a datatype of explicit ``proofs'' of the 
+addition relation.  This datatype is the relational incarnation of the 
+\ensuremath{\Varid{sum}} type function.\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{4}{@{}l@{}}
+\column{10}{@{}l@{}}
+\column{18}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{35}{@{}l@{}}
+\column{38}{@{}l@{}}
+\column{58}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s}{}}
+\nextline
+\fromto{B}{4}{{}\hsindent{4}{}}
+\fromto{4}{18}{{}\mathrel{=}{}}
+\fromto{18}{38}{{}\Conid{Base}\;{}}
+\fromto{38}{58}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Zero},{}}
+\fromto{58}{E}{{}\Varid{s}\mathrel{=}\Varid{m}{}}
+\nextline
+\fromto{B}{4}{{}\hsindent{4}{}}
+\fromto{4}{18}{{}\mid \exists\;\Varid{n'}\;\Varid{s'}. {}}
+\fromto{18}{38}{{}\Conid{Step}\;(\Conid{Sum}\;\Varid{n'}\;\Varid{m}\;\Varid{s'})\;{}}
+\fromto{38}{58}{{}\mathbf{where}\;\Varid{n}\mathrel{=}\Conid{Succ}\;\Varid{n'},{}}
+\fromto{58}{E}{{}\Varid{s}\mathrel{=}\Conid{Succ}\;\Varid{s'}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{append}\mathbin{::}\Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s}\to \Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\Varid{s}{}}
+\nextline
+\fromto{B}{10}{{}\Varid{append}\;{}}
+\fromto{10}{22}{{}(\Conid{Base})\;{}}
+\fromto{22}{35}{{}(\Conid{Nil})\;{}}
+\fromto{35}{E}{{}\Varid{ys}\mathrel{=}\Varid{ys}{}}
+\nextline
+\fromto{B}{10}{{}\Varid{append}\;{}}
+\fromto{10}{22}{{}(\Conid{Step}\;\Varid{sum})\;{}}
+\fromto{22}{35}{{}(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\;{}}
+\fromto{35}{E}{{}\Varid{ys}\mathrel{=}\Conid{Cons}\;\Varid{x}\;(\Varid{append}\;\Varid{sum}\;\Varid{xs}\;\Varid{ys}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+
+This alternative has the disadvantage of requiring an extra \ensuremath{\Conid{Sum}} 
+input.  We can overcome this limitation by giving 
+\ensuremath{\Varid{append}} the type 
+\ensuremath{\Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \exists\;\Varid{s}. (\Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s},\Conid{Seq}\;\Varid{a}\;\Varid{s})}.
+Since \Wmega{} doesn't directly support existential types in this way, 
+we simulate them using a combination of rank-2 polymorphism and 
+continuation-passing style.\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{37}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{append}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to (\forall\;\Varid{s}. \Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s}\to \Conid{Seq}\;\Varid{a}\;\Varid{s}\to \Varid{r})\to \Varid{r}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Nil})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\;\Varid{k}\mathrel{=}\Varid{k}\;\Conid{Base}\;\Varid{ys}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\;{}}
+\fromto{22}{37}{{}\Varid{ys}\;\Varid{k}\mathrel{=}\Varid{append}\;{}}
+\fromto{37}{E}{{}\Varid{xs}\;\Varid{ys}\;(\lambda \Varid{sum}\;\Varid{zs}\to {}}
+\nextline
+\fromto{37}{E}{{}\Varid{k}\;(\Conid{Step}\;\Varid{sum})\;(\Conid{Cons}\;\Varid{x}\;\Varid{zs})){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+In a language supporting multi-parameter type classes with 
+functional dependencies~\cite{FunctionalDependencies}
+(as do common extensions to Haskell), 
+\edit{Does this actually work?  Try it out in GHC!}
+we can forego explicitly constructing \ensuremath{\Conid{Sum}} proofs.
+We instead define a type class for the \ensuremath{\Conid{Sum}} relation, following
+Hallgren~\cite{hallgren-fun}\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{25}{@{}l@{}}
+\column{30}{@{}l@{}}
+\column{40}{@{}l@{}}
+\column{43}{@{}l@{}}
+\column{53}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{53}{{}\mathbf{class}\;\Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s}\mid \Varid{n}\;\Varid{m}\to \Varid{s}\;{}}
+\fromto{53}{E}{{}\mathbf{where}\;\{\mskip1.5mu \mskip1.5mu\}{}}
+\nextline
+\fromto{B}{25}{{}\mathbf{instance}\;{}}
+\fromto{25}{30}{{}\Conid{Sum}\;{}}
+\fromto{30}{40}{{}\Conid{Zero}\;{}}
+\fromto{40}{43}{{}\Varid{m}\;{}}
+\fromto{43}{53}{{}\Varid{m}\;{}}
+\fromto{53}{E}{{}\mathbf{where}\;\{\mskip1.5mu \mskip1.5mu\}{}}
+\nextline
+\fromto{B}{25}{{}\mathbf{instance}\;\Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s}\Rightarrow {}}
+\fromto{25}{30}{{}\Conid{Sum}\;{}}
+\fromto{30}{40}{{}(\Conid{Succ}\;\Varid{n})\;{}}
+\fromto{40}{43}{{}\Varid{m}\;{}}
+\fromto{43}{53}{{}(\Conid{Succ}\;\Varid{s})\;{}}
+\fromto{53}{E}{{}\mathbf{where}\;\{\mskip1.5mu \mskip1.5mu\}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Then we use the same CPS trick, but omitting the proof objects.\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{append}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to (\forall\;\Varid{s}. \Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s}\Rightarrow \Conid{Seq}\;\Varid{a}\;\Varid{s}\to \Varid{r})\to \Varid{r}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Nil})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\;\Varid{k}\mathrel{=}\Varid{k}\;\Varid{ys}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\;\Varid{k}\mathrel{=}\Varid{append}\;\Varid{xs}\;\Varid{ys}\;(\lambda \Varid{zs}\to \Varid{k}\;(\Conid{Cons}\;\Varid{x}\;\Varid{zs})){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+Type inference introduces all the proof objects as implicit 
+dictionary arguments.  In this case, the dictionaries are empty 
+and should be optimized away.
+
+We can also wrap up the guarded existential in a datatype, but the end 
+result is essentially a verbose version of continuation-passing-style.  
+Which one is preferable is a matter of taste.\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{SumSeq}\;\Varid{n}\;\Varid{m}\mathrel{=}\exists\;\Varid{s}. \Conid{Sum}\;\Varid{n}\;\Varid{m}\;\Varid{s}\Rightarrow \Conid{SumSeq}\;(\Conid{Seq}\;\Varid{a}\;\Varid{s}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{33}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{append}\mathbin{::}\Conid{Seq}\;\Varid{a}\;\Varid{n}\to \Conid{Seq}\;\Varid{a}\;\Varid{m}\to \Conid{Seq}\;\Varid{a}\;\{\mskip1.5mu \Varid{sum}\;\Varid{n}\;\Varid{m}\mskip1.5mu\}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Nil})\;{}}
+\fromto{22}{E}{{}\Varid{ys}\mathrel{=}\Conid{SumSeq}\;\Varid{ys}{}}
+\nextline
+\fromto{B}{22}{{}\Varid{append}\;(\Conid{Cons}\;\Varid{x}\;\Varid{xs})\;{}}
+\fromto{22}{33}{{}\Varid{ys}\mathrel{=}\mathbf{case}\;{}}
+\fromto{33}{E}{{}\Varid{append}\;\Varid{xs}\;\Varid{ys}\;\mathbf{of}{}}
+\nextline
+\fromto{33}{E}{{}\Conid{SumSeq}\;\Varid{zs}\to \Conid{SumSeq}\;(\Conid{Cons}\;\Varid{x}\;\Varid{zs}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+It remains to be seen whether most interesting uses of type functions 
+fall into the set that can be implemented using type classes. 
+If so, we would like to use the syntax of type functions as an 
+interface to the underlying machinery of type classes with 
+functional dependencies.
+Neubauer et al make a similar proposal~\cite{FunctionalNotation}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Related Work}
+
+\subsection{Non-regular datatypes}
+Non-regular datatypes can be used to enforce structural 
+invariants on datatypes.
+
+	also encode invariants. \\
+	sometimes less natural. \\
+	cite Okasaki~\cite{okasaki-adventure}, 
+	Hinze~\cite{hinze-}. \\
+
+\subsection{Type Functions}
+	Fun with Functional Dependencies~\cite{hallgren-fun} \\
+	Functional Notation for Functional
+		Dependencies~\cite{FunctionalNotation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+
+Equality qualified types (as well as several other generalizations of 
+  datatypes) allow one to index datatypes with ``values'' describing 
+  the structural invariants they obey.
+
+In a non- dependently-typed setting, these ``values'' must themselves 
+be types.
+User-defined kinds allow us to define simple datatypes at the type level 
+  and enforce that their ``values'' are well-formed.
+Type functions provide an intuitive way to compute with type-level data. 
+
+We presented two examples of structural invariants that can be expressed 
+  by equality qualified types.  The first example captured the structural 
+  invariants of a heap datatype that are relevant for guaranteeing the 
+  time-complexities of the heap operations.  The encoding is much more 
+  natural than what can be obtained using non-regular datatypes (in the 
+  similar setting of red-black trees).
+
+In the second example, the structural invariants were the typing 
+  rules of a simple object language.  The first order nature of \Wmega{}'s
+  type system forced us to commit to using de Bruijn indices to 
+  represent variables. 
+
+In both examples, user-defined kinds and type functions nicely support  
+  programming with equality qualified types.  The resulting programs 
+  are not to complicated to understand. (We hope!)
+
+We saw how representation types are a useful alternative to dependent types. 
+  They provide a flow of information from the value realm to the type realm.
+
+Finally, we argue that while
+  type functions allow for elegant code, they need a more solid foundation.
+  In particular, we would like to formalize them as an interface to the 
+  well-understood mechanism of type classes with functional dependencies.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BIBLIOGRAPHY
+%\bibliographystyle{splncs}
+\bibliographystyle{plain} %{alpha}
+\bibliography{references}
+
+\section{Appendix: Code for \ensuremath{\Varid{minElem}} and \ensuremath{\Varid{extractMin}}}
+
+\subsection{Retrieving the Minimum Element} 
+
+\hide{
+Retrieving the minimum element from a binomial heap is fast 
+because of the heap invariant maintained for binomial trees.
+The only binomial tree operations used in 
+the heap code so far are \ensuremath{\Varid{singletonT}} and \ensuremath{\Varid{mergeT}}.
+These both maintain the invariant that every binomial tree (and 
+subtree) has a minimum element at the top.  So we just need to 
+check the top elements of each binomial tree when looking for 
+the minimum element of a heap.  This can be done in a single 
+$O (log\ n)$ traversal of the list of binomial trees.
+
+The search takes place in two stages.  In the first stage, 
+we don't know if the heap is empty so we return 
+a \ensuremath{\Conid{Maybe}\;\Conid{Elem}}.  Once we find a tree (and its top element), we enter 
+the second stage, carrying along the least \ensuremath{\Conid{Elem}} found so far.
+The entire computation has a top-level wrapper function.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{20}{@{}l@{}}
+\column{24}{@{}l@{}}
+\column{27}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{minElem}\mathbin{::}\Conid{Heap}\to \Conid{Maybe}\;\Conid{Elem}{}}
+\nextline
+\fromto{B}{27}{{}\Varid{minElem}\;\Conid{Empty}{}}
+\fromto{27}{E}{{}\mathrel{=}\Conid{Nothing}{}}
+\nextline
+\fromto{B}{27}{{}\Varid{minElem}\;(\Conid{Heap}\;\Varid{h}){}}
+\fromto{27}{E}{{}\mathrel{=}\Conid{Just}\;(minElem_1\;\Varid{h}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}minElem_1\mathbin{::}\Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{Elem}{}}
+\nextline
+\fromto{B}{27}{{}minElem_1\;(\Conid{Last}\;\Varid{t}){}}
+\fromto{27}{E}{{}\mathrel{=}\Varid{top}\;\Varid{t}{}}
+\nextline
+\fromto{B}{20}{{}minElem_1\;(\Conid{Skip}\;{}}
+\fromto{20}{27}{{}\Varid{h}){}}
+\fromto{27}{E}{{}\mathrel{=}minElem_1\;\Varid{h}{}}
+\nextline
+\fromto{B}{20}{{}minElem_1\;(\Conid{Cons}\;\Varid{t}\;{}}
+\fromto{20}{27}{{}\Varid{h}){}}
+\fromto{27}{E}{{}\mathrel{=}minElem_2\;\Varid{h}\;(\Varid{top}\;\Varid{t}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}minElem_2\mathbin{::}\Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{Elem}\to \Conid{Elem}{}}
+\nextline
+\fromto{B}{24}{{}minElem_2\;(\Conid{Last}\;\Varid{t})\;{}}
+\fromto{24}{27}{{}\Varid{x}{}}
+\fromto{27}{E}{{}\mathrel{=}\Varid{min}\;\Varid{x}\;(\Varid{top}\;\Varid{t}){}}
+\nextline
+\fromto{B}{20}{{}minElem_2\;(\Conid{Skip}\;{}}
+\fromto{20}{24}{{}\Varid{h})\;{}}
+\fromto{24}{27}{{}\Varid{x}{}}
+\fromto{27}{E}{{}\mathrel{=}minElem_2\;\Varid{h}\;\Varid{x}{}}
+\nextline
+\fromto{B}{20}{{}minElem_2\;(\Conid{Cons}\;\Varid{t}\;{}}
+\fromto{20}{24}{{}\Varid{h})\;{}}
+\fromto{24}{27}{{}\Varid{x}{}}
+\fromto{27}{E}{{}\mathrel{=}minElem_2\;\Varid{h}\;(\Varid{min}\;\Varid{x}\;(\Varid{top}\;\Varid{t})){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\subsection{Removing the Minimum Element}
+\hide{
+Removing the minimum element is slightly more difficult because 
+one must do something with the remainder of the tree that loses its 
+top element.
+The basic idea is to make the following three passes 
+\edit{"three passes"? change this wording.} over the list of trees.
+\begin{enumerate}
+\item Identify the tree containing the minimum element.
+\item Remove that tree from the original heap.
+\item Make a second heap out of the removed tree (minus its minimum element)
+      and merge it with the remaining heap.
+\end{enumerate}
+Using a programming technique called ``The Zipper''~\cite{huet-zipper}, 
+we collapse the first two passes into one.  The idea is that 
+one pass returns a \ensuremath{\Conid{Focus}} value representing the heap together with 
+a focal point singling out one of the binomial trees.  The 
+second pass ``heapifies'' the tree in focus and does the merge.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{23}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{extractMin}\mathbin{::}\Conid{Heap}\to \Conid{Maybe}\;\Conid{Heap}{}}
+\nextline
+\fromto{B}{23}{{}\Varid{extractMin}\;\Conid{Empty}{}}
+\fromto{23}{E}{{}\mathrel{=}\Conid{Nothing}{}}
+\nextline
+\fromto{B}{23}{{}\Varid{extractMin}\;(\Conid{Heap}\;\Varid{h}){}}
+\fromto{23}{E}{{}\mathrel{=}\Conid{Just}\;(\Varid{unfocus}\;(\Varid{minFocus1}\;\Conid{Top}\;\Varid{h})){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\subsubsection{``The Zipper''.}
+\hide{
+ The technique is to define an auxilary data 
+structure representing paths from the root of some data structure to 
+its sub-parts.  In our case, we define a \ensuremath{\Conid{Path}} type that complements 
+the \ensuremath{\Conid{SubHeap}} type.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{17}{@{}l@{}}
+\column{26}{@{}l@{}}
+\column{39}{@{}l@{}}
+\column{49}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{17}{{}\mathbf{data}\;\Conid{Path}\;\Varid{k}{}}
+\fromto{17}{26}{{}\mathrel{=}{}}
+\fromto{26}{49}{{}\Conid{Top}\;{}}
+\fromto{49}{E}{{}\mathbf{where}\;\Varid{k}\mathrel{=}\Conid{Zero}{}}
+\nextline
+\fromto{17}{26}{{}\mid \exists\;\Varid{j}. {}}
+\fromto{26}{39}{{}\Conid{Skip'}\;{}}
+\fromto{39}{49}{{}(\Conid{Path}\;\Varid{j})\;{}}
+\fromto{49}{E}{{}\mathbf{where}\;\Varid{k}\mathrel{=}\Conid{Succ}\;\Varid{j}{}}
+\nextline
+\fromto{17}{26}{{}\mid \exists\;\Varid{j}. {}}
+\fromto{26}{39}{{}\Conid{Cons'}\;(\Conid{T}\;\Varid{j})\;{}}
+\fromto{39}{49}{{}(\Conid{Path}\;\Varid{j})\;{}}
+\fromto{49}{E}{{}\mathbf{where}\;\Varid{k}\mathrel{=}\Conid{Succ}\;\Varid{j}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\hide{
+A \ensuremath{\Conid{Path}\;\Varid{k}} value contains everything we passed by on the way to 
+the $k^{\mathrm{th}}$ tree slot in a \ensuremath{\Conid{Heap}}.
+Given a \ensuremath{\Conid{Path}} and \ensuremath{\Conid{SubHeap}}, we can ``zip'' them together 
+to recover a \ensuremath{\Conid{Heap}}.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{23}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{zipHeap}\mathbin{::}\Conid{Path}\;\Varid{k}\to \Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{23}{{}\Varid{zipHeap}\;\Conid{Top}\;{}}
+\fromto{23}{E}{{}\Varid{h}\mathrel{=}\Conid{Heap}\;\Varid{h}{}}
+\nextline
+\fromto{B}{23}{{}\Varid{zipHeap}\;(\Conid{Skip'}\;\Varid{p})\;{}}
+\fromto{23}{E}{{}\Varid{h}\mathrel{=}\Varid{zipHeap}\;\Varid{p}\;(\Conid{Skip}\;\Varid{h}){}}
+\nextline
+\fromto{B}{23}{{}\Varid{zipHeap}\;(\Conid{Cons'}\;\Varid{t}\;\Varid{p})\;{}}
+\fromto{23}{E}{{}\Varid{h}\mathrel{=}\Varid{zipHeap}\;\Varid{p}\;(\Conid{Cons}\;\Varid{t}\;\Varid{h}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\hide{}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{25}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{close}\mathbin{::}\Conid{Path}\;\Varid{k}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{25}{{}\Varid{close}\;\Conid{Top}{}}
+\fromto{25}{E}{{}\mathrel{=}\Conid{Empty}{}}
+\nextline
+\fromto{B}{25}{{}\Varid{close}\;(\Conid{Skip'}\;\Varid{p}){}}
+\fromto{25}{E}{{}\mathrel{=}\Varid{close}\;\Varid{p}{}}
+\nextline
+\fromto{B}{25}{{}\Varid{close}\;(\Conid{Cons'}\;\Varid{t}\;\Varid{p}){}}
+\fromto{25}{E}{{}\mathrel{=}\Varid{zipHeap}\;\Varid{p}\;(\Conid{Last}\;\Varid{t}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\hide{}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{25}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{fill}\mathbin{::}\Conid{Path}\;\Varid{k}\to \Conid{Maybe}\;(\Conid{SubHeap}\;\Varid{n}\;(\Conid{Succ}\;\Varid{k}))\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{25}{{}\Varid{fill}\;\Varid{p}\;\Conid{Nothing}{}}
+\fromto{25}{E}{{}\mathrel{=}\Varid{close}\;\Varid{p}{}}
+\nextline
+\fromto{B}{25}{{}\Varid{fill}\;\Varid{p}\;(\Conid{Just}\;\Varid{h}){}}
+\fromto{25}{E}{{}\mathrel{=}\Varid{zipHeap}\;\Varid{p}\;(\Conid{Skip}\;\Varid{h}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\subsubsection{The Focus type.}
+\hide{
+ Now we define a type for singling 
+out one tree in a \ensuremath{\Conid{Heap}}.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\mathbf{data}\;\Conid{Focus}\mathrel{=}\exists\;\Varid{n}\;\Varid{k}. \Conid{Focus}\;(\Conid{Path}\;\Varid{k})\;(\Conid{T}\;\Varid{k})\;(\Conid{Maybe}\;(\Conid{SubHeap}\;\Varid{n}\;(\Conid{Succ}\;\Varid{k}))){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\hide{
+Once we focus in on the tree containing the minimum element.  We convert it 
+into a \ensuremath{\Conid{Heap}} and merge it with what remains of the original \ensuremath{\Conid{Heap}}.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{unfocus}\mathbin{::}\Conid{Focus}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{unfocus}\;(\Conid{Focus}\;\Varid{p}\;\Varid{t}\;\Varid{mh})\mathrel{=}\Varid{merge}\;(\Varid{heapify}\;\Varid{t})\;(\Varid{fill}\;\Varid{p}\;\Varid{mh}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\hide{
+We will need to compare trees-in-focus according to their minimum elements.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{key}\mathbin{::}\Conid{Focus}\to \Conid{Elem}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{key}\;(\Conid{Focus}\;\anonymous \;\Varid{t}\;\anonymous )\mathrel{=}\Varid{top}\;\Varid{t}{}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\subsubsection{Heapifying a tree.}
+\hide{
+The \ensuremath{\Varid{unfocus}} function above requires us to be able to turn any tree 
+of type \ensuremath{\Conid{T}\;\Varid{k}} (minus its minimum element) into a \ensuremath{\Conid{Heap}}.  A binomial tree 
+without its minimum element is just a forest of trees:
+\ensuremath{\Conid{T}\;(\Varid{k}\mathbin{-}\mathrm{1})}, \ensuremath{\Conid{T}\;(\Varid{k}\mathbin{-}\mathrm{2})}, \ldots, \ensuremath{\Conid{T}\;\mathrm{0}}.  
+To form a heap, just reverse the list of these trees.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{24}{@{}l@{}}
+\column{27}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{E}{{}\Varid{heapify}\mathbin{::}\Conid{T}\;\Varid{k}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{E}{{}\Varid{heapify}\;(\Conid{Tree}\;\Varid{i}\;\Varid{f})\mathrel{=}\Varid{reverse1}\;\Varid{f}{}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{reverse1}\mathbin{::}\Conid{F}\;\Varid{k}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{27}{{}\Varid{reverse1}\;(\Conid{FNil}){}}
+\fromto{27}{E}{{}\mathrel{=}\Conid{Empty}{}}
+\nextline
+\fromto{B}{27}{{}\Varid{reverse1}\;(\Conid{FCons}\;\Varid{t}\;\Varid{f}){}}
+\fromto{27}{E}{{}\mathrel{=}\Varid{reverse2}\;\Varid{f}\;(\Conid{Last}\;\Varid{t}){}}
+\nextline[\blanklineskip]
+\fromto{B}{E}{{}\Varid{reverse2}\mathbin{::}\Conid{F}\;\Varid{k}\to \Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{Heap}{}}
+\nextline
+\fromto{B}{24}{{}\Varid{reverse2}\;(\Conid{FNil})\;{}}
+\fromto{24}{27}{{}\Varid{h}{}}
+\fromto{27}{E}{{}\mathrel{=}\Conid{Heap}\;\Varid{h}{}}
+\nextline
+\fromto{B}{24}{{}\Varid{reverse2}\;(\Conid{FCons}\;\Varid{t}\;\Varid{f})\;{}}
+\fromto{24}{27}{{}\Varid{h}{}}
+\fromto{27}{E}{{}\mathrel{=}\Varid{reverse2}\;\Varid{f}\;(\Conid{Cons}\;\Varid{t}\;\Varid{h}){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+\hide{
+This operation preserves the heap invariant because each sub-tree in 
+\ensuremath{\Varid{f}} was built up using \ensuremath{\Varid{singletonT}} and \ensuremath{\Varid{mergeT}}.
+}
+
+\subsubsection{Finding the minimum Focus.}
+
+\hide{
+Finding the minimum \ensuremath{\Conid{Focus}} in a tree is just like finding the 
+minimum element, except we have to pass along an accumulating \ensuremath{\Conid{Path}} 
+parameter in order to build up \ensuremath{\Conid{Focus}} values along the way.
+}
+\begingroup\par\noindent\advance\leftskip\mathindent\(
+\begin{pboxed}\SaveRestoreHook
+\column{B}{@{}l@{}}
+\column{17}{@{}l@{}}
+\column{22}{@{}l@{}}
+\column{23}{@{}l@{}}
+\column{27}{@{}l@{}}
+\column{31}{@{}l@{}}
+\column{44}{@{}l@{}}
+\column{48}{@{}l@{}}
+\column{53}{@{}l@{}}
+\column{E}{@{}l@{}}
+\fromto{B}{17}{{}minFocus_1{}}
+\fromto{17}{E}{{}\mathbin{::}\Conid{Path}\;\Varid{k}\to \Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{Focus}{}}
+\nextline
+\fromto{B}{31}{{}minFocus_1\;\Varid{p}\;(\Conid{Last}\;\Varid{t}){}}
+\fromto{31}{E}{{}\mathrel{=}\Conid{Focus}\;\Varid{p}\;\Varid{t}\;\Conid{Nothing}{}}
+\nextline
+\fromto{B}{22}{{}minFocus_1\;\Varid{p}\;(\Conid{Skip}\;{}}
+\fromto{22}{31}{{}\Varid{h}){}}
+\fromto{31}{44}{{}\mathrel{=}minFocus_1\;{}}
+\fromto{44}{E}{{}(\Conid{Skip'}\;\Varid{p})\;\Varid{h}{}}
+\nextline
+\fromto{B}{31}{{}minFocus_1\;\Varid{p}\;(\Conid{Cons}\;\Varid{t}\;\Varid{h}){}}
+\fromto{31}{44}{{}\mathrel{=}minFocus_2\;{}}
+\fromto{44}{E}{{}(\Conid{Cons'}\;\Varid{t}\;\Varid{p})\;\Varid{h}\;{}}
+\nextline
+\fromto{44}{E}{{}(\Conid{Focus}\;\Varid{p}\;\Varid{t}\;(\Conid{Just}\;\Varid{h})){}}
+\nextline[\blanklineskip]
+\fromto{B}{17}{{}minFocus_2{}}
+\fromto{17}{E}{{}\mathbin{::}\Conid{Path}\;\Varid{k}\to \Conid{SubHeap}\;\Varid{n}\;\Varid{k}\to \Conid{Focus}\to \Conid{Focus}{}}
+\nextline
+\fromto{B}{27}{{}minFocus_2\;\Varid{p}\;(\Conid{Last}\;\Varid{t})\;{}}
+\fromto{27}{31}{{}\Varid{x}{}}
+\fromto{31}{E}{{}\mathrel{=}\Varid{minBy}\;\Varid{key}\;\Varid{x}\;(\Conid{Focus}\;\Varid{p}\;\Varid{t}\;\Conid{Nothing}){}}
+\nextline
+\fromto{B}{23}{{}minFocus_2\;\Varid{p}\;(\Conid{Skip}\;{}}
+\fromto{23}{27}{{}\Varid{h})\;{}}
+\fromto{27}{31}{{}\Varid{x}{}}
+\fromto{31}{44}{{}\mathrel{=}minFocus_2\;{}}
+\fromto{44}{53}{{}(\Conid{Skip'}\;{}}
+\fromto{53}{E}{{}\Varid{p})\;\Varid{h}\;\Varid{x}{}}
+\nextline
+\fromto{B}{23}{{}minFocus_2\;\Varid{p}\;(\Conid{Cons}\;\Varid{t}\;{}}
+\fromto{23}{27}{{}\Varid{h})\;{}}
+\fromto{27}{31}{{}\Varid{x}{}}
+\fromto{31}{44}{{}\mathrel{=}minFocus_2\;{}}
+\fromto{44}{E}{{}(\Conid{Cons'}\;\Varid{t}\;\Varid{p})\;\Varid{h}\;{}}
+\nextline
+\fromto{44}{E}{{}(\Varid{minBy}\;\Varid{key}\;\Varid{x}\;{}}
+\nextline
+\fromto{44}{48}{{}\hsindent{4}{}}
+\fromto{48}{E}{{}(\Conid{Focus}\;\Varid{p}\;\Varid{t}\;(\Conid{Just}\;\Varid{h}))){}}
+\ColumnHook
+\end{pboxed}
+\)\par\noindent\endgroup\resethooks
+
+\end{document}
+

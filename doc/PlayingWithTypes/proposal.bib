@@ -1,0 +1,2090 @@
+@String{LNCS =   "Lecture Notes in Computer Science"}
+@string{jfp={Journal of Functional Programming}}
+
+@Misc{oai:CiteSeerPSU:339817,
+  title =        "Equality proofs in Cayenne",
+  author =       "Lennart Augustsson",
+  year =         "2000",
+  month =        jul # "~11",
+  abstract =     ". We introduce a simple syntactical extension to
+                 Cayenne to make equality proofs readable. 1
+                 Introduction Equality proofs are important for
+                 functional programs, since they are encouraged by
+                 equational reasoning. Unfortunately, type theory style
+                 equational proofs are tedious and look very ugly. Let
+                 us illustrate this with an example. We wish to prove
+                 that list append is associative. The function has the
+                 following denition: Nil ++ ys = ys (x : xs) ++ ys = x :
+                 (xs ++ ys) Now we want to establish that (xs++ys)++zs =
+                 xs++(ys++zs). With normal notation we do this with an
+                 inductive proof 1 as follows. Base case: (Nil++ys)++zs
+                 = by rst clause of ++ = ys++zs = by rst clause of ++,
+                 reversed = Nil++(ys++zs) Inductive step:
+                 ((x:xs)++ys)++zs = by second clause of ++ =
+                 (x:(xs++ys))++zs = by second clause of ++ =
+                 x:((xs++ys)++zs) = by induction hypothesis =
+                 x:(xs++(ys++zs)) = by second clause of ++, reversed =
+                 (x:xs)++(ys++zs) Now compare this to the same proof in
+                 type theory style. W...",
+  citeseer-isreferencedby = "oai:CiteSeerPSU:291358;
+                 oai:CiteSeerPSU:373381; oai:CiteSeerPSU:156676;
+                 oai:CiteSeerPSU:310596; oai:CiteSeerPSU:42657;
+                 oai:CiteSeerPSU:375952; oai:CiteSeerPSU:108132;
+                 oai:CiteSeerPSU:300895; oai:CiteSeerPSU:375033;
+                 oai:CiteSeerPSU:332599",
+  annote =       "The Pennsylvania State University CiteSeer Archives",
+  language =     "en",
+  oai =          "oai:CiteSeerPSU:339817",
+  rights =       "unrestricted",
+  subject =      "Lennart Augustsson Equality proofs in Cayenne",
+  URL =          "http://citeseer.ist.psu.edu/339817.html;
+                 http://www.cs.chalmers.se/~augustss/cayenne/eqproof.ps",
+}
+
+
+
+@Article{Augustsson:1999:CLD,
+  author =       "Lennart Augustsson",
+  title =        "{Cayenne} --- a Language with Dependent Types",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "34",
+  number =       "1",
+  pages =        "239--250",
+  month =        jan,
+  year =         "1999",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Sun Dec 14 09:17:56 MST 2003",
+  acknowledgement = ack-nhfb,
+  affiliation =  "Chalmers University",
+}
+
+
+
+@InProceedings{Davies97,
+  author =       "Rowan Davies",
+  title =        "A refinement-type checker for {S}tandard {ML}",
+  booktitle =    "International Conference on Algebraic Methodology and
+                 Software Technology",
+  series =       "Lecture Notes in Computer Science",
+  publisher =    "Springer-Verlag",
+  volume =       "1349",
+  year =         "1997",
+  fullissn =     "0302-9743",
+}
+
+
+@InProceedings{clever,
+  author =       "Mary Sheeran",
+  title =        "Generating fast multipliers using clever circuits",
+  booktitle =    "FMCAD'04",
+  series =       "Lecture Notes in Computer Science",
+  publisher =    "Springer-Verlag",
+  volume =       "3312",
+  year =         "2004",
+  fullissn =     "03029743"
+}
+  
+
+
+@inproceedings{113468,
+  author = {Tim Freeman and Frank Pfenning},
+  title = {Refinement types for ML},
+  booktitle = {Proceedings of the ACM SIGPLAN 1991 conference on Programming language design and implementation},
+  year = {1991},
+  isbn = {0-89791-428-7},
+  pages = {268--277},
+  location = {Toronto, Ontario, Canada},
+  doi = {http://doi.acm.org/10.1145/113445.113468},
+  publisher = {ACM Press},
+  }
+ 
+
+
+@Article{Coquand:1994:IDT,
+  author =       "T. Coquand and P. Dybjer",
+  title =        "Inductive Definitions and Type Theory an Introduction
+                 (Preliminary Version)",
+  journal =      "Lecture Notes in Computer Science",
+  volume =       "880",
+  pages =        "60--76",
+  year =         "1994",
+  CODEN =        "LNCSD9",
+  ISSN =         "0302-9743",
+  bibdate =      "Wed Sep 15 10:01:31 MDT 1999",
+  acknowledgement = ack-nhfb,
+  keywords =     "software technology; theoretical computer science;
+                 computer; science",
+}
+
+
+
+@Article{Dybjer:1999:FAI,
+  author =       "P. Dybjer and A. Setzer",
+  title =        "A Finite Axiomatization of Inductive-Recursive
+                 Definitions",
+  journal =      "Lecture Notes in Computer Science",
+  volume =       "1581",
+  pages =        "129--146",
+  year =         "1999",
+  CODEN =        "LNCSD9",
+  ISSN =         "0302-9743",
+  bibdate =      "Tue Sep 14 06:09:05 MDT 1999",
+  acknowledgement = ack-nhfb,
+  keywords =     "lambda calculi; TLCA; typed lambda calculi",
+}
+
+@Article{JACM::HarperHP1993,
+  title =        "A Framework for Defining Logics",
+  author =       "Robert Harper and Furio Honsell and Gordon Plotkin",
+  area =         "Logic in Computer Science",
+  pages =        "143--184",
+  journal =      "Journal of the ACM",
+  month =        jan,
+  year =         "1993",
+  volume =       "40",
+  number =       "1",
+  references =   "\cite{IC::Avron1991} \cite{IC::CoquandH1988}
+                 \cite{LICS::MendlerA1988} \cite{JACM::Robinson1965}",
+}
+
+@InProceedings{Pfenning91lf,
+  author =       "Frank Pfenning",
+  title =        "Logic Programming in the {LF} Logical Framework",
+  booktitle =    "Logical Frameworks",
+  editor =       "G\'{e}rard Huet and Gordon Plotkin",
+  publisher =    "Cambridge University Press",
+  address =      "Cambridge, England",
+  pages =        "149--181",
+  year =         "1991",
+  fullurldvi =   "http://www.cs.cmu.edu/~fp/papers/lfproc91.dvi.gz",
+  fullurlps =    "http://www.cs.cmu.edu/~fp/papers/lfproc91.ps.gz",
+  keywords =     "LF, Elf",
+}
+
+
+@InProceedings{CADE99*202,
+  author =       {Frank Pfenning and Carsten Sch\"{u}rmann},
+  title =        "System Description: Twelf --- {A} Meta-Logical
+                 Framework for Deductive Systems",
+  pages =        "202--206",
+  ISBN =         "3-540-66222-7",
+  editor =       "Harald Ganzinger",
+  booktitle =    "Proceedings of the 16th International Conference on
+                 Automated Deduction ({CADE}-16)",
+  month =        jul # "~7--10,",
+  series =       "LNAI",
+  volume =       1632,
+  publisher =    "Springer-Verlag",
+  address =      "Berlin",
+  year =         1999,
+} 
+
+
+@Article{SabMye2003,
+  author =       "Andrei Sabelfeld and Andrew C. Myers",
+  title =        "Language-Based Information-Flow Security",
+  added-by =     "msteiner",
+  URL =          "http://www.cs.cornell.edu/andru/papers/jsac/sm-jsac03.pdf",
+  journal =      "{IEEE} Journal on Selected Areas in Communications",
+  volume =       "21",
+  year =         "2003",
+  pages =        "5--19",
+  number =       "1",
+  month =        jan,
+  added-at =     "Thu May 29 10:16:56 2003",
+}
+
+ 
+@Article{volpano96:sound,
+  author =       "Dennis Volpano and Geoffrey Smith and Cynthia Irvine",
+  title =        "A Sound Type System for Secure Flow Analysis",
+  journal =      "Journal of Computer Security",
+  year =         "1996",
+  volume =       "4",
+  number =       "3",
+  pages =        "167--187",
+  month =        dec,
+  URL =          "http://www.cs.nps.navy.mil/research/languages/papers/atsc/jcs.ps.Z",
+  abstract =     "Ensuring secure information flow within programs in
+                 the context of multiple sensitivity levels has been
+                 widely studied. Especially noteworthy is Denning's work
+                 in secure flow analysis and the lattice model [6][7].
+                 Until now, however, the soundness of Denning's analysis
+                 has not been established satisfactorily. We formulate
+                 Denning's approach as a type system and present a
+                 notion of soundness for the system that can be viewed
+                 as a form of noninterference. Soundness is established
+                 by proving, with respect to a standard programming
+                 language semantics, that all well-typed programs have
+                 this noninterference property.",
+}
+
+@InProceedings{XiChen2003,
+  author =       "Chiyan Chen and Hongwei Xi",
+  title =        "Meta-Programming through Typeful Code Representation",
+  pages =        "275--286",
+  ISBN =         "1-58113-756-7",
+  booktitle =    "Proceedings of the 8th {ACM} {SIGPLAN}
+                 International Conference on Functional Programming
+                 ({ICFP}-03)",
+  month =        aug # " ~25--29",
+  series =       "ACM SIGPLAN Notices",
+  publisher =    "ACM Press",
+  address =      "New York",
+  year =         "2003",
+}
+
+ 
+@Article{Calgano-Moggi-Sheard-JFP03,
+  author =   "Calcagno, Cristiano and Moggi, Eugenio and Sheard, Tim",
+  title =    "Closed Types for a Safe Imperative {MetaML}",
+  journal =     jfp,
+  year =     2003,
+  volume =   13,
+  number =   12,
+  pages =    {545-572},
+  month =    May,
+  annote =   {Special Issuse on Semantics, Applications and Implementation
+              of Program Generation.}
+}
+
+
+@InProceedings{Moggi-Taha-Benaissa-Sheard-ESOP99,
+  author =       "E. Moggi and W. Taha and Z. Benaissa and T. Sheard",
+  title =        "An Idealized {M}eta{ML}:  
+                  Simpler, and More Expressive",
+  booktitle =    "European Symposium on Programming (ESOP)",
+  pages =        "193--207",
+  year =         1999,
+  volume =       1576,
+  series =       LNCS,
+  publisher =    "Springer-Verlag"
+}
+
+
+@inproceedings{Davies-Lics96,
+ author="Rowan Davies"
+,title="A Temporal Logic Approach to Binding-Time Analysis"
+,editor="E. Clarke"
+,booktitle="Proceedings of the Eleventh Annual {IEEE} Symposium on Logic in Computer Science, New Brunswick, New Jersey"
+,year=1996
+,pages="184--195"
+,month="July"
+,publisher="IEEE Computer Society Press"
+,keywords="partial evaluation, staged computation, temporal logic"
+}
+
+@InProceedings{Davies-Pfenning-Popl96,
+  author =       "Rowan Davies and Frank Pfenning",
+  title =        "A Modal Analysis of Staged Computation",
+  booktitle =    "23rd Annual ACM Symposium on Principles of Programming Languages (POPL'96)",
+  year =         1996,
+  address =      "St. Petersburg Beach",
+  pages   =      "258--270",
+  month =        "January",
+}
+
+@article{Davies-Pfenning-JACM,
+  author =       "Rowan Davies and Frank Pfenning",
+  title =        "A Modal Analysis of Staged Computation",
+  journal =      "Journal of the ACM",
+  year =         2001,
+  volume =       38,
+  number     =       3,
+  pages   =      "555--604"
+}
+
+
+
+@phdThesis{Gabbay-Thesis2000,
+  author =	"M. J. Gabbay",
+  title = 	"A Theory of Inductive Definitions with $\alpha$-Equivalence.",
+  degree =	"D.Phil. Thesis",
+  institution = "Cambridge University",
+  month = 	"August",
+  year =	"2000"
+}
+
+
+@InProceedings{Pitts-Gabbay-MPC2000,
+  author =       "A. M. Pitts and M. J. Gabbay",
+  title =        "A Metalanguage for Programming with
+       Bound Names Modulo Renaming",
+  booktitle =    "Mathematics of Programme Construction",
+  pages =        "230-255",
+  year =         2000,
+  volume =       1837,
+  series =       LNCS,
+  publisher =    "Springer-Verlag",
+}
+
+
+@InProceedings{Gabbay-Pitts-lics99,
+  author =       "Murdoch Gabbay and Andrew Pitts",
+  title =        "A New Approach to Abstract Syntax Involving Binders",
+  editor =       "G. Longo",
+  pages =        "214--224",
+  booktitle =    "Proceedings of the 14th Annual Symposium on Logic in
+                 Computer Science (LICS'99)",
+  year =         1999,
+  publisher =    "IEEE Computer Society Press",
+  address =      "Trento, Italy",
+  month =        jul,
+  keywords =     "misc",
+}
+
+@InProceedings{Nanevski-ICFP02,
+  author =       "Aleksandar Nanevski",
+  title =        "Meta-programming with names and necessity",
+  pages =        "206--217",
+  month =        oct,
+  year =         "2002",
+  booktitle =  "Proceedings of the 2002 ACM SIGPLAN International
+                Conference on Functional Programming (ICFOP'02)",
+  publisher = "ACM Press",
+  address = "Pittsburgh, PA.",
+  annote = "Reprinted as ACM SIG{\-}PLAN Notices. Vol. 37, No. 9",
+  ISSN =   "0362-1340"
+}
+
+@Article{Batory:97,
+  author = 	 "Don Batory and Bart J. Geraci",
+  title = 	 "Composition Validation and Subjectivity in GenVoca Generators",
+  journal = 	 "IEEE Transactions on Software Engineering",
+  year = 	 1997,
+  month =	 Feb,
+  pages =	 "67-82"
+}
+
+@Article{Frigo:1999:FFT,
+  author =       "Matteo Frigo",
+  title =        "A Fast {Fourier} Transform Compiler",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "34",
+  number =       "5",
+  pages =        "169--180",
+  month =        may,
+  year =         "1999",
+  coden =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Thu May 13 16:27:02 1999",
+  note =         "See PLDI'99 proceedings \cite{ACM:1999:PASa}.",
+  url =          "http://www.acm.org:80/pubs/citations/proceedings/pldi/301122/p169-frigo/"
+}
+
+
+
+@article{tal,
+  author = "G. Morrisett and D. Walker and K. Crary and N. Glew",
+  title = "From System {F} to Typed Assembly Language",
+  journal = "ACM Transactions on Programming Languages and Systems (TOPLAS)",
+  volume = 21,
+  number = 3,
+  pages = "528--569",
+  month = may,
+  year = 1999
+}
+
+@article{MetaOCaml,    
+      key = "{M}eta{OC}aml: A Compiled, Type-safe Multi-stage Programming Language", 
+      author = "{MetaOCaml Hompage}",
+      title = "Available online from:\\ {\tt http://cs-www.cs.yale.edu/homes/taha/MetaOCaml/}",
+}
+
+ 
+  
+@Article{TS00,
+author =       "Walid Taha and Tim Sheard",
+title =        "{MetaML}:  Multi-Stage Programming with Explicit 
+                Annotations",
+journal =      "Theoretical Computer Science",
+year =         "2000",
+volume =       248,
+number =       "1-2",
+}
+
+@InProceedings{Sheard02,
+  author =       "T. Sheard and S. Peyton-Jones",
+  title =        "Template meta-programming for Haskell.",
+  booktitle =    "Proceedings of the ACM SIGPLAN Haskell Workshop",
+  pages =        "1--16",
+  publisher =    "ACM",
+  year =         "2002",
+  keywords =     "workshop, functional programming, FP, zz1002",
+  abstract =     "...extension to the purely functional programming
+                 language Haskell that supports compile-time
+                 meta-programming. The purpose of the system is to
+                 support the algorithmic construction of programs at
+                 compile-time. The ability to generate code at compile
+                 time allows the programmer to implement such features
+                 as polytypic programs, macro-like expansion, user
+                 directed optimization (such as inlining), and the
+                 generation of supporting data structures and functions
+                 from existing data structures and functions. Our design
+                 is being implemented in the Glasgow Haskell Compiler,
+                 ghc. [http://doi.acm.org/10.1145/581690.581691
+                 (paper)][10/'02]
+                 http://www.amazon.com/exec/obidos/ISBN=1581136056/fourwheeldriveinA/
+                 .",
+}
+
+
+@Article{Sheard:1999:UMS,
+  author =       "T. Sheard",
+  title =        "Using {MetaML}: {A} Staged Programming Language",
+  journal =      "Lecture Notes in Computer Science",
+  volume =       "1608",
+  pages =        "207--239",
+  year =         "1999",
+  coden =        "LNCSD9",
+  ISSN =         "0302-9743",
+  bibdate =      "Mon Sep 13 16:57:02 MDT 1999",
+  acknowledgement = ack-nhfb,
+}
+
+
+@InProceedings{Sheard01,
+  title =        "Accomplishments and Research Challenges in Meta-Programming",
+  author =       "Tim Sheard",
+  booktitle =    "Proceedings of the Workshop on Semantics, 
+                  Applications and Implementation of Program 
+                  Generation (SAIG'01) ",
+  note      =  "Invited talk",
+  series = "LNCS",
+  volume = "2196",
+  editor = "Walid Taha",
+  year = "2001",
+  month = "September",
+  pages = "2--44",
+  publisher =    "Springer Verlag",
+  address =      "Berlin",
+  ISBN   = "3-540-42558-6"
+}
+
+
+@InProceedings{T00,
+  author =   "Walid Taha",
+  title =    "A Sound Reduction Semantics for Untyped {CBN} Mutli-Stage
+                  Computation.  {O}r, the Theory of {MetaML} is Non-trivial.",
+  booktitle =    "2000 SIGPLAN Workshop on Partial Evaluation and
+                  Semantics-Based Program Manipulation (PEPM'00)",
+  OPTcrossref =  {},
+  OPTkey =   {},
+  OPTpages =     {},
+  year =     "2000",
+  OPTeditor =    {},
+  OPTvolume =    {},
+  OPTnumber =    {},
+  OPTseries =    {},
+  OPTaddress =   {},
+  month =    jan,
+  OPTorganization = {},
+  OPTpublisher = {},
+  OPTnote =      {},
+  OPTannote =    {}
+}
+
+
+@InProceedings{Sheard&Shields96,
+  author =   "Mark Shields and Tim Sheard and Simon Peyton Jones",
+  title =    "Dynamic Typing through Staged Type Inference",
+  booktitle =    "Proceedings of the 25th {ACM} {SIGPLAN-SIGACT}
+                  Symposium on Principles of Programming Languages",
+  year =     1998,
+  OPTorganization = {},
+  pages = "289--302",
+  month =    jan,
+}
+
+
+
+@InProceedings{SheardDSL99,
+  author =   "Sheard, T. and Benaissa, Z. and Pasalic, E.",
+  title =    "DSL Implementation Using Staging and Monads ",
+  booktitle = "Second Conference on Domain-Specific Languages (DSL'99)",
+  year =     "1999",
+  organization = "USEUNIX",
+  address =      "Austin, Texas",
+  month =    "October",
+}
+
+
+@InProceedings{SheardPasalic2002,
+  author =       "Emir Pasalic and Walid Taha and Tim Sheard",
+  title =        "Tagless Staged Interpreters for Typed Languages",
+  pages =        "218--229",
+  ISBN =         "1-58113-487-8",
+  booktitle =    "Proceedings of the Seventh {ACM} {SIGPLAN}
+                 International Conference on Functional Programming
+                 ({ICFP}-02).",
+  month =        oct # " ~4--6",
+  publisher =    "ACM Press",
+  address =      "Pittsburgh, PA.",
+  year =         "2002",
+}
+
+
+@TechReport{PST00TR,
+  author =       "Emir Pa\v{s}ali\'{c} and Tim Sheard and 
+                  Walid Taha",
+  title =        "{DALI}: An Untyped, {CBV} Functional Language Supporting
+                  First-Order Datatypes with Binders (Technical Development)",
+  institution =  "OGI",
+  year =         2000,
+  OPTkey =       {},
+  OPTtype =      {},
+  number =       "CSE-00-007",
+  note  =        "Available from:\\ http://www.cse.ogi.edu/PacSoft/"
+}
+
+
+
+@techreport{MetaOCaml-paper,
+title = "A Bytecode-Compiled, Type-safe, Multi-stage Language",
+author = "Cristiano Calcagno and Walid Taha and Liwen Huang and Xavier Leroy",
+institution = "Rice University",
+year = "2002",
+url = "http://www.cs.rice.edu/~taha/publications.html"
+}
+
+
+@Article{Taha:2001:TEJ, 
+  author =       "Walid Taha and Henning Makholm and John Hughes",
+  title =        "Tag Elimination and Jones-Optimality",
+  journal =      "Lecture Notes in Computer Science",
+  volume =       "2053",
+  pages =        "257--??",
+  year =         "2001",
+  coden =        "LNCSD9",
+  ISSN =         "0302-9743",
+  bibdate =      "Sat Feb 2 13:04:09 MST 2002",
+  url =          
+"http://link.springer-ny.com/link/service/series/0558/bibs/2053/20530257.htm;
+                 
+http://link.springer-ny.com/link/service/series/0558/papers/2053/20530257.pdf",
+  acknowledgement = ack-nhfb,
+}
+
+
+@Article{Wright:94,
+  title =        "A Syntactic Approach to Type Soundness",
+  author =       "Andrew K. Wright and Matthias Felleisen",
+  pages =        "38--94",
+  journal =      "Information and Computation",
+  month =        "15~" # nov,
+  year =         1994,
+  volume =       "115",
+  number =       "1",
+}
+
+@Article{JFP::OrbaekP1997,
+  title =        "Trust in the {$\lambda$}-calculus",
+  author =       "P. {\O}rb{\ae}k and J. Palsberg",
+  pages =        "557--591",
+  journal =      "Journal of Functional Programming",
+  month =        nov,
+  year =         "1997",
+  volume =       "7",
+  number =       "6",
+  references =   "\cite{POPL::AikenM1991} \cite{TCS::FuhM1990}
+                 \cite{POPL::Mitchell1984}",
+}
+
+ 
+@InProceedings{Xi:1999:DTP,
+  author =       "Hongwei Xi and Frank Pfenning",
+  title =        "Dependent types in practical programming",
+  editor =       "{ACM}",
+  booktitle =    "{POPL} '99. Proceedings of the 26th {ACM}
+                 {SIGPLAN-SIGACT} on Principles of programming
+                 languages, January 20--22, 1999, San Antonio, {TX}",
+  publisher =    "ACM Press",
+  address =      "New York, NY, USA",
+  ISBN =         "1-58113-095-3",
+  series =       "ACM SIG{\-}PLAN Notices",
+  pages =        "214--227",
+  year =         "1999",
+  bibdate =      "Mon May 3 12:58:58 MDT 1999",
+  URL =          "http://www.acm.org:80/pubs/citations/proceedings/plan/292540/p214-xi/",
+  acknowledgement = ack-nhfb,
+  subject =      "{\bf F.4.1} Theory of Computation, MATHEMATICAL LOGIC
+                 AND FORMAL LANGUAGES, Mathematical Logic. {\bf D.3.2}
+                 Software, PROGRAMMING LANGUAGES, Language
+                 Classifications, ML. {\bf D.1.1} Software, PROGRAMMING
+                 TECHNIQUES, Applicative (Functional) Programming. {\bf
+                 D.3.3} Software, PROGRAMMING LANGUAGES, Language
+                 Constructs and Features, Polymorphism.",
+}
+
+
+@InProceedings{POPL00*184,
+  author =       "Karl Crary and Stephanie Weirich",
+  title =        "Resource Bound Certification.",
+  pages =        "184--198",
+  booktitle =    "Proceedings of the 27th {ACM} {SIGPLAN}-{SIGACT}
+                 Symposium on Principles of Programming Languages
+                 ({POLP}-00)",
+  month =        jan # " ~19--21",
+  publisher =    "ACM Press",
+  address =      "N.Y.",
+  year =         "2000",
+}
+
+
+@techreport{VaderwaartCrary2004,
+  author = "Joseph C. Vanderwaart and Karl Crary",
+  title = "Foundational Typed Assembly Language for Grid Computing",
+  year = 2004,
+  institution = "Carnegie Mellon University",
+  number = "CMU-CS-04-104",
+  url = "http://www.cs.cmu.edu/~joev/work.html"
+  }
+ 
+@Article{Launchbury:1996:PUU,
+  author =       "J. Launchbury and R. Paterson",
+  title =        "Parametricity and Unboxing with Unpointed Types",
+  journal =      "Lecture Notes in Computer Science",
+  volume =       "1058",
+  pages =        "204--??",
+  year =         "1996",
+  CODEN =        "LNCSD9",
+  ISSN =         "0302-9743",
+  bibdate =      "Wed Aug 14 09:38:08 MDT 1996",
+  acknowledgement = ack-nhfb,
+}
+
+@Unpublished{morrisett+:wcsss,
+  author =       "Greg Morrisett and Karl Crary and Neal Glew and Dan
+                 Grossman and Richard Samuels and Frederick Smith and
+                 David Walker and Stephanie Weirich and Steve
+                 Zdancewic",
+  title =        "{TALx86}: {A} Realistic Typed Assembly Language",
+  year =         "1999",
+  note =         "{ACM SIGPLAN} Workshop on
+                 Compiler Support for System Software",
+}
+
+
+
+@techreport{kaufmann94design,
+  author = "M. Kaufmann and J. Moore",
+  title = "Design goals of ACL",
+  number = "101",
+  institution = "Computational Logic, Inc.", 
+  month = aug,
+  year = "1994",
+  url = "citeseer.ist.psu.edu/kaufmann94design.html" }
+
+
+ 
+@TechReport{Bertel97,
+  author =       "P. Bertelsen",
+  title =        "Semantics of {Java Byte Code}",
+  added-by =     "gka",
+  URL =          "ftp://ftp.dina.kvl.dk/pub/Staff/Peter.Bertelsen/jvm-semantics.ps.gz",
+  year =         "1997",
+  institution =  "Dep.~of Information Technology, Technical University
+                 of Denmark",
+  month =        mar,
+}
+
+ 
+@InProceedings{StaAba98,
+  author =       "R. Stata and M. Abadi",
+  title =        "A Type System for {Java} Bytecode Subroutines",
+  added-by =     "gka",
+  URL =          "http://www.research.digital.com/SRC/personal/Martin_Abadi/Papers/jvm-short-preprint.ps",
+  year =         "1998",
+  booktitle =    "25th Annual ACM Symposium on Principles of Programming
+                 Languages",
+  pages =        "149--160",
+  month =        jan,
+  added-at =     "Fri Apr 17 14:45:45 1998",
+}
+
+@InProceedings{SSP98*52,
+  author =       "D. S. Wallach and E. W. Felten",
+  title =        "Understanding Java Stack Inspection",
+  pages =        "52--65",
+  booktitle =    "1998 {IEEE} Symposium on Security and Privacy ({SSP}
+                 '98)",
+  ISBN =         "0-8186-8386-4",
+  month =        may,
+  publisher =    "IEEE",
+  address =      "Washington - Brussels - Tokyo",
+  year =         "1998",
+}
+
+@InProceedings{PPDP`02*76,
+  author =       "Fr{\'e}de'ric Besson and Thomas de Grenier de Latour
+                 and Thomas Jensen",
+  title =        "Secure calling contexts for stack inspection",
+  pages =        "76--87",
+  booktitle =    "Proceedings of the Fourth {ACM} {SIGPLAN} Conference
+                 on Principles and Practice of Declarative Programming
+                 ({PPDP}-02)",
+  month =        oct # " ~6--8",
+  publisher =    "ACM Press",
+  address =      "New York",
+  year =         "2002",
+}
+ 
+@Article{Xi:1998:EAB,
+  author =       "Hongwei Xi and Frank Pfenning",
+  title =        "Eliminating Array Bound Checking Through Dependent
+                 Types",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "33",
+  number =       "5",
+  pages =        "249--257",
+  month =        may,
+  year =         "1998",
+  CODEN =        "SINODQ",
+  ISBN =         "0-89791-987-4",
+  ISSN =         "0362-1340",
+  bibdate =      "Sun Dec 14 09:17:47 MST 2003",
+  URL =          "http://www.acm.org:80/pubs/citations/proceedings/pldi/277650/p249-xi/",
+  acknowledgement = ack-nhfb,
+  annote =       "Published as part of the Proceedings of PLDI'98.",
+  keywords =     "algorithms; experimentation; languages; performance",
+  subject =      "{\bf F.3.3} Theory of Computation, LOGICS AND MEANINGS
+                 OF PROGRAMS, Studies of Program Constructs, Type
+                 structure. {\bf D.3.2} Software, PROGRAMMING LANGUAGES,
+                 Language Classifications, Standard ML. {\bf D.3.3}
+                 Software, PROGRAMMING LANGUAGES, Language Constructs
+                 and Features, Data types and structures.",
+}
+
+
+@InProceedings{Baars:2002:TDT,
+  author =       "Arthur I. Baars and S. Doaitse Swierstra",
+  title =        "Typing Dynamic Typing",
+  editors = "Simon Peyton Jones",
+  booktitle =    "Proceedings of the Seventh ACM SIGPLAN 
+                  International Conference on Functional Programming",
+  note =      "Also appears in ACM SIG{\-}PLAN Notices 37/9",
+  pages =        "157--166",
+  month =        sep,
+  year =         "2002",
+  publisher = "ACM Press, New York"
+}
+
+ 
+@inproceedings{TahaTag2000,
+   author = "Walid Taha",
+   booktitle = "APPSEM Workshop on Subtyping \& Dependent 
+               Types in Programming. Ponte de Lima Portugal.",
+   title = "Tag Elimination - or - Type Specialisation 
+            is a Type-Indexed Effect",
+   note = "Available online at
+          http://www-sop.inria.fr/oasis/DTP00/Proceedings/proceedings.html",
+   year = 2000,
+   month = "July"
+   }
+
+
+@TechReport{PS:04,
+  author =       {Emir Pasalic and Tim Sheard},
+  title =        {Meta-Programming with Typed Object-Language Representations},
+  institution =  {OGI},
+  year =         {2004},
+  OPTkey =       {},
+  OPTtype =      {},
+  OPTnumber =    {},
+  OPTaddress =   {},
+  OPTmonth =     {},
+  OPTnote =      {},
+  OPTannote =    {Available from \cite{ogi-tr-site}}
+}
+
+
+@Misc{ogi-tr-site,
+  key =          "Oregon Gradute Institute",
+  OPTauthor =    {},
+  title =        "{O}regon {G}raduate {I}nstitute {T}echnical
+                  {R}eports. {P.O. Box 91000, Portland, OR
+                  97291-1000,USA.}",
+  howpublished = "Available online from
+                  {\tt ftp://cse.ogi.edu/pub/tech-reports/README.html}",
+  OPTyear =      {},
+  OPTmonth =     {},
+  note =         "",
+  OPTannote =    {}
+} 
+
+
+@InProceedings{REYNOLDS83,
+  author =       "John C. Reynolds",
+  title =        "Types, Abstraction and Parametric Polymorphism",
+  booktitle =    "Information Processing 83",
+  booksubtitle = "Proceedings of the IFIP 9th World Computer Congress",
+  place =        "Paris",
+  dates =        "September 19--23, 1983",
+  editor =       "R. E. A. Mason",
+  publisher =    "Elsevier Science Publishers B. V. (North-Holland)",
+  address =      "Amsterdam",
+  year =         "1983",
+  pages =        "513--523",
+  callno =       "004 I613ia 1983",
+  checked =      "January 1988",
+}
+
+@InProceedings{Reynolds93,
+  key =          "Reynolds",
+  author =       "John C. Reynolds",
+  title =        "An Introduction to Logic Relations and Parametric
+                 Polymorphism",
+  booktitle =    "Conference record of the Twentieth Annual ACM
+                 SIGPLAN-SIGACT Symposium on Principles of Programming
+                 Languages, Charleston, South Carolina",
+  organization = "ACM",
+  year =         "1993",
+  month =        jan,
+  pages =        "155--156",
+  annote =       "9 references.",
+}
+
+@inproceedings{Wadler89a,
+   author = {PL Wadler},
+   editor = {MacQueen},
+   title = {Theorems for free!},
+   booktitle = {Fourth International Conference on Functional Programming and Computer Architecture, London},
+   publisher = {Addison Wesley},
+   year = {1989}
+}
+
+@Article{LeBotlan:2003:MRM,
+  author =       "Didier {Le Botlan} and Didier R{\'e}my",
+  title =        "{ML}$^{F}$: raising {ML} to the power of system {F}",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "38",
+  number =       "9",
+  pages =        "27--38",
+  month =        sep,
+  year =         "2003",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Sat Oct 11 12:45:06 MDT 2003",
+  acknowledgement = ack-nhfb,
+}
+
+@Article{Simonet:2003:EHX,
+  author =       "Vincent Simonet",
+  title =        "An extension of {HM(X)} with bounded existential and
+                 universal data-types",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "38",
+  number =       "9",
+  pages =        "39--50",
+  month =        sep,
+  year =         "2003",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Sat Oct 11 12:45:06 MDT 2003",
+  acknowledgement = ack-nhfb,
+}
+
+
+@TechReport{RankN,
+  author =       {Simon Peyton Jones and Mark Shields},
+  title =        {Practical type inference for arbitrary-rank types},
+  institution =  {Microsoft Research},
+  year =         {2003},
+  OPTkey =       {},
+  OPTtype =      {},
+  OPTnumber =    {},
+  OPTaddress =   {},
+  month =        {December},
+  note =         {{\scriptsize \verb+http://research.microsoft.com/Users/simonpj/+}},
+  OPTannote =    {Available from \cite{ogi-tr-site}}
+}
+
+@TechReport{Hinze:03:Phantom,
+  author = 	 {James Cheney and Ralf Hinze},
+  title = 	 {First-class phantom types},
+  institution =  {Cornell University},
+  number =       {TR2003-1901},
+  note = 	 "Also available from:\\ {\tt {\scriptsize http://www.informatik.uni-bonn.de/\verb+~+ralf/publications/Phantom.pdf}}",
+  OPTkey = 	 {},
+  OPTmonth = 	 {},
+  year = 	 {2003}
+}
+
+@InProceedings{fluet-02,
+  author =       "Matthew Fluet and Riccardo Pucella",
+  title =        "Phantom types and subtyping",
+  booktitle =    "IFIP International Conference on Theoretical Computer
+                 Science (TCS)",
+  pages =        "448--460",
+  year =         "2002",
+  month =        aug,
+}
+
+
+
+
+@InProceedings{HinzeHaskellWorkshop02,
+  author = 	 {Hinze, Ralf and Cheney, James},
+  title = 	 {A Lightweight Implementation of Generics and Dynamics},
+  booktitle = 	 {Proceedings of the ACM SIGPLAN 2002 Haskell Workshop},
+  OPTcrossref =  {},
+  OPTkey = 	 {},
+  pages = 	 {90-104},
+  year = 	 {2002},
+  editor = 	 {Manuel Chakravarty},
+  OPTvolume = 	 {},
+  OPTnumber = 	 {},
+  OPTseries = 	 {},
+  OPTaddress = 	 {},
+  month = 	 {October},
+  organization = {ACM SIGPLAN},
+  OPTpublisher = {},
+  OPTnote = 	 {},
+  OPTannote = 	 {}
+}
+
+@Article{Weirich:2000:TSC,
+  author =       "Stephanie Weirich",
+  title =        "Type-safe cast: (functional pearl)",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "35",
+  number =       "9",
+  pages =        "58--67",
+  month =        sep,
+  year =         "2000",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Tue Nov 7 16:57:22 MST 2000",
+  URL =          "http://www.acm.org/pubs/citations/proceedings/fp/351240/p58-weirich/;
+                 http://www.acm.org/pubs/articles/proceedings/fp/351240/p58-weirich/p58-weirich.pdf",
+  acknowledgement = ack-nhfb,
+}
+
+
+@InCollection{ba92lcwt,
+  author =       "H. P. Barendregt",
+  title =        "Lambda calculi with types",
+  editor =       "D. M. Gabbay and Samson Abramsky and T. S. E. Maibaum",
+  booktitle =    "Handbook of Logic in Computer Science",
+  publisher =    "Oxford University Press",
+  address =      "Oxford",
+  year =         "1992",
+  volume =       2,
+  annote =       "\\A very general paper on typed lambda calculus,
+                 including GTSs, giving meta theory and intuitions.",
+}
+
+
+@InProceedings{mpj:con-classes,
+  author =      "Mark P. Jones",
+  title =       "A system of constructor classes: overloading and
+                 implicit higher-order polymorphism",
+  booktitle =   {Proceedings of the Conference on Functional Programming
+                 Languages and Computer Architecture, Copenhagen, Denmark},
+  year =        "1993",
+  month =       "June"
+}
+
+@InProceedings{GrantEtAl99,
+  author =	 "B. Grant and M. Philipose and M. Mock and
+                  C. Chambers and S. J. Eggers",
+  title =	 "An Evaluation of Staged Run-time Optimizations in
+                  {DyC}",
+  booktitle =	 "Proc.~PLDI~'99",
+  year =	 "1999",
+  pages =	 "293--304"
+}
+
+@Article{GrantEtAl00,
+  author =	 "B. Grant and M. Mock and M. Philipose and
+                  C. Chambers and S. J. Eggers",
+  title =	 "Dy{C}: an expressive annotation-directed dynamic
+                  compiler for {C}",
+  journal =	 "Theoretical Computer Science",
+  volume =	 "248",
+  pages =	 "147--199",
+  year =	 "2000"
+}
+
+@InProceedings{1998:iccl:burger,
+  author =	 "R. G. Burger and R. K. Dybvig",
+  title =	 "An Infrastructure for Profile-Driven Dynamic
+                  Recompilation",
+  booktitle =	 "Proc.\ International Conf.\ on Computer Languages",
+  publisher =	 "IEEE",
+  year =	 "1998",
+  pages =	 "240--249"
+}
+
+
+@PhdThesis{Burger97,
+  author =	 "R. G. Burger",
+  title =	 "Efficient Compilation and Profile-Driven Dynamic
+                  Recompilation in Scheme",
+  year =	 "1997",
+  school =	 "Indiana Univ.\ Computer Science Dept."
+}
+
+
+@InProceedings{lee&leone96,
+  author =       "P. Lee and M. Leone",
+  title =        "Optimizing {ML} with Run-Time Code Generation",
+  booktitle =    "Proc.~{PLDI}~'96",
+  year =         "1996",
+  pages =        "137--148"
+}
+
+@Article{Leone:1998:DSF,
+  author =	 "M. Leone and P. Lee",
+  title =	 "Dynamic specialization in the {Fabius} system",
+  journal =	 "ACM Computing Surveys",
+  volume =	 "30",
+  year =	 "1998"
+}
+
+
+@inproceedings{tickc:popl96,
+  title =	 {{`C}: A language for efficient, machine-independent
+                  dynamic code generation},
+  author =	 {D. R. Engler and W. C. Hsieh and M. F. Kaashoek},
+  booktitle =	 {Proc.~{POPL}~'96},
+  year =	 {1996},
+  pages =	 {131--144},
+  publisher =	 {ACM}
+}
+
+
+@article{tickc:toplas,
+  title =	 {{`C} and {tcc}: A language and compiler for dynamic
+                  code generation},
+  author =	 {M. Poletto and W. C. Hsieh and D. R. Engler and
+                  M. F. Kaashoek},
+  journal =	 {ACM TOPLAS},
+  volume =	 {21},
+  year =	 {1999},
+  pages =	 {324--369}
+}
+ 
+@Article{Lowry:94:Amphion,
+  author = 	 "Michael Lowry and Andrew Philpot and Thomas Pressburger and Ian Underwood", 
+  title = 	 "AMPHION:  Automatic Programming for Scientific Subroutine Libraries",
+  journal = 	 "NASA Science Information Systems Newsletter",
+  year = 	 1994,
+  OPTkey = 	 {},
+  volume = 	 31,
+  OPTnumber = 	 {},
+  Tmonth = 	 feb,
+  pages = 	 "22--25",
+  OPTnote = 	 "Available at \cite{Amphion:Page}",
+} 
+
+@Manual{COQ74,
+  title =        {The Coq Proof Assistant Reference Manual, Version 7.4},
+  OPTkey =       {},
+  author =       {{The Coq Development Team}},
+  organization = {INRIA},
+  OPTaddress =   {},
+  OPTedition =   {},
+  OPTmonth =     {},
+  year =         {2003},
+  note =         {http://pauillac.inria.fr/coq/doc/main.html},
+  OPTannote =    {}
+}
+
+
+
+@InCollection{Paulson90lacs,
+  author =       "Lawrence C. Paulson",
+  title =        "{Isabelle}: The Next 700 Theorem Provers",
+  booktitle =    "Logic and Computer Science",
+  editor =       "P. Odifreddi",
+  publisher =    "Academic Press",
+  year =         "1990",
+  pages =        "361--386",
+  urldvi =       
+"http://www.cl.cam.ac.uk/Research/Reports/TR143-lcp-experience.dvi.gz",
+  keywords =     "Isabelle",
+}
+
+
+
+@Article{PittsAM:newaas-jv,
+  author =	 {M. J. Gabbay and A. M. Pitts},
+  title =	 {A New Approach to Abstract Syntax with Variable
+                  Binding},
+  journal =	 {Formal Aspects of Computing},
+  year =	 2002,
+  volume =	 13,
+  pages =	 {341--363}
+}
+
+
+@InProceedings{PittsAM:frepbm,
+  author =	 {M. R. Shinwell and A. M. Pitts and M. J. Gabbay},
+  title =	 {Fresh{ML}: Programming with Binders Made Simple},
+  booktitle =	 {Proc.~{ICFP} 2003},
+  pages =	 {263--274},
+  year =	 2003,
+  publisher =	 {ACM}
+}
+
+@misc{PeterLeeWeb,
+  key = "Peter Lee",
+  author = "Peter Lee",
+  title = "Proof-Carrying Code",
+  note = {Available from {\verb+http://www-2.cs.cmu.edu/~petel/papers/pcc/pcc.html+}}
+  }
+
+@InProceedings{Griffin03,
+  author =	 {Timothy G. Grifin and Aaron D. Jaggard and Vijay Ramachandran},
+  title =	 {Design Principles of Policy Languages for Path Vector Protocols},
+  booktitle =	 {Prooceedings of the annual meeting of the ACM
+                  Special Interest Group on Data Communication (SIGCOMM'03)},
+  pages =	 {61-72},
+  year =	 2003,
+  month = {August},
+  city = {Karlsruhe, Germany},
+  publisher =	 {ACM}
+}
+
+@InProceedings{Sobrinho03,
+  author =	 {{Jo\~ao} {Lu\'{i}s} Sobrinho},
+  title =	 {Network Routing with Path Vector Protocols: Theory and Applications},
+  booktitle =	 {Prooceedings of the annual meeting of the ACM
+                  Special Interest Group on Data Communication (SIGCOMM'03)},
+  pages =	 {49-60},
+  year =	 2003,
+  month = {August},
+  city = {Karlsruhe, Germany},
+  publisher =	 {ACM}
+}
+
+ 
+@TechReport{parsec,
+  author = 	 {Daan Leijen and Erik Meijer},
+  title = 	 {Parsec: Direct Style Monadic Parser Combinators for the Real World},
+  institution =  {Departement of Computer Science, Universiteit Utrecht.},
+  year = 	 {2001},
+  OPTkey = 	 {},
+  OPTtype = 	 {},
+  number = 	 {UU-CS-2001-35},
+}
+
+@InProceedings{StoneHar00,
+  author =       "Christopher A. Stone and Robert Harper",
+  title =        "Deciding Type Equivalence in a Language with Singleton
+                 Kinds",
+  booktitle =    "Conference Record of {POPL}'00: The 27th {ACM}
+                 {SIGPLAN}-{SIGACT} Symposium on Principles of
+                 Programming Languages",
+  address =      "Boston, Massachusetts",
+  month =        jan # " 19--21,",
+  year =         "2000",
+  pages =        "214--227",
+}
+
+
+@Article{Shao:1999:ITI,
+  author =       "Zhong Shao and Christopher League and Stefan Monnier",
+  title =        "Implementing Typed Intermediate Languages",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "34",
+  number =       "1",
+  pages =        "313--323",
+  month =        jan,
+  year =         "1999",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Sun Dec 14 09:17:56 MST 2003",
+  acknowledgement = ack-nhfb,
+  affiliation =  "Yale University",
+}
+
+@Article{Shao:2002:TSC,
+  author =       "Zhong Shao and Bratin Saha and Valery Trifonov and
+                 Nikolaos Papaspyrou",
+  title =        "A type system for certified binaries",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "37",
+  number =       "1",
+  pages =        "217--232",
+  month =        jan,
+  year =         "2002",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Thu May 15 12:22:58 MDT 2003",
+  acknowledgement = ack-nhfb,
+  annote =       "Proceedings of the 29th ACM SIGPLAN-SIGACT symposium
+                 on Principles of Programming Languages (POPL'02).",
+}
+
+
+
+@Book{GirardJY:prot,
+  series =       "Cambridge tracts in theoretical computer science",
+  subject =      "Electronic digital computers--Programming Proof theory
+                 Type theory",
+  author =       "Jean-Yves Girard",
+  volume =       "7",
+  camlib =       "[Univ. Lib.] 348:8.b.95.262 South Front 4",
+  publisher =    "Cambridge University Press",
+  authors =      "Jean-Yves Girard; translated and with appendices by
+                 Paul Taylor, Yves Lafont",
+  pages =        "xi,176p",
+  year =         "1989",
+  xref =         "Taylor, Paul, 1960- Lafont, Yves",
+  city =         "Cambridge",
+  size =         "26cm",
+  title =        "Proofs and types",
+}
+
+
+@phdThesis{XiThesis,
+  author =	"Hongwei Xi",
+  title = 	"Dependent Types in Practical Programming",
+  degree =	"Ph. D.",
+  institution = "Carnegie Mellon University",
+  school =  "Carnegie Mellon University",
+  year =	"1997"
+}
+
+@Article{Duggan:1999:DTD,
+  author =       "Dominic Duggan",
+  title =        "Dynamic Typing for Distributed Programming in
+                 Polymorphic Languages",
+  journal =      "ACM Transactions on Programming Languages and
+                 Systems",
+  volume =       "21",
+  number =       "1",
+  pages =        "11--45",
+  month =        jan,
+  year =         "1999",
+  CODEN =        "ATPSDT",
+  ISSN =         "0164-0925",
+  bibdate =      "Tue Sep 26 10:12:58 MDT 2000",
+  URL =          "http://www.acm.org/pubs/citations/journals/toplas/1999-21-1/p11-duggan/",
+  abstract =     "While static typing is widely accepted as being
+                 necessary for secure program execution, dynamic typing
+                 is also viewed as being essential in some applications,
+                 particularly for distributed programming environments.
+                 {\em Dynamics\/} have been proposed as a language
+                 construct for dynamic typing, based on experience with
+                 languages such as CLU, Cedar/Mesa, and Modula-3.
+                 However proposals for incorporating dynamic typing into
+                 languages with parametric polymorphism have serious
+                 shortcomings. A new approach is presented to extending
+                 polymorphic languages with dynamic typing. At the heart
+                 of the approach is the use of dynamic type dispatch,
+                 where polymorphic functions may analyze the structure
+                 of their type arguments. This approach solves several
+                 open problems with the traditional approach to adding
+                 dynamic typing to polymorphic languages. An explicitly
+                 typed language XMLdyn is presented; this language uses
+                 {\em refinement kinds\/} to ensure that dynamic type
+                 dispatch does not fail at run-time. {\em Safe
+                 dynamics\/} are a new form of dynamics that use
+                 refinement kinds to statically check the use of
+                 run-time dynamic typing. Run-time errors are isolated
+                 to a separate construct for performing run-time type
+                 checks",
+  acknowledgement = ack-nhfb,
+  generalterms = "Languages",
+  keywords =     "dynamic typing; marshalling; parametric polmorphism;
+                 static typing",
+  subject =      "Software --- Programming Languages --- Formal
+                 Definitions and Theory (D.3.1): {\bf Semantics};
+                 Software --- Programming Languages --- Language
+                 Constructs and Features (D.3.3): {\bf Data types and
+                 structures}; Software --- Programming Techniques ---
+                 Concurrent Programming (D.1.3)",
+}
+
+@ARTICLE{wadler:90,
+  author  = { Philip Wadler },
+  title   = "Comprehending Monads",
+  journal = { Proceedings of the ACM Symposium on Lisp and Functional Programming, Nice, France },
+  year    = 1990,
+  month   = jun,
+  pages   = "61--78"
+}
+@InProceedings{wadler92,
+  author =   {Philip Wadler},
+  title =    {The essence of functional programming (Invited talk)},
+  booktitle =    {19'th ACM Symposium on Principles of Programming Languages},
+  year =     1992,
+  address =  {Albuquerque, New Mexico},
+  month =    {January}
+}
+@InCollection{wadler94:,
+  author =   {Philip Wadler},
+  title =    {Monads for functional programming},
+  booktitle =    {Program Design Calculi},
+  publisher =    {Springer Verlag},
+  year =     1994,
+  editor =   {M. Broy},
+  volume =   118,
+  series =   {NATO ASI series, Series F: Computer and System Sciences},
+  note =     {Proceedings of the International Summer School at
+                  Marktoberdorf directed by F. L. Bauer, M. Broy,
+                  E. W. Dijkstra, D. Gries, and C. A. R. Hoare}
+}
+
+@InProceedings{XiCheChe03,
+  author =       "Hongwei Xi and Chiyan Chen and Gang Chen",
+  title =        "Guarded Recursive Datatype Constructors",
+  booktitle =    "POPL: 30th ACM SIGACT-SIGPLAN Symposium on Principles
+                 of Programming Languages",
+  year =         "2003",
+}
+
+@InProceedings{PasalicLingerGpce,
+  author =   "Emir Pasalic and Nathan Linger",
+  title =    "Meta-Programming with Typed Object-Language Representations",
+  booktitle = "Generative Programming and Component Engineering (GPCE'04)",
+  city = "Vancouver B.C.",
+  month = "October",
+  year = "2004",
+  note = "LNCS volume 3286",
+  pages = "136 - 167"
+  }
+  
+
+
+
+
+@Unpublished{wobbly,
+  author =       "Simon Peyton Jones and Geoffrey Washburn and Stephanie Weirich",
+  title =        "Wobbly types: type inference for generalised algebraic data types",
+  year =         "2004",
+  note =         {{\scriptsize {\tt http://research.microsoft.com/Users/simonpj/}}},
+}
+
+@Article{Sheard:2004:LF,
+  author =       "Tim Sheard",
+  title =        "Languages of the future",
+  journal =      "Onward Track, OOPSLA'04. Reprinted in: ACM SIG{\-}PLAN Notices, Dec. 2004.",
+  volume =       "39",
+  number =       "10",
+  pages =        "116--119",
+  month =        oct,
+  year =         "2004",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Thu Dec 2 05:49:56 MST 2004",
+  acknowledgement = ack-nhfb,
+}
+
+@InProceedings{SheardLogFrWks04,
+  author =   "Tim Sheard and Emir Pasalic",
+  title =    "Meta-programming with Built-in Type Equality",
+  booktitle = "Logical Frameworks and Meta-Languages workshop",
+  city = "Cork, Ireland",
+  month = "July",
+  year = "2004",
+  note = "Available at:\\ {\small {\tt http://cs-www.cs.yale.edu/homes/carsten/lfm04/}}"
+  }
+
+
+
+
+@Unpublished{sillyTF,
+  author =       "Lennart Augustsson and Kent Petersson",
+  title =        "Silly Type Families",
+  year =         "1994",
+  note =         "Available from: {\small {\tt http://www.cs.pdx.edu/\verb+~+sheard/papers/silly.pdf}}",
+}
+
+
+@UNPUBLISHED{pottier1,
+  AUTHOR = {Fran\c{c}ois Pottier and Yann {Régis-Gianas}},
+  TITLE = {Towards efficient, typed {LR} parsers},
+  URL = {http://cristal.inria.fr/~fpottier/publis/fpottier-regis-gianas-04.ps.gz},
+  PDF = {http://cristal.inria.fr/~fpottier/publis/fpottier-regis-gianas-04.pdf},
+  MONTH = SEP,
+  YEAR = {2004},
+  ABSTRACT = {The LR parser generators that are bundled with many functional programming
+		  language implementations produce code that is unsafe, needlessly inefficient,
+		  or both.  We show that, using generalized algebraic data types, it is possible
+		  to produce parsers that are well-typed (so they cannot unexpectedly crash or
+		  fail) and nevertheless efficient. This is a useful result as well as a nice
+		  exercise in programming with generalized algebraic data types.},
+  NOTE = {Draft paper}
+}
+
+
+
+@INPROCEEDINGS{pottier2,
+  AUTHOR = {Fran\c{c}ois Pottier and Nadji Gauthier},
+  TITLE = {Polymorphic Typed Defunctionalization},
+  URL = {http://cristal.inria.fr/~fpottier/publis/fpottier-gauthier-popl04.ps.gz},
+  PDF = {http://cristal.inria.fr/~fpottier/publis/fpottier-gauthier-popl04.pdf},
+  BOOKTITLE = {Proceedings of the 31st {ACM} Symposium on
+                  Principles of Programming Languages (POPL'04)},
+  ADDRESS = {Venice, Italy},
+  MONTH = JAN,
+  YEAR = {2004},
+  PAGES = {89--98},
+  OFF = {http://doi.acm.org/10.1145/964001.964009},
+  ABSTRACT = {\emph{Defunctionalization} is a program transformation that aims to turn a
+		  higher-order functional program into a first-order one, that is, to eliminate
+		  the use of functions as first-class values.  Its purpose is thus identical to
+		  that of \emph{closure conversion}. It differs from closure conversion,
+		  however, by storing a \emph{tag}, instead of a code pointer, within every
+		  closure. Defunctionalization has been used both as a reasoning tool and as a
+		  compilation technique.
+
+		  Defunctionalization is commonly defined and studied in the setting of a
+		  simply-typed $\lambda$-calculus, where it is shown that semantics and
+		  well-typedness are preserved. It has been observed that, in the setting of a
+		  polymorphic type system, such as ML or System F, defunctionalization is not
+		  type-preserving. In this paper, we show that extending System F with
+		  \emph{guarded algebraic data types} allows recovering type preservation. This
+		  result allows adding defunctionalization to the toolbox of type-preserving
+		  compiler writers.},
+  NOTE = {Superseded by~\cite{pottier-gauthier-hosc}}
+}
+
+ 
+@UNPUBLISHED{pottier-gauthier-hosc,
+  AUTHOR = {Fran\c{c}ois Pottier and Nadji Gauthier},
+  TITLE = {Polymorphic Typed Defunctionalization and Other Tales},
+  NOTE = {Manuscript. Submitted},
+  MONTH = FEB,
+  YEAR = 2005,
+  URL = {http://cristal.inria.fr/~fpottier/publis/fpottier-gauthier-hosc.ps.gz},
+  PDF = {http://cristal.inria.fr/~fpottier/publis/fpottier-gauthier-hosc.pdf},
+  ABSTRACT = {\emph{Defunctionalization} is a program transformation that aims to turn a
+		  higher-order functional program into a first-order one, that is, to eliminate
+		  the use of functions as first-class values. Its purpose is thus identical to
+		  that of \emph{closure conversion}. It differs from closure conversion,
+		  however, by storing a \emph{tag}, instead of a code pointer, within every
+		  closure. Defunctionalization has been used both as a reasoning tool and as a
+		  compilation technique.
+
+		  Defunctionalization is commonly defined and studied in the setting of a
+		  simply-typed $\lambda$-calculus, where it is shown that semantics and
+		  well-typedness are preserved. It has been observed that, in the setting of a
+		  polymorphic type system, such as Hindley and Milner's or System $F$,
+                  defunctionalization is not
+		  type-preserving. In this paper, we show that extending System $F$ with
+		  \emph{guarded algebraic data types} allows recovering type preservation. This
+		  result allows adding defunctionalization to the toolbox of type-preserving
+		  compiler writers.
+
+		  We also suggest that the principle of defunctionalization can be applied
+		  to eliminate constructs other than functions. To illustrate this point, we
+		  define two new type-preserving transformations. One eliminates Rémy-style
+		  \emph{polymorphic records} by translating them down to guarded algebraic data
+		  types. The other eliminates the dictionary records
+		  introduced by the standard compilation scheme for Haskell's \emph{type
+		  classes}. This yields a new type-preserving compilation scheme for type classes,
+		  whose target type system is an extension of Hindley and Milner's discipline
+		  with polymorphic recursion and guarded algebraic data types.}
+}
+
+@TechReport{LuoPollack92,
+  author =       "Zhaohui Luo and Robert Pollack",
+  title =        "{LEGO} Proof Development System: User's Manual",
+  institution =  "LFCS, Computer Science Dept., University of
+                 Edinburgh",
+  year =         "1992",
+  number =       "ECS-LFCS-92-211",
+  address =      "The King's Buildings, Edinburgh EH9 3JZ",
+  month =        may,
+  note =         "Updated version",
+  classification = "LF",
+}
+
+@Misc{oai:CiteSeerPSU:38734,
+  title =        "The {ALF} proof editor",
+  author =       "Bengt Nordstrom",
+  year =         "1996",
+  month =        mar # "~20",
+  abstract =     "Alf is an interactive proof editor. It is based on the
+                 idea that to prove a mathematical theorem is to build a
+                 proof object for the theorem. The proof object is
+                 directly manipulated on the screen, different
+                 manipulations correspond to different steps in the
+                 proof. The language we use is Martin-Lof's monomorphic
+                 type theory. This is a small functional programming
+                 language with dependent types. The language is open in
+                 the sense that it is easy to introduce new inductively
+                 defined sets. A proof is represented as a mathematical
+                 object and a proposition is identified with the set of
+                 its proof objects. Background During the years we have
+                 learned that there is no such thing as {"}the logic of
+                 programming{"}. Different kinds of programs require
+                 different kind of reasoning. Programs are manipulating
+                 different kinds of objects, and it would be very
+                 awkward to code these objects into a fixed set of
+                 objects. Objects have their own logic, it is for
+                 instance very different to reason about ongoing
+                 proce...",
+  citeseer-isreferencedby = "oai:CiteSeerPSU:2648;
+                 oai:CiteSeerPSU:176010; oai:CiteSeerPSU:53007;
+                 oai:CiteSeerPSU:234809; oai:CiteSeerPSU:224766",
+  annote =       "The Pennsylvania State University CiteSeer Archives",
+  language =     "en",
+  oai =          "oai:CiteSeerPSU:38734",
+  rights =       "unrestricted",
+  subject =      "Bengt Nordstrom The ALF proof editor",
+  URL =          "http://citeseer.ist.psu.edu/38734.html;
+                 ftp://ftp.cs.chalmers.se/pub/users/ilya/FMC/alfintro.ps.gz",
+}
+
+
+@InProceedings{epigram,
+  author =   "Connor McBride",
+  title =    "Epigram: Practical Programming with Dependent Types",
+  booktitle = "Notes from the 5th International Summer School on 
+              Advanced Functional Programming ",
+  city = "Tartu, Estonia",
+  month = "August",
+  year = "2004",
+  note = "Available at:\\ {\scriptsize {\tt http://www.dur.ac.uk/CARG/epigram/epigram-afpnotes.pdf }}"
+  }
+
+@Misc{oai:CiteSeerPSU:495376,
+  title =        "First-Order Unification by Structural Recursion",
+  author =       "Conor Mcbride",
+  year =         "2001",
+  month =        aug # "~16",
+  abstract =     "First-order unification algorithms (Robinson, 1965)
+                 are traditionally implemented via general recursion,
+                 with separate proofs for partial correctness and
+                 termination. The latter tends to involve counting the
+                 number of unsolved variables and showing that this
+                 total decreases each time a substitution enlarges the
+                 terms. There are many such proofs in the literature,
+                 for example, (Manna \& Waldinger, 1981; Paulson, 1985;
+                 Coen, 1992; Rouyer, 1992; Jaume, 1997; Bove, 1999).",
+  citeseer-isreferencedby = "oai:CiteSeerPSU:77059;
+                 oai:CiteSeerPSU:437063; oai:CiteSeerPSU:345366",
+  annote =       "The Pennsylvania State University CiteSeer Archives",
+  language =     "en",
+  oai =          "oai:CiteSeerPSU:495376",
+  rights =       "unrestricted",
+  subject =      "Conor Mcbride First-Order Unification by Structural
+                 Recursion",
+  URL =          "http://citeseer.ist.psu.edu/495376.html;
+                 http://www.dur.ac.uk/~dcs1ctm/unify.ps",
+}
+
+ 
+
+
+
+@Misc{Agda,
+  title =        "Agda is a system for incrementally developing proofs and programs",
+  author =       "Catarina Coquand",
+  note = "Web page describing AGDA: 
+   \\ {\small {\tt http://www.cs.chalmers.se/\verb+~+catarina/agda/ }}"
+ }
+
+
+@InProceedings{Rogue,
+  author =   "Aaron Stump",
+  title =    "Imperative {LF} Meta-Programming",
+  booktitle = "Logical Frameworks and Meta-Languages workshop",
+  city = "Cork, Ireland",
+  month = "July",
+  year = "2004",
+  note = "Available at:\\ {\small {\tt http://cs-www.cs.yale.edu/homes/carsten/lfm04/}}"
+  }
+  
+
+@Misc{pottier3,
+   author = "Vincent Simonet and Fran\c{c}ois Pottier",
+   title = "Constraint-based type inference for guarded algebraic data types",
+   note = "Available from:\\{\small {\tt http://cristal.inria.fr/\verb+~+simonet/publis/index.en.html }}"
+   }
+   
+
+@Phdthesis{pasalicThesis,
+  author =	"Emir Pasalic",
+  title = 	"The Role of Type Equality in Meta-programming",
+  degree =	"D.Phil. Thesis",
+  institution = "Oregon Health \& Science University",
+  school =      "OGI School of Science \& Engineering at OHSU",
+  month = 	"October",
+  year =	"2004",
+  note =	
+    "Available from:\\{\small http://www.cs.rice.edu/\verb+~+pasalic/thesis/body.pdf}"
+ }
+ 
+@PhdThesis{mpj:qualified-types,
+  author =	"Mark P. Jones",
+  title = 	"Qualified types: Theory and Practice",
+  degree =	"D.Phil. Thesis",
+  school = "Programming Research Group, University of Oxford",
+  month = 	"July",
+  year =	"1992"
+  } 
+
+@Article{Xi:1999:DCE,
+  author =       "Hongwei Xi",
+  title =        "Dead Code Elimination through Dependent Types",
+  journal =      "Lecture Notes in Computer Science",
+  volume =       "1551",
+  pages =        "228--242",
+  year =         "1999",
+  CODEN =        "LNCSD9",
+  ISSN =         "0302-9743",
+  bibdate =      "Tue Feb 5 11:53:36 MST 2002",
+  URL =          "http://link.springer-ny.com/link/service/series/0558/bibs/1551/15510228.htm;
+                 http://link.springer-ny.com/link/service/series/0558/papers/1551/15510228.pdf",
+  acknowledgement = ack-nhfb,
+  keywords =     "declarative languages; logic programming; PADL",
+}
+
+
+@Misc{oai:CiteSeerPSU:489584,
+  title =        "Parsec: Direct Style Monadic Parser Combinators For
+                 The Real World",
+  author =       "Daan Leijen and Erik Meijer",
+  year =         "2001",
+  month =        oct # "~04",
+  abstract =     "Despite the long list of publications on parser
+                 combinators, there does not yet exist a monadic parser
+                 combinator library that is applicable in real world
+                 situations. In particular naive implementations of
+                 parser combinators are likely to suffer from space
+                 leaks and are often unable to report precise error
+                 messages in case of parse errors. The Parsec parser
+                 combinator library described in this paper, utilizes a
+                 novel implementation technique for space and time
+                 ecient parser combinators that in case of a parse
+                 error, report both the position of the error as well as
+                 all grammar productions that would have been legal at
+                 that point in the input.",
+  citeseer-isreferencedby = "oai:CiteSeerPSU:75666",
+  citeseer-references = "oai:CiteSeerPSU:370543",
+  annote =       "The Pennsylvania State University CiteSeer Archives",
+  language =     "en",
+  oai =          "oai:CiteSeerPSU:489584",
+  rights =       "unrestricted",
+  subject =      "Daan Leijen,Erik Meijer Parsec: Direct Style Monadic
+                 Parser Combinators For The Real World",
+  URL =          "http://citeseer.ist.psu.edu/489584.html;
+                 http://www.cs.ruu.nl/~daan/papers/parsec-paper-letter.ps",
+}
+
+@TechReport{oai:CiteSeerPSU:312481,
+  title =        "Type Reconstruction in the Presence of Polymorphic
+                 Recursion and Recursive Types",
+  author =       "A. J. Kfoury and Said Jahama",
+  year =         "2000",
+  month =        mar # "~21",
+  abstract =     "We establish the equivalence of type reconstruction
+                 with polymorphic recursion and recursive types is
+                 equivalent to regular semiunification which proves the
+                 undecidability of the corresponding type reconstruction
+                 problem. We also establish the equivalence of type
+                 reconstruction with polymorphic recursion and positive
+                 recursive types to a special case of regular
+                 semi-unification which we call positive regular
+                 semi-unification. The decidability of positive regular
+                 semiunification is an open problem. 1 Introduction
+                 Semi-unification has developed into a powerful tool in
+                 the study of polymorphic type systems in recent years.
+                 Various forms of the semi-unification problem,
+                 depending on the kind of terms allowed in the
+                 inequalities of an instance, Partly supported by NSF
+                 grant CCR-9113196. Address: Department of Computer
+                 Science, Boston University, 111 Cummington St., Boston,
+                 MA 02215, USA. y Partly supported by NSF grant
+                 CCR-9113196. Address: Department of Computer Science,
+                 Boston ...",
+  citeseer-isreferencedby = "oai:CiteSeerPSU:202946;
+                 oai:CiteSeerPSU:203060; oai:CiteSeerPSU:198348;
+                 oai:CiteSeerPSU:37667; oai:CiteSeerPSU:517191;
+                 oai:CiteSeerPSU:196963; oai:CiteSeerPSU:301134",
+  annote =       "The Pennsylvania State University CiteSeer Archives",
+  language =     "en",
+  oai =          "oai:CiteSeerPSU:312481",
+  rights =       "unrestricted",
+  subject =      "A. J. Kfoury,Said Jahama Type Reconstruction in the
+                 Presence of Polymorphic Recursion and Recursive Types",
+  URL =          "http://citeseer.ist.psu.edu/312481.html;
+                 http://www.cs.bu.edu/techreports/1993-019-recursivetype.ps.Z",
+}
+
+
+
+@Misc{Sulzmann1,
+   author = "Martin Sulzmann and Meng Wang ",
+   title = "A Systematic Translation of Guarded Recursive Data Types to Existential Types",
+   month = "February",
+   year = "2005",
+   note = "Available from:\\{\small {\tt http://www.comp.nus.edu.sg/\verb+~+sulzmann/ }}"
+   }
+
+@Misc{Sulzmann2,
+   author = "Peter J. Stuckey and Martin Sulzmann",
+   title = "Type Inference for Guarded Recursive Data Types",
+   month = "February",
+   year = "2005",
+   note = "Available from:\\{\small {\tt http://www.comp.nus.edu.sg/\verb+~+sulzmann/ }}"
+   }
+
+@Misc{SheardLinger,
+   author = "Tim Sheard and Nathan Linger",
+   title = "Programming with Static Invariants in {O}mega",
+   month = "September",
+   year = "2004",
+   note = "Available from:\\{\small {\tt http://www.cs.pdx.edu/\verb+~+sheard/ }}"
+   }
+
+@inproceedings{sheard02template,
+ author =	"Tim Sheard and Simon Peyton Jones",
+ title =	"Template Meta-Programming for Haskell",
+ booktitle =	"{ACM} {SIGPLAN} Workshop on Haskell",
+ year =		"2002",
+ pages =	"1--16",
+ location =	"Pittsburgh, Pennsylvania",
+ publisher =	"ACM Press"
+ }
+ 
+ 
+ @PhdThesis{Taha99,
+   author =       "Walid Taha",
+   title =        "Multi-Stage Programming: Its Theory and Applications",
+   school =       "Oregon Graduate Institute of Science and Technology",
+   year =         "1999",
+   month =        nov,
+ }
+
+
+@PhdThesis{koen2001,
+   author =       "Koen Claessen",
+   title =        "An Embedded Language Approach to Hardware Description and Verification",
+   school =       "Chalmers University of Technology",
+   year =         "2000"
+ }
+
+@Article{Leijen:2000:DSE,
+  author =       "Daan Leijen and Erik Meijer",
+  title =        "Domain-Specific Embedded Compilers",
+  journal =      "ACM SIG{\-}PLAN Notices",
+  volume =       "35",
+  number =       "1",
+  pages =        "109--122",
+  month =        jan,
+  year =         "2000",
+  CODEN =        "SINODQ",
+  ISSN =         "0362-1340",
+  bibdate =      "Sun Dec 14 09:18:13 MST 2003",
+  acknowledgement = ack-nhfb,
+}
+
+@Misc{omegamanual,
+   author = "Tim Sheard",
+   title = "Omega Users Guide",
+   month = "March",
+   year = "2005",
+   note = "Available from:\\{\small {\tt http://www.cs.pdx.edu/\verb+~+Omega/ }}"
+   }
+
+@InProceedings{TahNie03,
+  author =       "Taha and Nielsen",
+  title =        "Environment Classifiers",
+  booktitle =    "POPL: 30th ACM SIGACT-SIGPLAN Symposium on Principles
+                 of Programming Languages",
+  year =         "2003",
+}
+
+@Article{Milner78,
+  author =       "Robin Milner",
+  journal =      "Journal of Computer and System Science",
+  pages =        "348--375",
+  title =        "A Theory of Type Polymorphism in Programming
+                 Languages",
+  volume =       "17",
+  number =       "3",
+  year =         "1978",
+}
+
+
+@techreport{GADT+Kind=Dep,
+title = "{GADT}s + Extensible Kind System = Dependent Programming",
+author = "Tim Sheard and James Hook and Nathan Linger",
+institution = "Portland State University",
+year = "2005",
+note = {{\tt http://www.cs.pdx.edu/\verb+~+sheard}}
+}
+
+@techreport{Playing,
+title = "Playing with Types",
+author = "Tim Sheard",
+institution = "Portland State University",
+year = "2005",
+note = {{\tt http://www.cs.pdx.edu/\verb+~+sheard}}
+}
+
+@Article{Harper:1991:TCU,
+  author =       "R. Harper and R. Pollack",
+  title =        "Type checking with universes",
+  journal =      "Theoretical Computer Science",
+  volume =       "89",
+  number =       "1",
+  pages =        "107--136",
+  day =          "21",
+  month =        oct,
+  year =         "1991",
+  CODEN =        "TCSCDI",
+  ISSN =         "0304-3975",
+  bibdate =      "Sat Nov 22 13:24:22 MST 1997",
+  acknowledgement = ack-nhfb,
+  classification = "C4210 (Formal logic); C4240 (Programming and
+                 algorithm theory)",
+  corpsource =   "Sch. of Comput. Sci., Carnegie Mellon Univ.,
+                 Pittsburgh, PA, USA",
+  keywords =     "formal logic; formal theory; generalized calculus of
+                 constructions; ML; programming theory; type checking;
+                 type polymorphism; type theories; typical ambiguity
+                 convention; universe levels; universe polymorphism;
+                 well-typedness",
+  pubcountry =   "Netherlands",
+  treatment =    "T Theoretical or Mathematical",
+}
+
+
+@InProceedings{ATS2004,
+  author =   "Hongwei Xi",
+  title =    "Applied Type Systems (extended abstract)",
+  booktitle = "In post-workshop proceedingds of TYPES 2003",
+  pages = "394 -- 408",
+  year = "2004",
+  note = "Springer-Verlag LNCS 3085"
+  }
+
+
+@InProceedings{ATS2005,
+  author =   "Chiyan Chen and Hongwei Xi",
+  title =    "Combining Programming with Theorem Proving",
+  booktitle = "To appear in ICFP 2005",
+  year = "2005",
+  note = "http://www.cs.bu.edu/~hwxi/"
+  }
+
+@techreport{CurryHoward,
+title = "Putting Curry-Howard to Work",
+author = "Tim Sheard",
+institution = "Portland State University",
+year = "2005",
+note = {{\tt http://www.cs.pdx.edu/\verb+~+sheard}}
+}
+
+
+@techreport{RSP1,
+  author =   "Edwin Westbrook and Aaron Stump and Ian Wehrman",
+  title =    "A Language-based Approach to Functionally Correct INperative Programming",
+  year = "2005",
+  institution = "Washington University in St. Louis",
+  note = "Available at:\\ {\small {\tt http://cl.cse.wustl.edu/}}"
+  }
+
+
+@techreport{ESCJava1,
+ author = "David L. Detlefs and K. Rustan M. Leino and Greg Nelson and James B. Saxe",
+ title = "Extended Static Checking",
+ number = "Research Report 159", 
+ institution = "Compaq Systems Research Center",
+ month = "December",
+ year = "1998"
+ }
+
+@InProceedings{Vault,
+  author =       "Robert {DeLine} and Manuel F{\"a}hndrich",
+  title =        "Enforcing {High-Level} Protocols in {Low-Level}
+                 Software",
+  pages =        "59--69",
+  ISSN =         "0362-1340",
+  editor =       "Cindy Norris and Jr. James B. Fenwick",
+  booktitle =    "Proceedings of the {ACM} {SIGPLAN} '01 Conference on
+                 Programming Language Design and Implementation
+                 ({PLDI}-01)",
+  month =        jun # " ~20--22",
+  series =       "ACM SIGPLAN Notices",
+  volume =       "36.5",
+  publisher =    "ACMPress",
+  address =      "N.Y.",
+  year =         "2001",
+}
+
+
+@Misc{oai:CiteSeerPSU:653069,
+  title =        "A Reflective Functional Language for",
+  author =       "Jim Grundy and Tom Melham",
+  year =         "2003",
+  month =        dec # "~19",
+  abstract =     "ch we can both execute functions efficiently and
+                 express algorithms over the syntactic structure of
+                 their definitions. Our presentation at DCC 2004 will
+                 describe reFL [4], a new language designed to meet
+                 these and other theorem proving and hardware design
+                 requirements. reFL is strongly typed and similar to ML
+                 [5], but has quotation and antiquotation constructs
+                 that can be used to construct and decompose expressions
+                 in the reFL language itself. This provides a form of
+                 reflection like that in LISP but in a strongly typed
+                 language. The reFL language is fully implemented and
+                 replaces FL in future versions of the Forte system. The
+                 target applications of theorem proving and hardware
+                 design give intensional analysis a primary role in reFL
+                 . Our language therefore differs from other
+                 `meta-programming' languages, such as MetaML [14] and
+                 Template Haskell [12], that are aimed more at program
+                 generation and optimization of evaluation. Our
+                 presentation will describe these differences and the",
+  citeseer-references = "oai:CiteSeerPSU:679064; oai:CiteSeerPSU:495487;
+                 oai:CiteSeerPSU:526067; oai:CiteSeerPSU:469608;
+                 oai:CiteSeerPSU:541397; oai:CiteSeerPSU:251651",
+  language =     "en",
+  oai =          "oai:CiteSeerPSU:653069",
+  rights =       "unrestricted",
+  subject =      "Jim Grundy,Tom Melham A Reflective Functional Language
+                 for",
+  URL =          "http://citeseer.ist.psu.edu/653069.html;
+                 http://www.cs.chalmers.se/~ms/DCC04/Abstracts/OLeary.pdf",
+}
+
+@techreport{reFLect03,
+ author = "Sava Krstic and John Matthews",
+ title = "Subject Reduction and Confluence for the reFLect Language",
+ number = "CSE-03-014", 
+ institution = "Oregon Graduate Institute",
+ year = "2003",
+ note = "\verb+http://www.cse.ogi.edu/~krstic/+"
+ }
+ 
+@inproceedings{reFLect04,
+  title =        "Semantics of the re{FL}ect language",
+  author =       "John Matthews and Sava Krsti C",
+  year =         "2004",
+  month =        "August",
+  booktitle =  "6th ACM-SIGPLAN International Conference on Principles and Practice of Declarative Programming",
+  city = "Verona, Italy",
+  URL =          "http://citeseer.ist.psu.edu/672459.html;
+                 http://www.cse.ogi.edu/~krstic/psfiles/KrsticMatthewsPPDP04.ps.gz"
+}
+
+@BOOK{Boyer-Moore:book79,
+    AUTHOR = "Boyer, Robert S. and Moore, J. Strother",
+    TITLE = "A Computational Logic",
+    PUBLISHER = "Academic Press, New York",
+    YEAR = 1979  }
+
+@PhdThesis{Brauburger:thesis,
+  author =       "J{\"u}rgen Brauburger",
+  title =        "Automatic Termination Analysis for Functional and
+                 Imperative Programs",
+  school =       "Technische Universit{\"a}t Darmstadt",
+  year =         "1999",
+  series =       "{DISKI}, {D}issertationen zur {K}{\"u}nstlichen
+                 {I}ntelligenz",
+  number =       "207",
+}
+
+
+@Article{HigherOrderTypeAnalysis,
+  author =       "Stephanie Weirich",
+  title =        "Higher-Order Intensional Type Analysis",
+  journal =      "Lecture Notes in Computer Science",
+  volume =       "2305",
+  pages =        "98--??",
+  year =         "2002",
+  CODEN =        "LNCSD9",
+  ISSN =         "0302-9743",
+  bibdate =      "Tue Sep 10 19:09:22 MDT 2002",
+  URL =
+"http://link.springer-ny.com/link/service/series/0558/bibs/2305/23050098.htm;
+http://link.springer-ny.com/link/service/series/0558/papers/2305/23050098.pdf",
+  acknowledgement = ack-nhfb,
+}
+
+
+@Article{PatternUnification,
+  author =       "Dale Miller",
+  title =        "Unification Under a Mixed Prefix",
+  journal =      "Journal of Symbolic Computation",
+  volume =       "14",
+  number =       "4",
+  pages =        "321--358",
+  month =        oct,
+  year =         "1992",
+  CODEN =        "JSYCEH",
+  ISSN =         "0747-7171",
+  MRclass =      "68T15 (03B35 03B40)",
+  MRnumber =     "93g:68121",
+  bibdate =      "Sat May 10 15:54:09 MDT 1997",
+  acknowledgement = ack-nhfb,
+  classcodes =   "C4240 (Programming and algorithm theory)",
+  corpsource =   "Dept. of Comput. Sci., Pennsylvania Univ.,
+                 Philadelphia, PA, USA",
+  keywords =     "decidability; mixed prefix; optimizations;
+                 pre-unifiers; search problems; symbol manipulation;
+                 unification problems; unification search problem",
+  treatment =    "T Theoretical or Mathematical",
+  mrnumber-url = "http://www.ams.org/mathscinet-getitem?mr=93g%3a68121",
+}
+
+
+@InProceedings{HOAS,
+  author =       "R. Harper and F. Honsell and G. Plotkin",
+  title =        "A Framework for Defining Logics",
+  pages =        "194--204",
+  booktitle =    "Symposium on Logic in Computer Science ({LICS} '87)",
+  month =        jun,
+  publisher =    "IEEE Computer Society Press",
+  address =      "Washington, D.C., USA",
+  year =         "1987",
+  ISBN =         "0-8186-0793-9",
+} 
+
+
+@Misc{infopipe,
+  title =          "Infopipe web sites:",
+  key = "infopipes",
+  note =         
+    "\\{\verb+http://www.cs.pdx.edu/~walpole/infopipes.html+},
+     and {\verb+http://woodworm.cs.uml.edu/~rprice/ep/koster/+}.",
+} 
+
+@TechReport{94:2,
+  author =	"Didier Remy",
+  title =	"Syntactic theories and the algebra of record terms",
+  institution =  "Institut National de Recherche en Informatique et en
+		 Automatique",
+  number =	"1869",
+  month =	mar,
+  year = 	"1993",
+}
+
+@Article{IC::Wand1991,
+  title =        "Type Inference for Record Concatenation and Multiple
+                 Inheritance",
+  author =       "Mitchell Wand",
+  pages =        "1--15",
+  journal =      "Information and Computation",
+  month =        jul,
+  year =         "1991",
+  volume =       "93",
+  number =       "1",
+  preliminary =  "LICS::Wand1989:92",
+  abstract =     "We show that the type inference problem for a lambda
+                 calculus with records, including a record concatenation
+                 operator, is decidable. We show that this calculus does
+                 not have principal types, but does have finite complete
+                 sets of types: that is, for any term $M$ in the
+                 calculus, there exists an effectively generable finite
+                 set of type schemes such that every typing for $M$ is
+                 an instance of one the schemes in the set. \par We show
+                 how a simple model of object-oriented programming,
+                 including hidden instance variables and multiple
+                 inheritance, may be coded in this calculus. We conclude
+                 that type inference is decidable for object-oriented
+                 programs, even with multiple inheritance and classes as
+                 first-class values."
+}

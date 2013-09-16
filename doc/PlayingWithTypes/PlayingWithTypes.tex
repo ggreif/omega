@@ -1,0 +1,1708 @@
+\documentclass{sigplanconf}
+\usepackage{hyperref}   
+\usepackage{makeidx,multicol,amssymb}
+\include{psinput}
+\include{psfig}
+\usepackage{epsf}
+\usepackage{epsfig}
+\usepackage{graphics,color}
+
+\newcommand{\om}{$\Omega$mega}
+
+
+\begin{document}
+
+
+
+\title{Playing with Type Systems:\\
+\large{Automated assistance in the design of programming languages}\\
+\small{Revision 2}}
+
+\authorinfo{Tim Sheard}
+           {Portland State University}
+           {sheard@cs.pdx.edu}
+\maketitle
+
+\begin{abstract} 
+
+We introduce the programming language \om, and illustrate how it can be used
+as a general purpose meta-language. \om\ has a sophisticated type system built
+on top of Generalized Algebraic Datatypes and an extensible kind system. It
+allows users to encode object-level types in the meta-level data structures
+that represent object-level terms. We show \om\ can be used to explore
+language designs interactively, by constructing both static and dynamic
+semantics as \om\ programs. These programs can be seen as partially checked
+proofs of soundness of the system under exploration. As a large example we
+present a new type system for MetaML, that is simpler than previous type systems.
+
+
+\end{abstract}
+
+
+\section{Introduction.}\label{intro}
+It has become common practice when designing a new language to create
+both a static semantics (type system) and a dynamic semantics and to prove
+the soundness of the type system with respect to the dynamic semantics.
+This process is often exploratory. The designer has an idea,  the
+approach is analyzed, and hopefully the consequences of the approach
+are quickly discovered. Automated aid in this process would be a great boon.
+
+The ultimate goal of this exploratory process is a type system, a semantics,
+and a proof. The proof witnesses the fact that {\em well-typed programs do not
+go wrong}~\cite{Milner78} for the language under consideration. 
+Approaches include a subject reduction proof in the style of
+Wright and Felleisen\cite{Wright:94} on a small step semantics, or
+by using denotational approaches. In either case, proofs require an amazing amount of
+detail and are most often carried out by hand, and are thus subject to all the
+foils of human endeavors. It has long been a personal goal of the author to
+develop a generic meta-language that could be used for exploring the static
+and dynamic semantics for new object-languages\cite{SheardPasalic2002,Sheard01} 
+that could aid in the generation of such proofs. Many others have
+had similar desires and the development of systems like
+Twelf\cite{CADE99*202} and Coq\cite{COQ74} attest to the broad appeal of 
+these ideas. But, while the author owes much to these systems for inspiration,
+he has always desired a system whose use was closer in style
+to the use of a programming language than existing systems. Hence the development of the language \om.
+This paper reports on our experience using the
+language \om\cite{Sheard:2004:LF,omegamanual,SheardLinger,SheardLogFrWks04} as
+just such a meta-language. In this paper we show that:
+
+\begin{itemize}
+
+\item Much of the work of exploring the nuances of
+a type system for a new language can be assisted by using mechanized tools 
+-- a generic meta-language.
+We call this exploration playing with type systems.
+
+\item Such tools need not be much more complicated than your favorite
+functional language (Haskell), and are thus within the reach most language researchers.
+After all playing should be child's work.
+
+\item The automation helps language designers visualize the consequences
+of their design choices quickly, and thus helps speed the design process.
+
+\item The artifacts created by this exploration, while
+not quite proofs in the full sense, are checked by machine, 
+and are hence less subject to error than pencil and paper proofs constructed
+by hand.
+
+\end{itemize}
+
+In addition to the broad goals about meta-language design, the author 
+has also devoted much energy to searching for a simple elegant type system
+for a multi-stage language such as MetaML. Such a
+system should not throw away too many good
+programs\cite{Moggi-Taha-Benaissa-Sheard-ESOP99,TS00,Taha99} (thus losing
+much of its usefulness) or be overly
+complex\cite{Calgano-Moggi-Sheard-JFP03,T00,TahNie03}. 
+After many attempts, the search has been fruitful. Thus, this paper
+has two purposes. First, it demonstrates the efficacy of the language
+\om{} as a first step towards the design of a general purpose meta-language.
+Second, it illustrates that a simple elegant type system for a multi-stage
+language is possible. The approach is so general, that we believe it can
+be applied to any multistage language, and as such is of wide spread
+interest to the program generation community.
+
+The paper is divided into three parts. First, in Section \ref{omega} we
+introduce the language \om. Second, in Section \ref{metaml} we discuss the
+multi-staged language MetaML, and explain why it is so hard to develop a sound
+type system for a staged language. In this section we provide several small
+programs that illustrate the multiple causes of soundness errors in a staged
+language. Third, in Section \ref{lang} we play with type systems. In this
+section we introduce our static and dynamic semantics for a multi-stage language as
+an \om\ program. We demonstrate that the ability to explore issues is greatly
+enhanced by the machine assistance supplied by \om, and that the artifacts
+produced consist of machine checked proofs.
+
+\section{The \om~ meta-programming language.} \label{omega}
+
+
+Haskell makes a fair meta-language. Its support for abstraction and first
+class functions make it an excellent tool for defining object-language
+programs as Haskell data, and for defining meta-language manipulations as
+Haskell functions. Unfortunately, its type system is too weak to be a true
+generic meta-programming system. In particular Haskell lacks the facilities to
+define and enforce type-systems for object-language programs represented as
+meta-language data. To overcome this deficiency we have defined the language
+\om.
+
+\begin{itemize}
+
+\item \om~ is based on Haskell so
+that it is easy for Haskell programmers to learn.
+
+\item We started by adding some features and removing others. To make
+our first attempt simple we have removed the class system of Haskell,
+and made \om~ strict but pure. We have tried hard to keep all the other
+features of Haskell not affected by these choices intact.
+
+\item We added small (backward compatible) features that support 
+programs that use a form of refinement or dependent types. We tried hard
+not to disturb the functional programming style -- in particular the phase
+distinction between values and types. The features we added are Generalized
+Algebraic Datatypes (GADTs) and an extensible kind system.
+
+\item We built a non-trivial implementation and have programmed up a
+wide array of examples from the literature.
+
+\end{itemize}
+
+\subsection{Generalized Algebraic Datatypes}
+
+The key to this style of programming is the use of Generalized
+Algebraic Datatypes (GADTs), a generalization of the normal
+Algebraic Datatypes (ADT) available in functional programming
+languages such as Haskell, ML, and O'Caml. Implementing GADTs
+in a functional language requires only a small, backward
+compatible, change to the ADT notion and is easily understood
+by functional programmers. A language with GADTs can
+support several closely related concepts such Refinement
+Types\cite{113468,Xi:1999:DTP,Davies97}, Guarded Recursive Datatype
+Constructors\cite{XiCheChe03}, Inductive
+Families\cite{Coquand:1994:IDT,Dybjer:1999:FAI}, First-class phantom
+types\cite{Hinze:03:Phantom}, Silly
+Type Families\cite{sillyTF}, and Equality Qualified
+Types\cite{Sheard:2004:LF,SheardLogFrWks04}. 
+% Wobbly types\cite{wobbly}, 
+There are many
+examples of the usefulness of such concepts in the
+recent literature\cite{Baars:2002:TDT,XiChen2003,HinzeHaskellWorkshop02,PasalicLingerGpce,pottier2,pottier1,Xi:1998:EAB}.
+
+
+
+ADTs generalize other forms of structuring data such as enumerations,
+records, and tagged variants. For example,
+in \om~ (and in Haskell) we write:
+
+\begin{verbatim}
+ -- An enumeration type
+data Major = CompScience | English | Chemistry    
+
+type Number = Int
+type Title = String
+ -- A record structure
+data Class = MakeClass Number Title  
+
+-- A tagged Variant
+data Person = Teacher [Class]  | Student Major    
+\end{verbatim}
+
+We assume the reader has a certain familiarity with ADTs. In
+particular that values of ADTs are constructed by {\em constructors}
+and that they are taken apart by the use of {\em pattern matching}.
+Two valuable features of ADTS are their ability to be {\em
+parameterized by a type} and to be {\em recursive}. A simple example
+that employs both these features is:
+\begin{verbatim}
+data Tree a 
+   = Fork (Tree a) (Tree a) 
+   | Node a 
+   | Tip
+\end{verbatim}
+This declaration defines the polymorphic {\tt Tree} type constructor. Example tree
+types include {\tt (Tree Int)} and {\tt (Tree Bool)}. In fact the
+type constructor {\tt Tree} can be applied to any type whatsoever.
+Note how the constructor functions ({\tt Fork},\ {\tt Node}) and constants ({\tt Tip})
+are given polymorphic types.
+
+\vspace*{0.1in}
+\noindent 
+{\tt Fork :: forall a . Tree a -> Tree a -> \underline{Tree a}}\\
+{\tt Node :: forall a . a -> \underline{Tree a}}\\
+{\tt Tip :: forall a . \underline{Tree a}}
+ \vspace*{0.1in}
+ 
+When we define a parameterized algebraic datatype, the syntactic formation
+rules of the {\tt data} declaration enforce the following restriction: The
+range of every constructor function, and the type of every constructor
+constant must be a polymorphic instance of the new type constructor being
+defined. Notice how the constructors for {\tt Tree} all have range ({\tt Tree
+{\it a}}) with a polymorphic type variable {\it a}.  We can remove this
+restriction {\it semantically} by strengthening the type system of the
+language. The restriction is {\it syntactically} removed by the following
+mechanism. In a {\tt data} declaration, 
+Rather than supplying the type arguments to the type being defined,
+the user supplys an explicit kind declaration; and
+rather than leaving the range of the
+constructor functions implicit, the user replaces the enumeration of the
+constructors and the type of their domains with a full explicit typing of each
+constructor. The only restriction being that the range must be some instance
+of the type being defined. For example we could define the {\tt Tree}
+type as follows using the new syntax.
+\begin{verbatim}
+data Tree::  *0 ~> *0 where
+  Fork:: Tree a -> Tree a -> Tree a
+  Node:: a -> Tree a
+  Tip:: Tree a
+\end{verbatim}
+\noindent
+It is not necessary to use the new syntax, since {\tt Tree} meets
+the restriction. As we will see below, there exist many useful types
+that do not. Removing the restriction requires new type checking rules that are
+beyond the scope of this paper, but which have been well
+studied\cite{wobbly,XiCheChe03,Hinze:03:Phantom}. 
+
+
+\subsection{Representing Object-Programs with Types as Data}
+This simple extension allows
+us to build datatypes representing object-programs, whose
+meta-level types encode the object-level types of the programs
+represented. A very simple object-language example with types is:
+
+\begin{verbatim}
+data Term :: *0 ~> *0 where
+  Const :: a -> Term a
+  Pair :: Term a -> Term b -> Term (a,b)
+  App :: Term(a -> b) -> Term a -> Term b
+\end{verbatim}
+
+Above we introduced the new type constructor {\tt Term}, which is a
+representation of a simple object-language of constants and pairs. {\tt Term}
+is a type constructor. It must be applied to another type to create a valid
+new type of kind {\tt *0} (star-zero). We say {\tt Term} is classified by the kind
+\verb+*0 ~> *0+. The kind \verb+*0+ classifies all types that classify
+computable values. For more on kinds, see Section \ref{kinds}. No restriction
+is placed on the types of the constructors except that the range of each
+constructor must be a fully applied instance of the type being defined, and
+that the type of the constructor as a whole must be classified by \verb+*0+.
+Note how the range of {\tt Pair} is a non-trivial instance of {\tt Term}.
+
+As promised, {\tt Term}s are a typed object-language representation, i.e. a data
+structure that represents terms in some object-language. The meta-level
+type of the representation ({\tt Term a}), indicates the type 
+of the object-level term ({\tt a}). This is made possible only by the flexibility of
+the GADT mechanism. Using typed object-level terms,
+it is impossible to construct ill-typed term representations, because
+the meta-language type system enforces this constraint.
+\begin{verbatim}
+ex1 :: Term Int  
+ex1 = App (App (Const (+)) (Const 3)) (Const 5)
+
+ex2 :: Term (Int,String)
+ex2 = Pair ex1 (Const "z")
+\end{verbatim}
+Attempting to construct an ill-typed object term, like {\tt (App (Const 3) (Const 5))},
+causes a meta-level (\om) type error. 
+
+Another advantage of using GADTs rather than ADTs is that it is now possible to
+construct a tagless\cite{SheardPasalic2002,Taha:2001:TEJ,TahaTag2000}
+interpreter directly. An interpreter is a function that takes a term to the
+value which is the meaning of that term. In a language without GADTs terms are
+untyped, and values are some universal value domain like: {\tt data V = IntV
+Int | PairV V V | FunV (V -> V)}, and the interpeter is said to be tagged,
+since each value must be tagged with one of the constructors of the universal
+domain (such as {\tt IntV}, {\tt PairV}, or {\tt FunV}). See
+\cite{PasalicLingerGpce} for a detailed discussion of this phenomena.
+But using GADTs none of this is necessary. Consider:
+
+\begin{verbatim}
+eval :: Term a -> a
+eval (Const x) = x
+eval (App f x) = eval f (eval x)
+eval (Pair x y) = (eval x,eval y)
+\end{verbatim}
+
+\noindent
+Here the universal domain is not necessary, and the tagless interpreter has the structure of a
+denotational semantics. Because the {\tt eval} function is total and
+well-typed at the meta-level, it also implies that the object-level
+semantics (defined by {\tt eval}) is also well-typed. As long as {\tt
+eval} is total, {\em every} well-typed object level term evaluates to
+a well-formed value.
+
+While we worked hard to make this look like Haskell programming, there
+are some key differences. First, the prototype declaration ({\tt eval :: Term
+a -> a}) is required, not optional. Functions which pattern match over
+GADTs can be type checked, but type inference is much harder (see
+\cite{pottier3} for work on how this might be done). Functions that
+don't pattern match over GADTs can have Hindley-Milner types inferred
+for them (see \cite{wobbly} for how this mixture of type-checking and
+type-inference is done). Requiring prototypes for only some functions
+should be familiar to Haskell programmers because polymorphic-recursive
+functions already require prototypes\cite{oai:CiteSeerPSU:312481}. 
+
+\subsection{Values, Types, Kinds, and Sorts}\label{kinds}
+
+In Haskell, values are classified by types. In a similar fashion, types can be
+classified by kinds, and kinds can be classified by sorts. We indicate
+clasification as a relation using the infix symbol({\tt ::}). We say ({\tt ::})
+is overloaded because the same notation can be used in all three contexts: {\em
+value}{\tt ::}{\em type}, and {\em type}{\tt ::}{\em kind}, and {\em kind}{\tt
+::}{\em sort}.
+
+Some concrete examples at the value level include:
+{\tt 5::Int}, and {\tt [True]::[Bool]}.  We say {\tt 5} is classified by {\tt Int}.
+At the type level:
+{\tt Int::*0 }, \verb+Term:: *0 ~> *0+. We say {\tt Int}
+is classified by star-zero, and {\tt Tree} is classified
+by star-zero to star-zero. {\tt *0}, and \verb+*0 ~> *0+ are kinds.
+At the kind level both: \verb+*0:: *1+ and \verb+(*O ~> *0):: *1+. Here, \verb+*1+
+is a sort.
+
+The kind {\tt *0} is interesting because it classifies all
+types that classify values (things we actually can compute). For example,
+{\tt Int:: *0}, and {\tt [Int]:: *0}, but not {\tt Tree:: *0}, because
+there are no values of type {\tt Tree} (but there are values of type {\tt Tree Int}).
+
+{\em New kinds} are introduced by the {\em kind} declaration that also
+introduces the type constructors that produce types classified by that kind,
+just as {\em new types} are introduced by the {\em data} declaration along with
+the value constructors that produce values classified by that type. The 
+{\tt data} and {\tt kind} declarations introduce similar structures, but at
+different levels in the type hierarchy. Two interesting kind declarations,
+of interest in this paper follow:
+
+\begin{verbatim}
+kind Nat = Z | S Nat
+\end{verbatim}
+
+The {\tt Nat} declaration introduces the kind {\tt Nat} and two new
+type constructors {\tt Z} and {\tt S} which encode the natural
+numbers at the type level.
+The type {\tt Z} has kind {\tt Nat}, and {\tt S} has kind {\tt Nat \verb+~+>
+Nat}. The type {\tt S} is a type constructor, so it has a higher-order kind. We
+indicate this using the classifies relation as follows:
+\begin{verbatim}
+Z :: Nat
+S :: Nat ~> Nat
+Nat :: *1
+\end{verbatim}
+
+The classification {\tt Nat::*1} indicates that {\tt Nat} is a kind classified
+by the sort {\tt *1}. Both {\tt Nat} and {\tt *0} are kinds at the same
+``level"  --- they are both classified by {\tt *1}.
+
+\begin{verbatim}
+kind Row (x :: *1) = RNil | RCons x (Row x)
+\end{verbatim}
+
+\noindent
+{\tt Row}s are list like structures at the type level,
+which are constructed by the type constructors {\tt RNil} and {\tt RCons}.
+For example {\tt (RCons Int (RCons Bool RNil))} and {\tt (RCons Z RNil)}.
+Such types are kinded by {\tt Row}.
+The kind {\tt Row} is a higher order kind, and is classified by
+\verb+(*1 ~> *1)+.  Thus {\tt Row} must be applied to a kind to be well formed
+(the argument indicates the kind of the types stored in the row).
+For example if we classify the examples above we get:
+\begin{verbatim}
+(RCons Int (RCons Bool RNil)):: Row *0
+(RCons Z RNil):: Row Nat
+\end{verbatim}
+\noindent
+Both \verb+*1+ and \verb+(*1 ~> *1)+ are
+kinds classified by the sort \verb+*2+.  
+
+\begin{figure}[t]
+\center{
+{\scriptsize
+\begin{tabular}{|ccccccc|} \hline
+{\tiny value name space} & $\mid$ & {\tiny type name space} & & & & \\ \hline
+value & $\mid$ & type & $\mid$ & kind &$\mid$ & sort \\ \hline
+5     &::& Int  &::& *0  &::& *1  \\ \hline
+[2]   &::& [Int]&::& *0  &::& *1  \\ \hline
+      &  & []   &::& *0 $\leadsto$ *0 &::& *1\\ \hline
+      &  &      &  & Nat &::& *1\\ \hline  
+      &  &  Z   &::& Nat &::& *1\\ \hline   
+      &  &  S   &::& Nat $\leadsto$ Nat &::& *1\\ \hline 
+      &  & Nat'   &::& Nat $\leadsto$ *0 &::& *1 \\ \hline  
+  Z   &::& Nat' Z &::& * 0               &::& *1 \\ \hline   
+  S   &::& Nat' m $\rightarrow$ Nat' (S m)  &::& *0 &::& *1\\ \hline        
+      &  & Term  &::&  *0 $\leadsto$ * 0 &::& *1\\ \hline
+Const &::& a $\rightarrow$ Term a &::& *0 &::& *1\\ \hline 
+%     &  & Has  &::& Tag $\leadsto$ *1 $\leadsto$ HasType &::& *1\\ \hline
+      &  &      &  & Row  &::& *1 $\leadsto$ *1\\ \hline
+%     &  & RCons&::& k $\leadsto$ Row k $\leadsto$ Row k &::& *1\\ \hline
+      &  & RNil &::& Row k &::& *1\\ \hline      
+\end{tabular}}}
+
+\caption{Values, types, kinds, and sorts, are the first few levels of 
+         the infinite classification hierarchy. As is done in Haskell, there are two name spaces. One name space, names values,
+and the other name space, names types, kinds, sorts etc. Two objects can have
+the same name if they live in different name spaces. This form of
+overloading is often exploited in \om~(as well as in Haskell) programs.
+Note that {\tt Z} and {\tt S} are defined in both the value name space and 
+the type name space.}\label{table}
+\hrule
+\end{figure}
+
+We illustrate the relationship between
+values, types, kinds, and sorts by example in a table found in Figure
+\ref{table}.
+Note that the table has empty slots. Not all types classify values.
+For example, there are no values of type \verb+[]+ (list) or \verb+Z+, but
+there are values of type \verb+[Int]+. The same holds at the kind level.
+Not all kinds classify types. For example, there are no types classified
+by \verb+Row+, but {\tt RNil} could be classified by \verb+(Row Int)+. 
+Note the different kinds of arrows ($\rightarrow$ and $\leadsto$). The first
+is used to classify functions at the value level. The second is used to classify
+type constructors. In \om~ programs we write \verb+->+ for $\rightarrow$, and
+\verb+~>+ for $\leadsto$.
+
+\subsection{Singleton Types}
+It is sometimes useful to build representations of types at the value level.
+Such representations are called {\em singleton types} if they are encoded
+by a type constructor whose argument indicates the type being represented.
+For example consider:
+\begin{verbatim}
+data Nat':: Nat ~> *0 where
+   Z:: Nat' Z 
+   S::  (Nat' x) -> Nat' (S x)
+\end{verbatim}
+\noindent
+Values classified by the type {\tt (Nat' a)} are reflections of the {\em types}
+classified by the {\em kind} {\tt Nat}. The value constructors of the {\tt data}
+declaration for {\tt Nat'} mirror the type constructors in the {\tt kind}
+declaration of {\tt Nat}, and the type index of {\tt Nat'} is equal to the
+type reflected. For example, the value \verb+S(S(S Z))+ is classified by the
+type \verb+Nat'(S(S(S Z)))+. We say that {\tt Nat'} is a {\em singleton type}
+because there is only one element of any singleton type. For example, only {\tt
+S (S Z)} inhabits the type {\tt Nat' (S (S Z))}. As discussed in Figure
+\ref{table}, we exploit the separate name spaces for value and types by using
+the same names for the type constructors of kind {\tt Nat} ({\tt S} and {\tt
+Z}) and the constructor functions of {\tt data} type {\tt Nat'} ({\tt S} and
+{\tt Z}) to emphasize the close relationship between {\tt Nat} and {\tt Nat'}.
+
+
+
+We will find natural numbers at the type level (and their {\tt Nat'}
+reflections at the value level) to be so useful we introduce some syntactic
+sugar for constructing such types (or values). For example,
+{\tt \#0 = Z}, and {\tt \#1 = (S Z)}, and {\tt \#2 = (S (S Z))} etc.
+We also support the syntax {\tt \#(n + x) = (S$_1$(S$_2$ ... (S$_n$ x)))}.
+This syntactic sugar is analogous to
+the use of square brackets to describe lists in addition to the use
+of the constructor \verb+(:)+.
+
+\subsection{Tags and Labels}
+
+Many object languages have a notion of name. To make representing names in the
+type system easy we introduce the notion of Tags and Labels. As a {\em first
+approximation}, consider the finite kind {\tt Tag} and its singleton type {\tt
+Label}:
+
+\begin{verbatim}
+kind Tag = A | B | C
+
+data Label:: Tag ~> *0 where
+  A:: Label A
+  B:: Label B
+  C:: Label C
+\end{verbatim}
+
+Here, we again deliberately use the value/type name space
+overloading first discussed in Figure \ref{table}. The names {\tt A}, {\tt B}, and {\tt C} 
+are defined in both the value and type name spaces. They 
+name different,
+but related objects in each space.
+At the value level every {\tt Label} has a type index
+that reflects its value. I.e. {\tt A::Label A}, and {\tt B::Label B}, and {\tt
+C::Label C}. Now consider a countably infinite set of tags and labels. We can't
+define this explicitly, but we can build such a type as a primitive inside of
+\om. At the type level, every legal identifier whose name is preceded by a
+back-tick ({\tt `}) is a type classified by the kind {\tt Tag}. For example, the type {\tt
+`abc} is classified by {\tt Tag}. At the value level, every such symbol {\tt `x} is classified
+by the type {\tt (Label `x)}.
+
+\subsection{Rows, Records, and HasType.}
+
+The kind {\tt Row} classifies list-like data structures at the type level.
+The kind {\tt HasType} classifies pairs at the type level. 
+\begin{verbatim}
+kind HasType = Has Tag *0
+\end{verbatim}
+It aggregates
+a {\tt Tag} and any type classified by {\tt *0}. For example, \verb+(Has `a Int)::HasType+.
+We can construct lists (at the type level) of such pairs using the type constructors of {\tt Row}.
+For example,
+\begin{verbatim}
+(RCons (Has `a Int) (RCons (Has `b Bool) RNil))
+  ::Row HasType
+\end{verbatim}
+Note, \verb+(RCons (Has `a Int) (RCons (Has `b Bool) RNil))+ is a type,
+and that \verb+(Row HasType)+ is a kind.
+Such a type can be thought of as classifying records at the value
+level. We can define such records within \om~ as follows:
+
+\begin{verbatim}
+data Rec:: Row HasType ~> *0 where
+  RecNil :: Rec RNil
+  RecCons:: Label s -> t -> 
+            Rec r -> 
+            Rec (RCons (Has s t) r)
+\end{verbatim}
+
+We can construct records by using the constructor functions
+{\tt RecNil} and {\tt RecCons}. Such values have types
+{\tt (Rec {\it r})} where {\tt r} is classified by {\tt (Row HasType)}. For example,
+consider
+
+\begin{verbatim}
+r1 :: Rec(RCons (Has `x Int) 
+                (RCons (Has `a Bool) RNil))
+r1 = RecCons `x 5 (RecCons `a True RecNil)
+
+r2:: Rec u -> Rec(RCons (Has `x Int) 
+                        (RCons (Has `a Bool) u))
+r2 x = RecCons `x 5 (RecCons `a True x)
+\end{verbatim}
+
+It is interesting to note that we have managed to express
+a simple form of Wand's (or Remy's) row-polymorphism\cite{IC::Wand1991,94:2} in \om\ just by
+using kinds.  We have found {\tt Row} and {\tt HasType} so useful we have built
+special syntactic sugar for printing them. For example,~ ~
+\verb+Rec(RCons (Has `x Int) (RCons (Has `a Bool) RNil))+ ~ prints
+as~  \verb+Rec {`x:Int,`a:Bool}+.
+The syntactic sugar for {\tt Row} and {\tt HasType} 
+replaces {\tt RCons} and {\tt RNil} with squiggly brackets, and
+replaces {\tt Has} with colon. A type classified by {\tt Row} whose
+(ultimate) tail is not {\tt RNil} (i.e. a type variable) prints with a trailing semi-colon.
+For example,\\ \verb+Rec(RCons (Has `x Int) (RCons (Has `a Bool) w))+ ~ prints
+as~  \verb+Rec {`x:Int,`a:Bool; w}+.
+
+\subsection{An Object Language with Binding.}\label{binding}
+
+Rows and records allow us to define object-languages with binding structures
+that track their free variables in their meta-level types. The object-language
+{\tt (Lam env t)} represents the simply typed lambda calculus.
+
+\begin{verbatim}
+data Lam:: Row HasType ~> *0 ~> *0  where
+  Var      :: Label s -> Lam (RCons (Has s t) env) t
+  Shift    :: Lam env t -> 
+              Lam (RCons (Has s q) env) t
+  Abstract :: Label a -> 
+              Lam (RCons (Has a s) env) t -> 
+              Lam env (s -> t)
+  Apply    :: Lam env (s -> t) -> 
+              Lam env s -> Lam env t
+\end{verbatim}
+
+The first index to {\tt Lam}, {\tt env} is a Row tracking its variables,
+and the second index, {\tt t} tracks the object-level type of the term.
+For example, a term with variables {\tt x} and {\tt y} might have type
+\verb+Lam {`x:Int, `y:Bool; u} Int+. This is made possible by the use
+of {\tt Row} and {\tt HasType} in the GADT representing lambda terms.
+
+The key to this approach is the typing of the object-language constructor
+functions for variables and lambda expressions. Consider the {\tt Var}
+constructor function.
+To construct a variable we simply apply {\tt Var} to a label, and its type
+reflects this. For example, here is the output from a short interactive
+session with the \om~ interpreter.
+\begin{verbatim}
+prompt> Var `name
+(Var `name):: 
+forall a (u:Row HasType) . Lam {`name:a; u} a
+   
+prompt> Var `age
+(Var `age):: 
+forall a (u:Row HasType) . Lam {`age:a; u} a
+\end{verbatim}
+
+Variables behave like Bruijn indices. Variables created with
+{\tt Var} are like the natural number 0. A variable
+can be lifted to the next natural number by the successor operator
+{\tt Shift}. To understand why this is useful
+consider that the two examples have different names in the
+same index position. The two variables would clash if they were both used in the same
+lambda term. To shift the position of variable to a different index, we use the
+\verb+Shift:: Lam u a -> Lam {v:b; u} a+ constructor. Rather
+than counting with natural numbers (as is done with de Bruijn indices)
+we ``count" with rows, recording both its symbolic name and its type. Here is how we could
+define two variables {\tt x} and {\tt y} for use in the same environment.
+
+\begin{verbatim}
+x :: Lam {`x:a; u} a 
+x = Var `x 
+
+y :: Lam {u:a,`y:b; v} b
+y = (Shift (Var `y)) 
+\end{verbatim}
+
+
+The type system now tracks the variables in an expressions.
+\begin{verbatim}
+z :: Lam {`x:a -> b,`y:a; u} b
+z = (Apply (Var `x) (Shift (Var `y))) 
+\end{verbatim}
+
+Finally, and of great interest, we can build a well-typed
+evaluator for the GADT {\tt Lam}.
+\begin{verbatim}
+evalLam :: Lam env t -> Rec env -> t
+evalLam (Var _) (RecCons _ y _) = y
+evalLam (Shift x) (RecCons _ _ rs) = evalLam x rs
+evalLam (Abstract l _ body) rs = 
+   \ x -> evalLam body (RecCons l x rs)
+evalLam (Apply f x) rs = 
+   (evalLam f rs) (evalLam x rs)
+\end{verbatim}
+We declare that the type of our evaluation function
+is as follows: (\verb+Lam env t -> Rec env -> t+). We can interpret
+this to mean that every well typed {\tt Lam} term with type {\tt t} under an 
+environment with shape {\tt env}, can be given meaning as a function
+from a record with shape {\tt env} to {\tt t}. The function {\tt evalLam}
+is a denotational semantics. It provides a meaning for every well formed
+lambda term.
+
+In essence, the well-typing of the evaluation function is one of three parts
+that comprise a proof of soundness of the type system with respect to the
+semantics. The other two parts are proofs of totality and
+compositionality.
+
+\begin{itemize} 
+
+\item{\bf Totality.} To ensure that every term is mapped to a well-typed value,
+we must ensure that {\tt evalLam} is total. That is, it terminates for every
+well-typed lambda term. Every well-typed {\tt Lam} term matches one of the
+clauses of {\tt evalLam}, and every recursive call of {\tt evalLam} is called
+on a smaller subterm of the original argument, so every call will terminate
+with a value if the input term is finite and the meta-language (in this case
+\om) is strongly normalizing. Note that the input to {\tt evalLam} is
+a meta-language term, so if the meta-language is strongly normalizing
+no infinite inputs are possible. The key is a strongly normalizing
+meta-language.
+
+\item {\bf Compositionality.} The meaning of every term is composed
+only from the meaning of its subterms.
+
+\end{itemize}
+
+While neither of these two are currently enforced by \om, we have plans
+to provide such support in the future.
+
+Other kinds of proofs are also
+possible. Proofs in style of Wright and
+Felleisen\cite{Wright:94} work on a small step semantics defined in terms of
+substitution. \om\ can also be used to define languages in this way. See our
+paper {\em Meta-programming with Built-in Type Equality}\cite{SheardLogFrWks04}
+which was presented at the Logical Frameworks and Meta-Languages Workshop to
+see how this can be done.
+
+\subsection{The bottom line.}
+
+The ability to define GADTs, and the ability to define new kinds,
+creates a rich playground for those wishing to explore the design of new
+languages. These features, along with the use of rank-N polymorphism (which we
+will illustrate by example later in the paper) make \om~ a better meta-language
+than Haskell. In order to explore the design of a new language one 
+can proceed as follows:
+
+\begin{itemize}
+
+\item First, represent the object-language as a type indexed GADT. The indexes
+correspond to static properties of the program.
+
+\item The indexes can have arbitrary structure, because they are introduced as
+the type constructors of new kinds.
+
+\item The typed constructor functions of the object-language GADT define a
+static semantics for the object language.
+
+\item Meta programs written in \om, manipulate object-language represented as
+data, and check and maintain the properties captured in the type indexes
+by using the meta-language type system. This lets us build and test type
+systems interactively.
+
+\item A dynamic semantics for the language can be defined by (1) writing either
+a denotational semantics in the form of an interpreter or evaluation
+function, or by (2) writing a small step semantics in terms of substitution
+over the term language. In either case, the type system of the meta-language
+guarantees that these meta-level programs maintain object level type-safety.
+
+\end{itemize}
+
+\section{The MetaML language.} \label{metaml}
+
+MetaML is a homogeneous, manually annotated, run-time code generation system.
+In MetaML we use angle brackets (\verb+< >+) as quotations, and tilde 
+(\verb+~ +) as the anti-quotation. We call the object-level code inside a pair of
+angle brackets, along with its anti-quoted holes a {\em template}, because its
+stands for a computation that will build an object-code fragment with the
+shape of the quoted code. In MetaML the angle brackets, the escapes, the {\tt
+lift}s, and the {\tt run} operator are staging annotations. They indicate the
+boundaries within a MetaML program where the program text moves from 
+meta-program to object-program. The staging annotations in MetaML are placed
+manually by the programmer and are considered part of the language. In MetaML
+the staging annotations have semantic meaning, they are part of the language
+definition, not just hints or directions to language preprocessors.
+A simple example using templates follows:
+
+{\small
+\begin{verbatim}
+-| val x = <3 + 2> ;
+val x = <3 %+ 2> : <int>
+
+-| val code = <show ~x> ;
+val code = <%show (3 %+ 2)> : <string>
+\end{verbatim}
+}
+
+In this example we construct the object-program fragment {\tt x} and use the
+anti-quotation mechanism to splice it into the object-program fragment {\tt
+code}. Note how the definition of {\tt code} uses a template with a hole (the
+escaped expression \verb+~x+). MetaML also statically scopes free variable
+occurrences in code templates. This is called {\em cross-stage persistence}.
+Variables defined in earlier stages are available for use in later stages.
+
+{\small
+\begin{verbatim}
+-|  fun f x y = x + y - 1;
+val f = fn  : int -> int -> int
+
+-| val z = <f 4 5>;
+val z = <%f 4 5> : <int>
+
+-| let fun f x y = not x andalso y 
+   in run z end;
+val it = 8 : int
+\end{verbatim}}
+
+\noindent
+
+When printing code with a lexically scoped variable, the pretty printer places
+the percent-sign ({\tt \verb+%+}) in front of {\tt f} in the code template 
+{\tt z} to indicate that this is a statically bound object-variable (not a free
+object-variable). 
+Note how the free variable {\tt f} in the code template {\tt z} refers to
+the function {\tt f:int -> int -> int}, which was in scope when the
+template was defined, and not the function {\tt f:bool -> bool -> bool}
+which was in scope when {\tt z} was run. Variables in MetaML are lexically
+scoped even across code brackets. Because code may be spliced or run in a context
+far removed from the scope where it was defined, this lexical scoping
+becomes important. 
+
+The {\tt run} operator in MetaML transforms a piece of code into the program it
+represents. It is useful to think of {\tt run} as indicating the composition of
+run-time compilation with execution.  In the example below, we first build a
+generator ({\tt power\_gen}). Apply it to obtain a piece of code ({\tt power\_code}).
+Run the code to obtain a function ({\tt power\_fun}). And then apply the function to
+obtain an answer ({\tt 125}).
+{\small
+\begin{verbatim}
+-| fun power_gen m = 
+     let fun f n x = 
+             if n = 0 then <1> 
+                      else <~x * ~(f (n-1) x)>
+     in <let fun power x = ~(f m <x>) in power end> end;
+val power_gen = fn  : int -> <int -> int>
+
+-| val power_code = power_gen 3;
+val power_code = 
+<let fun power x = x * x * x * 1 in power end> 
+: <int -> int>
+
+-| val power_fun = run power_code;
+val power_fun = fn  : int -> int
+
+-| power_fun 5;
+val it = 125 : int
+\end{verbatim}}
+
+The introduction of staging annotations such as, run, bracket, and escape
+considerably complicates the type system for any staged language. Most type
+systems disqualify bad programs that have a small class of errors. This class
+of errors includes, use of a variable in a scope where the variable is not
+declared, and use of a value in a manner inconsistent with its type -- i.e.
+using an integer where a float is expected, or applying something that is not
+a function to an argument. Once staging annotations are added to a language
+the class of errors becomes measurably larger.
+New problems include tracking the stage at which a variable is declared
+(as well as its scope), the execution of code with free variables, and
+tracking alpha-renamed variables. Of course all the old problems still
+exist. We illustrate these three new
+problems with simple examples below.
+
+\begin{itemize}
+
+\item{\bf Correct use of variables.} The staged type system helps the user
+construct well formed object-programs. One of its most useful features is that
+it tracks the level at which variables are bound. Attempts to use variables at
+a level lower than the level at which they are bound makes no sense. For example:
+
+\begin{verbatim}
+-| fun id x = x;
+val id = Fn  : 'a  -> 'a 
+
+-| <fn x => ~(id x) - 4>;
+Error: The term: x  Variable bound in stage 1 
+                    used too early in stage 0
+\end{verbatim}
+In the above example {\tt x} is a stage 1 variable, but because of the
+anti-quotation it is used at stage 0. This is semantically meaningless
+and should be reported as a type error.\vspace*{0.1in}
+
+
+\item{\bf Running code with free variables.}
+In MetaML we use {\tt run} to move from one stage to the next. Because
+it is legal to use the anti-quotation under a lambda-binding, there
+is the possibility that {\tt run} may be applied to variables that will not
+be bound until some later stage. For example:
+{\small
+\begin{verbatim}
+-| val bad = <fn x => ~(run <x>) + 4>;
+\end{verbatim}}
+
+\noindent
+will cause an error because the object-variable {\tt x} will not be bound until the
+whole piece of code is run, and then finally applied. \vspace*{0.1in}
+
+\item{\bf Tracking Alpha-renaming.} The third problem is very subtle. It was
+described in Walid Taha's thesis as {\em the puzzle}.
+
+\begin{verbatim}
+-| val puzzle = 
+   <fn a => ~((fn x => <x>)(fn y => <a>)) 0>;
+\end{verbatim}
+
+Using the (small step) substitution semantics for a staged language given in
+the thesis, the expression \verb+(run puzzle) 5+ should evaluate to 
+\verb+<5>+, but the implementation of MetaML raised an error. The subtlety comes
+because bound variables in object code in MetaML are generative. I.e. the
+object variable {\tt a} in the puzzle will be alpha renamed to some new
+variable name, say \verb+a_97+. The generative approach is essential to avoid
+inadvertent name capture in generated code. This name gets stored in the
+environment of the closure implementing \verb+(fn y => <a>)+, this closure is
+then embedded inside the code value created by the template \verb+<x>+,
+creating the object code \verb+<fn a_97 => %x 0>+ where the \verb+%x+ is a
+cross-stage persistent value linked to the closure. This value will only be
+executed when the larger enclosing code \verb+<fn a_97 => %x 0>+ is run. When
+the entailing function \verb+(fn a_97 => %x 0)+ is applied (to say \verb+5+),
+the variable \verb+a_97+ becomes bound in the environment to \verb+5+. Somehow
+this binding needs to be propagated inside the cross-stage persistent function
+represented by \verb+%x+. Doing this considerably complicates the
+implementation, and inadversely affects its efficiency.
+
+\end{itemize}
+
+The kind of errors described above do not occur in normal (unstaged)
+programs. They complicate the semantics, the type systems, and the
+implementations meta-programming systems. There has been much thought put
+into devising type-systems which will disallow such programs
+\cite{Moggi-Taha-Benaissa-Sheard-ESOP99,Calgano-Moggi-Sheard-JFP03,T00,TahNie03}. 
+The author finds all of these systems lacking in some degree or other, even
+though he had a hand in devising some of them.
+
+There has been much debate about the third example. Is it a good program?
+If so then the implementation must be much more complicated than it might
+otherwise be. If it is not a good program, this raises two questions.
+First, how do we get a type system to disqualify it? And, second, how do
+we know we won't be disqualifying important programs that real users want
+to write? The second objection is an easier one to answer. Had the user
+performed the explicit beta reduction inside the escape, i.e. written:
+
+\begin{verbatim}
+-| val puzzle = <fn a => ~(<fn y => <a>>) 0>;
+\end{verbatim}
+None of the problems associated with this example would occur. So the challenge
+is to come up with a type system that rejects the original program
+but not this one. In our opinion, this is a superior solution to complicating
+the implementation to accommodate the original program (which we believe
+no one would ever deliberately write). 
+
+
+
+\section{MetaML as an \om~ program.} \label{lang}
+
+In this section we play with types. We explore, in \om, several
+different formulations for a MetaML type system.
+We will discard several of our attempts, as our exploration 
+points out their deficiencies. This section is meant
+to illustrate how \om\ is useful
+for exploring language design issues. Those interested in
+the final MetaML type system may skip ahead to Section \ref{final}.
+
+We will develop a type system for an abstraction of MetaML that
+includes all of MetaML's important features. It has a standard lambda
+calculus fragment, and a staging fragment. The staging fragment
+includes brackets, escape, run, and cross-stage-persistence.
+
+As we did in Section \ref{binding} with the {\tt Lam} GADT, we represent the 
+lambda fragment with tagged de Bruijn style variables. The staging fragment
+is more problematic. How do we deal with the multiple levels in
+a staged expression? The standard solution\cite{T00,Taha99} is to use a level-indexed
+family of expressions. In \om\ we would extend the {\tt Lam}
+GADT as follows:
+\begin{verbatim}
+data Lam:: Nat ~> Row HasType ~> *0 ~> *0  where
+  Var      :: Label s -> 
+              Lam n (RCons (Has s t) env) t
+  Shift    :: Lam n env t -> 
+              Lam n (RCons (Has s q) env) t
+  Abstract :: Label a -> 
+              Lam n (RCons (Has a s) env) t -> 
+              Lam n env (s -> t)
+  Apply    :: Lam n env (s -> t) -> 
+              Lam n env s -> 
+              Lam n env t
+  Bracket  :: Lam n env t -> Lam (S n) env t
+  Escape   :: Lam (S n) env t -> Lam n env t
+\end{verbatim} 
+Note, how a natural number index is added to {\tt Lam}, and that how the
+constructor for bracket lifts the index of a term, and how
+the constructor for escape drops the index of a term. It is at this point
+ in the design exploration that the automation inherent that the meta-language
+ begins to payoff. A well-typed term built with the constructors of {\tt Lam}
+ is a derivation of the type of that term. 
+ By entering simple expressions at the \om\ prompt we get
+ the \om\ type system to check the well-formedness of the derivation, and to display the type of the term.
+ For example, by typing: \verb+Bracket (Apply (Var `f) (Shift (Var `x)))+
+ we get the following result:
+ \begin{verbatim}
+ Lam #(1+u) {`f:a -> b,`x:a; v} b
+ \end{verbatim}
+Right away, an error becomes obvious in our formulation. Shouldn't an
+expression that is bracketed have a code type? We need typing rules some thing
+like the following for escape and bracket.
+\begin{verbatim}
+  Bracket  :: Lam n env t -> Lam (S n) env (Code t)
+  Escape   :: Lam (S n) env (Code t) -> Lam n env t
+\end{verbatim} 
+But, what then is {\tt Code}? Some thought leads to the following definition.
+\begin{verbatim}
+data Code t = exists env . Code (Lam Z env t)
+\end{verbatim}
+Code is just a {\tt Lam} term at level zero ({\tt Z}) which can be typed in
+some environment\footnote{Which environment actually matters, but will discuss
+this in more detail later.}.  Now, let's observe the type of the same term:
+\begin{verbatim}
+Bracket (Apply (Var `f) (Shift (Var `x))) 
+:: Lam #(1+u) {`f:a -> b,`x:a; v} (Code b)
+\end{verbatim}
+Almost, but the environment index, \verb+{`f:a -> b,`x:a; v}+,
+does not indicate the stage at which a variable is bound. This can be
+fixed by making the environment be a row of triples (rather than pairs).
+We introduce the kind {\tt HasT} to encode triples, and adjust the definition of {\tt Var},
+{\tt Shift}, and {\tt Abstract}. 
+\begin{verbatim}
+kind HasT = H3 Tag Nat *0
+
+data Lam:: Nat ~> Row HasT ~> *0 ~> *0  where
+  Var      :: Label s -> Nat' n -> 
+              Lam n (RCons (H3 s n t) env) t
+  Abstract :: Label a -> 
+              Lam n (RCons (H3 a n s) env) t -> 
+              Lam n env (s -> t)
+  Shift    :: Lam n env t -> 
+              Lam n (RCons (H3 s m q) env) t
+\end{verbatim}
+When a variable is used, it must be applied to a singleton {\tt (Nat' n)}
+to indicate at what level it was defined. Consider again the type of
+the example term (adjusted to include level information on the variables).
+\begin{verbatim}
+Bracket (Apply (Var `f #0) (Shift (Var `x #0)))
+:: Lam #1 {`f^#0:(a -> b), `x^#0:a; u} (Code b)
+\end{verbatim}
+
+\noindent
+We have (again) introduced some syntactic sugar. When displaying a type
+of kind {\tt HasT}, we display \verb+(H3 `tag #n typ)+ as \verb+(`tag^#n:typ)+.
+A new problem arises if the two variables come from two different stages. 
+Assume {\tt `f} comes from stage 0, and {\tt `x} from
+stage 1, as it might in the MetaML term \verb+(fn f => <fn x => f x>)+. This makes {\tt `f} a cross stage persistent
+value. We replace {\tt (Var `x \#0)}
+with {\tt (Var `x \#1)}. Observe the types of {\tt f} and {\tt x}, and the
+constructor {\tt Apply}:
+\begin{verbatim}
+Var `f #0 :: Lam #0 {`f^#0:a; u} a
+Var `x #1 :: Lam #1 {`x^#1:a; u} a
+Apply :: Lam u v (a -> b) -> Lam u v a -> Lam u v b
+\end{verbatim}
+As we intended, the levels of the two terms now differ. The term {\tt f} is at level 0,
+and the term {\tt x} is at level 1. The application of {\tt f} to {\tt x}
+\verb+(Apply (Var `f #0) (Shift (Var `x #1)))+
+will be ill-typed, because {\tt Apply} requires that the level of the two
+terms be the same. The problem here is similar to the problem of constructing a term
+with two different variables with different names but with the same de Bruijn
+indices. We solved that problem be introducing the {\tt Shift} operator.
+We can solve the level problem by similar means. Introduce a new constructor
+of {\tt Lam} terms that raises the level of a term. We call this constructor
+{\tt Cross}, because it used when we want cross-stage persistence.
+\begin{verbatim}
+ Cross    :: Lam n env t -> Lam (S n) env t
+\end{verbatim} 
+Using {\tt Cross} on {\tt f}, the term is now well typed:
+\begin{verbatim}
+Apply (Cross (Shift (Var `f #0))) (Var `x #1)
+:: Lam #1 {`x^#1:a, `f^#0:(a -> b); u} (Code b)
+\end{verbatim}
+The term is a second level term. This is indicated in the level index
+(\verb+#1+). It mentions two variables {\tt f} defined at level {\tt \#0} with
+type {\tt (a -> b)}, and {\tt x} defined at level {\tt \#1} with type {\tt b}.
+The type of the term is {\tt (Code b)}. We have succeeded in describing
+well-formed object-level terms using the type system of the meta-language!
+
+\begin{figure}[t]
+\hrule
+\vspace{1.5ex}
+\begin{center}
+ \scalebox{0.40}{\psinput{stack.eps}}
+\end{center}
+
+\caption{A typing judgment contains a ``sliding band" of type contexts. The band
+is ``implemented" using a single type context, and two stacks of type contexts.
+The depth of the stacks is unbounded, since a multistage program can
+have an arbitrary number of stages.} \label{band}
+
+\vspace{1ex}
+\hrule
+\end{figure}
+
+Unfortunately, while an interesting exercise, this particular path is hard to
+extend. The problem comes from having variables from all levels in a
+single environment. Rhetorically, should it be necessary for the variables
+{\tt f} and {\tt x} to have different deBruijn indices? While executing in the
+second stage, the environment including the binding for {\tt f} (as well as
+the need for {\tt f}) will be long gone. The single environment approach also
+causes many problems when doing proofs. It is necessary to construct lemmas
+which talk about projections over environments. A projection projects only those
+variables defined a single stage. The key to a simple and elegant type system
+for a staged language is to break from tradition. Do not use an level-indexed
+term, and do not use a single environment.
+
+\section{Sliding Bands of Contexts} \label{final}
+
+The key to typing staged terms is to think about
+the environment as a ``sliding band" of type contexts. The lambda
+fragment binds and looks up variables in the ``present" stage. Staging operations
+slide the pointer. The structure of the environment is illustrated in
+Figure \ref{band}. 
+
+Capturing this structure in the object-level type system as a meta-level
+GADT is an interesting, though not too difficult exercise. We start
+by introducing a new GADT for terms {\tt Exp}. Like {\tt Lam}, it has
+multiple indexes. We write
+{\tt (Exp past now future t)} where {\tt past} and {\tt future} are
+stacks of contexts, {\tt now} is the current environment, and {\tt t}
+is the type of the term.
+
+For mnemonic purposes we would like the past stack to ``grow" on the right, and
+the future stack to ``grow" on the left. To do this we use meta-level pairs
+(i.e. {\tt (a,b)}). Unfortunately, the type constructor for pairs only allows
+types of kind {\tt *0} as arguments, and environments (as we have defined
+them) have kind {\tt (Row HasType)}. Fortunately we also defined the type
+constructor {\tt Rec} (for constructing records) which when applied to a {\tt
+(Row HasType)} has kind {\tt *0}. To push a context {\tt (r::Row HasType)} on
+to a right growing stack {\tt (past::*0)} we write {\tt (past,Rec r)}, and to push a
+context {\tt r} on to a left growing stack {\tt future} we write {\tt (Rec r,future)}.
+Keeping these explanations in mind study the GADT for expressions below:
+\begin{verbatim}
+data Cd n f t = Cd (forall p . Exp p n f t)
+
+data Exp:: *0 ~> Row HasType ~> *0 ~> *0 ~> *0 where 
+  -- The lambda fragment
+  V:: Label s -> Exp p (RCons (Has s t) env) f t
+  Sh::  Exp p env f t -> 
+        Exp p (RCons (Has s q) env) f t
+  Abs:: Label x -> 
+        Exp p (RCons (Has x s) n) f t -> 
+        Exp p n f (s -> t)
+  App:: Exp p n f (t1->t) -> 
+        Exp p n f t1 -> 
+        Exp p n f t
+  
+  -- the staging fragment
+  Br::  Exp (p,Rec n) c f t -> 
+        Exp p n (Rec c,f) (Cd c f t)
+  Esc:: Exp p b (Rec n,f) (Cd n f t) -> 
+        Exp (p,Rec b) n f t
+  Csp:: Exp p b (Rec n,f) t -> 
+        Exp (p,Rec b) n f t
+  Run:: (forall x . Exp p n (Rec x,f) (Cd x f t)) -> 
+        Exp p n f t
+  
+  -- pairs and constants
+  Pair:: Exp p n f s -> 
+         Exp p n f t -> 
+         Exp p n f (s,t)
+  Const:: t -> Exp past now future t
+\end{verbatim}
+The type {\tt Cd} is similar to the type {\tt Code} from
+Section \ref{lang}. It is nothing more than a restricted form
+of {\tt Exp}, and is the meta-level type used to implement
+object level terms with code type. In the examples below
+we often contrast {\tt Lam} terms from Section \ref{lang}
+with {\tt Exp} terms from this section and the distiction
+between {\tt Code} (used in {\tt Lam} terms) and {\tt Cd} (used in {\tt Exp}
+terms) is important.
+
+The {\tt Exp} type is how we represent object-level MetaML terms in \om.
+The lambda fragment of the language is completely standard. It basically
+ignores (by keeping constant) the first and third indexes which are the
+stacks of contexts. Its approach to variables is the same as in the
+{\tt Lam} object-language, using {\tt Sh} to shift variables into increasing
+de Bruijn indices.
+The staging fragment is reminiscent of the level indexed {\tt Lam}
+terms. But rather than changing the level index, these constructors
+manipulate the two context stacks. Let's compare
+the bracket constructor from the two approaches.
+\begin{verbatim}
+Bracket :: Lam u v a -> 
+           Lam #(1+u) v (Code a)
+
+Br      :: Exp (a,Rec u) v b c -> 
+           Exp a u (Rec v,b) (Cd v b c)
+\end{verbatim}
+While the {\tt Lam} bracket constructor increments the level index,
+the {\tt Exp} bracket constructor shifts the top context on the past
+stack ({\tt Rec u}) into the now context, and shifts the current context ({\tt v}) onto the top
+of the future stack. 
+\begin{verbatim}
+Escape :: Lam #(1+u) v (Code a) -> 
+          Lam u v a
+          
+Esc    :: Exp a u (Rec v,b) (Cd v b c) -> 
+          Exp (a,Rec u) v b c
+
+Cross  :: Lam u v a -> 
+          Lam #(1+u) v a
+          
+Csp    :: Exp a u (Rec v,b) c -> 
+          Exp (a,Rec u) v b c
+\end{verbatim}
+A similar (but inverse) relationship holds for the escape operator. The
+cross-stage persistence operator, rather than changing the level of a term,
+cause its argument to reach into the top most
+past context to compute its type. Lets observe the type of our
+example from the previous section in both systems.
+\begin{verbatim}
+Apply (Cross (Shift (Var `f #0))) (Var `x #1)
+:: Lam #1 {`x^#1:a, `f^#0:(a -> b); u} b
+
+App (Csp(Sh(V `f))) (V `x)
+:: Exp (a,Rec {u:b,`f:c -> d; v}) {`x:c; w} e d
+
+App (Csp (V `f)) (V `x)
+:: Exp (a,Rec {`f:c -> d; v}) {`x:c; w} e d
+\end{verbatim}
+Notice how the environment of the two stages is now completely separate. Both
+{\tt f} and {\tt x} could live at the same de Bruijn index since
+the two environments are disjoint. The third term illustrates
+what happens when we de Bruijn shift neither variable.
+If we level shift the last expression
+by wrapping the whole thing inside a bracket we obtain.
+
+\begin{verbatim}
+Br(App (Csp (V `f)) (V `x))
+:: Exp a {`f:c -> d; v} 
+         (Rec {`x:c; w},e) 
+         (Cd {`x:c; w} e d)
+\end{verbatim}
+Notice how the {\tt Br} shifts the top context in the past stack into 
+the current environment, and makes the type of the resulting
+expression have code type.
+
+The last staging fragment constructor is {\tt Run}. The typing
+rule for run is intimately tied with the declaration for code.
+As in the level indexed example, code is should be nothing
+more than an expression at level 0 typed in some environment.
+\begin{verbatim}
+data Cd n f t = Cd (forall p . Exp p n f t)
+\end{verbatim}
+A term is at level 0 if it has no embedded escapes or cross-stage
+persistent sub-terms. We capture this by requiring that the past
+environment is universally quantifiable. To better understand
+this requirement, consider a term
+with an embedded escape versus one without.
+\begin{verbatim}
+App (Esc (V `f)) (Const 3)
+:: Exp (a,Rec {`f:Cd u b (Int -> c); v}) u b c
+
+App (V `f) (Const 3)
+:: Exp a {`f:Int -> b; u} c b
+\end{verbatim}
+Notice the rich structure of the past stack
+\begin{verbatim}
+(a,Rec {`f:Cd u b (Int -> c); v})
+\end{verbatim}
+when the escape is present, and that it is simply a universally quantified 
+variable ({\tt a}) when there are no escapes. It seems polymorphism
+is as useful as counting levels! Finally we can explain the type for the
+run construct.
+\begin{verbatim}
+data Exp:: *0 ~> Row HasType ~> *0 ~> *0 ~> *0 where
+  ...
+  Run:: (forall x . Exp p n (Rec x,f) (Cd x f t)) -> 
+        Exp p n f t
+\end{verbatim}
+
+A piece of code can be run if it has no free variables. We use the same trick
+for testing for the lack of free variables, as we did for testing for the lack of
+escapes: polymorphism. A term can be run only if has code type {\tt (Cd x f
+t)}, and the current environment ({\tt x}) is universally quantifiable.
+
+
+\begin{figure*}[t]
+\vspace{1.5ex}
+\begin{center}
+ \scalebox{0.85}{\psinput{rules.eps}}
+\end{center}
+
+\vspace*{-.4in}
+\caption{Compare the type inference rules with the type
+of the constructors {\tt Br} and {\tt Esc}. }\label{typerules}
+\hrule
+\end{figure*}
+
+Reflect for a minute on what we have just done. The meta-level types of the
+constructors for the object-level terms {\tt Exp} specifies a complete type
+system for object-level terms for a multi-stage language with all the features
+of bracket, escape, run, and cross-stage persistence. The correspondence
+between typing rules and the types of the object-level constructors is one-to-
+one. This is illustrated in Figure \ref{typerules}.
+
+\subsection{An Evaluation Function.}
+
+The last step is to show that the evaluation of a well typed term
+does not go wrong. There are several ways to describe what evaluation
+means. In this section we define an
+interpreter just as we did for {\tt Lam} in Section
+\ref{binding}, we introduce an evaluation function with type:
+\verb+Exp past now future t ->+ \verb+Rec now -> t+. Every well
+typed {\tt Exp} term with type {\tt t} under an environment with shape {\tt now} is given
+meaning as a function from a record with shape {\tt now} to {\tt t}.
+
+
+\begin{verbatim}
+eval :: Exp past now future t -> Rec now -> t
+eval (Const n) env = n
+eval (V a)  (RecCons b y x) = y
+eval (Sh e) (RecCons b x y) = eval e y
+eval (App f x) env = (eval f env) (eval x env)
+eval (Abs a e) env = \ v -> eval e (RecCons a v env)
+eval (Pair x y) env = (eval x env, eval y env)
+eval (Br e) env = Cd (bd (EnvZ env) e)
+eval (Run e) env = case eval e env of 
+                     Cd x -> eval x RecNil
+\end{verbatim}
+
+As always, once the type system is right, the eval function is
+simplicity itself. Lets consider the cases one at a time.
+
+\begin{itemize}
+\item{\bf {\small (Const n)}.} Constants evaluate to themselves.
+
+\item{\bf {\small (V a)}.} The value of every (unshifted) variable is stored as the
+first element of the record storing the environment.  There is no need to check
+that the label {\tt a} and {\tt b} match, because the type system ensures that they do.
+
+\item{\bf {\small (Sh e)}.} A shifted expression ignores the first element of the
+record. Simply evaluate the unshifted expression in the rest of the record.
+
+\item{\bf {\small (App f x)}.} Evaluate the function part of the application. This must be a function. Apply
+it to the result of evaluating the argument part of the application.
+
+\item{\bf {\small (Abs a e)}.} The result of an abstraction must be a
+function, so we return a meta-level lambda abstraction. The body of the
+object-level term is well typed in an environment which maps its formal
+parameter to the first element of the record. So simply evaluate the body in a
+new record with the meta-level lambda bound value as an additional element at the front.
+
+\item{\bf {\small (Pair x y)}.} Evaluate each part of a pair, and build a pair
+with the result.
+
+\item{\bf {\small (Br e)}.} Build an expression that is polymorphic in the
+past with the function {\tt bd}, then make code out of it with the
+constructor for code {\tt Cd}. We discuss building code with {\tt bd} in the
+next section.
+
+\item{\bf {\small (Run e)}.} The expression {\tt e} must evaluate
+to code whose underlying {\tt Exp} is typable in any environment.
+Thus, evaluate {\tt e}, extract the code {\tt x}, and evaluate that 
+in the empty record. Any record will do, {\tt RecNil} is a convenient one.
+\end{itemize}
+
+\subsection{Building code.} 
+
+To evaluate a code template, that is an {\tt Exp} whose top-level constructor
+is {\tt Br}, we must walk over the term removing embedded escapes and 
+cross-stage persistent terms. Inside a bracket these two kinds of subterms 
+are the only ones that refer to values in the current (or past) environments. We must embed these
+values in the code produced now, because when the resulting code is evaluated,
+the values in the current environment will no longer be accessible.
+To understand this, recall how run evaluates code in the empty environment.
+If we don't capture the values of variables from lower levels when the
+code is built, it will be too late when the code is run.
+
+Escapes are removed by splicing in the code obtained
+by evaluating the term inside the escape. This is how template
+holes are spliced in. Cross-stage persistent
+term are removed by evaluating them in the current environment,
+and lifting the value obtained up to the code level. If all the escapes
+and all the cross-stage persistent terms are removed, the resulting
+expression will be polymorphic in the past stack. This is captured by the 
+type of the
+build function: \verb+(bd :: Env a z -> Exp a n f t -> Exp z n f t)+.
+Note how the past index ({\tt z}) of the {\tt Exp} in the range of {\tt bd}
+is unrelated to the type of the past stack ({\tt a}) of the input {\tt Exp}.
+
+The {\tt bd} function walks over an expression, copying it except
+when it reaches an escape or cross-stage persistent sub-term. Notice
+how only the cases for {\tt Esc} and {\tt Csp} do anything interesting.
+
+\begin{verbatim}
+data Env:: *0 ~> *0 ~> *0 where
+  EnvZ:: a -> Env (b,a) c
+  EnvS::  Env a b -> Env (a,c) (b,c)   
+  
+bd :: Env a z -> Exp a n f t -> Exp z n f t
+bd env (Const n) = Const n 
+bd env (V z) = V z
+bd env (App x y) = App (bd env x) (bd env y)
+bd env (Abs a e) = Abs a (bd env e)
+bd env (Pair x y) = Pair (bd env x) (bd env y)
+bd env (Br e) = Br(bd (EnvS env) e)
+bd env (Run e) = Run(bd env e)
+bd (EnvZ env) (Esc e) = 
+  case eval e env of 
+    Cd x -> x
+bd (EnvS r) (Esc e) = 
+  case bd r e of 
+    Br x -> x
+    y -> Esc y 
+bd (EnvZ env) (Csp e) = Const(eval e env)
+bd (EnvS r) (Csp e) = Csp(bd r e)  
+\end{verbatim}
+
+Not all escapes or cross-stage persistent can be removed. Those embedded
+inside more than the original surrounding brackets refer to values available
+when the code being built will be run. For example, when evaluating a term
+like \verb+<f ~x <g ~y>>+ we rebuild the term  \verb+(f ~x <g ~y>)+. Only the
+first level escape \verb+~x+ should be evaluated and then spliced in the rebuilding process. In
+order to know which escapes (and cross-stage persistent terms) to process,
+brackets must be counted as {\tt bd} crawls over a term. Counting brackets is the role of the
+{\tt Env} parameter to {\tt bd}. The number of brackets inside the original
+pair (that was removed in the {\tt Br} case of {\tt eval}) can be determined by the
+number of {\tt EnvS} constructors wrapped around the current environment. Thus
+\verb+(EnvS (EnvS (EnvZ env)))+ means the {\tt bd} is processing a subterm
+inside of two additional sets of brackets., while \verb+(EnvZ env)+ means zero
+additional sets of brackets.
+
+The only interesting cases inside {\tt bd} are the {\tt (Br e)}, {\tt (Esc e)},
+and {\tt (Csp e)} cases. For the {\tt (Br e)} case simply rebuild the
+subterm, but wrap an extra {\tt EnvS} term around the environment to
+record the fact. For the {\tt (Esc e)} case, if the environment
+is {\tt (EnvZ env)} then the subterm {\tt e} should be evaluated,
+and the resulting code term spliced in. If the environment
+is {\tt (EnvS env)} then at least one extra pair of brackets surrounds
+this term. Simply rebuild it (remembering to count down by one by removing
+the {\tt EnvS}) and wrap an {\tt Esc} around the result. An optimization
+is possible here. Consider a subterm inside a bracketed term
+like \verb+~<e>+, this could be replaced by \verb+e+. We recognize
+this by comparing the rebuilt subterm. If it is itself a bracketed term,
+then we can apply the rule, and don't need to wrap the extra escape around
+the returned result. The cases for {\tt Csp} are almost identical
+except we use {\tt Const} to lift a value into a piece of code when
+the environment count is zero.
+
+\subsection{Well-typed MetaML programs do not go wrong}
+
+In Section \ref{binding} we showed that a denotational semantics for
+the lambda calculus was sound by showing that it was well-typed,
+total, and compositional. 
+
+Showing that well-typed programs do not go wrong for MetaML is
+more complicated. First, our evaluator is not a denotational
+semantics, because it is not compositional. The problematic case is
+the evaluation of a {\tt Run} term, where the {\tt eval} function
+is called twice.
+\begin{verbatim}
+eval (Run e) env = case eval e env of 
+                     Cd x -> eval x RecNil
+\end{verbatim}
+The second call to {\tt eval} is on a term that is not a subterm of the original term. Note if
+evaluating {\tt e} from a term {\tt (Run e)} causes an infinite sequence of
+{\tt Run} subterms, the evaluator would not be total. 
+
+Can we argue the non-compositional evaluator is sound? I.e. that every
+well-typed term is mapped to a meta-level value with that type. To show
+this we must answer the question: {\em What's a well-typed term in
+MetaML?} In MetaML only level 0 terms can be evaluated i.e. As discussed
+in Section \ref{lang}, level 0 terms have no escapes at level 0, and a
+term is at level 0, if and only if, its is polymorphic in its past. Thus
+we need argue soundness for terms polymorphic in their past.
+
+Showing {\em totality} is problematic for two reasons. The first is the
+possibility of evaluation leading to an infinite sequence of {\tt Run}s
+inside {\tt Run}s. We are currently working on  a solution in which the
+nesting level of {\tt Run} is encoded as an additional type index to {\tt
+Exp}. We hope to report on this
+in the final paper.
+
+The second cause of non-totality is non-exhaustiveness. The function
+{\tt eval} is not defined on terms built with the {\tt Esc} or {\tt Csp}
+constructors. Fortunately, code polymorphic in its past cannot contain
+either {\tt Esc} or {\tt Csp} at level 0. This leads us to the following
+strategy, first define a version of {\tt eval}, called {\tt eval0}, that
+can only be applied to terms polymorphic in their past.
+ 
+\begin{verbatim}
+eval0 :: (forall p . Exp p now future t) -> 
+         Rec now -> t
+eval0 exp env = eval exp env
+  where eval::Exp past now future t -> Rec now -> t
+        eval (Const n) env = n
+        ...
+        eval (Run e) env = 
+           case eval e env of 
+             Cd x -> eval0 x RecNil 
+             
+        bd::Env a z -> Exp a n f t -> Exp z n f t
+        bd env (Const n) = Const n 
+        ...
+\end{verbatim}
+By defining {\tt eval} and {\tt bd} as local functions of {\tt eval0}
+It is impossible to apply {\tt eval} to terms not polymorphic in
+their past, since all access to {\tt eval} is through {\tt eval0}
+which requires polymorphic terms. All recursive calls to {\tt eval} and
+{\tt Bd}
+(except the second one in the {\tt Run} case in {\tt eval}) are applied to strict
+subterms of the original term, so if the original terms was
+polymorphic, so must all these sub-terms be polymorphic. The
+problematic second call to {\tt eval} in the {\tt Run} case
+which is applied to the return result of applying {\tt eval} to a 
+subterm, can be replaced with {\tt eval0}, because expressions
+inside the {\tt Cd} constructor must also be level 0 terms.
+Thus both {\tt eval} and {\tt eval0}
+are total, in that they will never be called on a term for
+which they are not defined. 
+While not a complete proof, we have made subtantial progress.
+In the next section we demonstrate that the type system distinguishes
+the subtle staging errors discussed in Section \ref{metaml}.
+
+\section{Evaluating the type system.}
+Section~\ref{metaml} introduced three programs that highlight
+subtle typing issues for multi-stage programs.  We now evaluate the
+novel multi-stage type system discussed in the previous
+section based on how it performs on these issues.
+
+\begin{itemize}
+\item{\bf Correct use of variables.}
+The following program exhibits a level-mismatch error, and is incorrect.
+\begin{verbatim}
+<fn x => ~(id x)>;
+\end{verbatim}
+This program makes use of the variable x at a stage 
+prior to the stage in which it is bound. What about the \om{} encoding of this program?
+\begin{verbatim}
+Br (Abs `x (Esc (App (Abs `y (V `y)) (V `x))))
+\end{verbatim}
+The interpreter gives this term the following type:
+\begin{verbatim}
+Exp a {`x:Cd {`x:b; u} c d; v} 
+      (Rec u,c) 
+      (Cd u c (b -> d)))
+\end{verbatim}
+
+The variable \verb|`x| shows up in two different environments at two different
+stages. Each environment in the sliding band of type contexts is a separate
+name space, so the two occurrences of \verb|`x| in the \om\ encoding aren't
+the same variable, as they are in the MetaML program. So while this is a ``type correct"
+program in the \om\ encoding, it isn't an encoding of \verb|<fn x => ~(id x)>|.
+
+This brings up an important point. The cross-stage persistence
+construct does not appear in MetaML, so there must be some syntactic
+sugar in the parsing stage which translates MetaML syntax into the {\tt Exp} data-structures.
+This preprocessing step counts brackets, and assigns to every
+variable a static level at its point of definition. At each point
+of use, a number of cross-stage persistent annotations ({\tt Csp}) are
+inserted. The correct number is the difference between the level
+at which a variable is defined, and the level at which it is used.
+If this number is negative, the program is ill-typed. So this kind
+of error is actually caught before type checking in the syntactic
+sugar pre-processing phase.
+
+\vspace*{.1in}
+\item{\bf Running code with free variables.} The following program should be
+rejected because the {\tt run} will force the evaluation of the not-yet-bound
+variable {\tt x}.
+\begin{verbatim}
+val bad = <fn x => ~(run <x>) + 4>;
+\end{verbatim}
+
+How does this program hold up in our \om{} encoding?
+\begin{verbatim}
+|- Br (Abs `x (Esc (Run (Br (V `x)))))
+Error: Br (V `x) isn't polymorphic enough
+Expected type: forall v. 
+               Exp a u (Rec v,b) 
+                       (Cd v b c) 
+   Found type: Exp a u (Rec {`x:c; w},b) 
+                       (Cd {`x:c; w} b c))
+\end{verbatim}
+
+The program is rejected because the term \verb+(Br (V `x))+
+isn't polymorphic enough. The term has the type
+\begin{verbatim}
+Exp a u (Rec {`x:b; v},c) (Cd {`x:b; v} c b)
+\end{verbatim}
+See how the variable \verb+x+ shows up in the current context of
+the code type. Run can be applied only to code whose
+current context is completely polymorphic.
+
+\vspace*{.1in}
+\item{\bf Tracking Alpha-renaming.} 
+Recall the test programs highlighting the subtle issues at work here.
+\begin{verbatim}
+-| val puzzle1 = 
+       <fn a => ~((fn x => <x>)(fn y => <a>)) 0>;
+-| val puzzle2 = 
+       <fn a => ~(<fn y => <a>>) 0>;
+\end{verbatim}
+We argued that \verb|(run puzzle1)| should cause a type error, but \verb|(run puzzle2)| 
+shouldn't.
+
+The \om{} encoding behaves in exactly this way. Consider
+the type of the \om\ translation of {\tt puzzle1}.
+\begin{verbatim}
+Br (Abs `a 
+        (App (Esc (App (Abs `x (Br (Csp (V `x)))) 
+                       (Abs `y (Br (V `a)))))
+             (Const 0) ))
+:: Exp a u (Rec v,b) 
+           (Cd v b (c -> Cd {`a:c; v} b c))
+\end{verbatim}
+It appears polymorphic enough. Note the current
+context is typed by the type variable {\tt v} inside the {\tt Cd} type. But further
+inspection shows that this type variable {\tt v} also appears
+in the type of the code returned \verb+(c -> Cd {`a:c; v} b c)+.
+Thus it isn't really polymorphic at all.
+\begin{verbatim}
+-| run puzzle1
+Error: puzzle1 isn't polymorphic enough
+Expected Type: 
+   (forall v. Exp a u (Rec v,b) 
+                      (Cd v b c))
+Found Type:   Exp a u (Rec v,b) 
+                      (Cd v b (c -> Cd {`a:c; v} 
+                                       b c)))
+\end{verbatim}
+The type given to \verb|puzzle1| illustrates of the problem.  The 
+environment \verb|v| is needed even after the function is applied.
+But if the user performs the beta-reduction
+manually, then the problem does not occur.  
+{\small
+\begin{verbatim}
+-| puzzle2
+   Br (Abs `a (App (Esc (Br (Abs `y (Br (V `a))))) 
+                   (Const 0)))
+ :: Exp a u (Rec v,(Rec {`a:b; w},c))
+            (Cd v (Rec {`a:b; w},c) 
+                  (d -> Cd {`a:b; w} c b))
+-| Run puzzle2
+   Run (Br (Abs `a (App (Esc (Br (Abs `y (Br (V `a))))) 
+                   (Const 0))))
+ :: Exp a u (Rec {`a:b; v},c) 
+            (d -> Cd {`a:b; v} c b)
+\end{verbatim}}
+\end{itemize}
+
+The \om\ function {\tt eval} shows that if we disallow {\tt puzzle1}
+we can use a very simple implementation, yet still remain safe.
+
+\section{Related work.}
+
+There are two areas of related work that should be discussed.
+First, type systems for multi-stage languages, and second, the
+design of meta-languages for specifying and reasoning about
+object-languages. 
+
+{\bf Type Systems.} Of the many papers on type systems for multi-stage languages
+only two achieve the scope of the system presented in this paper
+(in terms of the features supported), and one should be
+discussed because it uses a similar, but weaker approach.
+They are:
+{\it Environment Classifiers}\cite{TahNie03} by Taha and Nielsen, 
+{\it Meta-Programming through Typeful Code Representation}\cite{XiChen2003}
+by Chiyan Chen and Hongwei Xi, 
+and {\it A Modal Analysis of Staged Computation} by Davies and Pfenning.
+
+Neither of the first two has the simplicity of the 
+system presented in this paper, and the third
+covers a much simpler language.
+The first two employ a single type context
+that records the type of all variables, rather than a sliding band
+of type contexts. The third uses a single stack, rather than
+a sliding band (two stacks).
+
+The paper {\it Environment Classifiers} employs a level-stratified syntax and
+a complicated syntactic notion called {\it demotion}. Demotion is a term to
+term transformation (performed under a set of variables) that essentially
+places additional cross-stage persistent annotations around the variables
+mentioned in the set. The notion of demotion is necessary to show that
+reduction preserves typing. This considerably complicates the type
+system.
+
+The paper {\it Meta-Programming through Typeful Code Representation}
+employs a de Bruijn notation similar to the notation used in
+this paper, but relies an a complicated notion of projection. 
+Projection, computes a new type context with only those
+variables from specified levels from the ``master" context with
+information about all levels. This considerably complicates
+proofs about program properties, like subject reduction. Neither system
+approaches the simplicity or the compactness of the system presented here.
+
+The paper {\it A Modal Analysis of Staged Computation} 
+\cite{Davies-Pfenning-JACM} provides a type system for several staged languages
+based on intuitionist modal logic S4. While similar is some
+respects to the type system for MetaML presented here it has some
+basic differences. First, the languages presented can only build code
+for closed terms. For example: \verb+<fn x => ~(f <x>)>+ could not be
+typed because the argument to {\tt f} is a code term with a free
+variable bound in the present level (from the perspective of inside
+the brackets). This severely limits the code generators that can be
+expressed. Second, the type system uses a single stack of
+environments one for each level, as opposed to a sliding band (a pair
+of stacks of environments), this simplification is sufficient because
+the language lacks the escape annotation. Instead it uses a weaker
+{\em unbox} construct that cannot be placed inside of brackets, also
+limiting the expressiveness of the language. Finally, none of there
+languages provides the explicit cross operator that lifts values from
+previous stages into code.
+
+{\bf Meta-languages.} There are many systems that could be used as 
+meta-languages for manipulating object-languages. They include Inductive
+Families\cite{Coquand:1994:IDT,Dybjer:1999:FAI}, theorem provers
+(Coq\cite{COQ74}, Isabelle\cite{Paulson90lacs}), logical frameworks
+(Twelf\cite{CADE99*202}, LEGO\cite{LuoPollack92}), proof assistants
+(ALF\cite{oai:CiteSeerPSU:38734}, Agda\cite{Agda}) dependently typed languages
+(Epigram\cite{epigram}, RSP\cite{Rogue}).
+
+These systems all choose a point in the design space where types and values
+are indistinguishable. In \om\ we choose a point in the design space with a
+strict phase distinction between types and values. We also have a strong
+desire to minimize type annotations and other administrative work.
+
+Several systems choose a point in the design space closer to ours, where the
+distinction between types and values is preserved. We owe much to these works
+for inspiration, examples, and implementation techniques. These include
+Guarded Recursive Datatype Constructors\cite{XiCheChe03}, First-class phantom
+types\cite{Hinze:03:Phantom}, Wobbly types\cite{wobbly}, and Silly Type
+Families\cite{sillyTF}. There are only minor syntactic differences between
+these systems and our own, and we imagine they could be used in a similar
+manner, except for one very important thing. In these systems, type indexes
+are restricted to types classified by {\tt *0}, because the systems have no
+way of introducing new kinds. We consider the introduction of new kinds as an
+important contribution of our work. Without new kinds, rows, natural numbers,
+and other important meta-level entities at the type level are not possible.
+
+\section{Conclusion.} 
+
+The goals of this paper were three fold. First, to introduce
+the meta-language \om. Second, to illustrate that important explorations
+in language design can be assisted with the correct tools. Third,
+to demonstrate that a sound type system for a multi-stage
+language can also be simple, concise, and easy to understand.
+We believe the system using a sliding band of type contexts can generalize
+to any multi-stage language and is of general interest to all who
+study program generation. As illustrated the type system can disqualify
+programs with subtle properties, and can thus simplify the semantics
+of multi-stage languages because they no-longer need to address programs
+with these subtle characteristics.
+
+\bibliographystyle{plain}
+\bibliography{proposal}
+
+\end{document}
+
