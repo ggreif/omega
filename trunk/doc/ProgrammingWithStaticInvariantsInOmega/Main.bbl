@@ -1,0 +1,84 @@
+\begin{thebibliography}{10}
+
+\bibitem{FirstClassPhantomTypes}
+James Cheney and Ralf Hinze.
+\newblock First class phantom types.
+\newblock Technical Report CUCIS TR2003-1901, Cornell University,
+  http://techreports.library.cornell.edu:8081/Dienst/UI/1.0/Display/cul.cis/TR2003-1901,
+  2003.
+
+\bibitem{hallgren-fun}
+Thomas Hallgren.
+\newblock Fun with functional dependencies, 2001.
+
+\bibitem{hatcliff-danvy-thunks}
+John Hatcliff and Olivier Danvy.
+\newblock Thunks and the lambda-calculus.
+\newblock {\em J. Functional Programming}, 7(3):303--319, May 1997.
+
+\bibitem{FunctionalNotation}
+Ralf Hinze.
+\newblock Constructing red-black trees.
+\newblock pages 89--99, September 1999.
+\newblock The proceedings appear as a technical report of Columbia University,
+  CUCS-023-99.
+
+\bibitem{huet-zipper}
+G\'{e}rard Huet.
+\newblock Functional pearl: The zipper.
+\newblock {\em J. Functional Programming}, 7(5):549--554, 1997.
+
+\bibitem{J92}
+Mark~P. Jones.
+\newblock {\em Qualified types :--theory and practice}.
+\newblock PhD thesis, Keble College, Oxford University, 1992.
+
+\bibitem{FunctionalDependencies}
+Mark~P. Jones.
+\newblock Type classes with functional dependencies.
+\newblock In {\em Proceedings of the 9th European Symposium on Programming
+  Languages and Systems}, pages 230--244. Springer-Verlag, 2000.
+
+\bibitem{okasaki-adventure}
+Chris Okasaki.
+\newblock From fast exponentiation to square matrices: an adventure in types.
+\newblock In {\em Proceedings of the fourth ACM SIGPLAN international
+  conference on Functional programming}, pages 28--35. ACM Press, 1999.
+
+\bibitem{Pasalic}
+Emir Pasalic.
+\newblock {\em The Role of Type Equality in Meta-Programming}.
+\newblock PhD thesis, OGI School of Science \& Engineering, Oregon Health \&
+  Science University, 2004.
+
+\bibitem{peytonjones-wobbly}
+Simon Peyton-Jones, Geoffrey Washburn, and Stephanie Weirich.
+\newblock Wobbly types: Type inference for generalised algebraic data types.
+\newblock July 2004.
+
+\bibitem{ONWARD}
+Tim Sheard.
+\newblock Languages of the future.
+\newblock October 2004.
+\newblock OOPSLA Companion Volume.
+
+\bibitem{sheardLFM04}
+Tim Sheard and Emir Pasalic.
+\newblock Meta-programming with built-in type equality.
+\newblock In {\em Proceedings of the Fourth International Workshop on Logical
+  Frameworks and Meta-Languages (LFM'04).
+  \verb+http://cs-www.cs.yale.edu/homes/carsten/lfm04/+}, pages 106--124, Cork,
+  Ireland, July 2004.
+
+\bibitem{simonet-pottier-hmg}
+Vincent Simonet and François Pottier.
+\newblock Constraint-based type inference for guarded algebraic data types.
+\newblock July 2003.
+
+\bibitem{xi-gadt}
+Hongwei Xi, Chiyan Chen, and Gang Chen.
+\newblock Guarded recursive datatype constructors.
+\newblock In {\em Proceedings of the 30th ACM SIGPLAN Symposium on Principles
+  of Programming Languages}, pages 224--235, New Orleans, January 2003.
+
+\end{thebibliography}
