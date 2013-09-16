@@ -1,0 +1,4001 @@
+\documentclass[11pt,twoside,A4]{llncs}
+\usepackage{makeidx,multicol}
+\include{psinput}
+\include{psfig}
+\usepackage{epsf}
+\usepackage{epsfig}
+\usepackage{graphics,color}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{mathpartir}
+
+%\DeclareGraphicsRule{*}{mps}{*}{}
+
+\newcommand{\om}{\emph{$\Omega$}mega}
+\newcommand{\plus}[2]{\{plus {#1} {#2}\}}
+\newcommand{\plusH}[2]{\begin{tabular}[t]{ll}
+                       \{plus \hspace*{-0.1in} &{#1} \\ 
+                              & {#2} \}
+                      \end{tabular}}
+\newcommand{\hide}[1]{}
+%\newtheorem{exercise}{Exercise}
+
+\newcommand{\deffbox}[8]{{\begin{tabular}{|l|rcl|} \hline
+{\small expected type} & {\small{\tt #1}} & $\rightarrow$ & {\small{\tt #2}} \\ \hline
+{\small equation} & {\small{\tt #3}} & =             & {\small{\tt #4}} \\ \hline
+{\small computed type} & {\small{\tt #5}} & $\rightarrow$ & {\small{\tt #6}} \\ \hline
+{\small equalities}    & {\small{\tt #7}} & $\Rightarrow$ & {\small{\tt #8}} \\ \hline 
+\end{tabular}}}
+
+\newcommand{\deffboxShort}[8]{{\begin{tabular}{|l|rcl|} \hline
+{\small \begin{tabular}{l} expected \\ type \end{tabular}} & {\small{\tt #1}} & $\rightarrow$ & {\small{\tt #2}} \\ \hline
+{\small equation} & {\small{\tt #3}} & =             & {\small{\tt #4}} \\ \hline
+{\small \begin{tabular}{l} computed \\ type \end{tabular}} & {\small{\tt #5}} & $\rightarrow$ & {\small{\tt #6}} \\ \hline
+{\small equalities}    & {\small{\tt #7}} & $\Rightarrow$ & {\small{\tt #8}} \\ \hline 
+\end{tabular}}}
+
+\newcommand{\zero}{0t}
+\newcommand{\one}{1t}
+\newcommand{\two}{2t}
+
+
+
+%\setlength{\textheight}{9.5in}
+%\setlength{\textwidth}{6.4in}
+%\setlength{\oddsidemargin}{-.2in}
+%\setlength{\evensidemargin}{-.2in}
+%\setlength{\topmargin}{-1in}
+
+
+%\setcounter   {topnumber}{3}
+%\renewcommand {\topfraction}{1.0}
+%\setcounter   {totalnumber}{4}
+%\renewcommand {\textfraction}{0.2}
+%\renewcommand {\floatpagefraction}{0.99} 
+%\renewcommand {\floatsep}{0.1}
+ 
+
+
+%\setlength{\linewidth}{0.2cm}
+
+\begin{document}
+
+
+\title{Programming in \om.}
+\author{Tim Sheard \& Nathan Linger}
+\institute{Computer Science Department\\
+Maseeh College of Engineering and Computer Science\\
+Portland State University}{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\maketitle
+
+%\tableofcontents
+
+\begin{abstract}
+This report was originally prepared as notes for
+a short course on \om\ taught at the 
+Central-European Functional Programming School held in
+Cluj, Romania, between 25-30 June, 2007. It can be viewed
+as a tutorial on the use of the \om\ programming language.
+
+
+\vspace*{0.1in}
+It introduces readers to the {\em types as propositions}
+notion based upon the Curry-Howard isomorphism.
+Such types can express precise
+properties of programs. The \om\ language allows us to use a single
+language for the specification of designs, the definition of properties,
+the implementation of programs, and the production of proofs that
+programs adhere to their properties. \om\ bundles all these in a coherent
+manner into a single unified system that appears to the user to be a
+programming language.
+
+\end{abstract}
+
+\section{Introduction}\label{intro}
+
+\om\ is a language with an infinite hierarchy of computational levels: value,
+type, kind, sort, etc. Data, and functions manipulating data, can be introduced
+at any level. Data is introduced by declaring the type of constructors, and
+functions are introduced by writing (possibly recursive) pattern matching
+equations.
+
+Terms at each level are classified by terms at the next level. Thus values are
+classified by types, types are classified by kinds, kinds are classified by
+sorts, etc. As discussed earlier, programmers are allowed to introduce new terms
+and functions at every level, but any particular program will have terms at only
+a finite number of levels. We illustrate the level hierarchy for the many of the
+examples given in this paper in Figure \ref{hierarchy}.
+
+We maintain a strict phase distinction ---
+the classification of a term at level $n$ cannot depend upon terms at
+lower levels. For example, no types can depend on values, and no kinds
+can depend on types. 
+We formalize properties of programs by exploiting the Curry-Howard
+isomorphism. Terms at computational level $n$, are used
+as proofs about terms at level $n+1$. We use indexed types
+to maintain a strict and formal connection between the two levels,
+and singleton types to maintain the strict separation between
+values and types.
+
+
+\section{A simple example} \label{simple}
+
+To illustrate the hierarchy of computational levels we give the
+following two-level example which uses natural numbers as a type
+index to lists that record their length in their type.
+
+First, we introduce tree-like data (the natural
+numbers, {\tt Nat}) at the {\em type level} by using the {\tt data}
+introduction form. This form is a generalization
+over the \verb+data+ declaration in Haskell~\cite{peyton-jones:haskell98}. 
+
+
+{\small
+\begin{verbatim}
+data Nat :: *1 where
+  Z :: Nat
+  S :: Nat ~> Nat
+\end{verbatim}}
+
+\noindent
+The line ``\verb+data Nat :: *1 where+" indicates that
+\verb+Nat+ is classified by \verb+*1+ (rather than \verb+*0+), which tells
+the programmer that \verb+Nat+ is a kind (rather than a type), and 
+that \verb+Z+ and \verb+S+ are types (rather than values) that are
+classified as indicated.  Think of the operator \verb+~>+ as the
+operator that classifies functions at the type level. I.e.
+it is similar in use to the operator \verb+->+, but used on kinds rather
+than types. Thus, \verb+S :: Nat ~> Nat+ indicates
+a type constructor that takes a \verb+Nat+ as input and produces
+a \verb+Nat+ as output.
+
+The classifiers
+\verb+*0+, \verb+*1+, \verb+*2+, etc. indicate the level of a term.
+All values are classified by types that are classified by \verb+*0+. All types
+are classified by kinds that are classified by \verb+*1+. All kinds are
+classified by sorts that are classified by \verb+*2+, etc. This is illustrated
+with great detail in Figure \ref{hierarchy}.
+
+Second, we write a function at the type level over this data
+({\tt plus}).  At the type level and higher, we distinguish
+function application from constructor application by surrounding
+function application by braces (\verb+{+ and \verb+}+). For example,
+we write \verb+S x+ for constructor application,
+and \verb+{plus x y}+ for function application.
+
+
+{\small
+\begin{verbatim}
+plus:: Nat ~> Nat ~> Nat
+{plus Z m} = m
+{plus (S n) m} = S {plus n m}
+\end{verbatim}}
+
+
+Third, using the {\tt data} introduction form at the {\em value level}, we introduce
+the algebraic data structure ({\tt Seq}). The types of such values are indexed
+by the natural numbers.  These indexes describe an invariant about the
+constructed values --- their length appears in their type --- consider the type
+of {\tt l1} below. 
+
+{\small
+\begin{verbatim}
+data Seq:: *0 ~> Nat ~> *0 where
+  Snil :: Seq a Z
+  Scons:: a -> Seq a n -> Seq a (S n)
+  
+l1 = (Scons 3 (Scons 5 Snil)) :: Seq Int (S(S Z))
+\end{verbatim}}
+
+Finally, we introduce an append function at the value level over {\tt Seq}
+values ({\tt app}). The type of {\tt app} describes one of its important
+properties --- there is a functional relationship between the lengths of its two
+inputs, and the length of its output.
+
+{\small
+\begin{verbatim}
+app:: Seq a n -> Seq a m -> Seq a {plus n m}
+app Snil ys = ys
+app (Scons x xs) ys = Scons x (app xs ys)
+\end{verbatim}}
+
+\noindent
+To see that the {\tt app} is well typed, the type checker does the following.
+The expected type is the type given in the function prototype. We
+compute the type of both the left- and right-hand-side of the equation
+defining a clause. We compare the expected type with the computed type
+for both the left- and right-hand-sides. This comparison generates
+some necessary equalities (for each side) to make the expected and computed
+types equal. We assume the left-hand-side
+equalities to prove the right-hand-side equalities. To see this in
+action, consider the second clause of the definition of \verb+app+.
+
+\vspace*{.1in}
+{\tt
+\begin{tabular}{|l|rlclcl|} \hline
+{\small {\normalfont expected type}} & &{\small{{Seq a n}}} & $\rightarrow$ & {\small{{Seq a m}}} & $\rightarrow$ &  {\small{{Seq a \plus{n}{m}}}}\\ \hline
+{\small {\normalfont equation}}      & {\small{app}}&  {\small{{(Scons x xs)}}} & &  {\small{{ys}}} & = & {\small{{Scons x (app xs ys)}}} \\ \hline
+{\small {\normalfont computed type}} & & {\small{{Seq a (S b)}}} & $\rightarrow$ & {\small{{Seq a m}}} & $\rightarrow$ & {\small{{Seq a (S \plus{b}{m})}}}  \\ \hline
+{\small {\normalfont equalities}}    & & \multicolumn{3}{r}{\small{{n = (S b)}}} & $\Rightarrow$ & {\small{{\plus{n}{m}= S\plus{b}{m}}}} \\ \hline 
+\end{tabular}}
+\vspace*{.1in}
+
+\noindent
+The expected types are taken from the type declaration accompanying the
+function definition. The computed type is computed\footnote{Using an inference
+algorithm based upon algorithm-W} from the known types of the constructors and functions in the
+definition. The equalities are generasted by equating the expected type
+and the computed type. The left-hand-side equalities (to the left of the
+$\Rightarrow$) let us assume
+\verb+n+ = \verb+S b+. The right-hand-side equalities, require us to
+establish that \verb+{plus n m}+ = \verb+S{plus b m}+.   Using the
+assumption that \verb+n+ = \verb+S b+, we are left with the requirement
+that \verb+{plus (S b) m}+ = \verb+S{plus b m}+, which is easy to prove
+using the definition of \verb+plus+.
+ 
+The different levels of the objects introduced in this example (and elsewhere
+in the paper) are plotted in Figure \ref{hierarchy}. The reader may wish
+to consult the figure to help visualize the relationships involved.
+
+\begin{exercise} \label{lengthEx}
+
+Write an \om\ function that defines the length function over sequences.
+\verb+length:: Seq a n -> Int+. You will need to create a file, and paste the
+definition for {\tt Seq} into the file, as well as write the length function.
+The {\tt Nat} kind is predefined. You will need to include the function
+prototype, above, in your file (type inference is limited in \om). How might we
+reflect the fact that the resulting {\tt Int} should have size {\tt n}? See
+Section \ref{nat'}.
+
+\end{exercise}
+
+\begin{exercise}
+After you complete Exercise \ref{lengthEx}, create a table,
+as we did for {\tt app} above, with expected type, equations, computed type,
+and equations to be discharged. How might we solve the equations produced?
+\end{exercise}
+
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\topfraction}{.80}
+ 
+\begin{figure}[t]
+{\tt
+\begin{tabular}{|lclclcl|} \hline
+  $\leftarrow$     {\it {\tiny value name space}}&|& {\it {\tiny type name space $\rightarrow$}} & &  && \\ \hline
+{\em value}&|& {\em type} &|&  {\em kind} &|& {\em sort} \\ \hline
+     & |& Tree        &::& *0 \verb+~>+ *0 &::& *1 \\
+Fork &::& Tree a -> Tree a -> Tree a &::& *0       &::& *1 \\
+Node &::& a -> Tree a &::& *0       &::& *1 \\
+Tip  &::&      Tree a &::& *0       &::& *1 \\ \hline
+%     &  &          & |& Nat        &::& *1 \\      
+     & |& Z        &::& Nat &::& *1 \\
+     & |& S        &::& Nat \verb+~>+ Nat &::& *1 \\   \hline  
+     & |& plus     &::& Nat \verb+~>+ Nat \verb+~>+ Nat &::& *1 \\    
+     & |& \{plus 1t 3t \} &::& Nat &::& *1 \\    \hline
+     &|& Seq       &::& *0 \verb+~>+ Nat \verb+~>+ *0 &::& *1 \\ 
+Snil  &::& Seq a Z &::& *0 &::& *1 \\
+Scons &::& a -> Seq a b -> Seq a (S b) &::& *0 &::& *1 \\
+app   &::& Seq a n -> Seq a m -> && && \\
+      &  & Seq a \{plus n m\} &::&*0  &::&  *1\\   \hline  
+%      &  &                   & |& TempUnit &::&  *1 \\           
+      & |& Tp        &::& Shape &::& *1 \\     
+      & |& Nd        &::& Shape &::& *1 \\     
+      & |& Fk        &::& Shape &::& *1 \\   \hline       
+
+      & |& Tree   &::& Shape \verb+~>+ *0  \verb+~>+ *0  &::& *1\\      
+Tip &::& Tree Tp a  &::& *0 &::& *1\\  
+Node &::& a -> Tree Nd a  &::& *0 &::& *1\\ 
+Fork &::& Tree x a -> Tree y a -> && && \\
+     &  & Tree (Fk x y) a  &::& *0 &::& *1\\ 
+find &::& (a -> a -> Bool) -> a -> &&  && \\
+     &  & Tree sh a -> [Path sh a] &::& *0 &::& *1 \\ \hline
+%      &  &          & |& Boolean &::&  *1 \\
+      & |& T        &::& Boolean &::& *1 \\  
+      & |& F        &::& Boolean &::& *1 \\ 
+    &|& le  &::& Nat \verb+~>+ Nat ~> Boolean &::& *1 \\
+    &|& \{le 0t 2t\}   &::& Boolean &::& *1 \\ \hline
+    &|&  LE &::& Nat \verb+~>+ Nat ~> *0 &::& *1 \\
+LeZ &::& LE Z a            &::&  *0     &::& *1 \\
+LeS &::& LE n m -> LE (S n) (S m)  &::&  *0     &::& *1 \\ \hline
+
+      & |&  Even  &::&  Nat \verb+~>+ *0 &::& *1 \\
+EvenZ &::& Even Z &::& *0 &::& *1 \\
+EvenSS &::& Even n -> Even (S(S n)) &::& *0 &::& *1 \\
+\hline
+\end{tabular}
+}
+\caption{The level hierarchy for some of the examples in the paper.} \label{hierarchy}
+\end{figure}
+
+
+\section{Features of the \om\ Language} \label{features}
+\om\ is modelled after the Haskell language. There are several
+important differences between \om\ and Haskell that
+give \om\ its unique power of expression. These include.
+
+\begin{itemize}
+
+\item{\bf Data Structures at All Levels.} Kinds are a type system
+for classifying types. Sorts are a type system for classifying
+kinds. There is no practical limit to this hierarchy. In \om,
+programmers can introduce new tree-like structures at any level. In
+Haskell all introduced datatypes are classified by \verb+*0+. I.e.
+the introduced types classify only values. In Figure \ref{hierarchy},
+Haskell types are illustrated by {\tt Tree}, which is a type
+constructor which classifies its constructor functions ({\tt Fork},
+{\tt Node}, and {\tt Tip}) which are values. In \om, the {\tt data}
+declaration is generalized to all levels.
+
+\item{\bf GADTs.} Generalized Algebraic Datatypes allow constructor
+functions to have more general types than the types supported by the
+\verb+data+ declaration in Haskell. GADTs are important because the
+additional generality allows the programmer to express properties of
+types as witness types, proof objects, or singleton types. GADTs are
+the machinery that support the Curry-Howard isomorphism in \om.
+In Figure \ref{hierarchy}, the types {\tt Seq},
+{\tt LE}, and {\tt Even} require the generality introduced by GADTs.
+
+
+\item{\bf Functions at All Levels.} \om\ supports functions over
+tree- structured data at all levels. Such functions are written
+by pattern matching equations, in much the same manner one writes
+functions over data at the value level in Haskell. We restrict the
+form of such definitions to be inductively sequential (See Appendix \ref{IndSeq}). This ensures
+a sound and complete strategy for answering certain type-checking
+time questions by the use of narrowing. The class of inductively
+sequential functions is a large one, in fact every Haskell function
+has an inductively sequential definition. The inductively sequential
+restriction affects the form of the equations, and not the functions
+that can be expressed. In Figure \ref{hierarchy}, {\tt plus} 
+and {\tt le} are functions at the type level.
+
+\item{\bf Code Constructing Quasi-Quotes.}  \om\
+supports the run-time generation of code, along the lines of
+MetaML~\cite{Sheard:1999:UMS} and Template Haskell~\cite{Sheard02}. The meta-programming ability of
+code generation allows us to remove a layer of interpretation
+from our programs, that makes them efficient as well as
+general.
+
+\end{itemize}
+
+Some of the following sections are labeled with {\em Feature} if they
+are an addition to Haskell, {\em Pattern} if they are a paradigmatic
+use of the features to accomplish a particular end, or {\em Example} if
+they illustrate an important concept.
+
+\vspace*{0.1in}
+
+\subsection{Feature: Kinds} \label{shape} We can introduce new tree-like data at any level,
+including the type level and higher. The data declaration introduces both the constructors for
+tree-like data and the object that classifies these structures. We
+indicate the level where these objects reside using \verb+*0+, \verb+*1+,
+\verb+*2+, etc. in the \verb+data+ declaration. Consider the kinds {\tt Nat} (introduced earlier), and
+{\tt Boolean}:
+ 
+\vspace*{.15in}
+\begin{tabular}{l|l}
+\begin{minipage}[t]{2.2in}
+{\small
+\begin{verbatim}
+data Shape :: *1 where 
+  Tp:: Shape
+  Nd:: Shape
+  Fk:: Shape ~> Shape ~> Shape
+
+\end{verbatim}}
+\end{minipage}
+&
+\begin{minipage}[t]{2.2in}
+{\small
+\begin{verbatim}
+ data Boolean:: *1 where
+   T:: Boolean
+   F:: Boolean  
+\end{verbatim}}
+\end{minipage}
+\end{tabular}
+\vspace*{0.1in}
+
+\noindent
+Like the kind {\tt Nat} defined earlier, {\tt Shape} and {\tt Boolean}
+also define new kinds, and new types classified by these kinds. The new
+tree-like data at the type level are constructed by the type-constants
+({\tt Tp}, {\tt Nd}, {\tt T}, {\tt F}, {\tt Z}), and type constructors
+({\tt Fk} and {\tt S}). The kinds {\tt Shape} and {\tt Boolean} classify
+these structures, as shown explicitly in the declaration. For example {\tt
+T} is classified by {\tt Boolean}, and {\tt Fk} is a constructor from {\tt
+Shape} to {\tt Shape} to {\tt Shape}. Note that while {\tt Tp}, {\tt Nd},
+{\tt T}, and {\tt F}  live at the type level, there are no values
+classified by them. Again, see Figure \ref{hierarchy} to see where these
+objects reside in the larger picture.
+
+Even though there are no values classified by the types introduced by {\tt
+Nat}, {\tt Shape}, and {\tt Boolean}, they are very useful. Instead of
+using them to classify values, we use them as indexes to value level data,
+i.e. types like {\tt Proof \{even n\}} and {\tt Seq a (S Z)}. The indexes
+like {\tt \{even n\}} and {\tt S z} indicate static (type-checking time)
+properties of values. For example, a value with type {\tt Seq a (S Z)} is
+statically guaranteed to have length 1.
+
+\begin{exercise}
+Write a data declaration introducing a new kind called {\tt Color}
+with types {\tt Red} and {\tt Black}. Are there any values with
+type {\tt Red}? Now write a data declaration introducing a new
+type {\tt Tree} which is indexed by {\tt Color} (this will be
+similar to the use of {\tt Nat} in the declaration of {\tt Seq}).
+There should be some values classified by the type {\tt (Tree Red)},
+and others classified by the type {\tt (Tree Black)}.
+\end{exercise}
+
+
+\subsection{Feature: Type Functions} \label{functions}  Kind declarations allow us to
+introduce new tree-like structures at the type level. We can use
+these structures to parameterize data at the value level as we did
+with {\tt Nat} indexing {\tt Seq}. We may also compute over these tree-like
+structures. Such functions are written by pattern matching equations,
+in much the same manner one writes functions over data at the value
+level. Several useful functions over types defined
+earlier are:
+
+\vspace*{.05in}
+\begin{tabular}{l|l}
+\begin{minipage}[t]{2.2in}
+{\small
+\begin{verbatim}
+even :: Nat ~> Boolean
+{even Z} = T
+{even (S Z)} = F
+{even (S (S n))} = {even n}
+ 
+le:: Nat ~> Nat ~> Boolean 
+{le Z n} = T
+{le (S n) Z} = F
+{le (S n) (S m)} = {le n m}
+\end{verbatim}}
+\end{minipage}
+&
+\begin{minipage}[t]{2.8in}
+{\small
+\begin{verbatim}
+ plus:: Nat ~> Nat ~> Nat
+ {plus Z m} = m
+ {plus (S n) m} = S {plus n m}
+ 
+ and:: Boolean ~> Boolean ~> Boolean
+ {and T x} = x
+ {and F x} = F
+\end{verbatim}}
+\end{minipage}
+\end{tabular}
+\vspace*{0.05in}\\ \noindent
+Like functions at the value level, the type functions  {\tt plus}, {\tt and},
+{\tt even}, and {\tt le} are expressed using equations. The function {\tt and}
+is a binary function that combines two {\tt Booleans}.  The property {\tt even}
+is a unary predicate that distinguishes odd from even numbers, and the property
+{\tt le} is a binary less-than-or-equal-to predicate. All the functions are
+strict total (terminating) functions at the type level. Termination
+is a necessary property of type functions, though this is not
+currently checked by the system.
+
+\begin{exercise}
+Write an \om\ function {\tt mult}, which is the multiplication
+function at the type level over natural numbers.
+It should be classified by the kind
+\verb+mult:: Nat ~> Nat ~> Nat+.
+\end{exercise}
+
+\begin{exercise}
+Write the {\tt odd} function classified by the kind \verb+Nat ~> Boolean+.
+\end{exercise}
+
+\begin{exercise}
+Write the {\tt or} and {\tt not'} functions, that are classified by the kinds
+\verb+(Boolean ~> Boolean ~> Boolean)+  and  \verb+(Boolean ~> Boolean)+.
+Use {\tt not'} rather than {\tt not} since the name {\tt not}
+is already predefined.
+Which arguments of {\tt or} should you pattern match over?
+Does it matter? Experiment, \om\ won't allow some combinations.
+See Appendix \ref{IndSeq} 
+on inductively sequential definitions and narrowing for the reason why.
+\end{exercise}
+
+
+\subsection{Feature: GADTs} 
+Generalized Algebraic Datatypes allow constructor
+functions to have more general types than the types supported by
+\verb+data+ declaration in Haskell. GADTs are important because the
+additional generality allows the programmer to express properties 
+of types using type indexes and witnesses (or proof objects). 
+The {\tt data} declaration in \om\ defines generalized algebraic datatypes
+(GADT). These are characterized by explicitly classifying constructors in a {\tt data}
+declaration with their full types. The additional generality arises because
+the range of a constructor in a GADT is not constrained to be the type
+constructor applied to only type variables. For example consider the value
+level GADTs {\tt Seq}, {\tt Path} and {\tt Tree}:
+
+{\small
+\begin{verbatim}
+data Seq:: *0 ~> Nat ~> *0 where
+  Snil :: Seq a Z
+  Scons:: a -> Seq a n -> Seq a (S n)
+
+data Path:: Shape ~> *0 ~> *0 where
+  None :: Path Tp a
+  Here :: b -> Path Nd b
+  Left :: Path x a -> Path (Fk x y) a
+  Right:: Path y a -> Path (Fk x y) a
+  
+data Tree :: Shape ~> *0 ~> *0 where
+  Tip:: Tree Tp a
+  Node:: a -> Tree Nd a
+  Fork::  Tree x a -> Tree y a -> Tree (Fk x y) a
+\end{verbatim}}
+
+\noindent
+Note that instead of ranges like {\tt (Seq a b)}, and {\tt (Path a b)} where
+only type variables like {\tt a}, and {\tt b} can be used as parameters, the
+ranges contain sophisticated instantiations such as 
+{\tt (Seq a (S n))} and {\tt (Path Nd)}. Note that the second index to {\tt Seq} (the one of kind {\tt
+Nat}) is used to describe an invariant about the length of the sequence,
+and the {\tt Shape} index to {\tt Path}, indicates the shape of a tree
+in which that path is legal. This is one of the many uses of GADTs --
+to enforce invariants about the structure of data.
+Notice how the shape of {\tt tree1} appears in its type.
+{\small
+\begin{verbatim}
+tree1 :: Tree (Fk  (Fk   Tp  Nd)       (Fk   Nd       Nd))        Int
+tree1 =       Fork (Fork Tip (Node 4)) (Fork (Node 4) (Node 3))
+\end{verbatim}}
+\noindent
+We can write pattern matching functions
+over GADTs just as we can over algebraic datatypes. The only caveat
+is that we must specify the type of the function using a prototype.
+\om\ does type checking of functions over GADTs rather than type inference.
+
+Suppose we wanted to search a tree, returning all paths that
+lead to a particular element. It would be nice to know that
+every path returned was a legal path within the tree. For example
+{\tt (Left (Here 2))} is not a legal path within the tree {\tt Tip}.
+The {\tt Shape} index allows us to specify that our searching function
+always returns a value that obeys this legal path invariant.
+
+{\small
+\begin{verbatim}
+find:: (a -> a -> Bool) -> a -> Tree sh a -> [Path sh a]
+find eq n Tip = []
+find eq n (Node m) =
+  if eq n m then [Here n] else []
+find eq n (Fork x y) = 
+  map Left (find eq n x) ++ 
+  map Right (find eq n y)
+\end{verbatim}}
+
+\noindent
+The type of {\tt find} guarantees that every path returned is a legal
+path within the tree searched, because both the tree and every path
+in the list has the same {\tt Shape}, namely {\tt sh}.
+
+\begin{exercise} \label{extract}
+Write an \om\ function with type
+{\tt extract:: Path sh a -> Tree sh a -> a}, which extracts
+the value of type {\tt a}, stored in the tree at the
+location pointed to by the path. This function will pattern
+match over two arguments simultaneously. Some combinations
+of patterns are not necessary. Why? See section
+\ref{unreachable} for how you can document this fact.
+\end{exercise}
+
+\begin{exercise} 
+Replicate the shape index pattern for lists.
+Write two \om\ GADTs. One at the kind level which encodes
+the shape of lists, and one at the type level for lists
+indexed by their shape. Also, write a find function for
+your new types. {\tt find:: (a -> a -> Bool) -> a -> List sh a -> Maybe(ListPath sh a)},
+which returns the first path, if one exists.
+
+Since every GADT is comprised of a sum of products, can you define
+a single shape kind, that could be used for all parametric
+datatypes?
+\end{exercise}
+
+\begin{exercise} \label{reptype}
+Consider the GADT below.
+{\small
+\begin{verbatim}
+data Rep :: *0 ~> *0 where
+   Int :: Rep Int
+   Prod :: Rep a -> Rep b -> Rep (a,b)
+   List :: Rep a -> Rep [a]
+\end{verbatim}}
+Construct a few terms. Do you note anything interesting
+about this type? Write a function with the following prototype:
+{\tt showR:: Rep a -> a -> String}, which given values
+of type {\tt Rep a} and {\tt a}, displays the second as a string.
+Extend this GADT with a few more constructors, then extend your
+{\tt showR} function as well.
+\end{exercise}
+
+
+\subsection{Pattern: Witnesses} \label{witness}
+
+GADTs can be used to witness relational properties
+between types. This is because the parameters to types introduced
+using the GADT mechanism can play different roles.
+The natural number argument of the type constructor {\tt
+Seq} (from Section \ref{simple}) plays a qualitatively
+different role than type arguments in ordinary ADTs.
+Consider the declaration for a binary tree datatype in Haskell:
+
+{\small\begin{verbatim} 
+data HTree a = HFork (HTree a) (HTree a) | HNode a | HTip
+\end{verbatim}}
+\noindent
+In this declaration the type parameter {\tt a} is used to
+indicate that there are sub components of {\tt HTree}s that
+are of type {\tt a}. In fact, {\tt HTree}s are parametric.
+Any type of value can be placed in the ``sub component" of
+type {\tt a}. The type of the value placed there is
+reflected in the {\tt HTree}'s type. Contrast this with the
+{\tt n} in {\tt (Seq a n)}, and the {\tt sh} in {\tt (Tree sh a)}. Instead, the parameter {\tt n}
+is used to stand for an abstract property (the length of the
+list represented), and the parameter {\tt sh} is used to stand for the
+shape of the tree. When we use a type parameter in this way
+we call it a type index~\cite{XiThesis,Xi:1999:DTP} rather than a type parameter.
+
+We can use indexes to GADTs to define value level data that
+we can think of as proofs, or witnesses to type level
+properties. This is a powerful idea. Consider the
+introduction of several new indexed types {\tt Proof}, {\tt Plus}, {\tt LE} and
+{\tt Even}. Note that these are ordinary data structures that
+exist at the value level, but describe properties at
+the type level.
+\vspace*{.3in}
+\noindent
+\begin{tabular}{l|l}
+\begin{minipage}[t]{2.3in}
+{\small
+\begin{verbatim}
+
+data Proof:: Boolean ~> *0 where
+  Triv:: Proof T
+
+data Plus:: Nat ~> Nat ~> Nat ~> *0 
+      where
+  PlusZ:: Plus Z m m
+  PlusS:: Plus n m z -> 
+          Plus (S n) m (S z)
+\end{verbatim}}
+\end{minipage}
+&
+\begin{minipage}[t]{2.6in}
+{\small
+\begin{verbatim} 
+
+ data LE:: Nat ~> Nat ~> *0 where
+   LeZ:: LE Z n
+   LeS:: LE n m -> 
+         LE (S n) (S m)
+
+ data Even:: Nat ~> *0 where
+   EvenZ:: Even Z
+   EvenSS:: Even n -> Even (S (S n))
+\end{verbatim}}
+\end{minipage}
+\end{tabular}
+
+\noindent
+These declarations introduce value-level constants ({\tt Triv}, {\tt EvenZ}, {\tt PlusZ}, and
+{\tt LeZ}) and constructor functions ({\tt EvenSS}, {\tt PlusS}, and {\tt LeS}).
+Values of these types can be used as proofs about the natural numbers.
+
+To make it easier to enter and display types of kind \verb+Nat+, 
+in \om,  we have special syntactic sugar for them:
+{\tt Z} = \verb+0t+,
+\verb+S Z+ = \verb+1t+, and
+\verb+S(S Z)+ = \verb+2t+, 
+etc. We may also write \verb|(1+x)t| for \verb|S x|,
+ and  \verb|(2+x)t| for \verb|S(S x)|, etc.
+We introduce this notation here (see Section \ref{synext} for more detail)
+to emphasize that we should view {\tt LE}, {\tt Plus} and {\tt Even}
+as relationships
+between natural numbers. To emphasize this,
+let's examine the types of several values constructed with these
+constructors. 
+
+\vspace*{.2in}
+\begin{tabular}{l|l}
+\begin{minipage}[t]{2.4in}
+{\small
+\begin{verbatim}
+EvenZ:: Even 0t
+(EvenSS EvenZ):: Even 2t
+(EvenSS (EvenSS EvenZ)):: Even 4t
+
+p1 ::Plus 2t 3t 5t
+p1 = PlusS (PlusS PlusZ)
+\end{verbatim}}
+\end{minipage}
+&
+\begin{minipage}[t]{3.0in}
+{\small
+\begin{verbatim}
+ LeZ:: LE 0t a
+ (LeS LeZ):: LE 1t (1+a)t
+ (LeS (LeS LeZ)):: LE 2t (2+a)t
+ 
+ even2 :: Proof {even 2t}
+ even2 = Triv
+\end{verbatim}}
+\end{minipage}
+\end{tabular}
+\vspace*{.05in}
+
+\noindent
+The important thing to notice is 
+that we may view ordinary values with types 
+\verb+(LE n m)+, \verb+(Even n)+, and \verb+(Proof {even n})+ as proofs, since the types of all 
+legally constructed values witness only true statements about {\tt n} and {\tt m}. 
+For example we cannot build a term of type \verb+(Even 1t)+. This is the essence
+of the Curry-Howard isomorphism. 
+
+We can view \verb+(EvenSS EvenZ):: Even 2t+
+as either the statement that \verb+(EvenSS EvenZ)+ has type \verb+(Even 2t)+,
+or that \verb+(EvenSS EvenZ)+ is a proof of the property \verb+(Even 2t)+.
+In the same fashion, the type system will reject ill-typed terms that witness false
+statements. For example, consider the response when we
+try to type the term {\tt Triv} with the type {\tt (Proof \{even 1t\})}
+
+
+{\small
+\begin{verbatim}
+bad:: Proof {even 1t}
+bad = Triv
+
+While type checking in the scope of:
+   bad
+We need to prove:
+   Equal {even 1t} T
+From the truths:
+And the rules:S,Z,
+But, The equations: (F=T) =>  have no solution
+\end{verbatim}}
+
+All this follows directly from the introduction of new types as GADTs
+and the ability to define them, and to compute over them, at arbitrary levels. 
+
+\begin{exercise} 
+Construct terms with the types {\tt (Plus 2t 3t 5t)}, {\tt (Plus 2t 1t 3t)},
+and {\tt (Plus 2t 6t 8t)}. What did you discover?
+\end{exercise}
+
+\begin{exercise} \label{summand}
+Write an \om\ function with the following prototype:\\
+{\tt summandLessThanOrEqualToSum:: Plus a b c -> LE a c}. Hint: it is a recursive function.
+Can you write a similar function with type {\tt (Plus a b c -> LE b c)}?
+\end{exercise}
+
+\subsection{Pattern: Witness vs. Type Function}
+The reader may have noticed that {\tt (Proof \{even n\})} and {\tt (Even n)} are
+two different ways to express the same notion.
+Either we write a ({\tt Boolean}) function at the type level ({\tt even}), or
+introduce a witness type ({\tt Even}) at the value level. 
+
+The general principle of replacing a boolean function at the type level
+with a witness object at the value level, can be further
+generalized (you can try this in Exercise \ref{EvenWitness}).
+The type function does not
+have to have {\tt Boolean} as its range. Instead, 
+for every $n$-ary function at the type
+level, we can build an $(n+1)$-ary witness type. 
+We express the equality between a function call and its
+result: {\tt \{function a b\} = c} as a relation: {\tt \{Relation a b c\}}.
+
+The witness
+type turns the $n$-ary function into an $(n+1)$-ary type constructor.
+Each clause in the function definition is named by a constructor
+function in the witness. If the right-hand-side of a clause has
+$m$ recursive calls, the constructor function becomes
+an $m$-ary constructor. The right-hand-side of each clause becomes
+the $(n+1)^{st}$ argument of the range, where every recursive call
+to the function in the right-hand-side, is replaced with a variable.
+Each recursive call becomes one of the $m$ arguments.
+The $(n+1)^{st}$ argument to these calls
+is the new variable replacing the corresponding recursive
+call in the $(n+1)^{st}$ argument of the
+range. For example: The clause of the
+binary function {\small \verb+{plus (S n) m} = S {plus n m}+}, becomes
+a ternary predicate {\small \verb+Plus (S n) m (S {plus n m})+}. By replacing
+the recursive call with {\tt z}, and making {\tt z} be the $(n+1)^{st}$ parameter
+to the first argument, we get the type of the unary constructor\\
+{\small \verb+PlusS:: Plus n m z -> Plus (S n) m (S z)+}.
+
+\begin{exercise}\label{EvenWitness}
+Use the pattern above to define a GADT (a type constructor
+with 2 arguments) that witnesses the {\tt even} type function.
+\end{exercise}
+
+Witnesses and type functions express the same ideas, but can be used
+in very different ways.  Type functions are only useful at compile-time 
+(they're static) and their structure cannot be observed (they
+can only be applied, so we say they are extensional). Witnesses, on
+the other hand, are actual data that is manipulated at run time
+(they're dynamic). Their structure can also be observed and taken
+apart (we say they're intensional). They are true data. A big
+difference between the two ways of representing properties is the
+computational mechanisms used to ensure that programs adhere to such
+properties.
+
+
+ 
+\subsection{Pattern: Singleton Types}  \label{singleton} Sometimes
+it is useful to direct computation at the type level, by
+writing functions at the value level. Even though types
+cannot depend on values directly, this can be simulated by the use of
+singleton types. The idea is to build a completely separate
+isomorphic copy of the type in the value world, but still
+retain a connection between the two isomorphic structures.
+This connection is maintained by indexing the value-world
+type with the corresponding type-world kind. This is best
+understood by example. Consider reflecting the kind {\tt
+Nat} into the value-world by defining the type constructor
+{\tt SNat} using a {\tt data} declaration.
+
+{\small
+\begin{verbatim}
+data SNat:: Nat ~> *0 where
+  Zero:: SNat Z
+  Succ:: SNat n -> SNat (S n)
+  
+three = (Succ (Succ (Succ Zero))):: SNat(S(S(S Z)))
+\end{verbatim}}
+
+\noindent
+Here, the value constructors of the {\tt data} declaration for {\tt
+SNat} mirror the type constructors in the {\tt kind} declaration of
+{\tt Nat}.  We maintain the connection
+between the two isomorphic structures by the use of {\tt SNat}'s natural
+number index. This type index is in one-to-one correspondence with
+the shape of the value. Thus, the type index of {\tt SNat} exactly
+mirrors its shape. For example, consider the
+example {\tt three} above, and pay particular attention to the
+structure of the type index, and the structure of the value with that
+type.
+ 
+This kind of relationship between values and types
+is called a {\it singleton type} because there is only one
+element of any singleton type. For example only {\tt Succ (Succ Zero)}
+inhabits the type {\tt SNat(S (S Z))}. It is possible to define a
+singleton type for any first order type (of any kind). All singleton
+types always have kinds of the form \verb+I ~> *0+ where {\tt I} is the
+index we are reflecting into the value world. We sometimes call
+singleton types {\em representation types}. We cannot over emphasize
+the importance of the singleton property. Every singleton type
+completely characterizes the structure of its single inhabitant, and
+the structure of a value in a singleton type completely characterizes
+its type. Thus we can compute over a value of a singleton type, and the
+computation at the value level can express a property at the type
+level.
+By using singleton types we completely avoid the use of dependent
+types where types depend on values~\cite{StoneHar00,Shao:2002:TSC}.
+The cost associated with this avoidance is the possible duplication
+of data structures and functions at several levels.
+
+
+
+\subsection{Pattern: A pun: Nat'} \label{nat'}
+We now define the type {\tt Nat'},
+which is identical structurally to the type {\tt SNat}. As such, the type {\tt Nat'} is
+also a singleton type representing the natural numbers, but it relies on a
+feature of the \om\ type system. In \om\ (as in Haskell) the name space for values
+is separate from the name space for types. Thus it is possible to have the same
+name stand for two things. One in the value space, and the other in the type
+space. The pun is because we use the names {\tt S} and {\tt Z} in both the
+value and type name spaces. We exploit this ability by writing:
+
+{\small
+\begin{verbatim}
+data Nat':: Nat ~> *0 where
+  Z:: Nat' Z
+  S:: Nat' n -> Nat' (S n)
+\end{verbatim}}
+
+\noindent
+The value constructors {\tt Z:: Nat' Z} and {\tt S:: Nat' n ->
+Nat' (S n)} are ordinary values whose types mention the type
+constructors they pun. The name space partition, and the relationship
+between {\tt Nat} and {\tt Nat'} is illustrated below.
+
+\vspace*{.1in}
+{\tt {\small
+\begin{tabular}{|lclclcl|} \hline
+  $\leftarrow$     {\it {\tiny value name space}}&|& {\it {\tiny type name space $\rightarrow$}} & &  && \\ \hline
+{\em value}&|& {\em type} &|&  {\em kind} &|& {\em sort} \\ \hline
+     & |& Z        &::& Nat &::& *1 \\
+     & |& S        &::& Nat \verb+~>+ Nat &::& *1 \\   \hline  
+Z &::& Nat' Z &::& *0 &::& *1 \\
+S &::& Nat' m -> Nat' (S m) &::& *0 &::& *1 \\
+\hline
+\end{tabular}}}
+\vspace*{.1in}
+
+\noindent
+In {\tt Nat'}, the singleton relationship
+between a {\tt Nat'} value and its type is emphasized even more
+strongly, as witnessed by the example {\tt three'}. 
+
+\vspace*{-.05in}
+{\small
+\begin{verbatim}
+three' = (S(S(S Z))):: Nat'(S(S(S Z)))
+\end{verbatim}}
+
+\noindent
+Here the
+shape of the value, and the type index appear isomorphic.
+We further exploit this pun, by extending the syntactic sugar
+for writing natural numbers at the type level ({\tt 0t}, {\tt 1t},  etc.) to their
+singleton types at the value level. Thus we may write
+{\tt (2t:: Nat' 2v)}. See Section \ref{synext} for details.
+
+\begin{exercise} \label{pred}
+Write the two \om\ functions with types: {\tt same:: Nat' n -> LE n n},
+and {\tt predLE:: Nat' n -> LE n (S n)}. Hint: they are simple
+recursive functions.
+\end{exercise}
+
+\begin{exercise}  \label{trans}
+
+Write the \om\ function which witnesses the implication stating the
+transitivity of the less-than-or-equal-to predicate. {\tt trans:: LE a
+b -> LE b c -> LE a c}. By the curry-Howard isomorphism a total function
+between two witnesses
+
+Hint: it is a recursive function with pattern
+matching over both arguments. One of the cases is not reachable. Which
+one? Why? See Section \ref{unreachable} for how you can document this
+fact. \end{exercise}
+
+
+\begin{exercise} 
+In Exercise \ref{summand} we proposed writing a function with type
+{\tt (Plus a b c -> LE b c)}. This turned out to be not possible given
+our current knowledge. But,
+it is possible to write a function with type
+{\tt (Nat' b -> Plus a b c -> LE b c)}. Write this function. What
+benefit does the first {\tt Nat' b} argument provide? Hint:
+both the functions {\tt same} and {\tt predLE} come in useful.
+\end{exercise}
+
+
+\subsection{Pattern: Leibniz Equality} \label{equal}
+Terminating terms of type \verb+(Equal lhs rhs)+ are values witnessing the equality
+of {\tt lhs} and {\tt rhs}. The type constructor {\tt Equal} is defined as:
+
+{\small
+\begin{verbatim}
+data Equal :: a ~> a ~> *0 where
+  Eq:: Equal x x
+\end{verbatim}}
+
+The type constructor {\tt Equal} can be applied to any
+two types, as long as both are classified by the same
+classifier {\tt a}. The classifier
+{\tt a} is largely unconstrained. In Section \ref{level} we
+discuss this in greater depth. Intuitively,
+given a term {\tt w} with type {\tt (Equal x y)}, we can
+think of {\tt w} as a proof that {\tt x} and {\tt y}
+are equal.
+
+Note that {\tt Equal} is a GADT, since in the type of the constructor {\tt Eq} the two type indexes
+are the same, and not just polymorphic variables (i.e. the type of
+{\tt Eq} is {\em not} {\tt (Equal x y)} but is rather {\tt (Equal x x)}).
+The single constructor ({\tt Eq}) has a polymorphic type {\tt(Equal x x)}.
+Ordinarily, if the two arguments of {\tt Equal} are type-constructor terms,
+the two arguments must be the same (or they couldn't be equal). But, if we
+allow type functions as arguments (see Section \ref{functions}), since many functions may compute the
+same result (even with different arguments), the two terms can be
+syntactically different (but semantically the same).  
+For example \verb+(Equal 2t {plus 1t 1t})+ is a well formed equality type
+since 2 is semantically equal to 1+1.
+The {\tt Equal} type allows the programmer to reify
+the type checkers notion of equality, and to pass this reified evidence
+around as a value. The {\tt Equal} type plays a large role
+in the {\tt theorem} declaration (see Section \ref{theorem}).
+
+
+\begin{exercise} \label{samenat}
+Singleton types allow us to construct Equal objects at runtime.
+Because of the one-to-one relationship between singleton values and their
+types, knowing the shape of a value determines its type. In a similar
+manner knowing the type of a singleton determines its shape. Write the
+function in \om\ that exploits this fact: {\tt sameNat:: Nat' a -> Nat' b -> Maybe(Equal a b)}.
+We have written the first clause. You can finish it.
+\begin{verbatim}
+sameNat:: Nat' a -> Nat' b -> Maybe(Equal a b)
+sameNat Z Z = Just Eq
+\end{verbatim}
+If one wonders how this function is typed,
+it is very instructive to construct the typing box (as we did for
+{\tt app} in Section \ref{simple}) with expected types, equations,
+computed types, and generated equalities.
+\end{exercise}
+
+\subsection{Computing Programs and Properties Simultaneously} We can write
+programs that compute an indexed value along with a witness that the
+value has some additional property. For example, when we add two
+static length lists, the resulting list has a length that is
+related to the lengths of the two input lists, and we can
+simultaneously produce a witness to this relationship.
+
+{\small
+\begin{verbatim}
+data Plus:: Nat ~> Nat ~> Nat ~> *0 where
+  PlusZ:: Plus Z m m
+  PlusS:: Plus n m z -> Plus (S n) m (S z)
+
+app1:: Seq a n -> Seq a m -> exists p . (Seq a p,Plus n m p)
+app1 Snil ys = Ex(ys,PlusZ)
+app1 (Scons x xs) ys = case (app1 xs ys) of  
+                        Ex(zs,p) ->  Ex(Scons x zs,PlusS p) 
+\end{verbatim}}\vspace*{-.05in}
+
+\noindent The keyword {\tt Ex} is the ``pack" operator of Cardelli and
+Wegner~\cite{Cardelli-Wegner85}. Its use turns a normal type 
+{\small \verb+(Seq a p,Plus n m p)+} into an existential type 
+{\small \verb+exists p.(Seq a p,Plus n m p)+}. The \om\ compiler
+uses a bidirectional type checking algorithm to propagate
+the existential type in the signature inwards to the
+{\tt Ex} tagged expressions. This allows it to
+abstract over the correct existentially quantified variables.
+
+In a similar manner, given a proof that $a \leq b$ we can always find a $c$
+such that $a+c=b$.
+{\small
+\begin{verbatim}
+smaller :: Proof {le (S a) (S b)} -> Proof {le a b}
+smaller Triv = Triv
+
+diff:: Proof {le a b} -> Nat' a -> Nat' b -> 
+       exists c .(Nat' c,Equal {plus a c} b)
+diff Triv Z m = Ex (m,Eq)
+diff Triv (S m) Z = unreachable
+diff (q@Triv) (S x) (S y) =  
+  case diff (smaller q) x y of
+   Ex (m,Eq) -> Ex (m,Eq)
+\end{verbatim}}
+
+\begin{exercise}
+The filter function drops some elements from a list. Thus, the length
+of the resulting list cannot be known statically. But, we can
+compute the length of the resulting list along with the list. Write
+the \om\ function with prototype:\\
+{\small {\tt filter :: (a->Bool) -> Seq a n -> exists m . (Nat' m,Seq a m)}}
+
+Since filter never adds elements to the list, that weren't already
+in the list, the result-list is never longer than the original list. We can compute 
+a proof of this fact as well. Write
+the \om\ function with prototype:\\
+{\small {\tt filter :: (a->Bool) -> Seq a n -> exists m . (LE m n,Nat' m,Seq a m)}}\\
+Hint: You may find the functions {\tt predLE} from
+Exercise \ref{pred} useful.
+\end{exercise}
+
+\subsection{Feature: Unreachable Clauses}\label{unreachable}
+
+The keyword {\tt unreachable} in the second clause of the definition
+for {\tt diff} states that type considerations
+preclude the flow of control ever reaching the clause labeled unreachable.
+This is because the type information in the function prototype for {\tt diff}
+is propagated into the patterns of each clause. In the second
+clause the following information is propagated.
+
+{\small
+\begin{verbatim}
+Triv  :: Proof {le a b}
+(S m) :: Nat' a
+Z     :: Nat' b 
+\end{verbatim}}
+
+We compute the type of \verb+(S m)+ to be \verb+(Nat' (S m))+, and we compute
+the type of \verb+Z+ to be \verb+(Nat' Z)+, combining this with
+the propagated type information we see that {\tt a = (S m)} and {\tt b = Z}.
+Thus the type of {\tt Triv} must be {\tt Proof \{le (S m) Z\}}.
+The type function application {\tt \{le (S m) Z\}} reduce to {\tt F},
+but the argument to {\tt Proof} must be {\tt T}.
+These sets of assumptions
+are inconsistent. So the clause in the
+scope of these patterns is unreachable. There are no well-typed
+arguments, to which we could apply {\tt diff}, that would
+exercise the second clause. The keyword {\tt unreachable}
+indicates to the compiler that we recognize this fact. 
+The reachability of all unreachable clauses is tested.
+If they are in fact reachable, an error is raised. An
+unreachable clause, without the {\tt unreachable} keyword
+also raises an error.
+
+The point of the unreachable clause is to document that the author of the
+code knows that this clause is unreachable, and to help document that the
+clauses exhaustively cover all possible cases. The function {\tt extract}
+from exercise \ref{extract} and the function {\tt trans} from exercise
+\ref{trans} could use an unreachable clause.
+
+
+\subsection{Feature: Staging} \label{stage}
+\om\ supports staging annotations:
+brackets ({\small \verb+[| _ |]+}),
+escape ({\small \verb+$( _ )+}), and the two staging functions
+{ {\tt lift::(forall a . a -> Code a)}} and 
+{ {\tt run::(forall a . (Code a) -> a)}} 
+for building and manipulating code. \om\ uses
+the Template Haskell~\cite{Sheard02} conventions for creating code. 
+Brackets  (\verb+[| _ |]+) are a quasi-quotation mechanism, and escape
+(\verb+$( _ )+) escapes from the effects of quasi-quotation.
+For example.
+
+\vspace*{-.1in}
+{\small
+\begin{verbatim}
+inc x = x + 1
+c1a = [| 4 + 3 |]
+c2a = [| \ x -> x + $c1a |]
+c3 = [| let f x = y - 1 where y = 3 * x in f 4 + 3 |]
+c4 = [| inc 3 |]
+c5 = [| [| 3 |] |]
+c6 = [| \ x -> x |]
+\end{verbatim}}
+\noindent
+In the examples above, {\tt inc} is a normal function. The variable {\tt c1a} names a piece
+of code with type {\small \verb+Code Int+}. The variable {\tt c2a} names a piece of code
+with type {\small {\small \verb+Code(Int -> Int)+}}. It is constructed by
+splicing the code {\tt c1a} into the body of the lambda abstraction.
+The variable {\tt c3} names a piece of code with type {\small \verb+Code Int+}. It illustrates
+the ability to define rich pieces of code with embedded
+{\tt let} and {\tt where} clauses. The variable {\tt c4} names a piece
+of code with type {\small \verb+Code Int+}. It illustrates that functions
+defined in earlier stages ({\tt inc}) can be lifted (or embedded)
+in code. The variable {\tt c5} names a piece
+of code with type {\small \verb+Code (Code Int)+}. It illustrates that
+code can be nested.
+
+The purpose of the staging mechanism is to have finer control over
+evaluation order, which is exactly what
+we want to do when removing the interpretive overhead of generic programming. \om\ supports many of the features of
+MetaML~\cite{Sheard:1999:UMS,TS00}. 
+
+\begin{exercise}
+The traditional staged function is the power function.
+The term {\tt (power 3 x)} returns x to the third power. The unstaged
+power function can be written as:
+{\small 
+\begin{verbatim}
+power:: Int -> Int -> Int
+power 0 x = 1
+power n x = x * power (n-1) x
+\end{verbatim}}
+\noindent
+Write a staged power function: {\tt pow:: Int -> Code Int -> Code Int}\\
+such that {\tt (pow 3 [|99|])} evaluates to \verb+[| 99 * 99 * 99 * 1 |]+.
+This can be written simply by placing staging annotations in the unstaged version.
+\end{exercise}
+
+
+\subsection{Feature: Level Polymorphism} \label{level}
+Sometimes we wish to use the same structure at both the value and type level.
+One way to do this is to build isomorphic, but different, data structures
+at different levels. In \om, we can define a structure to live
+at many levels. We call this level polymorphism. For example
+a {\tt Tree} type that lives at all levels can be defined by:
+
+{\small
+\begin{verbatim}
+data Tree :: level n . *n ~> *n where
+  Tip :: a ~> Tree a
+  Fork :: Tree a ~> Tree a ~> Tree a
+\end{verbatim}}
+\noindent
+Levels are {\it not} types. A level variable can only be used
+as an argument to the {\tt *} operator. Level abstraction can only
+be introduced in the kind part of a {\tt data} declaration, but level polymorphic
+functions can be inferred from their use of constructor functions
+introduced in level polymorphic {\tt data} declarations.
+
+In the example above,
+\om\ adds the type constructor {\tt Tree} at all type levels,
+and the constructors {\tt Tip} and {\tt Fork} at the value level
+as well at all type levels. We can illustrate this by evaluating
+a tree at the value level, and by asking \om\ for the kind of
+a similar term at the type level.
+
+{\small
+\begin{verbatim}
+prompt> Fork (Tip 3) (Tip 1)
+(Fork (Tip 3) (Tip 1)) : Tree Int
+
+prompt> :k Tip Int
+Tip Int :: Tree *0 
+\end{verbatim}}
+
+Another useful pattern is to define normal ({\tt *0}) datatypes indexable
+by types at all levels. For example consider the kind of the type constructor
+{\tt Equal} and the type of its constructor {\tt Eq} from Section \ref{equal}.
+Its type can be more verbosely expressed as follows where the level polymorphism
+is explicit (rather than inferred, as it is in Section \ref{equal}).
+
+{\small
+\begin{verbatim}
+Equal :: level b . forall (a:*(1+b)).a ~> a ~> *0
+
+Eq :: level b . forall (a:*(1+b)) (c:a:*(1+b)).Equal c c
+\end{verbatim}}
+\noindent
+For all levels {\tt b}, the type {\tt a} is classified by
+a star at level {\tt 1+b}. Some legal instances are:
+{\small
+\begin{verbatim}
+Equal :: forall (a:*1).a ~> a ~> *0   -- when b=0
+Equal :: forall (a:*2).a ~> a ~> *0   -- when b=1
+\end{verbatim}}
+\noindent
+Without level polymorphism, the {\tt Equal} type constructor could only
+witness equality between types at a single level, i.e. types classified by
+{\tt a:: *1} but not {\tt a:: *2}. So {\tt (Equal Int Bool)} is well formed
+but {\tt (Equal Nat Tag)} would not be, since both {\tt Nat}
+and {\tt Tag}\footnote{See Section \ref{tag}.} are classified by {\tt *1:: *2}. For a useful
+example, the type of {\tt labelEq} could not be expressed
+using a level-monomorphic {\tt Equal} datatype.
+
+{\small
+\begin{verbatim}
+labelEq:: forall (a:Tag) (b:Tag). Label a -> Label b -> Maybe (Equal a b)
+\end{verbatim}}
+\noindent
+This is because the {\tt a} and {\tt b} are classified by {\tt Tag}, and are
+not classified by {\tt *0}.
+
+\begin{exercise} \label{ExRow}
+A row is a list-like structure that associates
+a pair of objects. In \om\ we write \verb+{`a=Int,`z=Bool}r+ for the
+row classified by {\tt (Row Tag *0)}, which associates the {\tt Tag}
+\verb+`a+ with \verb+Int+, and \verb+`z+ with \verb+Bool+.
+In general we'd like not to restrict rows to any single level.
+Level polymorphism comes in handy here. Define a GADT, {\tt MyRow},
+that defines a level polymorphic row type at level 1, but which
+is indexed by a pair of types from any level. I.e.
+{\tt MyRow} should be classified as follows:
+
+{\small
+\begin{verbatim}
+MyRow :: level d b . forall (a:*(2+b)) (c:*(2+d)). a ~> c ~> *1
+\end{verbatim} }
+\end{exercise}
+
+\subsection{Feature: Syntactic Extension} \label{synext}
+Many languages supply syntactic sugar for constructing homogeneous sequences and
+heterogeneous tuples. For example in Haskell lists are often
+written with bracketed syntax, \verb+[1,2,3]+, rather than a constructor function syntax, \verb+(Cons 1 (Cons 2 (Cons 3 Nil)))+, and
+tuples are often written as \verb+(5,"abc")+ and \verb+(2,True,[])+
+rather than \verb+(Pair 5 "abc")+ and \verb+(Triple 2 True [])+. In \om\
+we supply special syntax for four different kinds of data, and allow users to
+use this syntax for data they define themselves. \om\ has
+special syntax for list-like, natural-number-like, pair-like, and record-like types.
+Some examples in the supported syntax are: \verb+[4,5]i+, \verb|(2+n)j|,
+\verb+(4,True)k+, and \verb+{"a"=5, "b"=6}h+. In general, the syntax starts 
+with list-like, natural-number-like, record-like, or pair-like syntax,
+and is terminated by a tag. A programmer may specify that 
+a user defined type should be displayed using the special syntax with a given tag. Each
+tag is associated with a set of functions (a different set for
+list-like, natural-number-like, record-like, and pair-like types). Each
+term written using the special syntax (with tag {\it i}) expands into a call of the
+functions specified by tag {\it i}. For example {\tt 2}{\it i} expands to {\tt S(S Z))}
+if the functions associated with {\it i} are {\tt S} and {\tt Z}. We now
+explian the details for each case.
+
+
+The list-like syntax associates two functions with each
+tag. These functions play the role of {\tt Nil} and {\tt Cons}.
+For example if the tag ``{\tt i}" is associated with
+the functions {\tt (C,N)}, then the expansion is as follows.
+{\small
+\begin{verbatim}
+[]i         ---> N
+[x,y,z]i    ---> C x(C y (C z N))
+[x;xs]i     ---> (C x xs)
+[x,y ; zs]i ---> C x (C y zs)
+\end{verbatim}}
+\noindent
+The semicolon may only appear before the last element in the square brackets.
+In this case, the last element stands for the tail of the resulting list.
+
+The natural-number-like syntax associates two functions with each
+tag. These functions play the role of {\tt Zero} and {\tt Succ}.
+For example if the tag ``{\tt i}" is associated with
+the functions {\tt (Z,S)}, then the expansion is as follows.
+{\small
+\begin{verbatim}
+4i     ---> S(S(S(S Z)))
+0i     ---> Z
+(2+x)i ---> S(S x)
+\end{verbatim}}
+In earlier versions of \om, before the addition of syntactic
+extensions, values of the
+built in types {\tt Nat} and {\tt Nat'}, could 
+be specified using the syntax \verb+#4+. 
+For backward compatibility reasons, this is currently still
+supported and is equivalent 
+to either \verb+4t+ (i.e. {\tt  S(S(S(S Z)))}) in the type name space, and \verb+4v+ 
+(i.e. {\tt  S(S(S(S Z)))}) in the value name space.
+
+
+The tuple-like syntax associates one function with each
+tag. This function plays the role of a binary constructor.
+For example if the tag ``{\tt i}" is associated with
+the function {\tt P}, then the expansion is as follows.
+
+{\small
+\begin{verbatim}
+(a,b)i      ---> P a b
+(a,b,c)i    ---> P a (P b c)
+(a,b,c,d)i  ---> P a (P b (P c d))
+\end{verbatim}}
+
+The record-like syntax associates two functions with each
+tag. These functions play the role of the constant {\tt RowNil} and 
+the ternary function {\tt RowCons}.
+For example, if the tag ``{\tt i}" is associated with
+the functions {\tt (RN,RC)}, then the expansion is as follows.
+
+{\small
+\begin{verbatim}
+{}i            ---> RN
+{a=x,b=y}i    ---> RC a x (RC b y RN)
+{a=x;xs}i     ---> (RC a x xs)
+{a=x,b=y ; zs}i ---> RC a x (RC b y zs)
+\end{verbatim}}
+
+Syntactic extension can be applied to any GADT, at either the value or type level. The
+new syntax can be used by the programmer for terms, types, or patterns. \om\ uses the
+new syntax to display such terms. The constructor based mechanism can also still
+be used. The tags are specified using a deriving clause in a GADT. 
+See Section \ref{binding} for an example use of this feature that
+makes \om\ code easy to read and understand.
+
+\begin{exercise}
+Consider the GADT with syntactic extension ``{\tt i}".
+{\small
+\begin{verbatim}
+data Nsum:: *0 ~> *0 where
+    SumZ:: Nsum Int
+    SumS:: Nsum x -> Nsum (Int -> x)
+  deriving Nat(i)
+\end{verbatim}}
+\noindent
+What is the type of the terms {\tt 0i}, {\tt 1i}, and {\tt 2i}? Can you write
+a function with prototype: {\tt add:: Nsum i -> i}, where {\tt (add n)}
+is a function that sums
+$n$ integers. For example:
+\verb+add 3i 1 2 3+ $\longrightarrow$ \verb+6+.
+\end{exercise}
+
+\subsection {Feature: Tags and Labels} \label{tag}
+
+Many object languages have a notion of name. To make representing names in the
+type system easy we introduce the notion of Tags and Labels. As a {\em first
+approximation}, consider the finite kind {\tt Tag} and its singleton type {\tt
+Label}:
+
+{\small
+\begin{verbatim}
+data Tag:: *1 where
+  A:: Tag
+  B:: Tag
+  C:: Tag
+
+data Label:: Tag ~> *0 where
+  A:: Label A
+  B:: Label B
+  C:: Label C
+\end{verbatim}}
+
+Here, we again deliberately use the value-name space, type-name space
+overloading. The names {\tt A}, {\tt B}, and {\tt C} name different,
+but related, objects at both the value and type level.
+At the value level, every {\tt Label} has a type index
+that reflects its value. I.e. {\tt A::Label A}, and {\tt B::Label B}, and {\tt
+C::Label C}. Now consider a countably infinite set of tags and labels. We can't
+define this explicitly, but we can build such a type as a primitive inside of
+\om. At the type level, every legal identifier whose name is preceded by a
+back-tick ({\tt `}) is a type classified by the kind {\tt Tag}. For example the type {\tt
+`abc} is classified by {\tt Tag}. At the value level, every such symbol {\tt `abc} is classified
+by the type {\tt (Label `abc)}.
+
+There are several functions that operate on labels. The first is
+{\tt labelEq} which compares two labels for equality. Since labels
+are singletons, a simple true or false answer would be useless.
+Instead {\tt labelEq} returns a Leibniz proof of equality 
+(see Section \ref{equal}) that the {\tt Tag}
+indexes of identical labels are themselves equal.
+
+{\small
+\begin{verbatim}
+labelEq :: forall (a:Tag) (b:Tag).Label a -> Label b -> Maybe (Equal a b)
+
+prompt> labelEq `w `w
+(Just Eq) : Maybe (Equal `w `w)
+
+prompt> labelEq `w `s
+Nothing : Maybe (Equal `w `s)
+\end{verbatim}}
+
+Fresh labels can be generated by the function {\tt freshLabel}.
+Since the {\tt Tag} index for such a label is unknown, the generator
+must return a structure where the
+{\tt Tag} indexing the label is existentially quantified. Since every call
+to {\tt freshLabel} generates a different label, the {\tt freshLabel}
+operation must be an action in the {\tt IO} monad. The function
+{\tt newLabel} coerces a string into a label. It too, must
+existentially hide the Tag indexing the returned label. But,
+because it always returns the same label when given the same input
+it can be a pure function.
+
+{\small
+\begin{verbatim}
+freshLabel :: IO HiddenLabel
+newLabel:: String -> HiddenLabel
+
+data HiddenLabel :: *0 where 
+ Hidden:: Label t -> HiddenLabel
+\end{verbatim}}
+We illustrate this at the top-level loop. The \om\ top-level loop executes
+{\tt IO} actions, and evaluates and prints
+out the value of expressions with other types.
+
+{\small
+\begin{verbatim}
+prompt> freshLabel
+Executing IO action               -- An IO action
+(Hidden `#cbp) : IO HiddenLabel
+
+
+prompt> temp <- freshLabel        -- An IO action
+Executing IO action
+(Hidden `#sbq) : HiddenLabel
+prompt> temp
+(Hidden `#sbq) : HiddenLabel
+
+prompt> newLabel "a"              -- A pure value
+(Hidden `a) : HiddenLabel
+\end{verbatim}}
+
+\begin{exercise} \label{existVar}
+A common use of labels is to name variables in a data structure used
+to represent some object language as data. Consider the GADT
+and an evaluation function over that object type.
+
+{\small
+\begin{verbatim}
+data Expr:: *0 where
+  VarExpr :: Label t -> Expr
+  PlusExpr:: Expr -> Expr -> Expr
+
+valueOf:: Expr -> [exists t .(Label t,Int)] -> Int
+valueOf (VarExpr v) env = lookup v env
+valueOf (PlusExpr x y) env = valueOf x env + valueOf y env
+\end{verbatim}}
+\noindent
+Write the function: {\small {\tt lookup:: Label v -> [exists t .(Label t,Int)] -> Int}}.
+\end{exercise}
+
+
+\section{Maintaining Structural Invariants of Data}
+
+Both {\tt Seq} and {\tt Tree} use kinds as indexes ({\tt Nat} for {\tt Seq}, and
+{\tt Shape} for {\tt Tree}) to maintain an invariant about the shape of the data.
+This is quite common. In this section we illustrate this in more detail by
+examining the world of balanced trees.
+
+\subsection{AVL Trees}
+
+
+\input{AvlSection}
+
+\begin{exercise}
+
+{\bf Red Black Trees.}
+A red-black tree is a binary search tree with the following additional invariants:
+
+\begin{enumerate}
+\item Each node is colored either red or black
+\item The root is black
+\item The leaves are black
+\item Each Red node has Black children \label{RedKidsAreBlack}
+\item For all internal nodes, each path from that node to a descendant 
+        leaf contains the same number of black nodes.
+\end{enumerate}
+
+We can encode these invariants by thinking of each internal node as having two
+attributes: a color and a black-height. We will use a GADT, we call {\tt SubTree},
+with two indexes, one of them a {\tt Nat} (for the black-height) and the other a
+{\tt Color}.
+
+{\small
+\begin{verbatim}
+data Color:: *1 where 
+  Red:: Color
+  Black:: Color
+
+data SubTree:: Color ~> Nat ~> *0 where 
+ Leaf:: SubTree Black Z
+ RNode:: SubTree Black n -> Int -> SubTree Black n -> SubTree Red n
+ BNode:: SubTree cL m    -> Int -> SubTree cR m    -> SubTree Black (S m)
+
+data RBTree:: *0 where
+ Root:: SubTree Black n -> RBTree
+\end{verbatim}}
+\noindent
+Note how the black height increases only on black nodes. The type
+{\tt RBTree} encodes a ``full" Red-Black tree, forcing the root
+to be black, but placing no restriction on the black-height.
+Write an insertion function for Red-Black trees.
+A solution to this exercise is found in Appendix \ref{redblack}.
+\end{exercise}
+
+\section{\om\ as a Meta Language}
+
+It has become common practice when designing a new language to study the
+relationship between a static semantics (a type system) and a dynamic
+semantics (a meaning function). This process is often exploratory. The
+designer has an idea, the approach is analyzed, and hopefully the
+consequences of the approach are quickly discovered. Automated aid in this
+process would be a great boon.
+
+The ultimate goal of this exploratory process is a type system, a semantics,
+and a proof. The proof witnesses the fact that {\em well-typed programs do not
+go wrong}\cite{Milner78} for the language under consideration. The most common
+way to perform such a proof is by a subject reduction proof in the style of
+Wright and Felleisen\cite{Wright:94} on a small step semantics, though there
+other approaches as well\cite{Milner78,DamasThesis}. Such proofs require an amazing amount of
+detail and are most often carried out by hand, and are thus subject to all the
+foils of human endeavors. 
+
+\om\ is our attempt at developing a generic meta-language that could be used
+for exploring the static and dynamic semantics for new
+object-languages\cite{SheardPasalic2002,Sheard01} that
+could aid in the generation of such proofs. This section describes how 
+\om\ can be used as a meta-language. We show that:
+
+
+\begin{itemize}
+
+\item Much of the work of exploring the nuances of
+a type system for a new language can be assisted by using mechanized tools 
+-- a generic meta-language.
+
+\item Such tools need not be much more complicated than your favorite
+functional language (Haskell), and are thus within the reach of most language researchers.
+
+\item The automation helps language designers visualize the consequences
+of their design choices quickly, and thus helps speed the design process.
+
+\item The artifacts created by this exploration are machine checked proofs,
+and are hence less subject to error than proofs constructed by the more
+traditional approach.
+
+\end{itemize}
+
+\subsection{Object Languages}
+
+In meta-programming systems meta-programs manipulate object-programs. 
+Meta-programs may construct object-programs, combine object-program 
+fragments into larger object-programs, observe the structure and 
+other properties of object-programs, and execute object-programs to 
+obtain their values.
+
+There are several important kinds of meta-programming scenarios: program generators,
+and program analyses. Each of these scenarios has a number of distinguishing
+characteristics.
+
+A program generator (a meta-program) solves a particular problem by constructing
+another program (an object-program) that solves the problem at hand. Usually the
+generated (object) program is ``specialized" for the particular problem and uses
+less resources than a general purpose, non-generator solution.
+
+A program analysis (a meta-program) observes the structure and environment of an
+object-program and computes some value as a result. Results can be data- or
+control-flow graphs, or even another object-program with properties based on the
+properties of the source object-program. Examples of these kinds of meta-systems
+are: program transformers, optimizers, and partial evaluation systems.
+
+A language model (a meta-program) gives meaning to, and points out properties
+of an object-language. Examples of these include type systems, type judgments,
+denotational and operational semantics, and small-step semantics.
+
+\subsection{Representing Object Programs}
+
+Meta-programs must represent object-programs as data. Object program
+representations usually fall into one of three categories. (1) Strings, (2) Algebraic
+datatypes, or (3) Quasi-quote systems. Other representations
+(as graphs for example) are possible, but not widespread.
+
+With the string encoding, we represent the code fragment {\tt f(x,y)} simply as
+\verb+"f(x,y)"+. While constructing and combining fragments represented by strings can
+be done concisely, deconstructing them is quite verbose, and in essence
+degenerates into a parsing problem. More seriously, there is
+no automatically verifiable guarantee that programs thusly constructed are
+syntactically correct. For example, \verb+"f(,y)"+ can have the static type {\tt string}, but
+this clearly does not imply that this string represents a syntactically correct
+program.
+
+\subsection{Object-programs as Algebraic Datatypes}
+With the Algebraic datatype encoding, we can address the syntactic correctness problem. A
+datatype encoding is essentially the same as what is called abstract syntax or
+parse trees. The encoding of the fragment \verb+plus(x,y)+ in an \om\ datatype might be:\\
+{\small \verb+Apply Plus (Tuple [Variable "x" ,Variable "y"])+}\\ using a datatype declared
+as follows:
+
+{\small 
+\begin{verbatim}
+data Exp:: *0 where
+  Variable:: String  -> Exp    -- x
+  Constant:: Int -> Exp        -- 5
+  Plus:: Exp                   -- plus
+  Less:: Exp                   -- less
+  Apply:: Exp -> Exp -> Exp    -- Apply Plus (x,y)
+  Tuple:: [Exp] -> Exp         -- (x,y)
+\end{verbatim}}
+Using a datatype encoding has an immediate benefit: correct typing for the
+meta-program ensures correct syntax for all object-programs. Because \om\
+(like most functional languages) supports
+pattern matching over datatypes, deconstructing programs becomes easier than with
+the string representation. However, constructing programs is now more verbose
+because we must use the cumbersome constructors like Variable, Apply, and Tuple.
+
+\subsection{Representing Programs using Quasi-quotes}
+Quasi-quotation is an attempt to represent object-programs
+without cumbersome constructor functions. Here
+the actual representation of object-code is hidden from the user by the means of
+a quotation mechanism. Object code is constructed by placing ``quotation"
+annotations around normal code fragments. 
+The quasi-quotation approach is the approach used in MetaML,
+Template Haskell, and the staged fragment of \om.
+
+In the staged fragment of \om\ (Section \ref{stage}), quasi-quotations are called staging annotations, 
+and include Brackets \verb+[| |]+ and Escape \verb+$+.
+An expression \verb+[| e |]+ is a quotation, and it builds the code
+representation of \verb+e+ (a data structure); \verb+$(e)+ is an anti-quotation,
+and splices the code obtained by evaluating
+\verb+e+ into the body of a surrounding bracketed expression (embedding one data structure into
+another). The quotation and anti-quotation mechanism abstracts
+the actual data-type representing code.
+
+In a quasi-quoted system, the meta-language may now enforce the type-correctness
+of the object language as well as the meta-language,
+and avoid the problems associated with a constructor based approach.
+The major disadvantages of quasi-quoted systems are
+
+\begin{itemize}
+
+\item There is usually only a single object-language, and it must
+be built into the meta-language.
+
+\item The quasi-quote mechanism is great for constructing code,
+but less useful for taking code apart, especially code
+with binding constructs.
+
+\item The type system of the meta-language must be aware of the type system
+of the object language. Usually this is accomplished by making
+the meta-language and the object-language the same language. Heterogeneous
+quasi-quote systems are rare because of this.
+
+\end{itemize}
+
+In the remainder of this section, we eschew the quasi-quote mechanism
+in favor of using GADTs in an effort to address these disadvantages.
+
+\subsection{Interpreters in a Typed Meta-language}
+
+Often one would like to build an interpreter or evaluation function
+for an object-language. In a typed meta-language, it is
+necessary to define a {\tt Value} domain, that is a labeled sum of
+all the possible result types of evaluating an expression. In the {\tt Exp}
+type above this would include both integers and booleans (as these are the 
+types of the ranges of the functions {\tt Plus} and {\tt Less}), as
+well as functions and tuples.
+
+{\small 
+\begin{verbatim}
+data Value :: *0 where
+  IntV:: Int -> Value
+  BoolV:: Bool -> Value
+  FunV:: (Value -> Value) -> Value
+  TupleV :: [Value] -> Value
+\end{verbatim}}
+
+The evaluation function is then a case analysis over the
+structure of terms, recursively evaluating sub-terms into
+values, and then combining the sub-values into 
+answer values.
+
+{\small 
+\begin{verbatim}
+eval:: (String -> Value) -> Exp -> Value
+eval env (Variable s) = env s
+eval env (Constant n) = IntV n
+eval env Plus = FunV plus
+  where plus (TupleV[IntV n ,IntV m]) = IntV(n+m)
+eval env Less = FunV plus
+  where plus (TupleV[IntV n ,IntV m]) = BoolV(n < m) 
+eval env (Apply f x) = 
+  case eval env f of
+    FunV g -> g (eval env x)
+eval env (Tuple xs) = TupleV(map (eval env) xs)    
+\end{verbatim}}
+\noindent
+The key observation is -- there is considerable overhead in such a function. It must first
+interpret the structure of the expressions, and it must perform quite a bit of tagging
+and un-tagging by applying the {\tt Value} constructors ({\tt IntV}, {\tt BoolV}, {\tt
+FunV}, and {\tt TupleV}), and deconstructing them when appropriate.
+
+\subsection{Staging an Interpreter}
+
+We may remove the interpretive overhead by using staging.
+Like the evaluation function, the staged evaluation function is a case analysis over the
+structure of terms, recursively evaluating sub-terms into
+code values, and then splicing the smaller code values into
+larger code values. 
+
+{\small 
+\begin{verbatim}
+stagedEval:: (String -> Code Value) -> Exp -> Code Value
+stagedEval env (Variable s) = env s
+stagedEval env (Constant n) = lift(IntV n)
+stagedEval env Plus = [| FunV plus |]
+  where plus (TupleV[IntV n ,IntV m]) = IntV(n+m)
+stagedEval env Less = [| FunV less |]
+  where less (TupleV[IntV n ,IntV m]) = BoolV(n < m) 
+stagedEval env (Apply f x) = 
+      [| apply $(stagedEval env f) $(stagedEval env x) |]
+  where apply (FunV g) x = g x
+stagedEval env (Tuple xs) = [| TupleV $(mapLift (stagedEval env) xs) |]
+  where mapLift f [] = lift []
+        mapLift f (x:xs) = [| $(f x) : $(mapLift f xs) |]
+\end{verbatim}}
+We may observe the result of staging by applying {\tt stagedEval} to
+an actual {\tt Exp}.
+
+{\small 
+\begin{verbatim}
+exp1 = Apply Plus (Tuple [Variable "x" ,Variable "y"]) -- (+)(x,y)
+
+ans = stagedEval f exp1 
+  where f "x" = lift(IntV 3)
+        f "y" = lift(IntV 4)
+        
+
+ans = [| %apply (%FunV %plus) (%TupleV [IntV 3,IntV 4]) |] : Code Value  
+\end{verbatim}}
+
+We have removed the interpretive overhead, but the tagging and untagging
+overhead remains. This overhead is caused by using a disjoint sum as
+the range of the evaluator, which is necessary in a typed meta-language.
+This not the only problem when using algebraic datatypes to encode
+object-languages in a strongly typed meta-language like Haskell. The
+algebraic datatype approach to encoding object-languages does not track
+the type correctness of the object-program. We will fix both these
+problems by representing object-programs using GADTs rather than
+Algebraic datatypes.
+
+\subsection{Typed Object-languages using GADTs} \label{tagged}
+
+GADTs allow
+us to build datatypes indexed by another type. We can use the
+GADT to represent object programs (just as we use algebraic
+datatype to represent object programs), but we may also
+use the type index to represent the type of the object-language
+program being represented. A simple typed object-language example is:
+
+{\small
+\begin{verbatim}
+data Term:: *0 ~> *0 where
+  Const :: Int -> Term Int               -- 5
+  Add:: Term ((Int,Int) -> Int)          -- (+)
+  LT:: Term ((Int,Int) -> Bool)          -- (<)
+  Ap:: Term(a -> b) -> Term a -> Term b  -- (+) (x,y)
+  Pair:: Term a -> Term b -> Term(a,b)   -- (x,y)
+\end{verbatim}}
+
+Above we introduced the new type constructor {\tt Term}, which is a
+representation of a simple object-language of constants, pairs, and numeric
+operators. 
+{\tt Term}s are a typed object-language representation, i.e. a data
+structure that represents terms in some object-language. The meta-level
+type of the representation, i.e. the {\tt a} in ({\tt Term a}), indicates the type 
+of the object-level term. This is made possible by the flexibility of
+the GADT mechanism. Using typed object-level terms,
+it is impossible to construct ill-typed term representations, because
+the meta-language type system enforces this constraint.
+
+{\small
+\begin{verbatim}
+ex1 :: Term Int  
+ex1 = Ap Add (Pair (Const 3) (Const 5))
+
+ex2 :: Term (Int,Int)
+ex2 = Pair ex1 (Const 1)
+\end{verbatim}}
+Attempting to construct an ill-typed object term, like {\tt (Ap (Const 3) (Const 5))},
+causes a meta-level (\om) type error. Another advantage of using
+GADTs rather than ADTs is that it is now possible to construct a 
+tagless\cite{SheardPasalic2002,Taha:2001:TEJ,TahaTag2000}
+interpreter directly:
+
+{\small
+\begin{verbatim}
+evalTerm :: Term a -> a
+evalTerm (Const x) = x
+evalTerm Add = \ (x,y) -> x+y
+evalTerm LT = \ (x,y) -> x<y
+evalTerm (Ap f x) = evalTerm f (evalTerm x)
+evalTerm (Pair x y) = (evalTerm x,evalTerm y)
+\end{verbatim}}
+In a language without GADTs, as we illustrated
+in Section \ref{tagged}, we would need to employ universal value domain like
+{\tt Value}. See \cite{PasalicLingerGpce} 
+for a detailed discussion of this phenomena. Such a tagless interpreter
+has the structure of a large step (or operational) semantics. If the {\tt eval}
+function is total and well-typed at the meta-level, it implies
+that the object-level semantics (defined by {\tt eval}) is also well-typed.
+Every well-typed object level term evaluates to a well-formed value.
+
+\begin{exercise} \label{objectVar}
+
+In the object-languages we have seen so far, there are no variables. One
+way to add variables to a typed object language is to add a variable
+constructor tagged by a name and a type. A singleton type representing
+all the possible types of a program term is necessary. For example
+we may add a {\tt Var} constructor as follows (where the {\tt Rep} 
+is similar to the {\tt Rep} type from Exercise \ref{reptype}).
+
+{\small
+\begin{verbatim}
+data Term:: *0 ~> *0 where
+  Var:: String -> Rep t -> Term t        -- x
+  Const :: Int -> Term Int               -- 5
+  . . .
+\end{verbatim}}
+Write a GADT for {\tt Rep}.
+Now the evaluation function for {\tt Term}
+needs an environment that can store
+many different types. One possibility is
+use existentially quantified types
+in the environment as we did in
+Exercise \ref{existVar}. Something like:
+
+{\small
+\begin{verbatim}
+type Env = [exists t . (String,Rep t,t)]  
+
+eval:: Term t -> Env -> t
+\end{verbatim}}
+Write the evaluation function for the {\tt Term}
+type extended with variables. You will need a function
+akin to {\tt sameNat} from Exercise \ref{samenat},
+except it will have prototype: 
+{\tt sameRep:: Rep a -> Rep b -> Maybe(Equal a b)}
+\end{exercise}
+
+\begin{exercise} \label{countingvars}
+Another way to add variables to a typed object language is
+to reflect the name 
+and type of variables in the meta-level types of the terms in which they occur. Consider the GADTs:
+
+{\small
+\begin{verbatim}
+data VNum:: Tag ~> *0 ~> Row Tag *0 ~> *0 where
+  Zv:: VNum l t (RCons l t row)
+  Sv:: VNum l t (RCons a b row) -> VNum l t (RCons x y (RCons a b row))
+ deriving Nat(u)
+ 
+data Exp2:: Row Tag *0 ~> *0 ~> *0 where
+  Var:: Label v -> VNum v t e -> Exp2 e t
+  Less:: Exp2 e Int -> Exp2 e Int -> Exp2 e Bool
+  Add:: Exp2 e Int -> Exp2 e Int -> Exp2 e Int
+  If:: Exp2 e Bool -> Exp2 e t -> Exp2 e t -> Exp2 e t
+\end{verbatim}}
+What are the types of the terms {\tt (Var `x 0u)}, {\tt (Var `x 1u)}, and
+{\tt (Var `x 2u)}. Now the evaluation function for {\tt Exp2}
+needs an environment that stores both integers and booleans.
+Write a datatype declaration for the environment, and then
+write the evaluation function. One way to approach this
+is to use existentially quantified types
+in the environment as we did in
+Exercises \ref{existVar} and \ref{objectVar}. Better mechanisms exist. Can you think
+of one?
+\end{exercise}
+
+\subsection{Tagless Staged Interpreters}
+
+By staging an object-level type indexed GADT we can remove both
+the interpretive and tagging overhead.
+
+{\small
+\begin{verbatim}
+stagedEvalTerm :: Term a -> Code a
+stagedEvalTerm (Const x) = lift x
+stagedEvalTerm Add = [| add |]
+  where add (x,y) = x+y
+stagedEvalTerm LT = [| less |]
+  where less (x,y) = x < y
+stagedEvalTerm (Ap f x) = [| $(stagedEvalTerm f) $(stagedEvalTerm x) |]
+stagedEvalTerm (Pair x y) = [|($(stagedEvalTerm x),$(stagedEvalTerm y))|]
+
+ex2 = (Pair (Ap Add (Pair (Const 3) (Const 5))) (Const 1))
+\end{verbatim}}
+We can stage a program like {\tt ex2} by applying {\tt stagedEvalTerm}
+to produce some code. For {\tt ex2} we get: {\tt [| (add (3, 5), 1) |]}.
+Note that both the interpretive overhead, and the tagging overhead, have
+been completely removed.
+
+\begin{exercise}
+A staged evaluator is a simple compiler. Many compilers
+have an optimization phase. Consider the term
+language with variables from Exercise \ref{objectVar}.
+
+{\small
+\begin{verbatim}
+data Term:: *0 ~> *0 where
+  Var:: String -> Rep t -> Term t
+  Const :: Int -> Term Int               -- 5
+  Add:: Term ((Int,Int) -> Int)          -- (+)
+  LT:: Term ((Int,Int) -> Bool)          -- (<)
+  Ap:: Term(a -> b) -> Term a -> Term b  -- (+) (x,y)
+  Pair:: Term a -> Term b -> Term(a,b)   -- (x,y)
+\end{verbatim}}
+Can you write a well-typed staged
+evaluator the performs optimizations like
+constant folding, and applies laws like $(x+0) = x$
+before generating code?
+\end{exercise}
+
+\subsection{A Typed-Object Language with Binding}\label{binding}
+
+Object languages with variables and binding structures are harder
+to represent in a way that reflects the type of the object-language
+term in the type of its meta-language representation. 
+
+This is because if we change the type of the object-level variables,
+the type of the whole object-level term may also change. The key
+to this dilemma is to represent the type of the free variables
+in a term, as well as the type of the term, in the type of its
+meta-level representation. We do this by indexing terms by two
+indexes: first, the terms object-level type, and second, a type
+level structure encoding the environment (i.e. a mapping from
+variables to their types) in which the term has that type.
+
+If we represent variables by labels (see Section \ref{tag}), we can
+represent the environment by a row. A {\tt Row} is nothing
+more than a list-like structure (storing pairs of elements at each ``cons" node) at the
+type level (see Exercise \ref{ExRow}).
+
+{\small
+\begin{verbatim}
+data Row :: a ~> b ~> *1 where
+   RNil :: Row x y
+   RCons :: x ~> y ~> Row x y ~> Row x y
+ deriving Record(r)
+\end{verbatim} }
+For example the type: \verb+(RCons 3t Int RNil)+ is classified by {\tt (Row Nat *0)}.
+Note that we have defined a syntactic extension for rows tagged by {\tt r}. Thus
+\verb+(RCons 3t Int RNil)+ will display as \verb+{3t=Int}r+. An environment is just a
+type classified by {\tt (Row Tag *0)}. We define a new value level type, {\tt Lam},
+indexed by environments (represented by  {\tt (Row Tag *0)}) and types (represented by {\ *0}).
+
+{\small
+\begin{verbatim}
+data Lam:: Row Tag *0 ~> *0 ~> *0  where
+  Var   :: Label s -> Lam (RCons s t env) t
+  Shift :: Lam env t -> Lam (RCons s q env) t
+  Abs   :: Label a -> Lam (RCons a s env) t -> Lam env (s -> t)
+  App   :: Lam env (s -> t) -> Lam env s -> Lam env t
+\end{verbatim}}
+
+The first index to {\tt Lam}, is a Row tracking its variables,
+and the second index, tracks the object-level type of the term.
+For example a term with variables {\tt x} and {\tt y} might have type
+\verb+Lam {`x:Int, `y:Bool; u}r Int+.
+
+The key to this approach is the typing of the constructor functions for variables ({\tt
+Var}) and lambda expressions ({\tt Abs}). Consider the {\tt Var} constructor
+function. To construct a variable we simply apply {\tt Var} to a label, and its type
+reflects this. For example here is the output from a short interactive session with the
+\om~ interpreter.
+
+{\small
+\begin{verbatim}
+prompt> Var `name
+(Var `name) : forall a (b:Row Tag *0).Lam {`name=a; b}r a
+   
+prompt> Var `age
+(Var `age) : forall a (b:Row Tag *0).Lam {`age=a; b}r a
+\end{verbatim}}
+
+Variables are really De Bruijn-like in their behavior. Variables created
+with {\tt Var} all have index level 0. The two examples have different
+names in the same index position, and they would clash if they were both
+used in the same lambda term. To shift the position of variable to a
+different index, we use the constructor \verb+Shift:: Lam a b -> Lam {c=d; a}r b+
+(see Exercise \ref{objectVar} for an alternative mechanism to distinguish
+variables). To define two variables {\tt x} and {\tt y} for use in the
+same environment we shift one of them into a different index. We type a
+few examples at the \om\ top-level loop to illustrate the this.
+
+{\small
+\begin{verbatim}
+prompt> Var `x
+(Var `x) : Lam {`x=a; b}r a 
+
+prompt> Shift(Var `y)
+(Shift (Var `y)) : Lam {a=b,`y=c; d}r c
+
+prompt> Shift (Shift (Var `z))
+(Shift (Shift (Var `z))) : Lam {a=b,c=d,`z=e; f}r e
+\end{verbatim}} 
+\noindent
+A {\tt Lam} term represented by {\tt (Var `x)} has the tag {\tt `x} appearing
+as the first element in the environment row. By applying {\tt Shift}
+once, the tag {\tt `x} is pushed into the second element of the row,
+a second {\tt Shift} pushes it into the third element, etc.
+
+The {\tt Abs} constructor binds the first tag in the
+first element of the row, removing the tag and its associated type
+from the environment, and shifting the others towards the
+front of the environment.
+
+{\small
+\begin{verbatim}
+prompt> App (Var `a) (Shift (Var `b))
+(App (Var `a) (Shift (Var `b))) : Lam {`a=a -> b,`b=a; c}r b
+
+prompt> Abs `f (Abs `x (App (Shift (Var `f)) (Var `x)))
+(Abs `f (Abs `x (App (Shift (Var `f)) (Var `x)))) 
+    : Lam a ((b -> c) -> b -> c)
+\end{verbatim}} 
+\noindent
+
+Note how terms with free variables have non-trivial environment
+indexes which mention their free variables. 
+For example the first term's type is indexed
+by the {\tt Row}: {\small {\tt \{`a=a -> b,`b=a; c\}r}} indicating
+that both {\tt `a} and {\tt `b} are free variables in the term.
+To build an evaluator
+for an object-level typed term (Section \ref{tagglessvars}), we
+will need a data structure, pairing variables with their values,
+for each free variable in the term. We can package up a set of
+these values using a record.
+
+A {\tt Record} structure is a labeled tuple. We use
+the labels to name the variables. A Record is a level 0
+value. Its type is indexed by the level 1 type {\tt Row}.
+We can define this data structures as follows.
+
+{\small
+\begin{verbatim}
+data Record :: Row Tag *0 ~> *0 where
+    RecNil :: Record RNil
+    RecCons :: Label a -> b -> Record r -> Record (RCons a b r)
+  deriving Record()
+\end{verbatim}}
+Note that we have defined a syntactic extension for records tagged by
+the empty tag. Thus we may use the record syntax (with no tag) to build
+records.
+
+{\small
+\begin{verbatim}
+prompt> {`a=34,`b="abc"}
+{`a=34,`b="abc"} : Record {`a=Int,`b=[Char]}r
+\end{verbatim}}
+
+\subsection{A Tagless Interpreter for a Language with Variables}\label{tagglessvars}
+
+The typed-object language {\tt Lam} can be supplied with a typed
+evaluation function. The key is to supply a record that supplies exactly
+the values necessary for the free variables in the term being evaluated.
+The type system ensures that the record and the free variables coincide.
+
+{\small
+\begin{verbatim}
+evalLam:: Record r -> Lam r t -> t
+evalLam (RecCons _ v r) (Var _)   = v
+evalLam RecNil          (Var _)   = unreachable
+evalLam (RecCons _ _ r) (Shift e) = evalLam r e
+evalLam RecNil          (Shift _) = unreachable
+evalLam env     (Abs lab body) = \ x -> evalLam (RecCons lab x env) body
+evalLam env     (App f x)      = (evalLam env f) (evalLam env x)
+\end{verbatim}}
+
+\begin{exercise}
+Instead of using {\tt Var} and {\tt Shift}, fold the ideas from Exercise
+\ref{countingvars} into the {\tt Lam} datatype, and then write
+the evaluation function for this GADT.
+\end{exercise}
+
+\subsection{A Staged Interpreter for a Language with Variables}
+It is even possible to stage such an interpreter. One complication
+is that the record encoding the environment will not
+pair variables with values, but instead it will pair variables with code. To enable this
+we define the staged record.
+
+{\small
+\begin{verbatim}
+data StaticRecord:: Row Tag *0 ~> *0 where
+  StNil :: StaticRecord RNil
+  StCons:: Label t -> Code x -> StaticRecord r -> StaticRecord (RCons t x r)
+
+stageLam:: StaticRecord r -> Lam r t -> Code t
+stageLam (StCons _ code r) (Var _)        = code
+stageLam StNil             (Var _)        = unreachable
+stageLam (StCons _ _ r)    (Shift e)      = stageLam r e
+stageLam StNil             (Shift _)      = unreachable
+stageLam env               (App f x)      = 
+   [| $(stageLam env f) $(stageLam env x) |]
+stageLam env               (Abs lab body) = 
+   [| \ x -> $(stageLam (StCons lab [|x|] env) body) |]
+\end{verbatim}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Small step semantics}
+
+The datatype declarations for representing well-typed terms in the
+previous sections bear a striking similarity to the typing
+judgments for those languages. For example consider:
+\newcommand{\jgmt}[3]{{#1}\vdash{#2}:{#3}}
+\begin{mathpar}
+\inferrule
+        {~}
+        {\jgmt{\Gamma,x\colon\tau}{x}{\tau}}\textsc{Var}
+
+\inferrule
+        {\jgmt{\Gamma}{e}{\tau}}
+        {\jgmt{\Gamma,x\colon\sigma}{e}{\tau}}\textsc{Shift}
+
+\inferrule
+        {\jgmt{\Gamma,x\colon\tau}{e}{\sigma}}
+        {\jgmt{\Gamma}{\lambda x.e}{\tau\to\sigma}}\textsc{Abs}
+
+\inferrule
+        {\jgmt{\Gamma}{e_1}{\tau\to\sigma} \\ \jgmt{\Gamma}{e_2}{\tau}}
+        {\jgmt{\Gamma}{e_1\;e_2}{\sigma}}\textsc{Abs}
+\end{mathpar}
+The similarity justifies a slight change in perspective.  
+We have been thinking of \verb|Lam| as representing a piece of abstract syntax, 
+but we may also think of it as representing a typing derivation.
+
+The latter perspective supports an interesting approach to studying the 
+meta-theory of object languages.  A typing derivation is a \emph{proof}
+that a given term has a given type in a given context.  So total functions 
+that transform proofs into other proofs can be considered as constructive 
+proofs of results in the meta-theory of our object language.  This is 
+the approach taken in Twelf, where the meta-language is a Prolog-style 
+logic language.  In \om{}, we can write our meta-programs in a functional
+programming style.
+
+In the remainder of this section, we build, in several steps, a 
+proof of type soundness for our little language. 
+Our proof has the following basic structure (due to Wright and Felleisen)\cite{Wright:94}.
+\begin{enumerate}
+\item All terms are categorized syntactically as either values or non-values.
+\item A reduction relation $e \rightarrow e'$ comprising 
+        a small-step operational semantics is given.
+\item Any non-value term that cannot be reduced any further is considered to 
+        exhibit a run-time error.
+\item \textbf{Progress.} Any well-typed term $e$ is either a value or can
+        step to another well-typed term $e'$ (that is, $e \rightarrow e'$).
+\item \textbf{Preservation.} The reduction relation preserves types: 
+      If $e$ has type $\tau$ and $e \rightarrow e'$, then $e'$ has type $\tau$.
+\item Therefore if a term is well-typed, and we reduce it until no more
+        reduction steps are possible, then the resulting term must be a value
+        (rather than a term exhibiting a run-time error).
+\end{enumerate}
+
+To begin, we slightly modify our {\tt Lam} datatype
+from Section \ref{binding}. We call the datatype {\tt E}
+(for {\it E}xpression), and change the constructor names,
+to avoid confusion between the two. The substantive changes
+include the addition of a new type index ({\tt Mode} explained
+in greater detail below),
+and a shift from usings types of kind {\tt *0}, as indexes
+indicating the type of a term, to types of kind {\tt ObjType}
+(also explained in greater detail below). 
+To highlight
+these changes, we have included the classification
+of the old type {\tt Lam} for comparison.
+
+We emphasize, as explained earlier, that
+the datatype {\tt E} can
+be thought of as both abstract syntax or a typing derivation.
+
+{\small
+\begin{verbatim}
+--   Lam::         Row Tag *0      ~> *0      ~> *0
+
+data E  :: Mode ~> Row Tag ObjType ~> ObjType ~> *0  where
+  Const:: Rel a b -> b -> E Val env a
+  Var  :: Label s -> E Val (RCons s t env) t
+  Shift:: E m env t -> E m (RCons s q env) t
+  Lam  :: Label a -> E m (RCons a s env) t -> E Val env (ArrT s t)
+  App  :: E m1 env (ArrT s t) -> E m2 env s -> E Exp env t
+\end{verbatim}}
+
+\subsubsection{Values versus computations.}
+
+The first step to proving type-soundness in \om{} by this method is to 
+distinguish between values and non-values.  We accomplish this by
+the introduction of the new index {\tt Mode}. 
+
+{\small
+\begin{verbatim}
+data Mode:: *1 where
+ Exp:: Mode
+ Val:: Mode
+\end{verbatim}}
+
+\noindent
+Go back and study how the {\tt Mode} index is used
+in the types of the constructor functions of {\tt E}.
+Note how terms in normal form have types where {\tt Val}
+is the first index, and ones with redexes have types where {\tt Exp} is
+the first index. Consider the short \om\ session:
+
+{\small
+\begin{verbatim}
+prompt> Const IntR 3
+(Const IntR 3) : E Val a IntT 
+
+prompt> Lam `x (Var `x)
+(Lam `x (Var `x)) : E Val a (ArrT b b)
+
+prompt> App (Lam `x (Var `x)) (Const IntR 3)
+(App (Lam `x (Var `x)) (Const IntR 3)) : E Exp a IntT
+\end{verbatim}}
+
+\subsubsection{Object-types versus meta-types.}
+
+In {\tt E}, we no longer use types of kind {\tt *0} as object-level
+types. We do this because we wish to lift some, but not all,
+meta-level values into constants in the object-language. In this
+example we wish to lift integer constants, and n-ary functions
+over integers (the so-called $\delta$-reductions). To accomplish this we
+define a new kind to represent object-level types.
+
+{\small
+\begin{verbatim}
+data ObjType:: *1 where
+ ArrT:: ObjType ~> ObjType ~> ObjType
+ IntT:: ObjType
+\end{verbatim}}
+This new kind appears as the third index of {\tt E}, and also as an
+index to the {\tt Row} comprising the environment.
+The constructor {\tt Const} lifts only those values classified
+by types that are related to some {\tt ObjType} by the witness
+relation {\tt Rel}.
+
+{\small
+\begin{verbatim}
+data Rel:: ObjType ~> *0 ~> *0 where
+ IntR:: Rel IntT Int
+ IntTo:: Rel b s -> Rel (ArrT IntT b) (Int -> s)
+   -- First order functions only as constants
+\end{verbatim}}
+The structure of {\tt Rel} relates only integers and first-order, n-ary
+functions over integers to the type {\tt ObjType}. Consider the short \om\ session:
+
+{\small
+\begin{verbatim}
+prompt> IntR
+IntR : Rel IntT Int
+
+prompt> IntTo IntR
+(IntTo IntR) : Rel (ArrT IntT IntT) (Int -> Int)
+
+prompt> IntTo (IntTo IntR)
+(IntTo (IntTo IntR)) : Rel (ArrT IntT (ArrT IntT IntT)) (Int -> Int -> Int)
+\end{verbatim}}
+
+\subsubsection{Static versus Dynamic test for Mode.}
+
+Finally, on occasion we will need to observe the structure of
+an object-level term, and compute whether it is a value in normal
+form, or a term with a redex. We do this by defining a singleton type
+reflecting the kind {\tt Mode} into the value world,
+and by writing a total function that computes 
+a safe approximation of the mode of any expression. By safe, we mean that no
+term is ever indexed by {\tt Exp} if it is a value, though some terms
+might be indexed by {\tt Exp} even though they do not contain a redex.
+Such terms generally have the form {\tt (App (Var `x) \_)}, i.e. an
+application with a variable in the function part).
+
+{\small
+\begin{verbatim}
+data Mode':: Mode ~> *0 where
+  Exp':: Mode' Exp
+  Val':: Mode' Val
+
+mode :: E m e t -> Mode' m
+mode (Lam v body) = Val'
+mode (Var v) = Val'
+mode (Const r v) = Val'
+mode (Shift e) = mode e
+mode (App _ _) = Exp'
+\end{verbatim}}
+
+\subsubsection{Summary of changes.}
+Thus
+a well-typed term of type {\tt (E m env t)} is 
+(1) a data structure representing an object-level
+term, (2) a derivation that the term is well typed with type {\tt t}
+in environment {\tt env}, 
+and (3) a derivation that the term has mode {\tt m}. 
+Lets review the roles of the 3 kinds of indexes to {\tt E}.
+
+\begin{itemize}
+\item{\tt Mode.} The mode of the term. Either a {\tt Val}, a term
+in normal form, or an {\tt Exp}, a term with redex.
+
+\item{\tt Row Tag ObjType.} The environment which indicates
+the position and type of the free variables in the term.
+
+\item{\tt ObjType.} The object-level type of the term. Because of the
+relation {\tt Rel}, we know only first order functions
+can be lifted from the meta-language to the object language.
+\end{itemize}
+
+There are two kinds of redexes in a term. $\beta$-redexes 
+(explicit $\lambda$ - expressions in the function position
+of an application) and $\delta$-redexes (higher-order
+constants in the function position
+of an application). We give meaning
+to $\beta$-redexes by the use of substitution. Thus we
+need a well-typed version of substitution over object-level terms
+represented by {\tt E}.
+
+
+\subsubsection{Substitution lemma}
+
+The key lemma behind the preservation part of the type-soundness proof is called
+the \emph{substitution lemma}. The lemma says that if a term $e$ has type
+$\sigma$ under the assumption that some variable $x$ has type $\tau$, then
+substituting any term $e'$ of type $\tau$ for $x$ in $e$ yields $e[e'/x]$
+of type $\sigma$. In our version of the preservation proof, the lemma
+exhibits itself as a total well-typed function that performs substitution.
+
+We choose to represent substitutions as data structures. This provides
+another example of object language syntax because our syntax is similar to
+explicit substitutions~\cite{BenaissaBLR96}. In this approach a
+substitution of type {\tt (Sub e1 e2)} is a mapping from one environment
+(of kind {\tt e1}) to another (of kind {\tt e2}).
+
+{\small
+\begin{verbatim}
+data Sub:: Row Tag ObjType ~> Row Tag ObjType ~> *0 where
+  Id:: Sub r r
+  Bind:: Label t -> E m r2 x -> Sub r r2 -> Sub (RCons t x r) r2
+  Push:: Sub r1 r2 -> Sub (RCons a b r1) (RCons a b r2)
+
+subst:: E m1 r t -> Sub r s -> exists m2 . E m2 s t
+subst t           Id           = Ex t
+subst (Const r c) sub          = Ex (Const r c)
+subst (Var v)     (Bind u e r) = Ex e
+subst (Var v)     (Push sub)   = Ex (Var v)
+subst (Shift e)   (Bind _ _ r) = subst e r
+subst (Shift e)   (Push sub)   = case subst e sub of {Ex a -> Ex(Shift a)}
+subst (App f x)   sub          = case (subst f sub,subst x sub) of
+                                  (Ex g,Ex y) -> Ex(App g y)
+subst (Lam v x)   sub          = case subst x (Push sub) of
+                                  (Ex body) -> Ex(Lam v body)
+\end{verbatim}}
+
+\subsubsection{Preservation.}
+
+In our proof, we perform steps 2 (define the one-step evaluation
+relation), 4 (prove progress), and 5 (prove type preservation)
+at once by defining a total single-step operation that operates on
+well-typed non-value closed terms. Its type is given by\\ {\tt onestep
+:: E m Closed t -> (E Exp Closed t + E Val Closed t)}.\\ Read logically
+this type says that every closed term (regardless of whether it is a
+value or an expression with a redex) can be transformed into another
+closed term with the same type, or is already a value.
+
+{\small
+\begin{verbatim}
+type Closed = RNil
+
+onestep :: E m Closed t -> (E Exp Closed t + E Val Closed t)
+onestep (Var v)      = unreachable
+onestep (Shift e)    = unreachable
+onestep (Lam v body) = R (Lam v body)
+onestep (Const r v)  = R(Const r v)
+onestep (App e1 e2)  =
+  case (mode e1,mode e2) of
+    (Exp',_) ->
+      case onestep e1 of
+        L e -> L(App e e2)
+        R v -> L(App v e2)
+    (Val',Exp') ->
+      case onestep e2 of
+        L e -> L(App e1 e)
+        R v -> L(App e1 v)
+    (Val',Val') -> rule e1 e2
+\end{verbatim}}
+
+This function is a non-recursive case analysis. The {\tt Var} and {\tt
+Shift} cases are unreachable (they cannot be closed terms). The {\tt
+Lam} and {\tt Const} cases are already values. Observing the mode of
+the two parts of an application we have three choices. If the function
+is an expression with a possible redex, we take one step in the
+function part, and then rebuild the term. If the function part is a value,
+we must apply one of the $\beta$- or $\delta$-rules. Note that the
+function part is always a closed term with an {\tt (ArrT \_ \_)}
+object-level type.
+
+{\small
+\begin{verbatim}
+rule::  E Val Closed (ArrT a b) ->
+        E Val Closed a ->
+        (E Exp Closed b + E Val Closed b)
+rule (Var _)   _ = unreachable
+rule (Shift _) _ = unreachable
+rule (App _ _) _ = unreachable
+-- The beta-rule
+rule (Lam x body) v =
+  let (Ex term) = subst body (Bind x v Id)
+  in case mode term of
+       Exp' -> L term
+       Val' -> R term
+rule (Const IntR _)      _                   = unreachable
+rule (Const (IntTo b) _) (Var _)             = unreachable
+rule (Const (IntTo b) _) (Shift _)           = unreachable
+rule (Const (IntTo b) _) (App _ _)           = unreachable
+rule (Const (IntTo b) f) (Lam x body)        = unreachable
+rule (Const (IntTo b) f) (Const (IntTo _) x) = unreachable
+-- The delta-rule
+rule (Const (IntTo b) f) (Const IntR x)      = R(Const b (f x))
+\end{verbatim}}
+There are eleven cases. Nine of which are unreachable from type
+considerations (i.e. the inputs are not values, are not closed, or the
+first argument does not have an arrow type). We have structured our
+function body to make it explicit that we have covered every case. This
+allows us to prove (by a meta-level argument) that {\tt rule} is total. In
+other systems (i.e. Twelf, Coq, etc.) this argument can be enforced by the
+type-system of the meta-language. In these systems all functions are total
+(or they are not accepted). In \om, we aspire to this level of automated
+assistance, but as we think of \om\ as a programming language (not a proof
+system) we must support both total and partial functions. We hope to
+separate total and partial functions by using the type system sometime in
+the near future. 
+
+The function {\tt onestep} makes progress. By inspecting the code we see
+all values are immediately returned, and all non-values actually take one
+step forward.
+ 
+ 
+ \subsection{Example: Constructing Typing Derivations at Runtime}
+ 
+ At first glance, using GADTs to represent object-languages
+ solves many problems. But, further introspection reveals a subtle
+ problem. We can build typed object-level terms by typing
+ constructed terms into our program using the constructors of the GADT, but how do we build
+ such terms algorithmically? I.e. how do we write a parser,
+ for example, that builds a well-typed object-level term? What
+ would the type of the parser be?
+ The type {\tt (parse:: String -> E m e t)} is clearly not
+ sufficient. Not every string can be parsed.
+ But the type  {\tt (parse:: String -> Maybe(E m e t))} is also
+ not sufficient. What mode, environment, and object level type
+ should constrain the meta-level type variables {\tt m}, {\tt e}, and
+ {\tt t}? The type
+ {\tt (parse:: String -> exists m e t . Maybe(E m e t))} is closer
+ to the mark, but this is also too unconstrained.  We expect
+ some properties to be true of these type variables. One solution
+ is to build runtime representations that represent the constraints
+ we envision, and runtime tests for these constraints, that we can execute at runtime.
+ 
+ We do this by building a singleton type to reflect the
+ object-level types as meta-level runtime values
+ (Section \ref{singleton} and Exercise \ref{reptype}), and a runtime test for equality
+ of these object-level type indexes (Exercises \ref{samenat} and \ref{objectVar}).
+ 
+{\small
+\begin{verbatim}
+data Rep:: ObjType ~> *0 where
+ I:: Rep IntT
+ Ar:: Rep a -> Rep b -> Rep (ArrT a b)
+\end{verbatim}}
+
+In the function
+{\tt compare}, because we want our runtime tests to report interesting error
+messages, the comparison returns a sum type, were the left injection (a
+failure) is an error message, and the right injection (a success) is an
+equality proof. Because the partial application of the type constuctor
+{\tt (+)} to {\tt String} is monadic
+\footnote{{\tt return:: a -> (String + a)\\
+return x = R x\\
+bind:: (String + a) -> (a -> (String + b)) -> (String + b)\\
+bind (L message) f = Left message\\
+bind (R x) f = f x\\}}, we use the {\tt do} notation
+to specify what happens on success. On failure
+(of either {\tt (comapre x s)} or {\tt (compare y t)}) the error message
+in the left injection will be propogated.
+
+{\small
+\begin{verbatim}
+compare:: Rep a -> Rep b -> (String + Equal a b)
+compare I I = R Eq
+compare (Ar x y) (Ar s t) =
+  do { Eq <- compare x s
+     ; Eq <- compare y t
+     ; R Eq}
+compare I (Ar x y) = L "I /= (Ar _ _)"
+compare (Ar x y) I = L "(Ar _ _) /= I"
+\end{verbatim}}
+
+
+We will break our parsing problem into two parts. First, parsing a string
+into an untyped object-language representation (not shown in this paper,
+as this is the ordinary parsing problem). Second, transforming
+this untyped representation into a well-typed GADT representing
+a typed object-language term (or typing derivation, depending upon
+your perspective). In this report, we assume that the untyped
+representation suggests a type for every variable, and that
+our algorithm checks that this suggestion is correct. The inference
+problem is much harder, and not shown here. Our untyped
+representation follows:
+
+{\small
+\begin{verbatim}
+data Term:: *0 where
+  C:: Int -> Term
+  Ab:: String -> Rep a -> Term -> Term
+  Ap:: Term -> Term -> Term
+  V:: String -> Term
+\end{verbatim}}
+
+We will check each term with respect to a given environment which maps
+every variable to an object-level type. It will also store the string used
+to name the variable in the untyped representation, and the label used to
+represent the variable in the typed-representation. Such an environment is
+indexed by {\tt (Row Tag ObjType)} in the same manner as terms {\tt E} and
+substitutions {\tt Sub}.
+
+{\small
+\begin{verbatim}
+data Env:: Row Tag ObjType ~> *0 where
+    Enil:: Env RNil
+    Econs:: Label t -> (String,Rep x) -> Env e -> Env (RCons t x e)
+  deriving Record(e)
+\end{verbatim}}
+A key component of our algorithm, to produce a well-typed
+representation from an untyped representation, is to
+look up the type of a variable. 
+
+{\small
+\begin{verbatim}
+fail:: String -> (String + a)
+fail s = L s
+
+lookup:: String -> Env e -> (String + exists t m .(E m e t,Rep t))
+lookup name Enil = fail ("Name not found: "++name)
+lookup name {l=(s,t);rs}e | eqStr name s = R(Ex(Var l,t))
+lookup name {l=(s,t);rs}e =
+  do { Ex(v,t) <- lookup name rs
+     ; R(Ex(Shift v,t)) } 
+\end{verbatim}}
+
+If successful, both a representation of a type, and a term with that type
+are returned. Now we need put all this machinery together. The type
+checker is a program with the following prototype:\\ {\tt tc:: Term -> Env e ->
+(String + exists t m . (E m e t,Rep t))}\\ Read logically, for every
+untyped term, and every environment with types for variables reflected in
+the row {\tt e}, we can either report a type-checking error, or 
+return a representation of a
+typed term. In this representation (consisting of a pair
+of a term and a singleton), its actual type and its mode are
+existentially quantified, but the actual object-level type
+is reflected in the ``shape" of the runtime singleton object.
+
+{\small
+\begin{verbatim}
+tc:: Term -> Env e -> (String + exists t m . (E m e t,Rep t))
+tc (V s) env = lookup s env
+tc (Ap f x) env =
+  do { Ex(f',ft) <- tc f env
+     ; Ex(x',xt) <- tc x env
+     ; case ft of
+        (Ar a b) ->
+           do { Eq <- compare a xt
+              ; R(Ex(App f' x',b)) }
+        _ -> fail "Non fun in Ap" }
+tc (Ab s t body) env =
+  do { let (Hidden l) = newLabel s
+     ; Ex(body',et) <- tc body {l=(s,t); env}e
+     ; R(Ex(Lam l body',Ar t et)) }
+tc (C n) env = R(Ex(Const IntR n,I))
+\end{verbatim}}
+
+The application case is the most interesting. First,
+recursively type-check the function and argument, returning
+typed terms {\tt f'} and {\tt x'}, and reflected types {\tt ft}
+and {\tt xt}. If either of these fails, the monad syntax causes the whole function
+to fail. Test that the function argument is really a function, and then
+compare the domain with the type of the argument. Only if this succeeds,
+and we have a proof that the two types are equal, can the whole case succeed.
+
+
+
+ 
+ {\small
+\begin{verbatim}
+
+\end{verbatim}} 
+
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The bottom line}
+
+The ability to define type-indexed GADTs, and the ability to define new
+kinds, creates a rich playground for those wishing to explore the
+design of new languages. These features, along with the use of rank-N
+polymorphism (which is beyond the scope of this paper) make \om~ a
+better meta-language than Haskell. In order to explore the design of a
+new language one can proceed as follows:
+
+\begin{itemize}
+
+\item First, represent the object-language as a type-indexed GADT. The indexes
+correspond to static properties of the program.
+
+\item The indexes can have arbitrary structure, because they are introduced as
+the type constructors of new kinds.
+
+\item The typed constructor functions of the object-language GADT define a
+static semantics for the object language.
+
+\item Meta-programs written in \om manipulate object-language
+represented as data, and check and maintain the properties captured in
+the type indexes by using the meta-language type system. This lets us
+build and test type systems interactively.
+
+\item A dynamic semantics for the language can be defined by (1) writing either
+a large step semantics in the form of an interpreter or evaluation
+function, or by (2) writing a small step semantics in terms of substitution
+over the term language. In either case, the type system of the meta-language
+guarantees that these meta-level programs maintain object level type-safety.
+
+\item Normal operations such as pretty-printing and parsing functions can also be constructed,
+albeit with a little more cleverness than is ordinarily required.
+
+\end{itemize}
+
+
+
+
+\section{Using Terms as Theorems}\label{theorem}
+
+We can use a value of type \verb+(Nat' n)+ as a proof
+that \verb+n+ is a natural number. In \om, ordinary
+datatypes can be used as constraints over types. A constraint
+can be discharged by exhibiting a non-divergent term with that type.
+The classic datatype used in this fashion is the equality type
+from Section \ref{equal}. Recall:
+%%%%%%%%%%%%%%%%%%
+\begin{verbatim}
+data Equal :: a ~> a ~> *0 where
+  Eq:: Equal x x
+\end{verbatim}
+The \verb+Equal+ constraint can be applied to all types of the same kind
+because it is level polymorphic (see section \ref{level}).
+Thus \verb+(Equal 2t 3t)+ and \verb+(Equal Int Bool)+ are both
+well formed, but neither is inhabited (i.e. there are no non-divergent values with these types
+since (\verb+Int+ $\neq$ \verb+Bool+) and (\verb+(S(S Z))+ $\neq$ \verb+(S(S(S Z)))+)).
+The normal mode of use is to construct terms with types
+like {\tt (Equal} {\it x} {\it y}{\tt )} 
+where {\it x} and {\tt y} are type
+level function applications. 
+For example consider the type of the function \verb+plusZ+ below.
+Its type: ({\tt Nat' n -> Equal {plus n Z} n}) when read logically means
+{\it for all natural numbers {\tt n}, n+0 = n}. One way
+to prove this is with a proof by induction over {\tt n}. The following
+recursive definition of {\tt plusZ} is a term witnessing
+this property. The {\tt theorem} clause, inside the
+defintion of {\tt plusZ} is a mechanism that helps organize this
+proof, and is explained in detail in the sequel.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+plusZ :: Nat' n -> Equal {plus n Z} n
+plusZ Z = Eq
+plusZ (S m) = Eq
+  where theorem indHyp = plusZ m
+\end{verbatim}}
+
+This function is a proof by induction
+that for all natural numbers {\tt n} : \verb+{plus n 0t}+ =  \verb+n+. The
+definition exhibits a well-typed, total function with this type.
+The declaration, \verb+where theorem indHyp = plusZ m+, instructs the
+type checker to use the type of the term \verb+(plusZ m)+ as a reasoning rule.
+Thus we may assume its type: \verb+(Equal {plus b 0t} b)+
+while discharging \verb+(Equal (S{plus b Z}) (S b))+.
+
+To see that {\tt plusZ} is well typed, the type checker does the following.
+The expected type is the type given in the function prototype. We
+compute the type of both the left- and right-hand-side of the equation
+defining a clause. We compare the expected type with the computed type
+for both the left- and right-hand-sides. This comparison generates
+some necessary equalities (for each side) to make the expected and computed
+types equal. We assume the left-hand-side
+equalities to prove the right-hand-side equalities. To see this in
+action, consider the two clauses of the definition of \verb+plusZ+.
+
+\begin{enumerate}
+
+\item \deffbox{Nat' n}{Equal \plus{n}{Z} n}{plusZ Z}{Eq}{Nat' Z}{Equal a a}{n = Z}{(a = n, a= \plus{n}{Z})}
+
+\vspace*{.1in}
+In the first case, the left-hand-side equalities let us
+assume \verb+n+ = \verb+Z+. The right-hand-side equalities require us
+to establish that \verb+a+ = \verb+{plus n Z}+ and \verb+a+ = \verb+n+.  This can be established
+{\it iff} \verb+ n+ = \verb+{plus n Z}+. Using the assumption that 
+\verb+n+ = \verb+Z+, we are left with the requirement that  \verb+Z+ = \verb+{plus Z Z}+,
+which is easy to prove using the definition of \verb+plus+.
+\vspace*{.1in} 
+
+\item \deffbox{Nat' n}{Equal \plus{n}{Z} n}{plusZ (S m)}{Eq}{Nat' (S b)}{Equal a a}{n = (S b)}{(a = n, a= \plus{n}{Z})}
+
+\vspace*{.2in}
+In the second case, the left-hand-side assumptions are \verb+n+ = 
+\verb+(S b)+ (where the pattern introduced variable {\tt m} has type {\tt (Nat' b)}).
+The right-hand-side equalities require us to establish that \verb+a+ =
+\verb+{plus n Z}+ and \verb+a+ = \verb+n+.  Again, this can only be
+established if  \verb+ n+ = \verb+{plus n Z}+. Using the assumption
+that \verb+n+ = \verb+(S b)+, we are left with the requirement that
+\verb+(S b)+ = \verb+{plus (S b) Z}+. Using the definition
+of {\tt plus}, this reduces to \verb+(S b)+ = \verb+(S{plus b Z})+.
+To establish this fact, we use the inductive hypothesis.
+Since the argument {\tt (S m)} is finitely
+constructed, and the function \verb+plusZ+ is total, the term, 
+\verb+(plusZ m)+ exhibits a proof that \verb+(Equal {plus b Z} b)+. 
+
+\end{enumerate}
+
+Other interesting facts, that are established in the same
+way, but omitted for brevity, include:
+
+ 
+{\small
+\begin{verbatim}
+plusS :: Nat' n -> Equal {plus n (S m)} (S{plus n m})  
+plusCommutes :: Nat' n -> Nat' m -> Equal {plus n m} {plus m n}
+plusAssoc :: Nat' n -> Equal {plus {plus n b} c} {plus n {plus b c}}
+plusNorm :: Nat' x -> Equal {plus x {plus y z}} {plus y {plus x z}}
+\end{verbatim}}
+
+\begin{exercise}\label{convlemma}
+Write an \om\ function body for each of the prototypes above. The function bodies
+for {\tt plusS} and {\tt plusAssoc} are very similar to {\tt plusZ}.
+The other two require appealing to theorems in addition to an induction
+hypotheses. In fact, {\tt plusCommutes} requires both {\tt plusZ} and
+{\tt plusS} in addition to an induction hypothesis. We leave it to you
+to figure out what theorem is required for {\tt plusNorm}.
+\end{exercise}
+
+\subsection{Self Describing Combinatorial Circuits}
+
+Our next example is the description of combinatorial circuits. We will use types
+to ensure that our descriptions describe what they implement. We first describe the
+{\tt Bit} type.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+data Bit:: Nat ~> *0 where
+  One :: Bit (S Z)
+  Zero :: Bit Z
+\end{verbatim}}
+
+Like \verb+Nat'+, {\tt Bit} is a singleton type (see Section \ref{singleton}), there is only
+one value for each type. Note how the type of a bit carries the 
+value of the bit as a natural number as its type index. 
+I.e.  \verb+(One :: Bit 1t)+  and \verb+(Zero :: Bit 0t)+.
+We exploit this
+to define a data structure representing a base-2 number
+as a sequence of bits. The idea is for a value
+of type \verb+(Binary Bit w v)+ to represent a binary number
+built from a sequence of {\tt Bits}, with width \verb+w+ and value \verb+v+.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+data Binary:: (Nat ~> *0) ~> Nat ~> Nat ~> *0 where
+  Nil :: Binary bit Z Z
+  Cons:: bit i -> Binary bit w n -> Binary bit (S w) {plus {plus n n} i}
+\end{verbatim}}
+
+Note that the type of the elements in the sequence has been abstracted
+to be any type constructor classified by the kind \verb+(Nat ~> *0)+.
+In our first few examples, we will construct lists of {\tt ({\it Bit}
+i)}, so we will have values with type {\tt (Binary {\it Bit} len
+value)} as a result. Later in the text, we will build binary numbers from
+other representations of bits.
+
+A value with type {\tt (Binary Bit 2t 3t)} is a sequence of {\tt (Bit j)}
+values. The individual {\tt j}'s are combined to represent a
+ binary number with value {\tt 3t}.
+Binary numbers are stored least significant bit first. Prefixing a new
+bit shifts the previous bits into the next significant position, so the
+value of the new number is the value of the new bit plus twice
+the value of the old bits. Thus the type expression \verb+{plus {plus n n} i}+ in
+the type of \verb+Cons+ which prefixes a new bit. For example consider the term: 
+\verb+(Cons Zero (Cons One (Cons Zero (Cons Zero Nil))))+ that has type \verb+(Binary Bit 4t 2t)+.
+I.e. ``0100" (where the least significant bit is left-most) has value 2 and width 4.
+
+
+
+If we add three one-bit numbers, we always get a two bit result. We
+can write this function as follows.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+add3Bits:: (Bit i) -> (Bit j) -> (Bit k) -> 
+           Binary Bit 2t {plus {plus j k} i}
+add3Bits Zero Zero Zero = Cons Zero (Cons Zero Nil)
+add3Bits Zero Zero One  = Cons One  (Cons Zero Nil)
+add3Bits Zero One  Zero = Cons One  (Cons Zero Nil)
+add3Bits Zero One  One  = Cons Zero (Cons One  Nil)
+add3Bits One  Zero Zero = Cons One  (Cons Zero Nil)
+add3Bits One  Zero One  = Cons Zero (Cons One  Nil)
+add3Bits One  One  Zero = Cons Zero (Cons One  Nil)
+add3Bits One  One  One  = Cons One  (Cons One  Nil) 
+\end{verbatim}}
+
+This function is an exhaustive case analysis of all 8 possible
+combination of bits. It is exhaustive and total. Consider
+type checking one case.
+
+\vspace*{+.1in}
+\hspace*{-.3in}
+{\tiny
+\deffboxShort{Bit i -> Bit j -> Bit k}{Binary Bit \two \hspace*{.1in}\plus{\plus{j}{k}}{i}}
+{add3Bits Zero One One}{Cons Zero (Cons One  Nil)}
+{Bit \zero \ -> Bit \one \ -> Bit \one}
+{\begin{tabular}[t]{lll}
+Binary Bit \two  \\
+\plusH{\plusH{\plus{\plus{\zero}{\zero}}{\one}}
+                   {\plus{\plus{\zero}{\zero}}
+             {\one}}}
+      {\zero}
+\end{tabular}}               
+{(i = \zero,j = \one,k = \one)}
+{\begin{tabular}[t]{l}
+  \plus{\plus{j}{k}}{i} = \\
+\plusH{\plusH{\plus{\plus{\zero}{\zero}}{\one}}
+                   {\plus{\plus{\zero}{\zero}}
+             {\one}}}
+      {\zero}  
+\end{tabular}} } 
+\vspace*{+.1in}
+                      
+Under the assumptions, both parts of the equality in the requirements
+for the right-hand-side reduce to
+\verb+(Binary Bit t2 2t)+, so the clause is well typed.
+Iterating \verb+add3Bits+, we can construct a ripple carry adder, whose type
+states that it is really an addition function!
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+add :: Bit c -> 
+       Binary Bit n i -> 
+       Binary Bit n j -> Binary Bit (S n) {plus {plus i j} c}
+add c Nil Nil = Cons c Nil
+add c (Cons x xs) (Cons y ys) = 
+  case add3Bits c x y of
+    (Cons bit (Cons c2 Nil)) -> Cons bit (add c2 xs ys)
+       where theorem plusCommutes, plusAssoc, plusNorm
+\end{verbatim}}
+
+The function \verb+add+ is type checked in the same manner as we illustrated
+with \verb+plusZ+ and \verb+add3Bits+. In  \verb+add+, the type
+checker relies on the three theorems \verb+plusCommutes+, \verb+plusAssoc+, 
+\verb+plusNorm+ that are the focus of Exercise \ref{convlemma} from the end of Section \ref{theorem}.
+We repeat their types here for convenience.
+%%%%%%%%%%%%%%
+
+{\small
+\begin{verbatim}
+plusCommutes :: Equal {plus n m}          {plus m n}
+plusAssoc    :: Equal {plus {plus n b} c} {plus n {plus b c}}
+plusNorm     :: Equal {plus x {plus y z}} {plus y {plus x z}}
+\end{verbatim}}
+
+When used in conjunction, these theorems act as a set of left-to-right rewriting rules,
+and have a very strong normalizing effect. This effect occurs because the theorems {\tt
+plusCommutes} and {\tt plusNorm} are only applied if the rewritten term is
+lexigraphically smaller than the original term. For example, while type checking {\tt
+add} the type checker uses them to repeatedly rewrite the term:\\ 
+\verb+{plus {plus {plus {plus x3 x3} x2} {plus {plus x5 x5} x4}} x1}+ \hspace*{.5in} to the term:\\ 
+\verb+{plus x1 {plus x2 {plus x3 {plus x3 {plus x4 {plus x5 x5}}}}}}+
+
+
+\begin{exercise}
+Repeat the progression of defining the GADT {\tt Binary} through
+defining the function {\tt add}, but this time make {\tt Binary}
+store most-significant bits on the left.
+\end{exercise}
+
+ \subsection{Symbolically Combining Bits}
+ 
+ While we have shown how to use types to describe properties of programs, our adder
+ is not a very effective hardware description.  We need a data structure that can
+ represent not only the constant bits, \verb+One+ and \verb+Zero+, but also
+ operations on bits. This motivates \verb+BitX+ (for eXtended bit).
+ 
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+data BitX:: Nat ~> *0 where
+  OneX :: BitX (S Z)
+  ZeroX :: BitX Z
+  And:: BitX i -> BitX j -> BitX {and i j}
+  Or:: BitX i -> BitX j -> BitX {or i j}
+  Xor:: BitX i -> BitX j -> BitX {xor i j}
+\end{verbatim}}
+
+In order to track the result of {\it and}ing ({\it or}ing, {\it xor}ing) two bits,
+we need the {\tt and} ({\tt or}, {\tt xor}) functions at the type level. These
+functions take any two natural numbers as input, but always return \verb+0t+ or \verb+1t+
+as a result.
+
+\vspace*{.15in}
+\hspace*{-0.25in}
+\begin{tabular}{l|l}
+\begin{minipage}[t]{2.0in}
+{\small
+\begin{verbatim}
+and :: Nat ~> Nat ~> Nat
+{and Z Z} = Z
+{and Z (S n)} = Z
+{and (S n) Z} = Z
+{and (S n) (S n)} = S Z
+\end{verbatim}}
+\end{minipage}
+&
+\begin{minipage}[t]{2.0in}
+{\small
+\begin{verbatim}
+ or :: Nat ~> Nat ~> Nat
+ {or Z Z} = Z
+ {or Z (S n)} = S Z
+ {or (S n) Z} = S Z
+ {or (S n) (S n)} = S Z
+\end{verbatim}}
+\end{minipage}
+\end{tabular}
+
+\begin{exercise}
+Write the \om\ type-level function:\\
+\verb+xor :: Nat ~> Nat ~> Nat+\\ that implements the exclusive-or function.
+\end{exercise}
+ 
+
+We can prove a number of interesting theorems about these functions
+by exhibiting terms with logical types. As we did with \verb+add3Bits+,
+these functions are basically an exhaustive analysis of the cases.
+Here we prove that {\tt and} is associative.
+%%%%%%%%%%%%%%%%%%
+
+{\small
+\begin{verbatim}
+andAs :: Bit a -> Bit b -> Bit c -> 
+         Equal {and {and a b} c} {and a {and b c}}
+andAs Zero Zero Zero = Eq
+andAs Zero Zero One  = Eq
+andAs Zero One  Zero = Eq
+andAs Zero One  One  = Eq
+andAs One  Zero Zero = Eq
+andAs One  Zero One  = Eq
+andAs One  One  Zero = Eq
+andAs One  One  One  = Eq
+\end{verbatim}}
+Note, that this is a theorem about \verb+Bit a+, \verb+Bit b+, and \verb+Bit c+,
+not about natural numbers {\tt a}, {\tt b}, and {\tt c}. I.e.\\
+{\small \verb+(Bit a -> Bit b -> Bit c -> Equal {and {and a b} c} {and a {and b c}})+}\\
+is a theorem but\\
+{\small \verb+(Nat' a -> Nat' b -> Nat' c -> Equal {and {and a b} c} {and a {and b c}}}+}\\
+is not.   A number of other useful theorems are proved in a similar manner.
+
+{\small
+\begin{verbatim}
+andZ1:: Bit a -> Equal {and a Z} Z
+andZ2:: Bit a -> Equal {and Z a} Z
+andOne2:: Bit a -> Equal {and a (S Z)} a
+andOne1:: Bit a -> Equal {and (S Z) a} a
+\end{verbatim}}
+
+\begin{exercise}
+Following the pattern of {\tt AndAs}, write function definitions for the
+above prototypes.
+\end{exercise}
+
+Every \verb+(BitX i)+ can be evaluated into a \verb+(Bit i)+ by applying
+the definitions of the operations {\tt and}, {\tt or} and {\tt xor}.
+This is the purpose of the function \verb+fromX+.
+Since the operations are functions at the type level, and we need 
+operations on bits (which live at the value level) we define
+the functions {\tt and'}, {\tt or'} and {\tt xor'}.
+
+\vspace*{.15in}
+
+{\small
+\begin{verbatim}
+fromX :: BitX n -> Bit n
+fromX OneX = One
+fromX ZeroX = Zero
+fromX (Or x y) = or' (fromX x) (fromX y)
+fromX (And x y) = and' (fromX x) (fromX y)
+fromX (Xor x y) = xor' (fromX x) (fromX y)
+fromX (And3 x y z) = 
+      and' (fromX x) (and' (fromX y) (fromX z))
+
+\end{verbatim}}
+
+{\small
+\begin{verbatim}
+and' :: Bit i -> Bit j -> Bit {and i j}
+and' Zero Zero = Zero
+and' Zero One = Zero
+and' One Zero = Zero
+and' One One = One
+
+or' :: Bit i -> Bit j -> Bit {or i j}
+xor' :: Bit i -> Bit j -> Bit {xor i j}
+\end{verbatim}}
+\vspace*{.15in}
+
+\begin{exercise}
+Write \om\ function bodies for the
+omitted functions {\tt or'} and {\tt xor'}.
+\end{exercise}
+
+
+Because every \verb+(BitX i)+ can be evaluated into a \verb+(Bit i)+,
+we can lift theorems about \verb+Bit+ to theorems about \verb+BitX+.
+For example, consider the theorem:
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+andAs:: Bit a -> Bit b -> Bit c -> Equal {and {and a b} c} {and a {and b c}}
+\end{verbatim}}
+If {\tt a}, {\tt b} and {\tt c} are {\tt Bit}s, then  {\tt a}, {\tt b} and {\tt c}
+associate under {\tt and}.  This is not the case for arbitrary  {\tt a}, {\tt b} and {\tt c}.
+Recall that the natural number indexes to {\tt Bit} can only be 0 or 1. A similar
+theorem holds if  {\tt a}, {\tt b} and {\tt c} are {\tt BitX}, and this theorem
+can be computed from the theorem involving {\tt Bit}.
+
+{\small
+\begin{verbatim}
+andAssoc:: BitX a -> BitX b -> BitX c -> 
+           Equal {and {and a b} c} {and a {and b c}}
+andAssoc a b c = andAs (fromX a) (fromX b) (fromX c)
+\end{verbatim}}
+
+So unlike {\tt andAs}, where we could not lift a theorem about {\tt Bit} to
+a theorem about {\tt Nat}, every theorem about {\tt Nat} can be lifted to a theorem about {\tt Bit}.
+With these tools,  we can build a ripple carry adder that performs
+addition by applying the bit operations. For example, to add
+three one-bit numbers to obtain a two-bit result, we need to
+construct a logical formula that captures the following table.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+inputs     sum
+
+i j k      high bit  low bit
+------
+0 0 0      0         0
+0 0 1      0         1
+0 1 0      0         1          low bit  = (Xor i (Xor j k))
+0 1 1      1         0          high bit = (Or (And i j) 
+1 0 0      0         1                         (Or (And i k) 
+1 0 1      1         0                             (And j k)))
+1 1 0      1         0
+1 1 1      1         1
+\end{verbatim}}
+
+To implement this is \om, we introduce a 2-bit number \verb+Pair+ (more significant bit on the left),
+and the function \verb+addthree+.
+
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+data Pair:: Nat ~> *0 where
+ Pair:: BitX hi -> BitX lo -> Pair {plus {plus hi hi} lo}
+
+addthree :: BitX i -> BitX j -> BitX k -> Pair {plus j {plus k i}}
+addthree i j k = Pair (Or (And i j) (Or (And i k) (And j k)))
+                                    (Xor i (Xor j k))
+  where theorem lemma = logic3 (fromX i) (fromX j) (fromX k) 
+\end{verbatim}}
+Unlike the function \verb+add3Bits+, we cannot type check \verb+addthree+
+by exhaustively enumerating all possible inputs because there
+are an infinite number of possible terms of type \verb+(BitX i)+ for each
+natural number \verb+i+. But we can prove a lemma about \verb+Bit+
+(which we can prove by exhaustive analysis) and then lift it to a theorem
+about \verb+BitX+. This is the role of the term \verb+(logic3 (fromX i) (fromX j) (fromX k))+
+in the \verb+theorem+ clause in \verb+addthree+.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+logic3 :: Bit i -> Bit j -> Bit k -> 
+          (Equal {plus {plus {or {and i j} 
+                                 {or {and i k} {and j k}}} 
+                             {or {and i j} 
+                                 {or {and i k} {and j k}}}} 
+                       {xor i {xor j k}}} 
+                 {plus j {plus k i}})                                            
+logic3 Zero Zero Zero = Eq
+logic3 Zero Zero One  = Eq
+logic3 Zero One  Zero = Eq
+logic3 Zero One  One  = Eq
+logic3 One  Zero Zero = Eq
+logic3 One  Zero One  = Eq
+logic3 One  One  Zero = Eq
+logic3 One  One  One  = Eq
+\end{verbatim}}
+We can now re-implement our ripple carry adder, but this time by
+symbolically combining the input bits, to compute
+the output bits as a logical function of the inputs. This function
+has a similar type, the same structure, and uses the same theorems as the function \verb+add+.
+%%%%%%%%%%%%%%%%%%
+
+{\small
+\begin{verbatim}
+addBits :: BitX c -> Binary BitX n i -> Binary BitX n j -> 
+           Binary BitX (S n) {plus {plus i j} c}
+addBits c Nil Nil = Cons c Nil
+addBits c (Cons x xs) (Cons y ys) = 
+  case addthree c x y of
+    (Pair c2 bit) -> Cons bit (addBits c2 xs ys)
+       where theorem plusCommutes, plusAssoc, plusNorm
+\end{verbatim}}
+
+To actually compute a circuit we need to have some symbolic inputs. We
+do this by extending the type \verb+BitX+ with a constructor to represent variables.
+We can then construct some inputs, and compute the description
+of an adder. Our function works on inputs of any size.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+data BitX:: Nat ~> *0 where
+  . . .
+  X:: Int -> BitX a
+  
+xs :: Binary BitX 2t {plus {plus a a} b}
+xs = Cons (X 1) (Cons (X 2) Nil)  
+
+ys :: Binary BitX 2t {plus {plus a a} b}
+ys = Cons (X 3) (Cons (X 4) Nil)
+carry = (X 5)
+
+ans = addBits carry xs ys  
+\end{verbatim}}
+Here \verb+xs+ and \verb+ys+ are two-bit symbolic inputs, and \verb+carry+ is a symbolic
+input carry. Calling \verb+addBits+ we construct an output which is a
+\verb+(Binary Bit)+ list with three elements, each of which is a combinatorial
+function of the input bits, whose value is guaranteed by the
+types to be the sum of the inputs! Below, we display the output with a pretty
+printer that displays \verb+(X n)+ as ``xn", and indents the display
+to emphasize its structure.
+
+%%%%%%%%%%%%%%%%%%
+{\small
+\begin{verbatim}
+(Cons (Xor x5
+          (Xor x1 x3))
+(Cons (Xor (Or (And x5 x1)
+               (Or (And x5 x3)
+                   (And x1 x3)))
+           (Xor x2 x4))
+(Cons (Or (And (Or (And x5 x1)
+                   (Or (And x5 x3)
+                       (And x1 x3)))
+               x2)
+          (Or (And (Or (And x5 x1)
+                       (Or (And x5 x3)
+                           (And x1 x3)))
+                   x4)
+             (And x2 x4)))
+Nil)))             
+\end{verbatim}}
+
+The key property here is that the type of this structure guarantees
+that it implements an addition function.
+
+\begin{exercise}
+There are many equivalencies between boolean expressions. Any
+function with the type: {\tt  (BitX n -> Maybe (BitX n))} can be thought of
+as a meaning preserving transformation. Given a value typed {\tt v:: BitX n},
+a meaning preserving transformation returns {\tt (Just u)} or {\tt Nothing}. If it returns {\tt (Just u)}
+then {\tt u} is semantically equivalent to {\tt v}. If it returns {\tt Nothing}
+we interpret this to mean the transformation did not apply to {\tt v}.
+Choose a few boolean laws and implement them as meaning preserving transformations
+as discussed above.
+\end{exercise}
+
+\begin{exercise}
+Transformations can be combined by placing them in a list, and applying them
+using transformation combinators. Consider functions with the types below:
+
+{\small
+\begin{verbatim}
+first:: [BitX n -> Maybe(BitX n)] -> BitX n -> Maybe(BitX n) 
+all:: [BitX n -> Maybe(BitX n)] -> BitX n -> [BitX n]
+\end{verbatim}}
+\vspace*{-.05in}
+
+The combinator {\tt first} lifts
+a list of transformations to a single transformation, applying the first
+applicable transformation in the list.
+The combinator {\tt all} finds all applicable transformations
+and returns a list of all possible results, including the
+untransformed term as well. Define these two functions in \om.
+
+The combinator {\tt retry} continually re-applies a meaning preserving
+transformation until the term reaches a fixed-point. What is the type of {\tt
+retry}? Write an \om\ function body for {\tt retry}.
+What other combinators can you think of?
+\end{exercise}
+
+\subsection{A Caveat} \label{caveat}
+
+The addition of the variable \verb+BitX+ constructor \verb+X+ was necessary if we
+want to use our functions to build hardware descriptions. Without it, we can only
+build constant combinatorial circuits!  Unfortunately, it breaks the soundness of
+our descriptions. The lack of soundness flows from the fact that our function
+\verb+fromX+ is no longer total. How do we turn a variable into a {\tt Bit}? Thus,
+we can no longer lift facts about the functions {\tt and}, {\tt or}, and {\tt xor} and
+the type {\tt Bit} to facts about the type {\tt BitX}. To overcome this limitation
+we would need to track the variables in the type of {\tt BitX} objects. For example
+we may write
+\verb+(BitX Bit env width value)+ as the type of a binary number whose 
+free variables are described by {\tt env}. Now, we must recast our theorems in 
+terms of \verb+(BitX Bit env width value)+ and well formed environments {\tt env}.
+This is sufficient, because a well formed environment means every variable
+will eventually be replaced by a bit, and in this new formulation the lifting
+of theorems hold. 
+
+\begin{exercise}
+Using the patterns discussed in Section \ref{binding} for 
+languages with binding structures, re-do the progression
+from the GADT {\tt BitX} to the function {\tt addBits}, but this time track
+the variables in the types of {\tt BitX}. Recast the theorems
+about {\tt BitX} so that they hold for all environments.
+\end{exercise}
+
+\section{Conclusion}
+
+We hope that the programs and exercises described in this paper
+give you, the reader, an appreciation for the power of types
+in describing the properties of programs. Additional
+resources and papers can be found on the authors web page
+\verb+http://cs.pdx.edu/~sheard+ where you can also
+obtain the \om\ system for download.
+
+\subsection{Relation to other systems}
+
+In order to make \om\ accessible to as broad an audience as possible,
+it is built around a framework which appears to the user to be a
+pure but strict version of Haskell. \om\ was designed, first and
+foremost, to be a programming language. Our goal was to design a
+language where program specifications, program properties, program
+analyses, proofs about programs, and programs themselves, are all
+represented using a single unifying notion of term. Thus programmers
+communicate many different things using the same language.
+
+Our second goal was to make \om\ a logic, in which our reasoning would
+be sound. This is the basis of our decision to make \om\ strict. We
+made this design decision because the use of GADTs as proof objects
+requires that bottom not be an inhabitant of certain types. Strictness
+is part of our eventual strategy to accomplish that goal. This goal is
+not yet achieved.
+
+There are many systems where soundness was the principal goal, and has been
+achieved. All of the examples, except for the staged examples, could be done in
+these languages as well. Such systems were principally designed to be logical
+frameworks or theorem provers. These include Inductive
+Families~\cite{Coquand:1994:IDT,Dybjer:1999:FAI}, theorem provers (Coq~\cite{COQ74},
+Isabelle~\cite{Paulson90lacs}), logical frameworks (Twelf~\cite{CADE99*202},
+LEGO~\cite{LuoPollack92}), and proof assistants (ALF~\cite{oai:CiteSeerPSU:38734},
+Agda~\cite{Agda}). Recently, there has been much interest in systems that use
+dependent types to build ``practical" systems that are part language, part
+reasoning system. These systems include Augustsson's Cayenne
+language~\cite{oai:CiteSeerPSU:339817,Augustsson:1999:CLD}, McBride's
+Epigram~\cite{epigram}, Stump's Rogue-Sigma-Pi~\cite{Rogue,RSP1}, Xi and Pfenning's
+Dependent ML~\cite{Xi:1998:EAB,Davies97}, and Xi's Applied Type
+Systems~\cite{ATS2004,ATS2005}. In fact, we owe a large debt to all these
+systems for inspiration.
+ 
+We realize that just {\em a little} loss in soundness makes all
+our reasoning claims vacuous, but we are working to fill
+these gaps.  Our goal is to do this in a different manner
+than the systems listed above, which require all functions to be total
+in order to ensure soundness. We wish to use types to separate
+terminating functions from non-terminating functions, and make
+logical claims only about the terminating fragment of the language.
+This seems almost a necessary condition for a system that
+claims to be a programming language. In any case, these issues
+have little effect on our use of \om\ to program generic programs,
+since logical soundness is not an issue in this domain.
+
+
+\section{Acknowledgments}
+
+This paper was originally prepared for the 
+Central-European Functional Programming School held in
+Cluj,  Romania, between 25-30 June, 2007.
+The text, code, and examples come from many sources. Here is quick
+(though, not by any means exhaustive) list.
+
+\begin{enumerate} 
+
+\item Section \ref{simple} comes from the paper {\em  Generic Programming in \om}\cite{GenProgOmega}.
+This paper has many additional examples, not covered in this report.
+
+\item Section \ref{features} also comes from the same paper, as well as
+the {\em \om\ Users' Guide}\cite{OmegaGuide}, both of which have their roots in the paper
+{\em Putting Curry-Howard to Work}\cite{CurryHoward}.
+
+\item The shaped tree example with paths (Section \ref{shape}) comes from
+discussions with James L. Caldwell from the University of Wyoming.
+
+\item The exercise about Red-Black trees comes from some examples
+posted by Hong-Wei Xi for the ATS system.\\\verb+http://www.cs.bu.edu/~hwxi/ATS/ATS.html+
+
+\item The Leibniz equality GADT has its roots in two 
+papers\cite{HinzeHaskellWorkshop02,BaSw02}
+which introduce similar types with slight variants.
+
+\item The material on using \om\ as a meta-language comes
+from an unpublished paper called {\em Playing with Types}\cite{Playing},
+though many of the examples used here are original to this
+report.
+
+\item The combinatorial circuit examples come from a paper
+{\em Types and Hardware Description Languages}\cite{HFL07}
+prepared for the {\em Hardware design and Functional Languages}
+workshop held March 24-25 2007, in Braga, Portugal.
+
+\item The answers to selected exercises was created by Ki-Yung Ahn.
+
+\item This material is based upon work supported by the National Science
+Foundation under Grant No. 0613969.
+\end{enumerate}
+
+
+\bibliographystyle{plain}
+\bibliography{final}
+
+\appendix
+
+\section{Red-Black Tree Insertion} \label{redblack}
+
+{\small
+\begin{verbatim}
+-------------------------------------------------------------------------
+-- Introduce a new kind to represent colors
+
+kind Color  = Red | Black
+
+-------------------------------------------------------------------------
+-- Top-level type that hides both 
+-- color of the node and tree height
+
+data RBTree:: *0 where
+ Root:: SubTree Black n -> RBTree
+
+-------------------------------------------------------------------------
+-- GADT that captures invariants
+
+data SubTree:: Color ~> Nat ~> *0 where
+ Leaf:: SubTree Black Z
+ RNode:: SubTree Black n ->
+         Int ->
+         SubTree Black n ->
+         SubTree Red n
+ BNode:: SubTree cL m ->
+         Int ->
+         SubTree cR m ->
+         SubTree Black (S m)
+
+-------------------------------------------------------------------------
+-- A Ctxt records where we've been as we descend 
+-- down into a tree as we search for a value
+
+data Dir = LeftD | RightD
+
+data Ctxt:: Color ~> Nat ~> *0 where
+  Nil:: Ctxt Black n
+  RCons:: Int -> Dir ->
+          SubTree Black n ->
+          Ctxt Red n ->
+          Ctxt Black n
+  BCons:: Int -> Dir ->
+          SubTree c1 n ->
+          Ctxt Black (S n) ->
+          Ctxt c n
+
+-------------------------------------------------------------------------
+-- Turn a Red tree into a black tree. Always
+-- possible, since Black nodes do not restrict
+-- the color of their sub-trees.
+
+blacken :: SubTree Red n -> SubTree Black (S n)
+blacken (RNode l e r) = (BNode l e r)
+
+
+-------------------------------------------------------------------------
+-- A singleton type representing Color at
+-- the value level.
+
+data CRep :: Color ~> *0 where
+  Red   :: CRep Red
+  Black :: CRep Black
+
+color :: SubTree c n -> CRep c
+color Leaf = Black
+color (RNode _ _ _) = Red
+color (BNode _ _ _) = Black
+
+-------------------------------------------------------------------------
+-- fill a context with a subtree to regain the original 
+-- RBTree, works if the colors and black depth match up
+
+fill :: Ctxt c n -> SubTree c n -> RBTree
+fill Nil t = Root t
+fill (RCons e LeftD  uncle c) tree = fill c (RNode uncle e tree)
+fill (RCons e RightD uncle c) tree = fill c (RNode tree  e uncle)
+fill (BCons e LeftD  uncle c) tree = fill c (BNode uncle e tree)
+fill (BCons e RightD uncle c) tree = fill c (BNode tree  e uncle)
+
+insert :: Int -> RBTree -> RBTree
+insert e (Root t) = insert_ e t Nil
+
+-------------------------------------------------------------------------
+-- as we walk down the tree, keep track of everywhere 
+-- we've been in the Ctxt input.
+
+insert_ :: Int -> SubTree c n -> Ctxt c n -> RBTree
+insert_ e (RNode l e' r) ctxt
+        | e < e'        = insert_ e l (RCons e' RightD r ctxt)
+        | True          = insert_ e r (RCons e' LeftD  l ctxt)
+insert_ e (BNode l e' r) ctxt
+        | e < e'        = insert_ e l (BCons e' RightD r ctxt)
+        | True          = insert_ e r (BCons e' LeftD  l ctxt)
+-- once we get to the bottom we "insert" the node as a Red node.
+-- since this may break invariant, we may need do some patch work
+insert_ e Leaf ctxt = repair (RNode Leaf e Leaf) ctxt
+
+-------------------------------------------------------------------------
+-- Repair a tree if its out of balance. The Ctxt holds
+-- crucial information about colors of parent and 
+-- grand-parent nodes.
+
+repair :: SubTree Red n -> Ctxt c n -> RBTree
+repair t (Nil)                 = Root (blacken t)
+repair t (BCons e LeftD  sib c) = fill c (BNode sib e t)
+repair t (BCons e RightD sib c) = fill c (BNode t e sib)
+-- these are the tricky cases
+repair t (RCons e dir sib (BCons e' dir' uncle ctxt)) =
+  case color uncle of
+    Red   -> repair (recolor dir e sib dir' e' (blacken uncle) t) ctxt
+    Black -> fill ctxt (rotate dir e sib dir' e' uncle t)
+repair t (RCons e dir sib (RCons e' dir' uncle ctxt)) = unreachable
+
+recolor :: Dir -> Int -> SubTree Black n ->
+           Dir -> Int -> SubTree Black (S n) ->
+           SubTree Red n -> SubTree Red (S n)
+recolor LeftD  pE sib RightD gE uncle t = RNode (BNode sib pE t) gE uncle
+recolor RightD pE sib RightD gE uncle t = RNode (BNode t pE sib) gE uncle
+recolor LeftD  pE sib LeftD  gE uncle t = RNode uncle gE (BNode sib pE t)
+recolor RightD pE sib LeftD  gE uncle t = RNode uncle gE (BNode t pE sib)
+
+rotate :: Dir -> Int -> SubTree Black n ->
+          Dir -> Int -> SubTree Black n ->
+          SubTree Red n -> SubTree Black (S n)
+rotate RightD pE sib RightD gE uncle (RNode x e y) = 
+   BNode (RNode x e y) pE (RNode sib gE uncle)
+rotate LeftD  pE sib RightD gE uncle (RNode x e y) = 
+   BNode (RNode sib pE x) e (RNode y gE uncle)
+rotate LeftD  pE sib LeftD  gE uncle (RNode x e y) = 
+   BNode (RNode uncle gE sib) pE (RNode x e y)
+rotate RightD pE sib LeftD  gE uncle (RNode x e y) = 
+   BNode (RNode uncle gE x) e (RNode y pE sib)
+\end{verbatim}}
+
+\section{Inductively Sequential Functions} \label{IndSeq}
+We restrict the form of function definitions at the type level and higher to be inductively
+sequential~\cite{conf/alp/Antoy92}. If a type function is not
+inductively sequential then the type checker rejects that type function.
+
+Inductively sequential type functions ensures a sound and complete narrowing strategy for answering 
+type-checking time questions. The class of inductively sequential functions is a large
+one, in fact every Haskell function has an inductively sequential definition. The
+inductively sequential restriction affects the form of the equations, and not the
+functions that can be expressed. Informally, a function definition is
+inductively sequential if all its clauses are non-overlapping. For example
+the definition of {\tt zip1} is not inductively sequential, but the equivalent
+program {\tt zip2} is.
+
+{\small
+\begin{verbatim}
+zip1 (x:xs) (y:ys) = (x,y): (zip1 xs ys)
+zip1 xs ys = []
+
+zip2 (x:xs) (y:ys) = (x,y): (zip2 xs ys)
+zip2 (x:xs) []     = []
+zip2 []     ys     = []
+\end{verbatim}}
+
+The definition for {\tt zip1} is not inductively sequential, since its two clauses overlap. In general
+any non-inductively sequential definition can be turned into an inductively
+sequential definition by duplicating some of its clauses, instantiating variable patterns
+with constructor based patterns. This will make the new clauses non-overlapping.
+We do not think this burden is too much of a burden to pay, since
+it is applied only to functions at the type level, and it supports
+sound and complete narrowing strategies. In addition to the 
+inductively sequential form required for type functions, \om\ assumes that
+each type function is a total terminating function. This assumption
+is not currently enforced, and it is up to the programmer
+to ensure that this is the case.
+
+\section{Answers to Selected Exercises} \label{answers}
+
+{\small
+\begin{verbatim}
+
+--------------
+-- Exercise  1
+--------------
+data Seq :: *0 ~> Nat ~> *0 where
+  Snil  :: Seq a Z
+  Scons :: a -> Seq a n -> Seq a (S n)
+
+length :: Seq a n -> Int
+length Snil         = 0
+length (Scons _ xs) = 1 + length xs
+
+-- we can can also use (Nat' n) (see 3.7) 
+-- to ensure that the size of the result is n
+
+length' :: Seq a n -> Nat' n
+legnth' Snil         = Z
+length' (Scons _ xs) = S (length' xs)
+
+--------------
+-- Exercise  3
+--------------
+data Color :: *1 where
+  Red   :: Color
+  Black :: Color
+
+data RBT :: Color ~> *0 where
+  LeafB :: RBT Black
+  NodeR :: RBT Black -> RBT Black -> RBT Red
+  NodeB :: RBT cL    -> RBT cR    -> RBT Black
+
+
+--------------
+-- Exercise  4
+--------------
+plus :: Nat ~> Nat ~> Nat
+{plus Z m} = m
+{plus (S n) m} = S {plus n m}
+
+mult :: Nat ~> Nat ~> Nat
+{mult Z m} = Z
+{mult (S n) m} = {plus {mult n m} m}
+
+
+--------------
+-- Exercise  5
+--------------
+data Boolean :: *1 where
+  T :: Boolean
+  F :: Boolean
+
+odd :: Nat ~> Boolean
+{odd Z}     = F
+{odd (S Z)} = T
+{odd (S (S n))} = {odd n}
+
+--------------
+-- Exercise  6
+--------------
+
+or :: Boolean ~> Boolean ~> Boolean
+{or T b} = T
+{or F b} = b
+
+-- The function (not :: Bool -> Bool) is predefined
+-- so we use different name
+not' :: Boolean ~> Boolean
+{not' T} = F
+{not' F} = T
+
+
+--------------
+-- Exercise  7
+--------------
+data Shape :: *1 where
+  Tp :: Shape
+  Nd :: Shape
+  Fk :: Shape ~> Shape ~> Shape
+
+data Path :: Shape ~> *0 ~> *0 where
+  None  :: Path Tp a
+  Here  :: b -> Path Nd b
+  Left  :: Path x a -> Path (Fk x y) a
+  Right :: Path y a -> Path (Fk x y) a
+
+data Tree :: Shape ~> *0 ~> *0 where
+  Tip :: Tree Tp a
+  Node :: a -> Tree Nd a
+  Fork :: Tree x a -> Tree y a -> Tree (Fk x y) a
+
+extract :: Path sh a -> Tree sh a -> a
+extract None      Tip          = error "(extract None Tip) has nothing"
+extract (Here _)  (Node v)     = v
+extract (Left p)  (Fork lt rt) = extract p lt
+extract (Right p) (Fork lt rt) = extract p rt
+
+
+--------------
+-- Exercise  8
+--------------
+data ListShape :: *1 where
+  LSnil  :: ListShape
+  LScons :: ListShape ~> ListShape
+
+data List :: ListShape ~> *0 ~> *0 where
+  Lnil  :: List LSnil a
+  Lcons :: a -> List sh a -> List (LScons sh) a
+
+data ListPath :: ListShape ~> *0 ~> *0 where
+  ListNone :: ListPath LSnil a
+  ListHere :: b -> ListPath (LScons sh) b
+  ListNext :: ListPath sh a -> ListPath (LScons sh) a
+
+find :: (a -> a -> Bool) -> a -> List sh a -> Maybe(ListPath sh a)
+find eq n Lnil         
+   = Nothing
+find eq n (Lcons x xs) 
+   = if eq n x 
+        then Just (ListHere n)
+        else case find eq n xs of
+               Nothing -> Nothing
+               Just p  -> Just (ListNext p)
+
+
+--------------
+-- Exercise  9
+--------------
+data Rep :: *0 ~> *0 where
+  Int  :: Rep Int
+  Bool :: Rep Bool
+  Prod :: Rep a -> Rep b -> Rep (a,b)
+  List :: Rep a -> Rep [a]
+
+showR :: Rep a -> a -> String
+showR Int        n  = show n
+showR Bool       True  = "True"
+showR Bool       False  = "False"
+showR (Prod x y) (a,b) = "("++showR x a++","++showR y b++")"
+showR (List t)   xs = "["++ help xs ++ "]"
+  where help [x] = showR t x
+        help []  = ""
+        help (x:xs) = showR t x++","++help xs
+
+--------------
+-- Exercise 10
+--------------
+data Plus :: Nat ~> Nat ~> Nat ~> *0 where
+  PlusZ :: Plus Z m m
+  PlusS :: Plus n m z -> Plus (S n) m (S z)
+
+plus2v3v5v :: Plus 2t 3t 5t
+plus2v3v5v = PlusS (PlusS PlusZ)
+
+plus2v1v3v :: Plus 2t 1t 3t
+plus2v1v3v = PlusS (PlusS PlusZ)
+
+plus2v6v8v :: Plus 2t 6t 8t
+plus2v6v8v = PlusS (PlusS PlusZ)
+
+
+--------------
+-- Exercise 11
+--------------
+data LE :: Nat ~> Nat ~> *0 where
+  LeZ :: LE Z n
+  LeS :: LE n m -> LE (S n) (S m)
+
+sumandLessThanOrEqualToSum :: Plus a b c -> LE a c
+sumandLessThanOrEqualToSum PlusZ     = LeZ
+sumandLessThanOrEqualToSum (PlusS p) = LeS (sumandLessThanOrEqualToSum p)
+
+-- Can we define a function with type (Plus a b c -> LE b c)?
+-- not exactly, but we can write one with a similar type.
+
+sumandLTorEQ2sum' :: Nat' c -> Plus a b c -> LE b c
+sumandLTorEQ2sum' n     PlusZ     = same n
+sumandLTorEQ2sum' Z     (PlusS _) = unreachable
+sumandLTorEQ2sum' (S n) (PlusS p) = predLE (sumandLTorEQ2sum' n p)
+
+-- see Exercise 13 for the definitions of same and predLE.
+
+--------------
+-- Exercise 12
+--------------
+even :: Nat ~> Boolean
+{even Z}     = T
+{even (S Z)} = F
+{even (S (S n))} = {even n}
+
+data EvenRel :: Nat ~> Boolean ~> *0 where
+  Er0  :: EvenRel 0t T
+  Er1  :: EvenRel 1t F
+  ErSS :: EvenRel n b -> EvenRel (S (S n)) b
+
+
+--------------
+-- Exercise 13
+--------------
+same :: Nat' n -> LE n n
+same Z     = LeZ
+same (S n) = LeS (same n)
+
+predLE :: LE m n -> LE m (S n)
+predLE LeZ     = LeZ
+predLE (LeS p) = LeS (predLE p)
+
+
+--------------
+-- Exercise 14
+--------------
+trans :: LE a b -> LE b c -> LE a c
+trans LeZ      _        = LeZ
+trans (LeS _)  LeZ      = unreachable
+trans (LeS p1) (LeS p2) = LeS (trans p1 p2)
+
+
+--------------
+-- Exercise 15
+--------------
+f15 :: Nat' b -> Plus a b c -> LE b c
+f15 n     PlusZ     = same n
+f15 Z     (PlusS _) = LeZ
+f15 (S n) (PlusS p) = predLE (f15 (S n) p)
+
+--------------
+-- Exercise 16
+--------------
+sameNat' :: Nat' a -> Nat' b -> Maybe (Equal a b)
+sameNat' Z     Z     = Just Eq
+sameNat' Z     (S _) = Nothing
+sameNat' (S _) Z     = Nothing
+sameNat' (S n) (S m) = case sameNat' n m of
+                         Nothing -> Nothing
+                         Just Eq -> Just Eq 
+\end{verbatim}}
+
+{\small 
+\begin{verbatim}
+--------------
+-- Exercise 17
+--------------
+filter :: (a->Bool) -> Seq a n -> exists m . (Nat' m, Seq a m)
+filter p Snil         = Ex (Z, Snil)
+filter p (Scons x xs) =
+  case filter p xs of
+    Ex (n, xs') -> if p x then Ex (S n, Scons x xs')
+                          else Ex (n, xs')
+
+filter' :: (a->Bool) -> Seq a n -> exists m . (LE m n, Nat' m, Seq a m)
+filter' p Snil         = Ex (LeZ, Z, Snil)
+filter' p (Scons x xs) =
+  case filter' p xs of
+    Ex (le, n, xs') -> if p x then Ex (LeS le, S n, Scons x xs')
+                              else Ex (predLE le, n, xs')
+
+--------------
+-- Exercise 18
+--------------
+pow :: Int -> Code Int -> Code Int
+pow 0 _ = [| 1 |]
+pow n x = [| $(x) * $(pow (n - 1) x) |]
+
+--------------
+-- Exercise 19
+--------------
+-- Row is already defined so we use MyRow
+
+data MyRow :: a ~> c ~> *1 where
+  Rnil :: MyRow e f
+  Rcons :: e ~> f ~> MyRow e f ~> MyRow e f
+ deriving Record(mr)
+
+-- We derive syntax 'mr' because the
+-- predefined Row uses syntax 'r' already.
+
+--------------
+-- Exercise 20
+--------------
+data Nsum :: *0 ~> *0 where
+  SumZ :: Nsum Int
+  SumS :: Nsum x -> Nsum (Int -> x)
+ deriving Nat(i)
+
+-- 0i : Nsum Int
+-- 1i : Nsum (Int -> Int)
+-- 2i : Nsum (Int -> Int -> Int)
+
+add :: Nsum i -> i
+add = add' 0
+
+add' :: Int -> Nsum i -> i
+add' x 0i     = x
+add' x (1+n)i = \k -> add' (x+k) n
+
+
+--------------
+-- Exercise 21
+--------------
+data Expr :: *0 where
+  VarExpr  :: Label t -> Expr
+  PlusExpr :: Expr -> Expr -> Expr
+
+valueOf :: Expr -> [exists t .(Label t,Int)] -> Int
+valueOf (VarExpr v)    env = lookup v env
+valueOf (PlusExpr x y) env = valueOf x env + valueOf y env
+
+lookup :: Label v -> [exists t .(Label t,Int)] -> Int
+lookup v ((Ex(u,n)):xs) = 
+ case labelEq v u of 
+   Just Eq -> n
+   Nothing -> lookup v xs
+
+pair1:: exists t .(Label t,Int)
+pair1 = Ex(`a,5)
+
+pair2:: exists t .(Label t,Int)
+pair2 = Ex(`x,22)
+
+pair3:: exists t .(Label t,Int)
+pair3 = Ex(`z,2)
+
+table :: [exists t .(Label t,Int)]
+table = [pair1,pair2,pair3]
+
+xValue = valueOf (VarExpr `x) table
+
+
+--------------
+-- Exercise 22
+--------------
+
+-- see Appendix A
+
+
+--------------
+-- Exercise 23
+--------------
+
+{-  already defined in Exercise 9 
+data Rep :: *0 ~> *0 where
+  Int  :: Rep Int
+  Bool :: Rep Bool
+  Prod :: Rep a -> Rep b -> Rep (a,b)
+  List :: Rep a -> Rep [a]
+-} 
+equalRep :: Rep a -> Rep b -> Maybe (Equal a b)
+equalRep Int        Int        = Just Eq
+equalRep Bool       Bool       = Just Eq
+equalRep (Prod a b) (Prod c d) = 
+  case equalRep a c of
+    Nothing -> Nothing
+    Just Eq -> case equalRep b d of
+                 Nothing -> Nothing
+                 Just Eq -> Just Eq
+-- alternatively we could use Monad syntax 
+equalRep (Prod a b) (Prod c d) = 
+  do { Eq <- equalRep a c
+     ; Eq <- equalRep b d
+     ; return Eq}
+ where monad maybeM     
+equalRep _ _ = Nothing
+
+maybeM = Monad (Just) bind fail
+  where bind (Just x) f = f x
+        fail s = Nothing
+        
+data Term :: *0 ~> *0 where
+  Var   :: String -> Rep t -> Term t         -- x
+  Const :: Int -> Term Int                   -- 5
+  Add   :: Term ((Int,Int) -> Int)           -- (+)
+  LT    :: Term ((Int,Int) -> Bool)          -- (<)
+  Ap    :: Term(a -> b) -> Term a -> Term b  -- (+) (x,y)
+  Pair  :: Term a -> Term b -> Term(a,b)     -- (x,y)        
+  
+type Env = [ exists t . (String, Rep t, t) ]  
+
+lookupWithRepr :: Env -> Rep t -> String -> t
+lookupWithRepr [] r1 x1 = error "variable not found"
+lookupWithRepr (Ex(x,r,v):ts) r1 x1 
+  = if eqStr x x1
+       then case equalRep r r1 of
+              Just Eq -> v
+              Nothing -> lookupWithRepr ts r1 x1
+       else lookupWithRepr ts r1 x1
+       
+uncurry f (x,y) = f x y
+
+eval :: Term t -> Env -> t
+eval (Var x r)  env = lookupWithRepr env r x
+eval (Const i)  _   = i
+eval Add        _   = uncurry (+)
+eval LT         _   = uncurry (<)
+eval (Ap f p)   env = (eval f env) (eval p env)
+eval (Pair a b) env = (eval a env, eval b env)       
+
+--------------
+-- Exercise 25
+--------------
+
+opt:: Term a -> Term a
+opt (Ap Add (Pair (Const n) (Const m))) 
+  -- constant folding
+  = Const(n+m)
+opt (Ap Add (Pair (Const 0) x)) 
+  -- law: (0 + x)=x
+  = x
+opt (Ap Add (Pair x (Const 0))) 
+  -- law: (x + 0)=x
+  = x
+opt (Ap x y) = Ap (opt x) (opt y)
+opt (Pair x y) = Pair (opt x) (opt y)
+opt x = x
+
+-- can you make opt work for (x + (3 + -3)) or (1 + (2 + 4))
+
+stagedEvalTerm :: Term a -> Code a
+stagedEvalTerm (Const x) = lift x
+stagedEvalTerm Add = [| add |]
+  where add (x,y) = x+y
+stagedEvalTerm LT = [| less |]
+  where less (x,y) = x < y
+stagedEvalTerm (Ap f x) = [| $(stagedEvalTerm f) $(stagedEvalTerm x) |]
+stagedEvalTerm (Pair x y) = [|($(stagedEvalTerm x),$(stagedEvalTerm y))|]
+
+
+optStagedEvalTerm x = stagedEvalTerm(opt x)
+
+\end{verbatim}}
+ 
+\end{document}

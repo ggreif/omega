@@ -144,7 +144,7 @@ stepProb (s@(nstep,nsol,d0,ex)) (AndP (p:ps)) truths =
                            in return(map add new,nextS)}}
 
 stepEq:: Check m => ST Z -> (Tau,Tau) -> Rel Tau -> m(Sol,ST Z)
-stepEq s0 (a,b) truths =
+stepEq s0 (a,b) truths = 
  case (project a,project b) of
   (VarN x,VarN y) | x==y -> return([(TermP success,truths,([],[]))],s0)
   (VarN x,VarN y) ->
@@ -173,11 +173,14 @@ stepEq s0 (a,b) truths =
         ; case fewestVar ansA a ansB b of
            (bool,ans,term) -> return(map (buildQ bool term) ans,s2)})
     (\ s -> if nm /= nm2
-               then failM 3 [Ds s]
+               then failM 3 [Ds s,Ds "\nWhile checking the two types\n   "
+                            ,Dd a,Ds "\n   ",Dd b,Ds "\nare equal."]
                else
                  do { ans <- mguB (zip args args2)
                     ; case ans of
-                       Right (m,x,y) -> failM 3 [Ds s]
+                       Right (m,x,y) -> failM 3 
+                            [Ds s,Ds "\nWhile checking the two types\n   "
+                            ,Dd a,Ds "\n   ",Dd b,Ds "\nare equal."]
                        Left u -> do { ts <- subRels u truths
                                     ; return([(TermP success,ts,u)],s0)}})
   (FunN nm args, rhs) ->
