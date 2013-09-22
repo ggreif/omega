@@ -33,6 +33,7 @@ import TokenDef
 import Data.Functor.Identity
 import System.IO (hGetContents, Handle)
 import Control.Monad (guard)
+import Debug.Trace
 
 nat = zeroNumber <|> decimal
 
@@ -50,11 +51,11 @@ tokenDef' = tokenDef
 omegaTokens :: P.GenTokenParser (Layout String Identity) u Identity
 omegaTokens = P.makeTokenParser tokenDef'
 
-lexeme = P.lexeme omegaTokens
+lexeme p = suspendLayout $ P.lexeme omegaTokens p
 comma = P.comma omegaTokens
-symbol = P.symbol omegaTokens
+symbol p = suspendLayout $ P.symbol omegaTokens p
 semi = P.semi omegaTokens
-whiteSpace = P.whiteSpace omegaTokens
+whiteSpace = suspendLayout $ P.whiteSpace omegaTokens
 natural = P.natural omegaTokens
 identifier = P.identifier omegaTokens
 parens = P.parens omegaTokens
@@ -64,7 +65,7 @@ reserved = P.reserved omegaTokens
 reservedOp' = P.reservedOp omegaTokens
 integer = P.integer omegaTokens
 charLiteral = P.charLiteral omegaTokens
-stringLiteral = P.stringLiteral omegaTokens
+stringLiteral = suspendLayout $ P.stringLiteral omegaTokens
 hexadecimal = P.hexadecimal omegaTokens
 decimal = P.decimal omegaTokens
 octal = P.octal omegaTokens
@@ -169,6 +170,7 @@ type Parser a = Parsec (Layout String Identity) () a
 -- Layout Streams
 
 data Layout s m where
+  Comment :: Stream s m Char => ![Int] -> !Int -> s -> Layout s m
   Indent :: Stream s m Char => ![Int] -> !Int -> !Bool -> s -> Layout s m
 
 class Stream s m t => LayoutStream s m t l where
@@ -176,9 +178,10 @@ class Stream s m t => LayoutStream s m t l where
   virtualEnd :: ParsecT (l s m) u m ()
   indent :: ParsecT (l s m) u m ()
   undent :: ParsecT (l s m) u m ()
+  suspendLayout :: ParsecT (l s m) u m a -> ParsecT (l s m) u m a
   intoLayout :: s -> l s m
   outofLayout :: l s m -> s
-  otherWhiteSpace :: l s m -> s -> m Bool
+  otherWhiteSpace :: l s m -> s -> m (Maybe (s -> l s m))
 
 -- Minor Hack:
 
@@ -204,22 +207,43 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
               setInput $ Indent (col:tabs) col True s
   undent = do Indent (_:tabs) col c'ed s <- getInput
               setInput $ Indent tabs col False s
+  suspendLayout p = p{-try (do Indent tabs col c'ed s <- getInput
+                            setInput $ Indent [] col False s
+                            at <- P.getPosition
+                            traceShow ("DEACTIVATED! " ++ show tabs ++ show at) $ return ()
+                            res <- p
+                            Indent [] col c'ed s <- getInput
+                            setInput $ Indent tabs col c'ed s
+                            at <- P.getPosition
+                            traceShow ("ACTIVATED! " ++ show tabs ++ show at) $ return ()
+                            return res)-}
   virtualSep = do Indent tabs@(tab:_) col False s <- getInput
                   guard $ col == tab
                   setInput $ Indent tabs col True s
   virtualEnd = do Indent (tab:out) col False s <- getInput
                   guard $ col < tab
                   setInput $ Indent out col False s
-  otherWhiteSpace _ s = do p <- runParserT (P.whiteSpace genHaskell >> P.getPosition) () "" s
-                           return $ case p of
-                                      Right pos | not $ atStart pos -> True
-                                      _ -> False
+  otherWhiteSpace (Indent tabs _ _ _) s
+                      = do p <- runParserT (P.whiteSpace genHaskell >> P.getPosition) () "" s
+                           case p of
+                             Right pos | not $ atStart pos
+                               -> do Right skips <- runParserT (until pos 0) () "" s
+                                     return $ Just $ Comment tabs skips
+                             _ -> return Nothing
     where atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
-
+          until pos n = do char' <- traceShow ("GETTING IN", n) anyChar
+                           pos' <- P.getPosition
+                           if traceShow ("pos", pos) pos == traceShow ("CHAR'", char', "pos'", pos') pos' then return $ traceShow ("GETTING OUT", n, pos) n else until pos $ 1 + n
 
 -- are instances of @Stream@
 --
 instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char where
+  uncons (Comment tabs 0 s) = uncons $ Indent tabs 0 False s -- FIXME
+  uncons (Comment tabs n s) = do un <- traceShow ("N:", n) $ uncons s
+                                 case (n, un) of
+                                   (_, Nothing) -> return Nothing
+                                   (1, Just ('\n', s')) -> return $ Just (traceShow ("NEWLINE") '\n', Indent tabs 0 False s')
+                                   (_, Just (t, s')) -> return $ Just (traceShow ("uncons", t, n) t, Comment tabs (n - 1) s')
   uncons i@(Indent tabs col c'ed s) = do un <- uncons s
                                          case un of
                                            Nothing -> return Nothing
@@ -228,10 +252,12 @@ instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char w
                                            Just (t, s') -> case (tabs, c'ed) of
                                                            ([], _) -> justAdvance -- deactivated layout
                                                            conf | notSpace t -> do white <- otherWhiteSpace i s
-                                                                                   if white then justAdvance else mayBlock conf
+                                                                                   case white of
+                                                                                     Just ersatz -> return $ Just (t, ersatz s')
+                                                                                     _ -> mayBlock conf
                                                            conf -> mayBlock conf
                                               where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
-                                                    mayBlock ((tab:_), False) | notSpace t && col <= tab = return Nothing
+                                                    mayBlock ((tab:_), False) | notSpace t && col <= tab = if tab > 0 || t == 'k' ||  t == 'd' then return Nothing else return Nothing
                                                     mayBlock _ = justAdvance
 
 notSpace ' ' = False
