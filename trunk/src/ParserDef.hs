@@ -64,7 +64,6 @@ pprog x = parseFromFile program x
 
 ------------------------------------------------------------------
 
---parseString :: Monad a => Parser b -> [Char] -> a (Either [Char] (b,[Char]))
 parseString p s = case parse2 p s of
                     Right(x,s) -> return(Right(x,s))
                     Left s -> return(Left s)
@@ -109,10 +108,9 @@ doubleToFloat n = encodeFloat a b
   where (a,b) = decodeFloat n
 
 -----------------------------------------------------------
--- Terminals of the grammar. I.e. Literals, variables, and constructors
+-- Terminals of the grammar. I.e. literals, variables, and constructors
 -----------------------------------------------------------
 
---literal :: (Literal -> a) -> (Extension a -> a) -> Parser a
 literal fromLit fromExt = lexeme
    (try (fmap fromLit floatLit) <|>  -- float before natP or 123.45 leaves the .45
     try (fmap fromExt natP) <|>
@@ -144,7 +142,6 @@ signedNumLiteral =
 
 terminal p inject = do { v <- p; return (inject v)}
 
---expvariable,expconstructor :: Parser Exp
 expvariable = terminal identifier (Var . Global)
 
 conNameUnreserved = conName >>= \s -> if isReservedName s then
@@ -157,13 +154,12 @@ expconstructor = terminal conNameUnreserved prepareCon
                          buildLambda s = Lam [Pvar (Global "x")] (Sum s $ var "x") []
                          var = Var . Global
 
---patvariable :: Parser Pat
 patvariable = do { (result@(Pvar x)) <- terminal identifier (Pvar . Global)
                  ; let (Global (patname@(init:_))) = x
                  ; if isUpper init
                    then fail ("pattern bindings must be lowercase, but this is not: " ++ patname)
                    else return result}
---name,constructor :: Parser Var
+
 constructor = terminal conName Global
 name = terminal identifier Global
 
@@ -278,7 +274,6 @@ infixPattern =
      ; return $ Pcon x [p1,p2]
      }
 
---simplePattern :: Parser Pat
 simplePattern =
         literalP
     <|> do { p <- extP pattern; return(extToPat p)} -- FIXME: should be expPattern, but then:
@@ -335,7 +330,6 @@ lit2Pat (LString s) = pConsUp patNil (map (Plit . Char) s)
 -----------------------------------------------------------
 
 -- simple expressions are one token, or surrounded by bracket-like things
---simpleExpression :: Parser Exp
 simpleExpression =
         literalE                  -- "abc"   23.5   'x'   `d  123  #34 45v
     <|> code                      -- [| 3 + x |]
@@ -351,7 +345,6 @@ simpleExpression =
     <?> "simple expression"
 
 
---expr :: Parser Exp
 expr =  lambdaExpression
     <|> letExpression
     <|> circExpression
@@ -417,7 +410,6 @@ caseExpression =
       ; return $ Case e alts
       }
 
---bodyP :: Parser a -> Parser (Body Exp)
 bodyP equal = (fmap Guarded (many1 guard)) <|>
               (equal >> ((reserved "unreachable" >> return Unreachable) <|>
                          (fmap Normal expr)))
@@ -564,7 +556,8 @@ code =
      ; return (Bracket e)}
 
 -------------------------------------------------------------------------
------------------ Read-eval-print loop commands ------------
+--------------------- Read-eval-print loop commands ---------------------
+-------------------------------------------------------------------------
 
 data Command =
     ColonCom String String   -- :t x
@@ -581,7 +574,7 @@ instance Show Command where
   show (ExecCom e) = show e
   show EmptyCom = ""
 
---pCommand :: Parser Command    -- Parse a command
+-- Parse a command
 pCommand =
   (try (eof >> return EmptyCom))
   <|>
@@ -803,7 +796,6 @@ targs = many arg
 
 -- Deriving clauses, both new and old style
 
---derive :: [(String,Int)] -> Parser [Derivation]
 derive arityCs =
   (do { reserved "deriving"
       ; (do {c <- extension arityCs ; return [c]}) 
