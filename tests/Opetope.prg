@@ -65,7 +65,11 @@ import "../tests/Nat.prg"
 --      to normal form. ('many syntax', 'one semantics' adjunction:
 --                       http://www.logicmatters.net/resources/pdfs/Galois.pdf)
 
-
+-- Cartesian Closure: Creating 'lambda cards' by the above technology
+--                    seems very ad-hoc and arbitrary. Contrast it with more
+--                    serious attempts like higher-order containers
+--                    (http://www.cs.nott.ac.uk/~txa/publ/hocont.pdf)
+--                    or other ways to create internal languages.
 
 
 -- TODO: these three must be LeftLists
