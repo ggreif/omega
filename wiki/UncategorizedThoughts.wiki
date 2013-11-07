@@ -170,3 +170,9 @@ http://gallium.inria.fr/%7Efpottier/publis/pottier-protzenko-mezzo.pdf
 This reminded me of the thread shape typing (thr :: FrameKind) for tracking resources and transfer. Not sure whether I have written down thread shapes anywhere, but the idea is to represent each thread's execution trace as `thr shape` where `shape` is fringe-like as the program executes, and `thr` is thread-specific, with primitives for forking etc.
 
 Now resources obtain a thread-specific fingerprint, and can only be _dereferenced_ to a regular haskell value in that context, and furthermore this must be linear.
+
+= Extended Initiality for Typed Abstract Syntax =
+
+http://arxiv.org/pdf/1107.4751.pdf
+
+This is building on the work of Zsidó, and is somewhat different from Fiore/Hamana.
