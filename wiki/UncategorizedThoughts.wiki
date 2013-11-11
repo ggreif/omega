@@ -176,3 +176,11 @@ Now resources obtain a thread-specific fingerprint, and can only be _dereference
 http://arxiv.org/pdf/1107.4751.pdf
 
 This is building on the work of Zsidó, and is somewhat different from Fiore/Hamana.
+
+= Tagless and Typeful NbE using GADTs =
+
+Danvy et al. implement `Rep` for types, and signatures for reification, and show that all is type safe.
+
+They mention Abel et. al as the "Dependent-Types" camp. See https://code.google.com/p/omega/source/browse/trunk/tests/NBE_lambda2.prg.
+
+They show how a `printf` partial evaluator can be built on top of this.
