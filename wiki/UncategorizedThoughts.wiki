@@ -49,6 +49,8 @@ Here the `t` parameter would be `Iceberg ‹Vec›` or such.
 
 _Aside: the signature above looks suspiciously like that of indexed functors._
 
+Drop in a `Tag` into `vec`'s signature, and have _constructor names_ too.
+
 == Connection to `prop` ==
 
 Issue 107 stipulates that the proof engine currently only can deal successfully with `prop`ositions where the rules are in sequentially inductive form. For these a clear decision procedure exists. But the `prop`s where this is not give are also useful. These require another type of backtracking. Could this dissonance be resolved?
