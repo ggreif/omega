@@ -344,7 +344,7 @@ all mentions of the names are connected by identity types.
 
 [
 (a :: X) = v
-can we say that a little X0 /\ X1 is embracing the type surface and thus
+can we say that a little X0 ∧ X1 is embracing the type surface and thus
 defining the bordism? (equivalence class)
 ]
 
@@ -460,9 +460,9 @@ Opetopes
   * video IAS [http://video.ias.edu/math/stpm2012/finster Higher Dimensional Syntax]
     * [http://uf-ias-2012.wikispaces.com/file/view/Higher-Dimensional-Syntax-Slides-Finster.pdf PDF]
   * video IAS [http://video.ias.edu/1213/univalent/0131-EricFinster The Calculus of Opetopes]
-    * 35:18 --> level polymorphism
-    * _universal cell_ same as commutative diagram, coercion, (directed) identity type
-    * opetope: string diagram, pasting diagram, diagram category
+    * 35:18 → level polymorphism
+    * _universal cell_ same as commutative diagram, coercion witness, (directed) identity typed value
+    * opetope: string diagram, pasting diagram, diagram category object
 
 === n-Categories, string diagrams ===
 
@@ -487,7 +487,7 @@ to the type theorist
 = Bibliography =
 
 Awodey: Homotopy lambda calculus
-Baez: Rosetta Stone
+Baez et al.: [http://math.ucr.edu/home/baez/rosetta.pdf Rosetta Stone]
 
 = Appendix =
 
