@@ -179,6 +179,8 @@ http://arxiv.org/pdf/1107.4751.pdf
 
 This is building on the work of Zsidó, and is somewhat different from Fiore/Hamana.
 
+Video about [http://video.ias.edu/math/stpm2012/ categorical certification]. Faithful (semantics-preserving) translation of languages.
+
 = Tagless and Typeful NbE using GADTs =
 
 Danvy et al. implement `Rep` for types, and signatures for reification, and show that all is type safe.
