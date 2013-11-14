@@ -3,7 +3,7 @@
 
 = The Name =
 
-[http://ix.cs.uoregon.edu/~ariola/cycles.pdf Ariola's work] contains an early mention of the _lambda graph_. It remains to be seen whether my treatment of `letrec` is different/better and how.
+[http://ix.cs.uoregon.edu/~ariola/cycles.pdf Ariola's work] contains an early mention of the _lambda-graph_. It remains to be seen whether my treatment of `letrec` is different/better and how.
 
 = Main Idea =
 
