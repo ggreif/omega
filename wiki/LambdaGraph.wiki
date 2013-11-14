@@ -1,6 +1,10 @@
 #summary Fω lambda terms form a graph.
 #labels Phase-Design
 
+= The Name =
+
+[http://ix.cs.uoregon.edu/~ariola/cycles.pdf Ariola's work] contains an early mention of the _lambda graph_. It remains to be seen whether my treatment of `letrec` is different/better and how.
+
 = Main Idea =
 
 A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up`*`{down|left|right}`*`) references.
