@@ -479,6 +479,8 @@ Relative monads (Altenkirch, Chapman, et al.)
 
 === Homotopical Type Theory ===
 
+See also Eric Finster's [http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.173.6218 research statement] about (amongst other things) the _Goodwillie Calculus_.
+
 == Acknowledgements ==
 to the blender guy --> artwork (+software)
 to the topologist (3-dim projective space)
