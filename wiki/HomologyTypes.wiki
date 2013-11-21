@@ -481,6 +481,12 @@ Relative monads (Altenkirch, Chapman, et al.)
 
 See also Eric Finster's [http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.173.6218 research statement] about (amongst other things) the _Goodwillie Calculus_.
 
+== Research Question ==
+
+HomologyTypes: have the Y combinator, create the LambdaGraph for it, and compute the Homology. Does the result imply that the term cannot be typed?
+
+Occurs check fails, but the type is finitely representable!
+
 == Acknowledgements ==
 to the blender guy --> artwork (+software)
 to the topologist (3-dim projective space)
