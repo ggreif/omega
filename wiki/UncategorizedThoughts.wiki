@@ -188,3 +188,7 @@ Danvy et al. implement `Rep` for types, and signatures for reification, and show
 They mention Abel et. al as the "Dependent-Types" camp. See https://code.google.com/p/omega/source/browse/trunk/tests/NBE_lambda2.prg.
 
 They show how a `printf` partial evaluator can be built on top of this.
+
+= A Categorical Theory of Patches =
+
+very cool: http://arxiv.org/abs/1311.3903
