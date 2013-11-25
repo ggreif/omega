@@ -227,14 +227,12 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
                       = do p <- runParserT (P.whiteSpace genHaskell >> P.getPosition) () "" s
                            case p of
                              Right pos | not $ atStart pos
-                               -> do Right skips <- runParserT (until (traceShow pos pos) 0) () "" s
+                               -> do Right skips <- runParserT (until pos 0) () "" s
                                      return $ Just $ Comment tabs skips (effCol pos)
                              _ -> return Nothing
     where atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
-          until pos n = do --char' <- traceShow ("GETTING IN", n) anyChar
-                           char' <- anyChar
+          until pos n = do char' <- anyChar
                            pos' <- P.getPosition
-                           --if traceShow ("pos", pos) pos == traceShow ("CHAR'", char', "pos'", pos') pos' then return $ traceShow ("GETTING OUT", n, pos) n else until pos $ 1 + n
                            if pos == pos' then return n else until pos $ 1 + n
           endCol 1 rcol = col + rcol
           endCol rlin rcol = rcol
@@ -242,16 +240,18 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
 
 -- are instances of @Stream@
 --
+-- TODO: handle \r, See: r1843
+-- TODO: handle EOF after {--}, see: ../tests/EqualProofsByInduction.prg
+-- TODO: handle " -- " in layout, see ../tests/Iceberg.prg
+-- TODO: handle ';' in 'do' with layout, See: "NBE_lambda2.prg" (line 106, column 21)
+--
 instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char where
-  uncons (Comment tabs 0 pos s) = uncons $ Indent tabs (traceShow ("pos", pos) pos) False s
-  uncons (Comment tabs n pos s) = do --un <- traceShow ("N:", n) $ uncons s
-                                 un <- uncons s
-                                 case (n, un) of
-                                   (_, Nothing) -> return Nothing
-                                   --(1, Just ('\n', s')) -> return $ Just (traceShow ("NEWLINE") '\n', Indent tabs 0 False s')
-                                   --(_, Just (t, s')) -> return $ Just (traceShow ("uncons", t, n) t, Comment tabs (n - 1) s')
-                                   (1, Just ('\n', s')) -> return $ Just ('\n', Indent tabs 0 False s')
-                                   (_, Just (t, s')) -> return $ Just (t, Comment tabs (traceShow ("new n:", n - 1) (n - 1)) pos s')
+  uncons (Comment tabs 0 pos s) = uncons $ Indent tabs pos False s
+  uncons (Comment tabs n pos s) = do un <- uncons s
+                                     case (n, un) of
+                                       (_, Nothing) -> return Nothing
+                                       (1, Just ('\n', s')) -> return $ Just ('\n', Indent tabs 0 False s')
+                                       (_, Just (t, s')) -> return $ Just (t, Comment tabs (n - 1) pos s')
   uncons i@(Indent tabs col c'ed s) = do un <- uncons s
                                          case un of
                                            Nothing -> return Nothing
