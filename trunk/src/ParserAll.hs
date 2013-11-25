@@ -104,7 +104,7 @@ parse2 p input
 -- and the resulting package: https://github.com/luqui/parsec-layout
 
 layoutSep :: Parsec (Layout String Identity) u ()
-layoutSep = (virtualSep <?> "inserted layout separator") <|> (symbol ";" >> return ())
+layoutSep = (virtualSep <?> "inserted layout separator") <|> (semi >> return ())
 layoutEnd :: Parsec (Layout String Identity) u ()
 layoutEnd = virtualEnd <?> "inserted layout closing brace"
 layoutBegin = symbol "{" <?> "layout opening brace"
