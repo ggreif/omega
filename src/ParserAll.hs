@@ -103,9 +103,9 @@ parse2 p input
 -- see http://stackoverflow.com/questions/3023439/parsing-indentation-based-syntaxes-in-haskells-parsec/3023615#3023615
 -- and the resulting package: https://github.com/luqui/parsec-layout
 
-layoutSep :: ParsecT (Layout String Identity) u Identity ()
+layoutSep :: Parsec (Layout String Identity) u ()
 layoutSep = virtualSep <?> "inserted layout separator (;)"
-layoutEnd :: ParsecT (Layout String Identity) u Identity ()
+layoutEnd :: Parsec (Layout String Identity) u ()
 layoutEnd = virtualEnd <?> "inserted layout closing brace"
 layoutBegin = symbol "{" <?> "layout opening brace"
 explicitBrace = symbol "}" <?> "explicit layout closing brace"
