@@ -170,7 +170,7 @@ type Parser a = Parsec (Layout String Identity) () a
 -- Layout Streams
 
 data Layout s m where
-  Comment :: Stream s m Char => ![Int] -> !Int -> s -> Layout s m
+  Comment :: Stream s m Char => ![Int] -> !Int -> !Int -> s -> Layout s m
   Indent :: Stream s m Char => ![Int] -> !Int -> !Bool -> s -> Layout s m
 
 class Stream s m t => LayoutStream s m t l where
@@ -223,27 +223,35 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
   virtualEnd = do Indent (tab:out) col False s <- getInput
                   guard $ col < tab
                   setInput $ Indent out col False s
-  otherWhiteSpace (Indent tabs _ _ _) s
+  otherWhiteSpace (Indent tabs col _ _) s
                       = do p <- runParserT (P.whiteSpace genHaskell >> P.getPosition) () "" s
                            case p of
                              Right pos | not $ atStart pos
-                               -> do Right skips <- runParserT (until pos 0) () "" s
-                                     return $ Just $ Comment tabs skips
+                               -> do Right skips <- runParserT (until (traceShow pos pos) 0) () "" s
+                                     return $ Just $ Comment tabs skips (effCol pos)
                              _ -> return Nothing
     where atStart pos = Pos.sourceLine pos == 1 && Pos.sourceColumn pos == 1
-          until pos n = do char' <- traceShow ("GETTING IN", n) anyChar
+          until pos n = do --char' <- traceShow ("GETTING IN", n) anyChar
+                           char' <- anyChar
                            pos' <- P.getPosition
-                           if traceShow ("pos", pos) pos == traceShow ("CHAR'", char', "pos'", pos') pos' then return $ traceShow ("GETTING OUT", n, pos) n else until pos $ 1 + n
+                           --if traceShow ("pos", pos) pos == traceShow ("CHAR'", char', "pos'", pos') pos' then return $ traceShow ("GETTING OUT", n, pos) n else until pos $ 1 + n
+                           if pos == pos' then return n else until pos $ 1 + n
+          endCol 1 rcol = col + rcol
+          endCol rlin rcol = rcol
+          effCol pos = endCol (Pos.sourceLine pos) (Pos.sourceColumn pos)
 
 -- are instances of @Stream@
 --
 instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char where
-  uncons (Comment tabs 0 s) = uncons $ Indent tabs 0 False s -- FIXME
-  uncons (Comment tabs n s) = do un <- traceShow ("N:", n) $ uncons s
+  uncons (Comment tabs 0 pos s) = uncons $ Indent tabs (traceShow ("pos", pos) pos) False s
+  uncons (Comment tabs n pos s) = do --un <- traceShow ("N:", n) $ uncons s
+                                 un <- uncons s
                                  case (n, un) of
                                    (_, Nothing) -> return Nothing
-                                   (1, Just ('\n', s')) -> return $ Just (traceShow ("NEWLINE") '\n', Indent tabs 0 False s')
-                                   (_, Just (t, s')) -> return $ Just (traceShow ("uncons", t, n) t, Comment tabs (n - 1) s')
+                                   --(1, Just ('\n', s')) -> return $ Just (traceShow ("NEWLINE") '\n', Indent tabs 0 False s')
+                                   --(_, Just (t, s')) -> return $ Just (traceShow ("uncons", t, n) t, Comment tabs (n - 1) s')
+                                   (1, Just ('\n', s')) -> return $ Just ('\n', Indent tabs 0 False s')
+                                   (_, Just (t, s')) -> return $ Just (t, Comment tabs (traceShow ("new n:", n - 1) (n - 1)) pos s')
   uncons i@(Indent tabs col c'ed s) = do un <- uncons s
                                          case un of
                                            Nothing -> return Nothing
