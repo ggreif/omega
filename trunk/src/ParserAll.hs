@@ -104,7 +104,7 @@ parse2 p input
 -- and the resulting package: https://github.com/luqui/parsec-layout
 
 layoutSep :: Parsec (Layout String Identity) u ()
-layoutSep = virtualSep <?> "inserted layout separator (;)"
+layoutSep = (virtualSep <?> "inserted layout separator") <|> (symbol ";" >> return ())
 layoutEnd :: Parsec (Layout String Identity) u ()
 layoutEnd = virtualEnd <?> "inserted layout closing brace"
 layoutBegin = symbol "{" <?> "layout opening brace"
@@ -243,7 +243,6 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
 -- TODO: handle \r, See: r1843
 -- TODO: handle EOF after {--}, see: ../tests/EqualProofsByInduction.prg
 -- TODO: handle " -- " in layout, see ../tests/Iceberg.prg
--- TODO: handle ';' in 'do' with layout, See: "NBE_lambda2.prg" (line 106, column 21)
 --
 instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char where
   uncons (Comment tabs 0 pos s) = uncons $ Indent tabs pos False s
