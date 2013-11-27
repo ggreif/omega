@@ -264,7 +264,7 @@ instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char w
                                                                                      _ -> mayBlock conf
                                                            conf -> mayBlock conf
                                               where justAdvance = return $ Just (t, Indent tabs (col + 1) False s')
-                                                    mayBlock ((tab:_), False) | notSpace t && col <= tab = if tab > 0 || t == 'k' ||  t == 'd' then return Nothing else return Nothing
+                                                    mayBlock ((tab:_), False) | notSpace t && col <= tab = return Nothing
                                                     mayBlock _ = justAdvance
 
 notSpace ' ' = False
