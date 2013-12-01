@@ -181,6 +181,11 @@ This is building on the work of Zsidó, and is somewhat different from Fiore/Ham
 
 Video about [http://video.ias.edu/math/stpm2012/ categorical certification]. Faithful (semantics-preserving) translation of languages.
 
+Given time, I should read these too:
+  * http://math.unice.fr/~ahrens/publications/MSCS_2012_Ahrens.pdf
+  * http://www.tcs.ifi.lmu.de/mitarbeiter/martin-hofmann/pdfs/reduction-freenormalisationforapolymorphicsystem.pdf
+  * and all these [http://www.google.de/search?rls=en&q=Andre+Hirschowitz+Monad+morphism&ie=UTF-8&oe=UTF-8&gws_rd=cr&ei=yJmbUpLEKcfbswaN5IGQCw results from a query]
+
 = Tagless and Typeful NbE using GADTs =
 
 Danvy et al. implement `Rep` for types, and signatures for reification, and show that all is type safe.
