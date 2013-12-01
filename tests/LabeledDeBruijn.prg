@@ -22,6 +22,25 @@ data Tm :: Usage ~> Inventory Tag ~> * where
   Let :: Label t -> Tm u [inv; t]i ->  Tm v [inv; t]i -> Tm NORMAL inv
  deriving syntax (tm) Nat(Arg, Up) LeftPair(App) Item(Enc)
 
+{- THIS IS NOT READY YET!
+sink :: Tag ~> Nat ~> Inventory Tag
+{sink t 0t} = [inv; t]i
+{sink t (1+n)t} = [{sink t n}; t']i
+
+prop Tm' :: Inventory Tag ~> * where
+  Arg' :: Tm' inv -> Label t -> Tm' [inv; t]i
+
+varLemma :: Label t -> Nat' n -> Tm' {sink t n} -> exists (inv :: Inventory Tag) (t' :: Tag) . Tm' [inv; t']i
+varLemma t 0v = undefined
+
+var :: Label t -> Nat' n -> Tm {sink t n}
+var l 0v = 0tm
+var l 1v = Up $ var l 0v
+var l 2v = Up $ var l 1v
+var l 3v = Up $ var l 2v
+--var l (1+v)v = Up $  (var l v)
+--  where theorem hyp = varLemma l v
+-}
 
 -- (closed) identity function
 --
@@ -30,8 +49,8 @@ identity = Lm `a 0tm
 
 -- ($) = \f . \a . f a
 --
-dollar :: Tm NORMAL []i
-dollar = Lm `f (Lm `a (1tm, 0tm)tm)
+---dollar :: Tm NORMAL []i
+---dollar = Lm `f (Lm `a (var `f 1v, var `a 0v)tm)
 
 -- bottom = \n . bottom n
 bottom = Lm `n ((0tm)tm, 0tm)tm
