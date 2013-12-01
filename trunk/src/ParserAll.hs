@@ -33,7 +33,7 @@ import TokenDef
 import Data.Functor.Identity
 import System.IO (hGetContents, Handle)
 import Control.Monad (guard)
-import Debug.Trace
+--import Debug.Trace
 
 nat = zeroNumber <|> decimal
 
@@ -241,16 +241,15 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
 -- are instances of @Stream@
 --
 -- TODO: handle \r, See: r1843
--- TODO: handle EOF after {--}, see: ../tests/EqualProofsByInduction.prg
--- TODO: handle " -- " in layout, see ../tests/Iceberg.prg
 --
 instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char where
-  uncons (Comment tabs 0 col s) = uncons $ Indent tabs col False s
+  uncons (Comment tabs 0 col s) = error "should not happen!" -- uncons $ Indent tabs col False s
   uncons (Comment tabs n col s) = do un <- uncons s
                                      case (n, un) of
                                        (_, Nothing) -> return Nothing
+                                       (_, Just ('\t', s')) -> error "TAB in comment? WTF to do?"
                                        (1, Just ('\n', s')) -> return $ Just ('\n', Indent tabs 0 False s')
-                                       (1, Just (t, s')) -> return $ Just (t, Indent tabs (traceShow ("col:", col) col) False s')
+                                       (1, Just (t, s')) -> return $ Just (t, Indent tabs col False s')
                                        (_, Just (t, s')) -> return $ Just (t, Comment tabs (n - 1) col s')
   uncons i@(Indent tabs col c'ed s) = do un <- uncons s
                                          case un of
