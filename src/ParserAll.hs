@@ -236,7 +236,7 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
                            if pos == pos' then return n else until pos $ 1 + n
           endCol 1 rcol = col + rcol
           endCol rlin rcol = rcol
-          effCol pos = endCol (Pos.sourceLine pos) (Pos.sourceColumn pos)
+          effCol pos = endCol (Pos.sourceLine pos) (Pos.sourceColumn pos) - 1
 
 -- are instances of @Stream@
 --
@@ -245,12 +245,13 @@ instance Stream s Identity Char => LayoutStream s Identity Char Layout where
 -- TODO: handle " -- " in layout, see ../tests/Iceberg.prg
 --
 instance (Monad m, LayoutStream s m Char Layout) => Stream (Layout s m) m Char where
-  uncons (Comment tabs 0 pos s) = uncons $ Indent tabs pos False s
-  uncons (Comment tabs n pos s) = do un <- uncons s
+  uncons (Comment tabs 0 col s) = uncons $ Indent tabs col False s
+  uncons (Comment tabs n col s) = do un <- uncons s
                                      case (n, un) of
                                        (_, Nothing) -> return Nothing
                                        (1, Just ('\n', s')) -> return $ Just ('\n', Indent tabs 0 False s')
-                                       (_, Just (t, s')) -> return $ Just (t, Comment tabs (n - 1) pos s')
+                                       (1, Just (t, s')) -> return $ Just (t, Indent tabs (traceShow ("col:", col) col) False s')
+                                       (_, Just (t, s')) -> return $ Just (t, Comment tabs (n - 1) col s')
   uncons i@(Indent tabs col c'ed s) = do un <- uncons s
                                          case un of
                                            Nothing -> return Nothing
