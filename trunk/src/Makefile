@@ -39,7 +39,7 @@ cabal:
 cabal-check:
 	@ grep -i version $(DISTR)/* | grep "1\." | grep -v "Open Font License" \
 	| grep -v "distr/OmegaManual.ps" \
-	| grep -v "Omega Interpreter: version 1.5.2"
+	| grep -v "Omega Interpreter: version 1.5.3"
 	@ grep /tags/ $(DISTR)/*     | grep "1\."
 	@ grep tag: $(DISTR)/*       | grep "1\."
 	@ grep "201" $(DISTR)/*       | grep -v "2002-2013" | grep -v "CEST 2013" \
@@ -53,17 +53,17 @@ cabal-pack:
 	cd $(DISTR) && cabal sdist -v
 
 cabal-upload:
-	@ $(JUST-TEST) cabal upload $(HACKAGE-SERIOUS) --username=$(HACKAGE-USER) --password=$(HACKAGE-PASSW) $(DISTR)/dist/omega-1.5.2.tar.gz
+	@ $(JUST-TEST) cabal upload $(HACKAGE-SERIOUS) --username=$(HACKAGE-USER) --password=$(HACKAGE-PASSW) $(DISTR)/dist/omega-1.5.3.tar.gz
 
 omega-pack:
 	cd $(DISTR)/.. \
-	&& zip -v -r Omega152 distr -l -x \*.cabal distr/Setup.hs \*.pdf \*.ps distr/dist/\* \
-	&& zip -v -u Omega152 distr/*.pdf distr/*.ps \
+	&& zip -v -r Omega153 distr -l -x \*.cabal distr/Setup.hs \*.pdf \*.ps distr/dist/\* \
+	&& zip -v -u Omega153 distr/*.pdf distr/*.ps \
 	&& ls -l Omega1*
 
 omega-tag:
-	$(JUST-TEST) $(SVN) cp -m "tag Omega 1.5.2" ^/trunk ^/tags/omega-1.5.2
-	$(JUST-TEST) $(SVN) switch ^/tags/omega-1.5.2/src/Version.hs Version.hs
+	$(JUST-TEST) $(SVN) cp -m "tag Omega 1.5.3" ^/trunk ^/tags/omega-1.5.3
+	$(JUST-TEST) $(SVN) switch ^/tags/omega-1.5.3/src/Version.hs Version.hs
 	$(JUST-TEST) $(SVN) ci -m "update version to match distribution" Version.hs
 	$(JUST-TEST) $(SVN) switch ^/trunk/src/Version.hs Version.hs
 
