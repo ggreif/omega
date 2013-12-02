@@ -10,7 +10,7 @@ import BuildSpecific ( distrDir, srcDir, utilDir, parseDir, libDir
                      , manualDir, testsDir, rootDir, extension, version)
 
 license =
- "-- Copyright (c) 2002-2012, Tim Sheard\n" ++
+ "-- Copyright (c) 2002-2013, Tim Sheard\n" ++
  "-- OGI School of Science & Engineering, Oregon Health & Science University\n" ++
  "-- Maseeh College of Engineering, Portland State University\n" ++
  "-- Subject to conditions of distribution and use; see LICENSE.txt for details.\n"
