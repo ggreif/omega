@@ -26,7 +26,7 @@ HACKAGE-USER = GaborGreif
 HACKAGE-PASSW = jXXXX
 
 .PHONY: all cabal cabal-check cabal-pack omega-pack \
-        tests clean cleaner manual update
+        tests regressions clean cleaner manual update
 
 all: *.hs
 	$(GHC) $(GHC_FLAGS) -o $(EXEC) --make $(MAIN)
@@ -78,6 +78,9 @@ hugs-%: %.hs
 
 tests: all
 	./$(EXEC) -tests ../tests
+
+regressions: all
+	./$(EXEC) -tests ../tests 2>&1 | awk -f ../tests/filter.awk
 
 %.prg: all
 	./$(EXEC) $@
