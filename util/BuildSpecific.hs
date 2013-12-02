@@ -3,9 +3,7 @@ module BuildSpecific where
 -- ====================================================================
 -- Everytime you make a distribution you need to edit the following
 
-defaultHome = "d:/"
-
-shortVersion = "1.5.2"
+shortVersion = "1.5.3"
 version = "Omega Interpreter: version " ++ shortVersion
 
 distrDir home = home ++ "/Omega/distr/"
