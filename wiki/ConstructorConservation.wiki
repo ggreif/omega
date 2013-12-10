@@ -10,7 +10,7 @@ Is there any literature on it?
 
 Comment from [http://www8.cs.fau.de/~gorin Daniel Gorín]: Does not work when we have two types of the interval, e.g. `S, T :: Nat -> Nat`. (GGR: This is for equality. Might work for other equivalence relations though.)
 
-Is it okay to have one constructor in each dimension? (Z, S, Homotopy, etc.) --> Globular model.
+Is it okay to have one constructor in each dimension? (`Z`, `S`, `Homotopy`, etc.) --> Globular model.
 
 Such a constraint surely restricts the number of candidates for a proof-search algorithm.
 
@@ -20,4 +20,4 @@ The above principle is a pretty strong one, we may desire to forget some (exact)
 
 = Counting Proofs =
 
-This might just be a specila case of [http://www.cs.toronto.edu/~azadeh/resources/papers/popl14-counter.pdf counting proofs].
+This might just be a special case of [http://www.cs.toronto.edu/~azadeh/resources/papers/popl14-counter.pdf counting proofs].
