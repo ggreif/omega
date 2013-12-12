@@ -118,3 +118,5 @@ So what we can do is to _apply_ an annotation by _apply nodes_:
 = More Interesting Papers =
 
 http://gallium.inria.fr/~balabons/Recherche/Balabonski-ICFP13.pdf mentions the "sharing-via-labelling" technique.
+
+Names for Free [http://ezyang.tumblr.com/post/62061779275/haskell-names-for-free-polymorphic-views-of-names-and with commentary]. Note the ∑-∏ isomorphism he gives.
