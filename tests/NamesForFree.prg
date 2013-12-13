@@ -9,3 +9,8 @@ type Succ a = a `Trunce` ()
 data Trunce :: * ~> * ~> * where
   Old :: a -> Trunce a b
   New :: b -> Trunce a b
+
+
+data Tri :: Nat ~> * ~> * where
+  Born :: a -> Tri 0t a
+  Reach :: Tri n a -> Tri (1+n)t a
