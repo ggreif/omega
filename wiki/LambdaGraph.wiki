@@ -120,3 +120,11 @@ So what we can do is to _apply_ an annotation by _apply nodes_:
 http://gallium.inria.fr/~balabons/Recherche/Balabonski-ICFP13.pdf mentions the "sharing-via-labelling" technique.
 
 Names for Free [http://ezyang.tumblr.com/post/62061779275/haskell-names-for-free-polymorphic-views-of-names-and with commentary]. Note the ∑-∏ isomorphism he gives.
+
+== Some older papers in ESOP 2000 proceedings ==
+
+Sharing Continuations: Proofnets for Languages with Explicit Control
+by Lawall and Mairson
+
+Improving the Representation of Infinite Trees to Deal with Sets of Trees
+by Mauborgne
