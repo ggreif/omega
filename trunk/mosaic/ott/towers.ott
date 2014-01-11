@@ -1,4 +1,4 @@
-% minimal + tex
+% minimal + latex + comments
 metavar termvar, x ::=
 
 grammar
