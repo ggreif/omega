@@ -4,6 +4,8 @@ metavar termvar, x ::= {{ com term variable }}
 
 metavar typvar, X ::= {{ com type variable }}
 
+metavar levar, l ::= {{ com level variable }}
+
 grammar
 
   t :: t_ ::= {{ com term }}
