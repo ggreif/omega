@@ -37,6 +37,7 @@ grammar
   levs :: ls_ ::= {{ com level tower }}
       | lev / cnat    ::   :: steps     {{ com stepped }}
       | lev '..' lev' :: S :: range     {{ com ranged }}
+      | lev           :: S :: fromUp    {{ com from to the sky }}
 
   T :: T_ ::= {{ com type }}
     | *         ::   :: star  {{ com star }}
