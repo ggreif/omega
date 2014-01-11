@@ -1,0 +1,8 @@
+% minimal + tex
+metavar termvar, x ::=
+
+grammar
+  G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
+    | empty               ::   :: em 
+    | G , x : T           ::   :: vn 
+
