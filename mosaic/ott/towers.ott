@@ -59,7 +59,7 @@ terminals :: 'terminals_' ::=
     | utmost :: :: utmost {{ tex ^\infty }}         {{ com sky high }}
     | '|-' ::   :: turnstile {{ tex \vdash }}       {{ com in context }}
     | ^    ::   :: rises {{ tex \Rsh }}             {{ com reaches up }}
-    | /    ::   :: steps {{ tex \risingdotseq }}    {{ com steps }}
+    | /    ::   :: steps {{ tex \shortmid }}        {{ com steps }}
 
 subrules
   nat <:: cnat
