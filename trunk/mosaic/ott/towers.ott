@@ -14,10 +14,14 @@ grammar
     | constr              ::   :: Con                     {{ com constructor }}
     | \ x . t             ::   :: Lam                     {{ com abstraction }}
 
+  nat :: n_ ::= {{ com natural }}
+      | 0     ::   :: zero {{ com zero }}
+      | S nat ::   :: succ {{ com successor }}
+
   lev :: l_ ::= {{ com level }}
-    | utmost        ::   :: Utmost    {{ com sky }}
-    | nat           ::   :: explicit  {{ com finite }}
-    | lev '..' lev' ::   :: range     {{ com ranged }}
+      | utmost        ::   :: Utmost    {{ com sky }}
+      | nat           ::   :: explicit  {{ com finite }}
+      | lev '..' lev' ::   :: range     {{ com ranged }}
 
   T :: T_ ::= {{ com type }}
     | *         ::   :: star  {{ com star }}
