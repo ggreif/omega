@@ -42,4 +42,11 @@ terminals :: 'terminals_' ::=
     | '::' ::  :: ann    {{ tex :: }}               {{ com type annotation }}
     | ->   ::  :: arrow  {{ tex \rightsquigarrow }} {{ com level arrow }}
     | \    ::  :: lambda {{ tex \lambda }}          {{ com lambda }}
-    | utmost :: :: utmost {{ tex ^\infty }}          {{ com sky high }}
+    | utmost :: :: utmost {{ tex ^\infty }}         {{ com sky high }}
+    | '|-' ::   :: turnstile {{ tex \vdash }}       {{ com in context }}
+
+defns Jlev :: '' ::=
+
+defn
+
+    G |- t : T :: :: GtT :: GtT_ by
