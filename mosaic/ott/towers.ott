@@ -32,7 +32,7 @@ grammar
 
   levs :: ls_ ::= {{ com level tower }}
       | lev / cnat    ::   :: steps     {{ com stepped }}
-      | lev '..' lev' ::   :: range     {{ com ranged }}
+      | lev '..' lev' :: S :: range     {{ com ranged }}
 
   T :: T_ ::= {{ com type }}
     | *         ::   :: star  {{ com star }}
@@ -55,7 +55,7 @@ terminals :: 'terminals_' ::=
     | utmost :: :: utmost {{ tex ^\infty }}         {{ com sky high }}
     | '|-' ::   :: turnstile {{ tex \vdash }}       {{ com in context }}
     | ^    ::   :: rises {{ tex \Rsh }}             {{ com reaches up }}
-    | /    ::   :: steps {{ tex \nearrow }}           {{ com steps }}
+    | /    ::   :: steps {{ tex \scriptscriptstyle{\nearrow} }}   {{ com steps }}
 
 subrules
   nat <:: cnat
@@ -69,10 +69,10 @@ defn
    levs ^ levs' :: :: rises :: rises_ {{ com [[levs]] reach up to [[levs']] }} by
 
    --------------------------- :: skyscraper
-   l .. utmost ^ S l .. utmost
+   l / utmost ^ S l / utmost
 
    --------------------- :: finite
-   l .. S l' ^ S l .. l'
+   l / l' ^ S l / l'
 
 
 defns Jtype :: '' ::=
