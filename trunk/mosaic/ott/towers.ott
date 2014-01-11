@@ -12,6 +12,11 @@ grammar
     | constr              ::   :: Con                     {{ com constructor }}
     | \ x . t             ::   :: Lam                     {{ com abstraction }}
 
+  lev :: l_ ::= {{ com level }}
+    | utmost       ::   :: Utmost    {{ com sky }}
+    | nat          ::   :: explicit  {{ com finite }}
+    | lev '..' lev' ::   :: range    {{ com ranged }}
+
   T :: T_ ::= {{ com type }}
     | X         ::   :: var   {{ com variable }}
     | v o T     ::   :: tower {{ com tower }}
@@ -27,3 +32,4 @@ terminals :: 'terminals_' ::=
     | o    ::  :: degree {{ tex ^\circ }}           {{ com type refinement }}
     | '::' ::  :: ann    {{ tex :: }}               {{ com type annotation }}
     | ->   ::  :: arrow  {{ tex \rightsquigarrow }} {{ com level arrow }}
+    | \    ::  :: lambda {{ tex \lambda }}          {{ com lambda }}
