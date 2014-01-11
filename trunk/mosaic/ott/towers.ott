@@ -25,9 +25,14 @@ grammar
 
   lev :: lev_ ::= {{ com level }}
       | l             ::   :: lvar      {{ com variable }}
+      | 0             ::   :: zero      {{ com zero }}
+      | S lev         ::   :: raise     {{ com raise }}
       | utmost        ::   :: Utmost    {{ com sky }}
       | nat           ::   :: explicit  {{ com finite }}
-      | S lev         ::   :: raise     {{ com raise }}
+
+
+  levs :: ls_ ::= {{ com level tower }}
+      | lev / cnat    ::   :: steps     {{ com stepped }}
       | lev '..' lev' ::   :: range     {{ com ranged }}
 
   T :: T_ ::= {{ com type }}
@@ -55,10 +60,13 @@ terminals :: 'terminals_' ::=
 subrules
   nat <:: cnat
 
+  cnat <:: lev
+
+
 defns Jlev :: '' ::=
 
 defn
-   lev ^ lev' :: :: rises :: rises_ {{ com [[lev]] reach up to [[lev']] }} by
+   levs ^ levs' :: :: rises :: rises_ {{ com [[levs]] reach up to [[levs']] }} by
 
    --------------------------- :: skyscraper
    l .. utmost ^ S l .. utmost
