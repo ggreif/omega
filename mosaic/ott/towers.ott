@@ -6,14 +6,17 @@ metavar typvar, X ::= {{ com type variable }}
 
 grammar
 
+
   T :: T_ ::= {{ com type }}
-    | X         ::  :: var {{ com variable }}
-    | v o T     ::  :: tower {{ com type tower }}
+    | X         ::   :: var   {{ com variable }}
+    | v o T     ::   :: tower {{ com tower }}
+    | T -> T'   ::   :: arrow {{ com arrow }}
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em 
     | G , x : T           ::   :: vn 
 
 terminals :: 'terminals_' ::=
-    | o ::  :: degree {{ tex ^\circ }} {{ com type refinement }}
-    | '::' :: :: ann {{ tex :: }} {{ com type annotation }}
+    | o    ::  :: degree {{ tex ^\circ }}           {{ com type refinement }}
+    | '::' ::  :: ann    {{ tex :: }}               {{ com type annotation }}
+    | ->   ::  :: arrow  {{ tex \rightsquigarrow }} {{ com level arrow }}
