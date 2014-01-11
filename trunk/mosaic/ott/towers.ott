@@ -6,6 +6,8 @@ metavar typvar, X ::= {{ com type variable }}
 
 metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
 
+metavar natvar, n {{ tex \imath }} ::= {{ com natural variable }}
+
 grammar
 
   t :: t_ ::= {{ com term }}
@@ -15,15 +17,18 @@ grammar
     | \ x . t             ::   :: Lam                     {{ com abstraction }}
 
   nat :: n_ ::= {{ com natural }}
+      | n     ::   :: nvar {{ com variable }}
       | 0     ::   :: zero {{ com zero }}
       | S nat ::   :: succ {{ com successor }}
 
   cnat :: cn_ ::= {{ com compact natural }}
+      | n      ::   :: nvar {{ com variable }}
       | 0      ::   :: zero {{ com zero }}
       | S cnat ::   :: succ {{ com successor }}
       | utmost ::   :: inf  {{ com infinity }}
 
   lev :: lev_ ::= {{ com level }}
+      | n             ::   :: nvar      {{ com nat variable }}
       | l             ::   :: lvar      {{ com variable }}
       | 0             ::   :: zero      {{ com zero }}
       | S lev         ::   :: raise     {{ com raise }}
@@ -72,7 +77,7 @@ defn
    l / utmost ^ S l / utmost
 
    --------------------- :: finite
-   l / l' ^ S l / l'
+   l / S n ^ S l / n
 
 
 defns Jtype :: '' ::=
