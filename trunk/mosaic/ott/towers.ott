@@ -1,11 +1,19 @@
 % minimal + latex + comments
 
-metavar termvar, x ::=
+metavar termvar, x ::= {{ com term variable }}
+
+metavar typvar, X ::= {{ com type variable }}
 
 grammar
+
+  T :: T_ ::= {{ com type }}
+    | X         ::  :: var {{ com variable }}
+    | v o T     ::  :: tower {{ com type tower }}
+
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em 
     | G , x : T           ::   :: vn 
 
 terminals :: 'terminals_' ::=
-    | o ::  :: degree {{ tex \circ }} {{ com type refinement }}
+    | o ::  :: degree {{ tex ^\circ }} {{ com type refinement }}
+    | '::' :: :: ann {{ tex :: }} {{ com type annotation }}
