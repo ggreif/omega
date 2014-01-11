@@ -22,6 +22,7 @@ grammar
       | l             ::   :: lvar      {{ com variable }}
       | utmost        ::   :: Utmost    {{ com sky }}
       | nat           ::   :: explicit  {{ com finite }}
+      | S lev         ::   :: raise     {{ com raise }}
       | lev '..' lev' ::   :: range     {{ com ranged }}
 
   T :: T_ ::= {{ com type }}
@@ -44,8 +45,21 @@ terminals :: 'terminals_' ::=
     | \    ::  :: lambda {{ tex \lambda }}          {{ com lambda }}
     | utmost :: :: utmost {{ tex ^\infty }}         {{ com sky high }}
     | '|-' ::   :: turnstile {{ tex \vdash }}       {{ com in context }}
+    | ^    ::   :: rises {{ tex \Rsh }}             {{ com reaches up }}
 
 defns Jlev :: '' ::=
+
+defn
+   lev ^ lev' :: :: rises :: rises_ {{ com [[lev]] reach up to [[lev']] }} by
+
+   --------------------------- :: skyscraper
+   l .. utmost ^ S l .. utmost
+
+   --------------------- :: finite
+   l .. S l' ^ S l .. l'
+
+
+defns Jtype :: '' ::=
 
 defn
 
