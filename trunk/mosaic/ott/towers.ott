@@ -18,7 +18,8 @@ grammar
       | 0     ::   :: zero {{ com zero }}
       | S nat ::   :: succ {{ com successor }}
 
-  lev :: l_ ::= {{ com level }}
+  lev :: lev_ ::= {{ com level }}
+      | l             ::   :: lvar      {{ com variable }}
       | utmost        ::   :: Utmost    {{ com sky }}
       | nat           ::   :: explicit  {{ com finite }}
       | lev '..' lev' ::   :: range     {{ com ranged }}
@@ -30,8 +31,8 @@ grammar
     | T -> T'   ::   :: arrow {{ com arrow }}
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
-    | empty               ::   :: em
-    | G , x : T           ::   :: vn
+    | empty               ::   :: em     {{ com empty }}
+    | G , x : T           ::   :: vn     {{ com extension }}
     | G' o G              ::   :: refin  {{ com tower }}
 
 terminals :: 'terminals_' ::=
