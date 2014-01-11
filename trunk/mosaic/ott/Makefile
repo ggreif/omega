@@ -1,6 +1,6 @@
 OTTFILES = $(wildcard *.ott)
 
-.PHONY: clean
+.PHONY: all clean
 
 all: $(OTTFILES:%.ott=%.pdf)
 
