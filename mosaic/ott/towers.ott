@@ -17,7 +17,6 @@ grammar
     | \ x . t             ::   :: Lam                     {{ com abstraction }}
 
   nat :: n_ ::= {{ com natural }}
-      | n     ::   :: nvar {{ com variable }}
       | 0     ::   :: zero {{ com zero }}
       | S nat ::   :: succ {{ com successor }}
 
@@ -28,11 +27,11 @@ grammar
       | utmost ::   :: inf  {{ com infinity }}
 
   lev :: lev_ ::= {{ com level }}
-      | n             ::   :: nvar      {{ com nat variable }}
       | l             ::   :: lvar      {{ com variable }}
       | 0             ::   :: zero      {{ com zero }}
       | S lev         ::   :: raise     {{ com raise }}
       | utmost        ::   :: Utmost    {{ com sky }}
+      | n             ::   :: nvar      {{ com nat variable }}
 
 
   levs :: ls_ ::= {{ com level tower }}
@@ -60,7 +59,7 @@ terminals :: 'terminals_' ::=
     | utmost :: :: utmost {{ tex ^\infty }}         {{ com sky high }}
     | '|-' ::   :: turnstile {{ tex \vdash }}       {{ com in context }}
     | ^    ::   :: rises {{ tex \Rsh }}             {{ com reaches up }}
-    | /    ::   :: steps {{ tex \scriptscriptstyle{\nearrow} }}   {{ com steps }}
+    | /    ::   :: steps {{ tex \risingdotseq }}    {{ com steps }}
 
 subrules
   nat <:: cnat
