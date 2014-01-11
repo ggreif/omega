@@ -8,4 +8,4 @@ grammar
     | G , x : T           ::   :: vn 
 
 terminals :: 'terminals_' ::=
-    | o ::  :: degree {{ tex \lambda }}
+    | o ::  :: degree {{ tex \circ }} {{ com type refinement }}
