@@ -85,3 +85,6 @@ defns Jtype :: '' ::=
 defn
 
     G |- t : T :: :: GtT :: GtT_ by
+
+    --------------- :: star
+    empty |- * : *
