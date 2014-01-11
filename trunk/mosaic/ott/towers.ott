@@ -1,10 +1,10 @@
 % minimal + latex + comments
 
-metavar termvar, x ::= {{ com term variable }}
+metavar termvar, x ::= {{ tex \mathit{[[termvar]]} }} {{ com term variable }}
 
 metavar typvar, X ::= {{ com type variable }}
 
-metavar levar, l ::= {{ com level variable }}
+metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
 
 grammar
 
@@ -15,11 +15,12 @@ grammar
     | \ x . t             ::   :: Lam                     {{ com abstraction }}
 
   lev :: l_ ::= {{ com level }}
-    | utmost       ::   :: Utmost    {{ com sky }}
-    | nat          ::   :: explicit  {{ com finite }}
-    | lev '..' lev' ::   :: range    {{ com ranged }}
+    | utmost        ::   :: Utmost    {{ com sky }}
+    | nat           ::   :: explicit  {{ com finite }}
+    | lev '..' lev' ::   :: range     {{ com ranged }}
 
   T :: T_ ::= {{ com type }}
+    | *         ::   :: star  {{ com star }}
     | X         ::   :: var   {{ com variable }}
     | v o T     ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
@@ -30,6 +31,7 @@ grammar
     | G' o G              ::   :: refin  {{ com tower }}
 
 terminals :: 'terminals_' ::=
+    | *    ::  :: star   {{ tex \star }}            {{ com kind star }}
     | empty :: :: emptycontext {{ tex \emptyset }}  {{ com empty set }}
     | o    ::  :: degree {{ tex ^\circ }}           {{ com type refinement }}
     | '::' ::  :: ann    {{ tex :: }}               {{ com type annotation }}
