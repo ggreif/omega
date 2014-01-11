@@ -1,4 +1,5 @@
 % minimal + latex + comments
+
 metavar termvar, x ::=
 
 grammar
@@ -6,3 +7,5 @@ grammar
     | empty               ::   :: em 
     | G , x : T           ::   :: vn 
 
+terminals :: 'terminals_' ::=
+    | o ::  :: degree {{ tex \lambda }}
