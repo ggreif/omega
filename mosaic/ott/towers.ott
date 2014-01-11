@@ -18,6 +18,11 @@ grammar
       | 0     ::   :: zero {{ com zero }}
       | S nat ::   :: succ {{ com successor }}
 
+  cnat :: cn_ ::= {{ com compact natural }}
+      | 0      ::   :: zero {{ com zero }}
+      | S cnat ::   :: succ {{ com successor }}
+      | utmost ::   :: inf  {{ com infinity }}
+
   lev :: lev_ ::= {{ com level }}
       | l             ::   :: lvar      {{ com variable }}
       | utmost        ::   :: Utmost    {{ com sky }}
@@ -46,6 +51,9 @@ terminals :: 'terminals_' ::=
     | utmost :: :: utmost {{ tex ^\infty }}         {{ com sky high }}
     | '|-' ::   :: turnstile {{ tex \vdash }}       {{ com in context }}
     | ^    ::   :: rises {{ tex \Rsh }}             {{ com reaches up }}
+
+subrules
+  nat <:: cnat
 
 defns Jlev :: '' ::=
 
