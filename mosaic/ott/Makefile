@@ -8,7 +8,7 @@ all: $(OTTFILES:%.ott=%.pdf)
 	ott -i $< -o $@
 
 %.pdf: %.tex
-	pdflatex $<
+	pdflatex $< > /dev/null
 
 clean:
 	rm -f *.log *.tex *.pdf *.aux
