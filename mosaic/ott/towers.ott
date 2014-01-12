@@ -41,7 +41,7 @@ grammar
   T :: T_ ::= {{ com type }}
     | *         ::   :: star  {{ com star }}
     | X         ::   :: var   {{ com variable }}
-    | v o T     ::   :: tower {{ com tower }}
+    | T0 o T1   ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
     | T _ levs  ::   :: level {{ com levelled }} {{ tex [[T]]_{[[levs]]} }}
 
@@ -88,3 +88,9 @@ defn
 
     --------------- :: star
     empty |- * _ S S n : * _ S S S n
+
+
+    G |- X : T _ l / n
+    G |- X' : T' _ l / n'
+    ------------------------ :: arrow
+    G |- X -> X' : * _ S l
