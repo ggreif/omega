@@ -33,7 +33,6 @@ grammar
       | utmost        ::   :: Utmost    {{ com sky }}
       | n             ::   :: nvar      {{ com nat variable }}
 
-
   levs :: ls_ ::= {{ com level tower }}
       | lev / cnat    ::   :: steps     {{ com stepped }}
       | lev '..' lev' :: S :: range     {{ com ranged }}
@@ -44,6 +43,7 @@ grammar
     | X         ::   :: var   {{ com variable }}
     | v o T     ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
+    | T x levs  ::   :: level {{ com levelled }}
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em     {{ com empty }}
@@ -84,7 +84,7 @@ defns Jtype :: '' ::=
 
 defn
 
-    G |- t : T :: :: GtT :: GtT_ by
+    G |- T : T1 :: :: GtT :: GtT_ by
 
     --------------- :: star
-    empty |- * : *
+    empty |- * x l : * x S n
