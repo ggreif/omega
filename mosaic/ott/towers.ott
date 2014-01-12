@@ -43,7 +43,7 @@ grammar
     | X         ::   :: var   {{ com variable }}
     | v o T     ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
-    | T x levs  ::   :: level {{ com levelled }}
+    | T _ levs  ::   :: level {{ com levelled }} {{ tex [[T]]_{[[levs]]} }}
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em     {{ com empty }}
@@ -87,4 +87,4 @@ defn
     G |- T : T1 :: :: GtT :: GtT_ by
 
     --------------- :: star
-    empty |- * x l : * x S n
+    empty |- * _ S S n : * _ S S S n
