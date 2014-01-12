@@ -41,9 +41,11 @@ grammar
   T :: T_ ::= {{ com type }}
     | *         ::   :: star  {{ com star }}
     | X         ::   :: var   {{ com variable }}
+    | X1 X2     ::   :: appl  {{ com application }}
     | T0 o T1   ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
     | T _ levs  ::   :: level {{ com levelled }} {{ tex [[T]]_{[[levs]]} }}
+    | ( T )     :: S :: parens {{ com grouping }}
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em     {{ com empty }}
@@ -94,3 +96,8 @@ defn
     G |- X' : T' _ l / n'
     ------------------------ :: arrow
     G |- X -> X' : * _ S l
+
+    G |- X : X1 _ l / n
+    G |- X' : ( X1 -> X2 ) _ l / n'
+    --------------------------- :: application
+    G |- X' X : X2 _ l / n'
