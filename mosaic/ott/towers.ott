@@ -2,7 +2,7 @@
 
 metavar termvar, x ::= {{ tex \mathit{[[termvar]]} }} {{ com term variable }}
 
-metavar typvar, X ::= {{ com type variable }}
+metavar typvar, X, F ::= {{ com type variable }}
 
 metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
 
@@ -92,12 +92,12 @@ defn
     empty |- * _ S S n : * _ S S S n
 
 
-    G |- X : T _ l / n
     G |- X' : T' _ l / n'
-    ------------------------ :: arrow
-    G |- X -> X' : * _ S l
-
     G |- X : T _ l / n
-    G |- X' : (T -> T') _ l / n'
+    ------------------------ :: arrow
+    G |- X' -> X : * _ S l
+
+    G |- X : T' _ l / n'
+    G |- F : (T' -> T) _ l / n
     --------------------------- :: application
-    G |- X' X : T' _ l / n'
+    G |- F X : T _ l / n
