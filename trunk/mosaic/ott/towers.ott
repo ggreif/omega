@@ -1,5 +1,10 @@
 % minimal + latex + comments
 
+embed {{ tex-preamble
+  \newcommand{\keyword}[1]{\textbf{#1} }
+  \newcommand{\labeledjudge}[1]{\vdash_{\!\!\mathsf{#1} } }
+}}
+
 metavar termvar, x ::= {{ tex \mathit{[[termvar]]} }} {{ com term variable }}
 
 metavar typvar, X, F ::= {{ com type variable }}
@@ -108,11 +113,11 @@ defns Jlevs :: 'lv_' ::=
 
 defn
 
-    |-lev levs : ok :: :: Lok :: Lok_ by
+    |-lv levs : ok :: :: Lok :: Lok_ {{ tex \labeledjudge{lv} [[levs]] }} by
 
     ---------------- :: zero
-    |-lev 0 / n /\ 0 / n' : ok
+    |-lv 0 / n /\ 0 / n' : ok
 
-    |-lev l / n /\ l' / n' : ok
+    |-lv l / n /\ l' / n' : ok
     ------------------------------- :: step
-    |-lev S l / n /\ S l' / n' : ok
+    |-lv S l / n /\ S l' / n' : ok
