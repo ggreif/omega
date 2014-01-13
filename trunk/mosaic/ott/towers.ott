@@ -35,6 +35,7 @@ grammar
 
   levs :: ls_ ::= {{ com level tower }}
       | lev / cnat    ::   :: steps     {{ com stepped }}
+      | levs /\ levs' ::   :: inters    {{ com intersection }}
       | lev '..' lev' :: S :: range     {{ com ranged }}
       | lev           :: S :: fromUp    {{ com from to the sky }}
 
@@ -63,6 +64,7 @@ terminals :: 'terminals_' ::=
     | '|-' ::   :: turnstile {{ tex \vdash }}       {{ com in context }}
     | ^    ::   :: rises {{ tex \Rsh }}             {{ com reaches up }}
     | /    ::   :: steps {{ tex \shortmid }}        {{ com steps }}
+    | /\   ::   :: inter {{ tex \cap }}             {{ com intersection }}
 
 subrules
   nat <:: cnat
@@ -100,4 +102,4 @@ defn
     G |- X : T' _ l / n'
     G |- F : (T' -> T) _ l / n
     --------------------------- :: application
-    G |- F X : T _ l / n
+    G |- F X : T _ l / n' /\ l / n
