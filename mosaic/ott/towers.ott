@@ -103,3 +103,16 @@ defn
     G |- F : (T' -> T) _ l / n
     --------------------------- :: application
     G |- F X : T _ l / n' /\ l / n
+
+defns Jlevs :: 'lv_' ::=
+
+defn
+
+    |-lev levs : ok :: :: Lok :: Lok_ by
+
+    ---------------- :: zero
+    |-lev 0 / n /\ 0 / n' : ok
+
+    |-lev l / n /\ l' / n' : ok
+    ------------------------------- :: step
+    |-lev S l / n /\ S l' / n' : ok
