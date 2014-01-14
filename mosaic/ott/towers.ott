@@ -48,6 +48,7 @@ grammar
     | *         ::   :: star  {{ com star }}
     | X         ::   :: var   {{ com variable }}
     | T T'      ::   :: appl  {{ com application }}
+    | T # T' ::   :: ann   {{ com annotation }}
     | T0 o T1   ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
     | T _ levs  ::   :: level {{ com levelled }} {{ tex [[T]]_{[[levs]]} }}
@@ -62,7 +63,7 @@ terminals :: 'terminals_' ::=
     | *    ::  :: star   {{ tex \star }}            {{ com kind star }}
     | empty :: :: emptycontext {{ tex \emptyset }}  {{ com empty set }}
     | o    ::  :: degree {{ tex ^\circ }}           {{ com type refinement }}
-    | '::' ::  :: ann    {{ tex :: }}               {{ com type annotation }}
+    | #    ::  :: ann    {{ tex :: }}               {{ com type annotation }}
     | ->   ::  :: arrow  {{ tex \rightsquigarrow }} {{ com level arrow }}
     | \    ::  :: lambda {{ tex \lambda }}          {{ com lambda }}
     | utmost :: :: utmost {{ tex ^\infty }}         {{ com sky high }}
@@ -128,3 +129,16 @@ defn
     |-lv l / n /\ l' / n' : ok
     ------------------------------ :: step
     |-lv S l / n /\ S l' / n' : ok
+
+
+defn
+
+    |-tw T : ok :: :: Tok :: Tok_ {{ tex \labeledjudge{tw} [[T]] }} by
+
+
+    ----------------- :: annotated
+    |-tw T0 # T1 : ok
+
+    |-tw T0 # T1 : ok
+    ------------------------ :: refined
+    |-tw T0 # (T0 o T1) : ok
