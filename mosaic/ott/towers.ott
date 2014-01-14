@@ -107,10 +107,11 @@ defn
     ------------------------ :: arrow
     G |- X' -> X : * _ S l
 
-    G |- X : T' _ l / n'
+      |-lv l' / n' /\ l / n : ok
+    G |- X : T' _ l' / n'
     G |- F : (T' -> T) _ l / n
     --------------------------- :: application
-    G |- F X : T _ l / n' /\ l / n
+    G |- F X : T _ l' / n' /\ l / n
 
 defns Jlevs :: 'lv_' ::= 
 
