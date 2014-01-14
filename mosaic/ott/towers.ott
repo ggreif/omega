@@ -101,7 +101,6 @@ defn
     empty |- * _ S S n : * _ S S S n
 
 
-    |-lv l / n' /\ l / n : ok
     G |- X' : T' _ l / n'
     G |- X : T _ l / n
     ------------------------ :: arrow
