@@ -26,10 +26,10 @@ grammar
       | S nat ::   :: succ {{ com successor }}
 
   cnat :: cn_ ::= {{ com compact natural }}
-      | n      ::   :: nvar {{ com variable }}
-      | 0      ::   :: zero {{ com zero }}
-      | S cnat ::   :: succ {{ com successor }}
-      | utmost ::   :: inf  {{ com infinity }}
+       | n      ::   :: nvar {{ com variable }}
+       | 0      ::   :: zero {{ com zero }}
+       | S cnat ::   :: succ {{ com successor }}
+       | utmost ::   :: inf  {{ com infinity }}
 
   lev :: lev_ ::= {{ com level }}
       | l             ::   :: lvar      {{ com variable }}
@@ -39,10 +39,10 @@ grammar
       | n             ::   :: nvar      {{ com nat variable }}
 
   levs :: ls_ ::= {{ com level tower }}
-      | lev / cnat    ::   :: steps     {{ com stepped }}
-      | levs /\ levs' ::   :: inters    {{ com intersection }}
-      | lev '..' lev' :: S :: range     {{ com ranged }}
-      | lev           :: S :: fromUp    {{ com from to the sky }}
+       | lev / cnat    ::   :: steps     {{ com stepped }}
+       | levs /\ levs' ::   :: inters    {{ com intersection }}
+       | lev '..' lev' :: S :: range     {{ com ranged }}
+       | lev           :: S :: fromUp    {{ com from to the sky }}
 
   T :: T_ ::= {{ com type }}
     | *         ::   :: star  {{ com star }}
@@ -72,6 +72,7 @@ terminals :: 'terminals_' ::=
     | /\   ::   :: inter {{ tex \cap }}             {{ com intersection }}
 
 subrules
+
   nat <:: cnat
 
   cnat <:: lev
@@ -80,6 +81,7 @@ subrules
 defns Jlev :: '' ::=
 
 defn
+
    levs ^ levs' :: :: rises :: rises_ {{ com [[levs]] reach up to [[levs']] }} by
 
    --------------------------- :: skyscraper
@@ -99,6 +101,7 @@ defn
     empty |- * _ S S n : * _ S S S n
 
 
+    |-lv l / n' /\ l / n : ok
     G |- X' : T' _ l / n'
     G |- X : T _ l / n
     ------------------------ :: arrow
@@ -109,15 +112,19 @@ defn
     --------------------------- :: application
     G |- F X : T _ l / n' /\ l / n
 
-defns Jlevs :: 'lv_' ::=
+defns Jlevs :: 'lv_' ::= 
 
 defn
 
     |-lv levs : ok :: :: Lok :: Lok_ {{ tex \labeledjudge{lv} [[levs]] }} by
 
-    ---------------- :: zero
+
+    --------------- :: justRange
+    |-lv l / n : ok
+
+    ------------------------- :: zero
     |-lv 0 / n /\ 0 / n' : ok
 
     |-lv l / n /\ l' / n' : ok
-    ------------------------------- :: step
+    ------------------------------ :: step
     |-lv S l / n /\ S l' / n' : ok
