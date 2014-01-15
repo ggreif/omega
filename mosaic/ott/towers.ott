@@ -43,6 +43,7 @@ grammar
   levs :: ls_ ::= {{ com level tower }}
        | lev / cnat    ::   :: steps     {{ com stepped }}
        | levs /\ levs' ::   :: inters    {{ com intersection }}
+       | L             ::   :: var       {{ com variable }}
        | lev '..' lev' :: S :: range     {{ com ranged }}
        | lev           :: S :: fromUp    {{ com from to the sky }}
 
@@ -139,8 +140,9 @@ defn
 
 
     ----------------- :: annotated
-    |-tw T0 # T1 : ok
+    |-tw T # T' : ok
 
-    |-tw T0 # T1 : ok
+         L ^ L''
+    |-tw T _ L # T' : ok
     ------------------------ :: refined
-    |-tw T0 # (T0 o T1) : ok
+    |-tw T _ L  # (T'' _ L'' o T') : ok
