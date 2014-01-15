@@ -148,11 +148,20 @@ defn
     |-tw T # T' : ok
 
          L ^ L''
+         T ~ T''
     |-tw T _ L # T' : ok
     ----------------------------------- :: refined
     |-tw T _ L  # (T'' _ L'' o T') : ok
 
          L' ^ L'''
+         T' ~ T'''
     |-tw T _ L  # (T'' _ L'' o T' _ L') : ok
     -------------------------------------------------------- :: reannotated
     |-tw T _ L  # ((T'' _ L'' # T''' _ L''') o T' _ L') : ok
+
+defns Juni :: '' ::=
+
+defn
+
+    T ~ T' :: :: unifies :: uni_ {{ com [[T]] unifies with [[T']] irrespective of level }} {{ tex [[T]] \sim [[T']] }} by
+
