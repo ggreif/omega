@@ -144,7 +144,7 @@ defn
     |-tw T : ok :: :: Tok :: Tok_ {{ tex \labeledjudge{tw} [[T]] }} by
 
 
-    ----------------- :: annotated
+    ---------------- :: annotated
     |-tw T # T' : ok
 
          L ^ L''
@@ -153,6 +153,6 @@ defn
     |-tw T _ L  # (T'' _ L'' o T') : ok
 
          L' ^ L'''
-    |-tw T _ L  # (T'' _ L'' o T') : ok
-    --------------------------------------------------- :: reannotated
-    |-tw T _ L  # ((T'' _ L'' # T''' _ L''') o T') : ok
+    |-tw T _ L  # (T'' _ L'' o T' _ L') : ok
+    -------------------------------------------------------- :: reannotated
+    |-tw T _ L  # ((T'' _ L'' # T''' _ L''') o T' _ L') : ok
