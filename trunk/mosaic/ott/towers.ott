@@ -51,7 +51,7 @@ grammar
     | *         ::   :: star  {{ com star }}
     | X         ::   :: var   {{ com variable }}
     | T T'      ::   :: appl  {{ com application }}
-    | T # T' ::   :: ann   {{ com annotation }}
+    | T # T'    ::   :: ann   {{ com annotation }}
     | T0 o T1   ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
     | T _ levs  ::   :: level {{ com levelled }} {{ tex [[T]]_{[[levs]]} }}
@@ -74,6 +74,10 @@ terminals :: 'terminals_' ::=
     | ^    ::   :: rises {{ tex \Rsh }}             {{ com reaches up }}
     | /    ::   :: steps {{ tex \shortmid }}        {{ com steps }}
     | /\   ::   :: inter {{ tex \cap }}             {{ com intersection }}
+
+parsing
+
+  T_ann <= T_level
 
 subrules
 
@@ -150,4 +154,4 @@ defn
          L' ^ L'''
     |-tw T _ L  # (T'' _ L'' o T') : ok
     --------------------------------------------------- :: reannotated
-    |-tw T _ L  # (((T'' _ L'') # (T''' _ L''')) o T') : ok
+    |-tw T _ L  # ((T'' _ L'' # T''' _ L''') o T') : ok
