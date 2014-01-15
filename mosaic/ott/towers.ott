@@ -78,6 +78,7 @@ terminals :: 'terminals_' ::=
 parsing
 
   T_ann <= T_level
+  T_tower <= T_level
 
 subrules
 
