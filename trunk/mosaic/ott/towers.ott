@@ -11,6 +11,8 @@ metavar typvar, X, F ::= {{ com type variable }}
 
 metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
 
+metavar levsvar, L {{ tex \mathcal{L} }} ::= {{ com tower variable }}
+
 metavar natvar, n {{ tex \imath }} ::= {{ com natural variable }}
 
 grammar
