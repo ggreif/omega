@@ -59,7 +59,7 @@ grammar
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
     | empty               ::   :: em     {{ com empty }}
-    | G , x : T           ::   :: vn     {{ com extension }}
+    | G , X : T           ::   :: vn     {{ com extension }}
     | G' o G              ::   :: refin  {{ com tower }}
 
 terminals :: 'terminals_' ::=
@@ -171,8 +171,17 @@ defn
 
 funs
   LevelUp ::=
+
 fun
   levs0 + ONE :: levs :: up {{ com a function of type $levs \rightarrow levs$, raising start level }} {{ tex \widehat{[[levs0]]} }}
 by
   l / utmost + ONE === S l / utmost
   l / S n + ONE === S l / n
+
+fun
+  G0 + ONE :: G :: Gup {{ com a function of type $\Gamma \rightarrow \Gamma$, raising start level where possible }} {{ tex \widehat{[[G0]]} }}
+by
+  empty + ONE === empty
+  G0 , X : T + ONE === G0 + ONE , X : T
+
+%  G , X : (T _ l / S n) + ONE === G + ONE , X : T _ l / S n + ONE
