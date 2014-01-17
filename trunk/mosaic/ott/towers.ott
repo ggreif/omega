@@ -172,7 +172,7 @@ defn
 funs
   LevelUp ::=
 fun
-  levs0 + ONE :: levs :: up {{ com a function of type levs $\rightarrow$ levs, raising start level }} {{ tex \widehat{[[levs0]]} }}
+  levs0 + ONE :: levs :: up {{ com a function of type $levs \rightarrow levs$, raising start level }} {{ tex \widehat{[[levs0]]} }}
 by
   l / utmost + ONE === S l / utmost
   l / S n + ONE === S l / n
