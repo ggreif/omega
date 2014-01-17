@@ -182,9 +182,11 @@ fun
   G0 + ONE :: G :: Gup {{ com a function of type $\Gamma \rightarrow \Gamma$, raising start level where possible }} {{ tex \widehat{[[G0]]} }}
 by
   empty + ONE === empty
-  G0 , X : T + ONE === G0 + ONE , X : T
 
 % {{ com drop binding }}
   G , X : (T _ l / 0) + ONE === G + ONE
+
 % {{ com raise binding of $[[X]]$ }}
-  G , X : (T _ l / S n) + ONE === G + ONE , X : T _ S l / n + ONE
+  G , X : (T _ l / S n) + ONE === G + ONE , X : T _ S l / n
+
+  G , X : (T _ l / utmost) + ONE === G + ONE , X : T _ S l / utmost
