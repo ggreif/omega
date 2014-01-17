@@ -184,4 +184,7 @@ by
   empty + ONE === empty
   G0 , X : T + ONE === G0 + ONE , X : T
 
-%  G , X : (T _ l / S n) + ONE === G + ONE , X : T _ l / S n + ONE
+% {{ com drop binding }}
+  G , X : (T _ l / 0) + ONE === G + ONE
+% {{ com raise binding of $[[X]]$ }}
+  G , X : (T _ l / S n) + ONE === G + ONE , X : T _ S l / n + ONE
