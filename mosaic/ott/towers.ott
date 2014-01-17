@@ -37,15 +37,15 @@ grammar
       | l             ::   :: lvar      {{ com variable }}
       | 0             ::   :: zero      {{ com zero }}
       | S lev         ::   :: raise     {{ com raise }}
-      | utmost        ::   :: Utmost    {{ com sky }}
+      | utmost        ::   :: utmost    {{ com sky }}
       | n             ::   :: nvar      {{ com nat variable }}
 
   levs :: ls_ ::= {{ com level tower }}
        | lev / cnat    ::   :: steps     {{ com stepped }}
        | levs /\ levs' ::   :: inters    {{ com intersection }}
        | L             ::   :: var       {{ com variable }}
-       | lev '..' lev' :: S :: range     {{ com ranged }}
-       | lev           :: S :: fromUp    {{ com from to the sky }}
+       | lev '..' lev' :: M :: range     {{ com ranged }}
+       | lev           :: S :: fromUp    {{ com from [[lev]] to the sky }}
 
   T :: T_ ::= {{ com type }}
     | *         ::   :: star  {{ com star }}
@@ -159,9 +159,20 @@ defn
     -------------------------------------------------------- :: reannotated
     |-tw T _ L  # ((T'' _ L'' # T''' _ L''') o T' _ L') : ok
 
+
+
+
 defns Juni :: '' ::=
 
 defn
 
     T ~ T' :: :: unifies :: uni_ {{ com [[T]] unifies with [[T']] irrespective of level }} {{ tex [[T]] \sim [[T']] }} by
 
+
+funs
+  LevelUp ::=
+fun
+  levs0 + ONE :: levs :: up {{ com a function of type levs -> levs }} {{ tex {[[levs0]]}^{0+1} }}
+by
+  l / utmost + ONE === S l / utmost
+  l / S n + ONE === S l / n
