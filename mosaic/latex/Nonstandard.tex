@@ -4,6 +4,10 @@
 
 \begin{document}
 
+% \newcommand{\compose}[1][2][3]{${\mathsf{#1, #2}}$}
+\newcommand{\compose}[3]{$#1{;_#2}#3$}
+\newcommand{\nsproduct}[3]{$(#1 + #2)(#3 + #2)$}
+
 \begin{abstract}
 In this short note we shall describe a curious connection
 between non-standard arithmetics and weak equivalences
@@ -62,8 +66,13 @@ and ${;_\beta}$.
 \section{Structure}
 This section's content...
 
-\subsection{The Correspondence}
-This subsection's content...
+\section{The Correspondence}
+
+Our idea is to map a context-annotated diagram composition \compose{f}{\alpha}{g}
+to the product formula \nsproduct{f}{\alpha}{g} where $\alpha$ is interpreted as
+an infinitesimal. By multiplication we obtain $fg+\alpha(f+g)$. Obviously the
+standard part is $fg$, encoding the composition, while the error term $\alpha(f+g)$
+absorbs the context dependence.
 
 \subsubsection{Article Information}
 This subsubsection's content...
