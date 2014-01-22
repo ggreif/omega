@@ -4,9 +4,9 @@
 
 \begin{document}
 
-% \newcommand{\compose}[1][2][3]{${\mathsf{#1, #2}}$}
 \newcommand{\compose}[3]{$#1{;_#2}#3$}
 \newcommand{\nsproduct}[3]{$(#1 + #2)(#3 + #2)$}
+\newcommand{\lie}[4]{$#1{_{[#3,#2]}}#4$}
 
 \begin{abstract}
 In this short note we shall describe a curious connection
@@ -77,7 +77,18 @@ absorbs the context dependence.
 We are interested in the universal cell that can be found between \compose{f}{\alpha}{g}
 and \compose{f}{\beta}{g}, however. To get a hold on it, we form the commutator, as the
 distance between \compose{f}{\alpha}{g} and \compose{f}{\beta}{g}:
-\[\nsproduct{f}{\beta}{g}-\nsproduct{f}{\alpha}{g}\]
+\nsproduct{f}{\beta}{g}-\nsproduct{f}{\alpha}{g}. This simplifies to $(\beta-\alpha)(f+g)$.
+
+Examining this latter term we observe that it is a product of a distance of infinitesimals
+and a sum of the standard number $f+g$. The first factor entitles us to regard this as a
+universal cell. By abuse of the lie-bracket notation we abbreviate this cell as
+\lie{f}{\alpha}{\beta}{g}.
+
+\subsection{Inverse}
+
+Obviously we expect the universal cell to have an inverse (up to a higher universal cell).
+
+
 
 \subsubsection{Article Information}
 This subsubsection's content...
