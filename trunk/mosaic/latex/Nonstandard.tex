@@ -32,16 +32,28 @@ and to weak equivalences in higher categories is due.
 
 Let $\alpha$ be a value $\neq 0$ with $\alpha^2 = 0$. Then
 our non-standard reals are a two-dimensional vector space
-inhabited by pairs $(s, i\alpha)$ with $s, i \from R$.
+inhabited by pairs $(s, i \alpha)$ with $s, i \in R$.
 
 We can recover the \emph{standard part} by applying the function
 ... 
-and the \emph{error term} as $nst (s, i\alpha) = v - st \over \alpha$
+and the \emph{error term} as $nst (s, i\alpha) = {v - st \over \alpha}$
 
 We also establish a multiplication on these vectors, making
 the vector space to a \emph{ring}.
 
 \subsection{Universality in higher categories}
+
+Composition in weak higher categories is only defined up to
+isomorphism. This includes identity morphisms, which can be
+seen as empty compositions. Fortunately where compositions
+are defined a higher cell is available to witness the isomorphism.
+
+We shall write $g \circ f$ and $f;g$ interchangably to stand for
+composition of diagrams.
+
+The strict equality between syntactically equal terms $f;g$ and $f;g$
+is rooted in the broken referential transparency of the monadic
+\emph{bind} operation.
 
 \section{Structure}
 This section's content...
