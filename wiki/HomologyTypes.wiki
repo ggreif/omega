@@ -447,10 +447,15 @@ Has somebody already embarked on visualizing (and/or topologizing) the lambda ca
 Visual canons in
   * (molecular) [http://arxiv.org/ftp/arxiv/papers/1307/1307.6360.pdf chemistry]
   * visual notations (UML?)
+  * electrical engineering (scematics, TMS74xxx digital circuits)
 
 Diagrams of moving 'particles/waves' in [https://www.cs.indiana.edu/~sabry/papers/rational.pdf negative and reciprocal types].
 
 Feynman diagrams. (Strings, Worldsheet)
+
+Operads
+  * in FRP, signals, boxes, [http://math.mit.edu/~dspivak/informatics/talks/CMU2014-01-23.pdf wiring diagrams]
+  * [http://video.ias.edu/pisgs/2013/1206-RalphKaufmann Feynman categories]
 
 Opetopes
   * [http://arxiv.org/pdf/0706.1033.pdf Long(-ish) introduction]
@@ -488,9 +493,9 @@ HomologyTypes: have the Y combinator, create the LambdaGraph for it, and compute
 Occurs check fails, but the type is finitely representable!
 
 == Acknowledgements ==
-to the blender guy --> artwork (+software)
-to the topologist (3-dim projective space)
-to the type theorist
+  * to the blender guy --> artwork (+software)
+  * to the topologist (3-dim projective space)
+  * to the type theorist
 
 = Bibliography =
 
