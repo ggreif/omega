@@ -48,10 +48,11 @@ A small demo
 > data St a = V a | A a | St a `J` St a
 
 > type VarSymbol s = Stuff KnownSymbol (V s)
+> type AtomSymbol s = Stuff KnownSymbol (A s)
 
 > demo, demo2 :: Hidden (Stuff KnownSymbol)
-> demo = Hide (Atom :: Stuff KnownSymbol (A "Hey")) <> Hide (Atom :: Stuff KnownSymbol (A "Du"))
-> demo2 = Hide (Var :: Stuff KnownSymbol (V "a")) <> Hide (Atom :: Stuff KnownSymbol (A "Du"))
+> demo = Hide (Atom :: AtomSymbol "Hey") <> Hide (Atom :: AtomSymbol "Du")
+> demo2 = Hide (Var :: VarSymbol "a") <> Hide (Atom :: AtomSymbol "Du")
 
 This corresponds to (Hey Du)
 
