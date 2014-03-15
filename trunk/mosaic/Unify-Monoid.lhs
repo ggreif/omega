@@ -85,9 +85,13 @@ here the vars that are free are tracked as k
 > instance FreeVars '[]
 > instance (KnownSymbol n, FreeVars ns) => FreeVars (n ': ns)
 
-> frees :: Stuff KnownSymbol s -> Hidden (Stuff FreeVars)
-> frees Atom = Hide (Atom :: Stuff FreeVars (A '[]))
-> frees Var = Hide (Var :: Stuff FreeVars (V '["heh?"]))
+> type family Frees (st :: St Symbol) :: St [Symbol] where
+>   Frees (A s) = A '[]
+>   Frees (V s) = V '[s]
+
+> frees :: Stuff KnownSymbol s -> Stuff FreeVars (Frees s)
+> frees Atom = Atom
+> frees Var = Var
 
 these will be binary (n-ary?) unifiers
 
