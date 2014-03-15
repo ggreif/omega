@@ -6,6 +6,7 @@
 > import GHC.TypeLits
 > import Data.Monoid
 > import Data.Proxy
+> import Data.Type.Equality(type (==), (:~:)(Refl))
 
 let's have stuff of this form:
 
@@ -31,6 +32,7 @@ Use the popular hiding trick
 This way it can form a Monoid
 
 > instance Monoid (Hidden (Stuff c)) where
+>   --mempty = Hide Var
 >   Hide a `mappend` Hide b = Hide $ a `Join` b
 
 A small demo
@@ -79,17 +81,34 @@ here the vars that are free are tracked as k
 
 > class FreeVars (l :: [Symbol])
 > instance FreeVars '[]
-> instance (KnownSymbol n, FreeVars ns) => FreeVars (n ': ns)
+> instance (KnownSymbol n, FreeVars ns, (n `In` ns) ~ '[]) => FreeVars (n ': ns)
 
 > type family Frees (st :: St Symbol) :: St [Symbol] where
->   Frees (A s) = A '[]
+>   Frees (A s) = V '[]
 >   Frees (V s) = V '[s]
+>   Frees (V s `J` V s') = V '[s, s']
 >   Frees (s `J` s') = Frees s `J` Frees s'
 
+> type family In (el :: k) (coll :: [k]) :: [k] where
+>   In a '[] = '[]
+>   In a (a ': as) = a ': In a as
+>   In b (a ': as) = In b as
+
+> --try :: Stuff KnownSymbol s -> Stuff FreeVars ss -> Maybe (Stuff FreeVars (s ': ss))
+> --try Var 
+
+> join :: Stuff FreeVars (V '[a] `J` V '[b]) -> Maybe (FreeVars (V '[a, b]))
+> join a@Var b@Var = case prox a `sameSymbol` prox b of
+>                  Just Refl -> Nothing
+>                  Nothing -> undefined
+>   where prox :: Stuff FreeVars (V '[a]) -> Proxy a
+>         prox Var = Proxy
+
 > frees :: Stuff KnownSymbol s -> Stuff FreeVars (Frees s)
-> frees Atom = Atom
+> frees Atom = Var
 > frees Var = Var
-> frees (a `Join` b) = frees a `Join` frees b
+> --frees (a `Join` b) = frees a `Join` frees b
+> frees (Var `Join` Var) = Var
 
 these will be binary (n-ary?) unifiers
 
