@@ -36,10 +36,11 @@ This way it can form a Monoid
 
 A small demo
 
-> class KnownSymbol (s :: Symbol)
+> {-class KnownSymbol (s :: Symbol)
 > instance KnownSymbol "Hey"
 > instance KnownSymbol "Du"
 > instance KnownSymbol "a"
+> -}
 
 > demo, demo2 :: Hidden (Stuff KnownSymbol)
 > demo = Hide (Atom :: Stuff KnownSymbol "Hey") <> Hide (Atom :: Stuff KnownSymbol "Du")
@@ -48,6 +49,15 @@ A small demo
 This corresponds to (Hey Du)
 
 TODO: need show instance
+
+> go :: Stuff a b -> String
+> go Atom = "Atom"
+
+> instance Show (Hidden (Stuff KnownSymbol)) where
+>   show (Hide x) = go x where
+>                 go :: Stuff a b -> String
+>                 go Atom = "Atom"
+>                 go (l `Join` r) = go l ++ " `Join` " ++ go r
 
 Then we can try unify stuff, obtaining other stuff
 here the vars that are free are tracked as k
