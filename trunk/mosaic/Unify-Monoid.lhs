@@ -3,6 +3,7 @@
 > import GHC.Exts
 > import GHC.TypeLits
 > import Data.Monoid
+> import Data.Proxy
 
 let's have stuff of this form:
 
@@ -48,16 +49,15 @@ A small demo
 
 This corresponds to (Hey Du)
 
-TODO: need show instance
-
-> go :: Stuff a b -> String
-> go Atom = "Atom"
-
 > instance Show (Hidden (Stuff KnownSymbol)) where
 >   show (Hide x) = go x where
->                 go :: Stuff a b -> String
->                 go Atom = "Atom"
+>                 go :: Stuff KnownSymbol s -> String
+>                 go a@Atom = "(Atom :: Stuff KnownSymbol " ++ show (SomeSymbol $ some a) ++ ")"
+>                 go v@Var = "(Var :: Stuff KnownSymbol " ++ show (SomeSymbol $ some v) ++ ")"
 >                 go (l `Join` r) = go l ++ " `Join` " ++ go r
+>                 some :: Stuff KnownSymbol s -> Proxy s
+>                 some Atom = Proxy
+>                 some Var = Proxy
 
 Then we can try unify stuff, obtaining other stuff
 here the vars that are free are tracked as k
