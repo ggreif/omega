@@ -1,6 +1,6 @@
 
 > {-# LANGUAGE TypeFamilies, DataKinds, PolyKinds, GADTs, ConstraintKinds, FlexibleInstances
->            , TypeOperators, MultiParamTypeClasses, UndecidableInstances, FlexibleContexts #-}
+>            , TypeOperators #-}
 
 > import GHC.Exts
 > import GHC.TypeLits
@@ -9,15 +9,11 @@
 
 let's have stuff of this form:
 
-> data Stuff' :: (k -> Constraint) -> St k -> * where
->   Atom' :: Known c (A k) => Stuff' c (A k)
-
-
-> data Stuff :: (k -> Constraint) -> k -> * where
+> data Stuff :: (k -> Constraint) -> St k -> * where
 
 Stuff can be atomic
 
->   Atom :: c k => Stuff c k
+>   Atom :: c k => Stuff c (A k)
 
 or joined
 
@@ -25,11 +21,11 @@ or joined
 
 and then there are variables
 
->   Var :: c k => Stuff c k
+>   Var :: c k => Stuff c (V k)
 
 We did not say what Join (on the type level) is
 
-> type family Join (c :: k -> Constraint) (a :: k) (a' :: k) :: k
+> type family Join (c :: k -> Constraint) (a :: St k) (a' :: St k) :: St k
 
 Use the popular hiding trick
 
@@ -49,25 +45,23 @@ A small demo
 > instance KnownSymbol "a"
 > -}
 
-> data St a = V a | A a
+> data St a = V a | A a | St a `J` St a
 
-> class Known (crit :: a -> Constraint) (st :: St a)
-> instance crit s => Known crit (A s)
-> instance KnownSymbol s => Known KnownSymbol (V s)
+> type VarSymbol s = Stuff KnownSymbol (V s)
 
 > demo, demo2 :: Hidden (Stuff KnownSymbol)
-> demo = Hide (Atom :: Stuff KnownSymbol "Hey") <> Hide (Atom :: Stuff KnownSymbol "Du")
-> demo2 = Hide (Var :: Stuff KnownSymbol "a") <> Hide (Atom :: Stuff KnownSymbol "Du")
+> demo = Hide (Atom :: Stuff KnownSymbol (A "Hey")) <> Hide (Atom :: Stuff KnownSymbol (A "Du"))
+> demo2 = Hide (Var :: Stuff KnownSymbol (V "a")) <> Hide (Atom :: Stuff KnownSymbol (A "Du"))
 
 This corresponds to (Hey Du)
 
 > instance Show (Hidden (Stuff KnownSymbol)) where
 >   show (Hide x) = go x where
->                 go :: Stuff KnownSymbol s -> String
->                 go a@Atom = "(Atom :: Stuff KnownSymbol " ++ show (SomeSymbol $ some a) ++ ")"
->                 go v@Var = "(Var :: Stuff KnownSymbol " ++ show (SomeSymbol $ some v) ++ ")"
+>                 go :: Stuff KnownSymbol ss -> String
+>                 go a@Atom = "(Atom :: AtomSymbol " ++ show (SomeSymbol $ some a) ++ ")"
+>                 go v@Var = "(Var :: VarSymbol " ++ show (SomeSymbol $ some v) ++ ")"
 >                 go (l `Join` r) = go l ++ " `Join` " ++ go r
->                 some :: Stuff KnownSymbol s -> Proxy s
+>                 some :: Stuff KnownSymbol (x s) -> Proxy s
 >                 some Atom = Proxy
 >                 some Var = Proxy
 
@@ -91,8 +85,8 @@ here the vars that are free are tracked as k
 > instance (KnownSymbol n, FreeVars ns) => FreeVars (n ': ns)
 
 > frees :: Stuff KnownSymbol s -> Hidden (Stuff FreeVars)
-> frees Atom = Hide (Atom :: Stuff FreeVars '[])
-> frees Var = Hide (Atom :: Stuff FreeVars '["heh?"])
+> frees Atom = Hide (Atom :: Stuff FreeVars (A '[]))
+> frees Var = Hide (Atom :: Stuff FreeVars (A '["heh?"]))
 
 these will be binary (n-ary?) unifiers
 
