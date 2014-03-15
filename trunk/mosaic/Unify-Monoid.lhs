@@ -17,15 +17,11 @@ Stuff can be atomic
 
 or joined
 
->   Join :: Stuff c k -> Stuff c k' -> Stuff c (Join c k k')
+>   Join :: Stuff c k -> Stuff c k' -> Stuff c (k `J` k')
 
 and then there are variables
 
 >   Var :: c k => Stuff c (V k)
-
-We did not say what Join (on the type level) is
-
-> type family Join (c :: k -> Constraint) (a :: St k) (a' :: St k) :: St k
 
 Use the popular hiding trick
 
@@ -88,10 +84,12 @@ here the vars that are free are tracked as k
 > type family Frees (st :: St Symbol) :: St [Symbol] where
 >   Frees (A s) = A '[]
 >   Frees (V s) = V '[s]
+>   Frees (s `J` s') = Frees s `J` Frees s'
 
 > frees :: Stuff KnownSymbol s -> Stuff FreeVars (Frees s)
 > frees Atom = Atom
 > frees Var = Var
+> frees (a `Join` b) = frees a `Join` frees b
 
 these will be binary (n-ary?) unifiers
 
