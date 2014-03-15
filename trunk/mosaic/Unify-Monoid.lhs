@@ -1,5 +1,7 @@
 
-> {-# LANGUAGE TypeFamilies, DataKinds, PolyKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
+> {-# LANGUAGE TypeFamilies, DataKinds, PolyKinds, GADTs, ConstraintKinds, FlexibleInstances
+>            , TypeOperators #-}
+
 > import GHC.Exts
 > import GHC.TypeLits
 > import Data.Monoid
@@ -75,6 +77,12 @@ Then we can try unify stuff, obtaining other stuff
 here the vars that are free are tracked as k
 
 > class FreeVars (l :: [Symbol])
+> instance FreeVars '[]
+> instance (KnownSymbol n, FreeVars ns) => FreeVars (n ': ns)
+
+> frees :: Stuff KnownSymbol s -> Hidden (Stuff FreeVars)
+> frees Atom = Hide (Atom :: Stuff FreeVars '[])
+> frees Var = Hide (Atom :: Stuff FreeVars '["heh?"])
 
 these will be binary (n-ary?) unifiers
 
