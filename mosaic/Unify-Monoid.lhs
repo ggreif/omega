@@ -59,6 +59,18 @@ This corresponds to (Hey Du)
 >                 some Atom = Proxy
 >                 some Var = Proxy
 
+> {-NOT NOW! instance Show (Hidden (Stuff KnownSymbol)) where
+>   showsPrec p (Hide x) = go p x where
+>                 go :: Int -> Stuff KnownSymbol s -> ShowS
+>                 go p a@Atom = "(Atom :: Stuff KnownSymbol " ++ show (SomeSymbol $ some a) ++ ")"
+>                 go p v@Var = "(Var :: Stuff KnownSymbol " ++ show (SomeSymbol $ some v) ++ ")"
+>                 go p (l `Join` r) = go l ++ " `Join` " ++ go r
+>                 some :: Stuff KnownSymbol s -> Proxy s
+>                 some Atom = Proxy
+>                 some Var = Proxy-}
+
+
+
 Then we can try unify stuff, obtaining other stuff
 here the vars that are free are tracked as k
 
