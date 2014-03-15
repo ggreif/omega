@@ -87,7 +87,7 @@ here the vars that are free are tracked as k
 
 > frees :: Stuff KnownSymbol s -> Hidden (Stuff FreeVars)
 > frees Atom = Hide (Atom :: Stuff FreeVars (A '[]))
-> frees Var = Hide (Atom :: Stuff FreeVars (A '["heh?"]))
+> frees Var = Hide (Var :: Stuff FreeVars (V '["heh?"]))
 
 these will be binary (n-ary?) unifiers
 
