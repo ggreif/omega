@@ -1,6 +1,6 @@
 
 > {-# LANGUAGE TypeFamilies, DataKinds, PolyKinds, GADTs, ConstraintKinds, FlexibleInstances
->            , TypeOperators #-}
+>            , TypeOperators, MultiParamTypeClasses, UndecidableInstances, FlexibleContexts #-}
 
 > import GHC.Exts
 > import GHC.TypeLits
@@ -8,6 +8,10 @@
 > import Data.Proxy
 
 let's have stuff of this form:
+
+> data Stuff' :: (k -> Constraint) -> St k -> * where
+>   Atom' :: Known c (A k) => Stuff' c (A k)
+
 
 > data Stuff :: (k -> Constraint) -> k -> * where
 
@@ -44,6 +48,12 @@ A small demo
 > instance KnownSymbol "Du"
 > instance KnownSymbol "a"
 > -}
+
+> data St a = V a | A a
+
+> class Known (crit :: a -> Constraint) (st :: St a)
+> instance crit s => Known crit (A s)
+> instance KnownSymbol s => Known KnownSymbol (V s)
 
 > demo, demo2 :: Hidden (Stuff KnownSymbol)
 > demo = Hide (Atom :: Stuff KnownSymbol "Hey") <> Hide (Atom :: Stuff KnownSymbol "Du")
