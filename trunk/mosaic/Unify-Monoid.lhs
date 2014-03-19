@@ -1,6 +1,6 @@
 
 > {-# LANGUAGE TypeFamilies, DataKinds, PolyKinds, GADTs, ConstraintKinds, FlexibleInstances
->            , TypeOperators #-}
+>            , TypeOperators, FlexibleContexts #-}
 
 > import GHC.Exts
 > import GHC.TypeLits
@@ -79,7 +79,12 @@ This corresponds to (Hey Du)
 Then we can try unify stuff, obtaining other stuff
 here the vars that are free are tracked as k
 
-> class FreeVars (l :: [Symbol])
+> data SingList :: [k] -> * where
+>   Nil :: SingList '[]
+>   Cons :: proxy n -> SingList ns -> SingList (n ': ns)
+
+> class FreeVars (l :: [Symbol]) where
+>   ell :: SingList l
 > instance FreeVars '[]
 > instance (KnownSymbol n, FreeVars ns, (n `In` ns) ~ '[]) => FreeVars (n ': ns)
 
@@ -97,8 +102,15 @@ here the vars that are free are tracked as k
 > --try :: Stuff KnownSymbol s -> Stuff FreeVars ss -> Maybe (Stuff FreeVars (s ': ss))
 > --try Var 
 
-> join :: Stuff FreeVars (V '[a] `J` V '[b]) -> Maybe (FreeVars (V '[a, b]))
-> join a@Var b@Var = case prox a `sameSymbol` prox b of
+> {-
+> data FreeLike :: [Symbol] -> * where
+>   Empty :: FreeLike '[]
+>   Can :: FreeVars (n ': ns) => FreeLike ns -> FreeLike (n ': ns)
+>   Can't :: KnownSymbol n => FreeLike ns -> FreeLike (n ': ns)
+> -}
+
+> join :: Stuff FreeVars (V '[a] `J` V '[b]) -> Maybe (Stuff FreeVars (V '[a, b]))
+> join (a@Var `Join` b@Var) = case prox a `sameSymbol` prox b of
 >                  Just Refl -> Nothing
 >                  Nothing -> undefined
 >   where prox :: Stuff FreeVars (V '[a]) -> Proxy a
