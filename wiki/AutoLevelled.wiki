@@ -150,7 +150,8 @@ foo :: Bar^3 -- pick the one under *3
   # http://code.google.com/p/omega/source/browse/trunk/tests/Progress.prg
   # http://personal.cis.strath.ac.uk/~conor/pub/she/fun/talk.pdf
   # [http://web.cecs.pdx.edu/~sheard/papers/GADT+ExtKinds.ps GADTs + Extensible Kinds = Dependent Programming by Sheard, Hook and Linger]
-  # [nax.googlecode.com/svn/trunk/draft/IFL12draft.pdf Programming with Term-Indexed Types in Nax by Ahn, Sheard, Fiore and Pitts]
+  # [http://nax.googlecode.com/svn/trunk/draft/IFL12draft.pdf Programming with Term-Indexed Types in Nax by Ahn, Sheard, Fiore and Pitts]
+  # [http://www.soi.city.ac.uk/~ross/papers/pts.pdf Parametricity and Dependent Types]
 
 ----
 = Examples =
