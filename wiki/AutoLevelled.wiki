@@ -151,8 +151,8 @@ foo :: Bar^3 -- pick the one under *3
   # http://personal.cis.strath.ac.uk/~conor/pub/she/fun/talk.pdf
   # [http://web.cecs.pdx.edu/~sheard/papers/GADT+ExtKinds.ps GADTs + Extensible Kinds = Dependent Programming by Sheard, Hook and Linger]
   # [http://nax.googlecode.com/svn/trunk/draft/IFL12draft.pdf Programming with Term-Indexed Types in Nax by Ahn, Sheard, Fiore and Pitts]
-  # [http://www.soi.city.ac.uk/~ross/papers/pts.pdf Parametricity and Dependent Types]
-
+  # [http://www.soi.city.ac.uk/~ross/papers/pts.pdf Parametricity and Dependent Types, by Bernardy, Jansson, Paterson]
+  # [http://www.iro.umontreal.ca/~monnier/comp-deptypes.pdf Monnier et al., Singleton Types Everywhere]
 ----
 = Examples =
 
