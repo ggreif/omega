@@ -84,9 +84,11 @@ here the vars that are free are tracked as k
 >   Cons :: proxy n -> SingList ns -> SingList (n ': ns)
 
 > class FreeVars (l :: [Symbol]) where
->   ell :: SingList l
+>   ell :: Maybe (SingList l)
+>   ell = Nothing
 > instance FreeVars '[]
-> instance (KnownSymbol n, FreeVars ns, (n `In` ns) ~ '[]) => FreeVars (n ': ns)
+> instance (KnownSymbol n, FreeVars ns, (n `In` ns) ~ '[]) => FreeVars (n ': ns) where
+>   ell = Nothing
 
 > type family Frees (st :: St Symbol) :: St [Symbol] where
 >   Frees (A s) = V '[]
