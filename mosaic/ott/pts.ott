@@ -13,4 +13,4 @@ grammar
 
 terminals :: 'terminals_' ::=
     | \   ::  :: lambda {{ tex \lambda }}              {{ com lambda }}
-    | \/  ::  :: forall {{ tex \forall }}              {{ com forall, a.k.a. Pi }} {{ tex forall, a.k.a. \Pi }}
+    | \/  ::  :: forall {{ tex \forall }}              {{ com forall, a.k.a. Pi }}
