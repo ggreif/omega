@@ -1,0 +1,11 @@
+% minimal + latex + comments
+
+grammar
+
+  T :: t_ ::= {{ com term }}
+    | C              ::   :: Const                     {{ com constant }}
+    | V              ::   :: Var                       {{ com variable }}
+    | T T'           ::   :: App                       {{ com application }}
+    | \ V : T . T'   ::   :: Abs                       {{ com abstraction }}
+    | \/ V : T . T'  ::   :: Space                     {{ com dependent function space }}
+
