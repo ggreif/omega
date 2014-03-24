@@ -197,3 +197,8 @@ They show how a `printf` partial evaluator can be built on top of this.
 = A Categorical Theory of Patches =
 
 very cool: http://arxiv.org/abs/1311.3903
+
+= Type inference by abstract rewriting =
+
+Stump et al. http://arxiv.org/pdf/1211.0865.pdf
+Discusses various meta-theoretic properties. Contains references to the initial technique.
