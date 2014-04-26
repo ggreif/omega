@@ -27,4 +27,6 @@ data Baz :: *1 ~> *1 where
   Howdy :: Baz b
 }}}
 
-This way we would get a user-defined four-level construct `Foo :: Bar Int :: Baz *0 :: *1`. Consequently `Foo` lives on the value (i.e. runtime) level.
+This way we would get a user-defined four-level construct `Foo :: Bar Int :: Baz *0 :: *1`. Consequently `Foo`, as well as `Quux`, lives on the value (i.e. runtime) level.
+
+Naturally, as I nest `data` declarations deeper and deeper I have to start at even higher kinds, as no definition can descend lower than the level of values.
