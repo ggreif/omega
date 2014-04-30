@@ -202,3 +202,7 @@ very cool: http://arxiv.org/abs/1311.3903
 
 Stump et al. http://arxiv.org/pdf/1211.0865.pdf
 Discusses various meta-theoretic properties. Contains references to the initial technique.
+
+= Contextual Categories =
+
+Lots of good stuff here: https://uf-ias-2012.wikispaces.com/Semantics+of+type+theory
