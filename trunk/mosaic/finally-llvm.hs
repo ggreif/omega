@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds, KindSignatures, MultiParamTypeClasses #-}
+{-# LANGUAGE DataKinds, KindSignatures, MultiParamTypeClasses
+           , GADTs #-}
 
 module FinallyLLVM where
 
@@ -21,6 +22,13 @@ class (LLVM repr, Monad m) => Block m (repr :: LLType -> *) where
 
 -- TEST
 
+-- a free-monad like thingy to implement Block
+data TB a where
+  Ret :: LLVM repr => repr a -> TB (repr a)
+  Bind :: LLVM repr => repr ty' -> (repr ty' -> m (repr ty)) -> TB (repr ty)
+
+instance Monad TB where
+  return = Ret
 
 t1 :: (LLVM repr, Block m repr) => m (repr 'Int)
 t1 = do
