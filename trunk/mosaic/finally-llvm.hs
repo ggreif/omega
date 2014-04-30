@@ -8,7 +8,7 @@ import Control.Applicative
 import Control.Monad (ap)
 
 
-data LLType = Int | Label Symbol | Nat `X` LLType
+data LLType = Void | Int | Label Symbol | Nat `X` LLType
 
 class LLVM (repr :: LLType -> *) where
   cnst :: Int -> repr 'Int
