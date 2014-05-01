@@ -4,7 +4,23 @@
 
 This is work of Carette et al.
 
-Oleg's tutorial is very good
+[http://okmij.org/ftp/tagless-final/course/lecture.pdf Oleg's tutorial] is very good
+
+Consider these identities:
+  * `type Empty = forall a . a`
+  * `type Empty' = forall a . () => a`
+  * `type Finally (c :: * -> Constraint) = forall a . c a => a; type Empty'' = Finally ()`
+  * `data Empty'''` (no constructors)
+
+To check the isomorphisms, we need to construct (round-trip) functions:
+
+{{{
+f2d :: Empty -> Empty'''
+f2d a = a
+
+d2f :: Empty''' -> Empty
+d2f = \case of {}
+}}}
 
 
 = Questions =
