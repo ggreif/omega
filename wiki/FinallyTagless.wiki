@@ -46,5 +46,5 @@ class LC (rep :: Nat -> *) where
   var :: rep n
   lam :: rep n -> rep n
   app :: rep n -> rep n -> rep n
-  annot rep n -> rep (n+1) -> rep n
+  annot :: rep n -> rep (n+1) -> rep n
 </code>
