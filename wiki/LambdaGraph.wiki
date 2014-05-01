@@ -128,3 +128,19 @@ by Lawall and Mairson
 
 Improving the Representation of Infinite Trees to Deal with Sets of Trees
 by Mauborgne
+
+= Extensions =
+
+Suppose we want to compare/unify two such graphs. Naturally, we'd put two search trees on top, and recursively walk down, comparing leaves, and nodes.
+
+Clearly, references encoding the same path unify, as do variables. Applications unify when some (non-normal) reduct - this should be nondeterministic reduction - unifies.
+
+But when two on-top variables unify, and we integrate the lhs and rhs graphs after the successful unification into a common graph, we have to be careful not to keep both variables around. Instead make a top-to-bottom reference.
+
+I am tempted to introduce a unification node (besides application nodes) to record successful (past) unifications. Reference paths crossing through unification nodes are then the eliminated variables.
+
+NB.: This seems to rhyme well with "equality types" of MLTT, where these are needed as a primitive.
+
+NB.: One could track intermediate reduction steps of the normalization process as on-top graphs connected by unification nodes.
+
+NB.: The defining equations of functional programs correspond to application nodes (e.g. `letrec`, context extension). Can unification nodes play this role too? How big is the overlap?
