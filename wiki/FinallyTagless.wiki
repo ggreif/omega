@@ -26,3 +26,17 @@ d2f = \case of {}
 = Questions =
 
 Can we encode structured graphs (esp. those which have PHOAS variables)?
+
+= Tinkering =
+
+Can I encode a multi-level lambda calculus in final tagless form?
+
+Let's try! What is the grammar?
+
+Term<n> ::= V<n> | App Term<n> Term<n> | Lam Term<n> | Annot Term<n> Term<n+1>
+
+_There is only ever only one variable in this calculus :-)_
+
+{{{
+
+}}}
