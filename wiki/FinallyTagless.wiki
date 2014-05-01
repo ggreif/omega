@@ -1,0 +1,12 @@
+#summary A very interesting encoding with pluriform interpretations.
+
+= Introduction =
+
+This is work of Carette et al.
+
+Oleg's tutorial is very good
+
+
+= Questions =
+
+Can we encode structured graphs (esp. those which have PHOAS variables)?
