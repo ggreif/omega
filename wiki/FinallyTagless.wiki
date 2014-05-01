@@ -40,6 +40,8 @@ _There is only ever only one variable in this calculus :-)_
 <code language=hs>
 class LC (rep :: Nat -> *) where
   star :: rep (2+n)
+  int :: rep (1+n)
+  cnst :: Int -> rep 1
   var :: rep n
   lam :: rep n -> rep n
   app :: rep n -> rep n -> rep n
