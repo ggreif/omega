@@ -52,3 +52,12 @@ class LC (rep :: Nat -> *) where
 
 Of course these should be split up in TypeLC{annot}, BuiltinLC{cnst, int, star}
 TypeLC should contain {{{typeof :: rep n -> rep (n+1)}}}.
+
+== Constructing `data` types ==
+
+The next complication is to construction of a user-defined data type with inhabitants
+{{{
+  dta :: String -> (rep (1+n), String -> rep n)
+}}}
+
+The first result is the new data type and the second a factory for the (nullary) inhabitants.
