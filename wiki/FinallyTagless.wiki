@@ -33,7 +33,7 @@ Can I encode a multi-level lambda calculus in final tagless form?
 
 Let's try! What is the grammar?
 
-Term<n> ::= Star<2+n> | V`<n>` | App Term`<n>` Term`<n>` | Lam Term`<n>` | Annot Term`<n>` Term`<n+1>`
+Term`<n>` ::= Star<2+n> | V`<n>` | App Term`<n>` Term`<n>` | Lam Term`<n>` | Annot Term`<n>` Term`<n+1>`
 
 _There is only ever only one variable in this calculus :-)_
 
@@ -41,6 +41,7 @@ _There is only ever only one variable in this calculus :-)_
 class LC (rep :: Nat -> *) where
   star :: rep (2+n)
   int :: rep (1+n)
+  arr :: rep (1+n) -> rep (1+n) -> rep (1+n)
   cnst :: Int -> rep 1
   var :: rep n
   lam :: rep n -> rep n
