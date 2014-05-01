@@ -51,4 +51,4 @@ class LC (rep :: Nat -> *) where
 </code>
 
 Of course these should be split up in TypeLC{annot}, BuiltinLC{cnst, int, star}
-TypeLC should contain {{{typeof :: rep n -> rep (n+1)
+TypeLC should contain {{{typeof :: rep n -> rep (n+1)}}}.
