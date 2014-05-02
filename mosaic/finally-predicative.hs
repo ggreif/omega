@@ -21,6 +21,20 @@ class BuiltinLC (rep :: Nat -> *) where
   int :: rep (S n)
   cnst :: Int -> rep Z
 
+-- ##############
+--     TypeOf
+-- ##############
+
+instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
+  var = T var
+  lam (T body) = T $ pi' body
+
+instance BuiltinLC rep => TypedLC (TypeOf rep) where
+  pi' _ = T star
+
+instance BuiltinLC rep => BuiltinLC (TypeOf rep) where
+  star = T star
+
 
 -- ## TESTS ##
 
@@ -64,13 +78,3 @@ instance TypedLC LString where
 newtype TypeOf (rep :: Nat -> *) (n :: Nat) = T { unT :: rep (S n) }
 
 deriving instance Show (rep (S n)) => Show (TypeOf rep n)
-
-instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
-  var = T var
-  lam (T body) = T $ pi' body
-
-instance BuiltinLC rep => TypedLC (TypeOf rep) where
-  pi' _ = T star
-
-instance BuiltinLC rep => BuiltinLC (TypeOf rep) where
-  star = T star
