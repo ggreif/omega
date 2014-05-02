@@ -33,7 +33,7 @@ newtype LString (n :: Nat) = L { unL :: String } deriving Show
 
 instance {-HasLevel (LString n) => -}LC LString where
   var = {-addLevel $-} L "?"
-  lam body = L $ "(\\" ++ unL body ++ ")"
+  lam body = L $ "(\\ " ++ unL body ++ ")"
   app e1 e2 = L $ "(" ++ unL e1 ++ " " ++ unL e2 ++ ")"
 
 class HasLevel p where
@@ -53,7 +53,7 @@ instance BuiltinLC LString where
   star = L "*"
 
 instance TypedLC LString where
-  --pi' -- TODO
+  pi' body = L $ "(|| " ++ unL body ++ ")"
 
 newtype TypeOf (rep :: Nat -> *) (n :: Nat) = T { unT :: rep (S n) }
 
@@ -65,3 +65,6 @@ instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
   pi' _ = T star
+
+instance BuiltinLC rep => BuiltinLC (TypeOf rep) where
+  star = T star
