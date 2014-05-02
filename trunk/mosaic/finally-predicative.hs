@@ -7,7 +7,21 @@ import Data.Function
 import Unsafe.Coerce
 
 data Nat = Z | S Nat
-data Cardinality = Finite | Infinite 
+data Cardinality = Finite | Infinite
+--data Tower = Tw Nat Nat
+
+--data Tw :: Cardinality -> Nat -> Nat -> * where
+--  Tw :: N Finite from -> N ord to -> Tw ord from to
+
+data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
+
+type family Up tw where
+  Up (Tw Finite n (S m)) = Tw Finite (S n) m
+  Up (Tw Infinite n (S m)) = Tw Infinite (S n) m
+
+up :: Tw ord from (S to) -> Tw ord (S from) to
+up (Tw n (S' m)) = Tw (S' n) m
+up (Tw n (Omega m)) = Tw (S' n) m
 
 data N :: Cardinality -> Nat -> * where
   Z' :: N Finite Z
