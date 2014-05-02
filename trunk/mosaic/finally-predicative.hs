@@ -8,16 +8,12 @@ import Unsafe.Coerce
 
 data Nat = Z | S Nat
 data Cardinality = Finite | Infinite
---data Tower = Tw Nat Nat
-
---data Tw :: Cardinality -> Nat -> Nat -> * where
---  Tw :: N Finite from -> N ord to -> Tw ord from to
 
 data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
 
-type family Up tw where
-  Up (Tw Finite n (S m)) = Tw Finite (S n) m
-  Up (Tw Infinite n (S m)) = Tw Infinite (S n) m
+--type family Up tw where
+--  Up (Tw Finite n (S m)) = Tw Finite (S n) m
+--  Up (Tw Infinite n (S m)) = Tw Infinite (S n) m
 
 up :: Tw ord from (S to) -> Tw ord (S from) to
 up (Tw n (S' m)) = Tw (S' n) m
@@ -37,7 +33,6 @@ pattern Omega o = O' o
 
 type Nat' n = N Finite n
 
---omega = fix (unsafeCoerce O' :: N Infinite Omega -> N Infinite Omega)
 omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
 
 test :: N Infinite (S n) -> N Infinite n
