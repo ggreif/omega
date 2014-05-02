@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
-           , UndecidableInstances, FlexibleInstances #-}
+           , UndecidableInstances, FlexibleInstances, OverloadedStrings #-}
+
+import Data.String
 
 data Nat = Z | S Nat
 
@@ -30,9 +32,11 @@ t3 :: (LC rep, BuiltinLC rep) => rep Z
 t3 = t1 `app` cnst 42
 
 newtype LString (n :: Nat) = L { unL :: String } deriving Show
+instance IsString (LString n) where
+  fromString = L
 
 instance {-HasLevel (LString n) => -}LC LString where
-  var = {-addLevel $-} L "?"
+  var = {-addLevel $-} "?"
   lam body = L $ "(\\ " ++ unL body ++ ")"
   app e1 e2 = L $ "(" ++ unL e1 ++ " " ++ unL e2 ++ ")"
 
@@ -42,17 +46,17 @@ class HasLevel p where
   level :: p -> Int
 
 instance HasLevel (LString Z) where
-  addLevel p = L $ unL p ++ "@" ++ (show . level) p
+  addLevel p = unL p ++ "@" ++ (show . level) p
   level _ = 0
 
 instance HasLevel (LString n) => HasLevel (LString (S n)) where
-  addLevel p = L $ unL p ++ "@" ++ (show . level) p
+  addLevel p = unL p ++ "@" ++ (show . level) p
   level _ = 1
 -}
 
 instance BuiltinLC LString where
   cnst i = L $ show i
-  star = L "*"
+  star = "*"
 
 instance TypedLC LString where
   pi' body = L $ "(|| " ++ unL body ++ ")"
