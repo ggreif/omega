@@ -1,9 +1,17 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
-           , UndecidableInstances, FlexibleInstances, OverloadedStrings #-}
+           , UndecidableInstances, FlexibleInstances, OverloadedStrings
+           , GADTs #-}
 
 import Data.String
+import GHC.Exts
 
 data Nat = Z | S Nat
+--data Cardinality = Finite | Infinite 
+
+data N :: Constraint -> Nat -> * where
+  Z' :: N () Z
+  S' :: N () n -> N () (S n)
+  Omega :: N (S n ~ n) n
 
 class LC (rep :: Nat -> *) where
   var :: rep n
