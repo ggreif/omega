@@ -13,7 +13,7 @@ class LC (rep :: Nat -> *) where
 class TypedLC (rep :: Nat -> *) where
   annot :: rep n -> rep (S n) -> rep n
   typeof :: rep n -> rep (S n)
-  arr :: rep (S n) -> rep (S n) -> rep (S n)
+  arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi'
   pi' :: rep (S n) -> rep (S n)
 
 class BuiltinLC (rep :: Nat -> *) where
@@ -34,6 +34,8 @@ instance BuiltinLC rep => TypedLC (TypeOf rep) where
 
 instance BuiltinLC rep => BuiltinLC (TypeOf rep) where
   star = T star
+  int = T star
+  cnst _ = T int
 
 
 -- ## TESTS ##
@@ -71,6 +73,7 @@ instance HasLevel (LString n) => HasLevel (LString (S n)) where
 instance BuiltinLC LString where
   cnst i = L $ show i
   star = "*"
+  int = "Int"
 
 instance TypedLC LString where
   pi' body = L $ "(|| " ++ unL body ++ ")"
