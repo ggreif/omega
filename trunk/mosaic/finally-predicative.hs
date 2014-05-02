@@ -53,7 +53,7 @@ instance BuiltinLC LString where
   star = L "*"
 
 instance TypedLC LString where
-  --pi
+  --pi' -- TODO
 
 newtype TypeOf (rep :: Nat -> *) (n :: Nat) = T { unT :: rep (S n) }
 
@@ -62,8 +62,3 @@ deriving instance Show (rep (S n)) => Show (TypeOf rep n)
 instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
   var = T var
   lam (T body) = T $ pi' body
-
--- ugly workaround to simulate Pi
---pi' :: rep (S n) -> rep n
---pi' :: rep (S n) -> rep (S n)
---pi' = undefined
