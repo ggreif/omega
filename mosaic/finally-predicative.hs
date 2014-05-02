@@ -38,25 +38,29 @@ omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
 test :: N Infinite (S n) -> N Infinite n
 test (Omega ii) = ii
 
-class LC (rep :: Nat -> *) where
-  var :: rep n
-  lam :: rep n -> rep n
-  app :: rep n -> rep n -> rep n
+class LC (rep :: Nat -> Nat -> *) where
+  var :: rep n m
+  lam :: rep n m -> rep n m
+  app :: rep n m -> rep n m -> rep n m -- FIX upper
 
-class TypedLC (rep :: Nat -> *) where
-  annot :: rep n -> rep (S n) -> rep n
-  typeof :: rep n -> rep (S n)
-  arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi'
-  pi' :: rep (S n) -> rep (S n)
+class TypedLC (rep :: Nat -> Nat -> *) where
+  annot :: rep n m -> rep (S n) m -> rep n m
+  typeof :: rep n (S m) -> rep (S n) m
+  --arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi'
+  pi' :: rep (S n) m -> rep (S n) m
 
-class BuiltinLC (rep :: Nat -> *) where
-  star :: rep (S (S n))
-  int :: rep (S n)
-  cnst :: Int -> rep Z
+class BuiltinLC (rep :: Nat -> Nat -> *) where
+  star :: rep (S (S n)) m
+  int :: rep (S n) m
+  cnst :: Int -> rep Z m
 
 -- ##############
 --     TypeOf
 -- ##############
+
+newtype TypeOf (rep :: Nat -> Nat -> *) (n :: Nat) (m :: Nat) = T { unT :: rep (S n) m }
+
+deriving instance Show (rep (S n) m) => Show (TypeOf rep n m)
 
 instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
   var = T var
@@ -73,15 +77,15 @@ instance BuiltinLC rep => BuiltinLC (TypeOf rep) where
 
 -- ## TESTS ##
 
-t1, t2 :: LC rep => rep Z
+t1, t2 :: LC rep => rep Z m
 t1 = lam var
 t2 = t1 `app` t1
 
-t3 :: (LC rep, BuiltinLC rep) => rep Z
+t3 :: (LC rep, BuiltinLC rep) => rep Z m
 t3 = t1 `app` cnst 42
 
-newtype LString (n :: Nat) = L { unL :: String } deriving Show
-instance IsString (LString n) where
+newtype LString (n :: Nat) (m :: Nat) = L { unL :: String } deriving Show
+instance IsString (LString n m) where
   fromString = L
 
 instance {-HasLevel (LString n) => -}LC LString where
@@ -111,6 +115,6 @@ instance BuiltinLC LString where
 instance TypedLC LString where
   pi' body = L $ "(|| " ++ unL body ++ ")"
 
-newtype TypeOf (rep :: Nat -> *) (n :: Nat) = T { unT :: rep (S n) }
 
-deriving instance Show (rep (S n)) => Show (TypeOf rep n)
+instance LC (Tw c) where
+  var = Tw undefined omega
