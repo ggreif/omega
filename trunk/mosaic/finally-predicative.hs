@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds, KindSignatures #-}
+{-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
+           , UndecidableInstances #-}
 
 data Nat = Z | S Nat
 
@@ -37,3 +38,11 @@ instance LC LString where
 instance BuiltinLC LString where
   cnst i = L $ show i
   star = L "*"
+
+newtype TypeOf (rep :: Nat -> *) (n :: Nat) = T { unT :: rep (S n) }
+
+deriving instance Show (rep (S n)) => Show (TypeOf rep n)
+
+instance LC rep => LC (TypeOf rep) where
+  var = T var
+  --lam body = lam (unT body)
