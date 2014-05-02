@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
-           , GADTs, PatternSynonyms #-}
+           , GADTs, PatternSynonyms, TypeFamilies #-}
 
 import Data.String
 import Data.Function
@@ -16,10 +16,14 @@ data N :: Cardinality -> Nat -> * where
 
 deriving instance Show (N c n)
 
+type family Omega where
+  Omega = S Omega
+
 pattern Omega o = O' o
 
 type Nat' n = N Finite n
 
+--omega = fix (unsafeCoerce O' :: N Infinite Omega -> N Infinite Omega)
 omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
 
 test :: N Infinite (S n) -> N Infinite n
