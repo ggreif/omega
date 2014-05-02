@@ -15,14 +15,14 @@ Consider these identities:
 
 To check the isomorphisms, we need to construct (round-trip) functions:
 
-<code language=hs>
+{{{
 {-# LANGUAGE RankNTypes, LambdaCase, EmptyCase #-}
 f2d :: Empty -> Empty'''
 f2d a = a
 
 d2f :: Empty''' -> Empty
-d2f = \case of {}
-</code>
+d2f = \case {}
+}}}
 
 
 = Questions =
