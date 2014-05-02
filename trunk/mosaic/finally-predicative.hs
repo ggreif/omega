@@ -3,24 +3,27 @@
            , GADTs #-}
 
 import Data.String
-import GHC.Exts
+--import GHC.Exts
 import Data.Function
 import Unsafe.Coerce
 
 data Nat = Z | S Nat
---data Cardinality = Finite | Infinite 
+data Cardinality = Finite | Infinite 
 
-data N :: Constraint -> Nat -> * where
-  Z' :: N () Z
-  S' :: N () n -> N () (S n)
+data N :: Cardinality -> Nat -> * where
+  Z' :: N Finite Z
+  S' :: N Finite n -> N Finite (S n)
+  O' :: N Infinite n -> N Infinite (S n)
 
 deriving instance Show (N c n)
 
-om :: N (S n ~ n) (S n)
-om = fix (unsafeCoerce S' :: N (S n ~ n) (S n) -> N (S n ~ n) (S n))
+type Nat' n = N Finite n
 
-test :: N (S n ~ n) (S n) -> N (S n ~ n) n
-test (S' ii) = ii
+--omega :: N Infinite (S n)
+omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
+
+test :: N Infinite (S n) -> N Infinite n
+test (O' ii) = ii
 
 class LC (rep :: Nat -> *) where
   var :: rep n
