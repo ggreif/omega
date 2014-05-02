@@ -57,4 +57,8 @@ deriving instance Show (rep (S n)) => Show (TypeOf rep n)
 
 instance LC rep => LC (TypeOf rep) where
   var = T var
-  --lam body = lam (unT body)
+  lam (T body) = T $ pi' body
+
+-- ugly workaround to simulate Pi
+pi' :: rep -> rep
+pi' = id
