@@ -4,6 +4,8 @@
 
 import Data.String
 import GHC.Exts
+import Data.Function
+import Unsafe.Coerce
 
 data Nat = Z | S Nat
 --data Cardinality = Finite | Infinite 
@@ -11,7 +13,19 @@ data Nat = Z | S Nat
 data N :: Constraint -> Nat -> * where
   Z' :: N () Z
   S' :: N () n -> N () (S n)
-  Omega :: N (S n ~ n) n
+  --Omega :: N (S n ~ n) n
+
+deriving instance Show (N c n)
+
+--om = fix (unsafeCoerce S' :: N (S n ~ n) n -> N (S n ~ n) n)
+om :: N () (S n)
+om = fix (unsafeCoerce S' :: N () (S n) -> N () (S n))
+
+ox :: N () (S n)
+ox = unsafeCoerce $ S (S Z)
+
+test :: N () (S n) -> N () n
+test (S' ii) = ii
 
 class LC (rep :: Nat -> *) where
   var :: rep n
