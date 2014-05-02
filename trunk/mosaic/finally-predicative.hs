@@ -62,3 +62,6 @@ deriving instance Show (rep (S n)) => Show (TypeOf rep n)
 instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
   var = T var
   lam (T body) = T $ pi' body
+
+instance BuiltinLC rep => TypedLC (TypeOf rep) where
+  pi' _ = T star
