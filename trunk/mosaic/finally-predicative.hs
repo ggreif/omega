@@ -9,6 +9,11 @@ import Unsafe.Coerce
 data Nat = Z | S Nat
 data Cardinality = Finite | Infinite
 
+-- Alternative: Use Maybe Nat for the storeys
+type family Climb (Maybe Nat) :: Maybe Nat where
+  Climb Nothing = Nothing
+  Climb (Just (S n)) = Just n
+
 data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
 
 --type family Up tw where
