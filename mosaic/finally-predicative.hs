@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
-           , GADTs #-}
+           , GADTs, PatternSynonyms #-}
 
 import Data.String
 import Data.Function
@@ -16,12 +16,14 @@ data N :: Cardinality -> Nat -> * where
 
 deriving instance Show (N c n)
 
+pattern Omega o = O' o
+
 type Nat' n = N Finite n
 
 omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
 
 test :: N Infinite (S n) -> N Infinite n
-test (O' ii) = ii
+test (Omega ii) = ii
 
 class LC (rep :: Nat -> *) where
   var :: rep n
