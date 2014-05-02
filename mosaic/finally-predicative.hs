@@ -3,7 +3,6 @@
            , GADTs #-}
 
 import Data.String
---import GHC.Exts
 import Data.Function
 import Unsafe.Coerce
 
@@ -18,8 +17,9 @@ data N :: Cardinality -> Nat -> * where
 deriving instance Show (N c n)
 
 type Nat' n = N Finite n
+type Omega = forall n . N Infinite (S n)
 
---omega :: N Infinite (S n)
+omega :: Omega
 omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
 
 test :: N Infinite (S n) -> N Infinite n
