@@ -12,6 +12,7 @@ class TypedLC (rep :: Nat -> *) where
   annot :: rep n -> rep (S n) -> rep n
   typeof :: rep n -> rep (S n)
   arr :: rep (S n) -> rep (S n) -> rep (S n)
+  pi' :: rep (S n) -> rep (S n)
 
 class BuiltinLC (rep :: Nat -> *) where
   star :: rep (S (S n))
@@ -51,14 +52,18 @@ instance BuiltinLC LString where
   cnst i = L $ show i
   star = L "*"
 
+instance TypedLC LString where
+  --pi
+
 newtype TypeOf (rep :: Nat -> *) (n :: Nat) = T { unT :: rep (S n) }
 
 deriving instance Show (rep (S n)) => Show (TypeOf rep n)
 
-instance LC rep => LC (TypeOf rep) where
+instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
   var = T var
   lam (T body) = T $ pi' body
 
 -- ugly workaround to simulate Pi
-pi' :: rep -> rep
-pi' = id
+--pi' :: rep (S n) -> rep n
+--pi' :: rep (S n) -> rep (S n)
+--pi' = undefined
