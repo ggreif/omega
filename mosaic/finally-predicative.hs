@@ -78,7 +78,7 @@ deriving instance Show (Nat' n)
 
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
-  --var :: rep Z Nothing
+  --var :: rep Z Nothing -- FIXME
   lam :: rep n m -> rep n m
   app :: rep n m -> rep n' m' -> rep (NatMax n n') (Min m m')
 
@@ -89,7 +89,7 @@ class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   pi' :: rep (S n) m -> rep (S n) m
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
-  star :: rep (S (S n)) Nothing
+  star :: rep (S (S n)) Nothing -- FIXME: S (S Z)
   int :: rep (S Z) Nothing
   io :: rep (S Z) UZ
   cnst :: Int -> rep Z Nothing
@@ -105,14 +105,16 @@ deriving instance Show (rep (S n) Nothing) => Show (TypeOf rep n m)
 instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
   var = T var
   lam (T body) = T $ pi' body
+  app (T f) (T e) = T $ f `app` e
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
   pi' _ = T star
 
-instance BuiltinLC rep => BuiltinLC (TypeOf rep) where
+instance (BuiltinLC rep, TypedLC rep) => BuiltinLC (TypeOf rep) where
   star = T star
   int = T star
   cnst _ = T int
+  io = T $ pi' star
 
 
 -- ## TESTS ##
