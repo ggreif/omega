@@ -15,6 +15,10 @@ type family Climb (n :: Maybe Nat) :: Maybe Nat where
   Climb Nothing = Nothing
   Climb (Just (S n)) = Just n
 
+type family Succ (n :: Maybe Nat) :: Maybe Nat where
+  Succ Nothing = Nothing
+  Succ (Just n) = Just (S n)
+
 type family Min (l :: Maybe Nat) (r :: Maybe Nat) :: Maybe Nat where
   Min Nothing r = r
   Min l Nothing = l
@@ -35,12 +39,12 @@ type family Norm (unat :: Maybe Nat) :: Maybe Nat where
 
 class Card (rep :: Maybe Nat -> *) where
   zero :: rep UZ
-  succ :: Norm (Climb p) ~ Norm s => rep p -> rep s
+  --succ :: Norm (Succ p) ~ Norm s => rep p -> rep s
+  succ :: rep p -> rep (Succ p)
 
 newtype UNatStr (sem :: Maybe Nat) = UNatStr String deriving Show
 instance Card UNatStr where
-  zero = UNatStr "0" -- :: UNatStr UZ
-  --zero = UNatStr "0" :: forall a . a ~ UZ => UNatStr a
+  zero = UNatStr "0"
   succ (UNatStr p) = UNatStr $ 'S' : p
 
 
