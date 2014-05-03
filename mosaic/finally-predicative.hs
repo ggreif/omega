@@ -26,8 +26,16 @@ type family NatMin (l :: Nat) (r :: Nat) :: Nat where
   NatMin l Z = Z
   NatMin (S l) (S r) = S (NatMin l r)
 
+type UNat = Maybe Nat
+type UZ = Just Z
+type Inf = Nothing
 
---class Card (rep :: 
+type family Norm (unat :: Maybe Nat) :: Maybe Nat where
+  Norm UZ = UZ
+  Norm Inf = Inf
+
+class Card (rep :: UNat -> *) where
+  zero :: Norm a ~ UZ => rep a
 
 data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
 
