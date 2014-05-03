@@ -80,7 +80,7 @@ class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
   --var :: rep Z Nothing
   lam :: rep n m -> rep n m
-  app :: rep n m -> rep n m -> rep n m -- FIX upper
+  app :: rep n m -> rep n' m' -> rep (NatMax n n') (Min m m')
 
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
@@ -116,7 +116,7 @@ instance BuiltinLC rep => BuiltinLC (TypeOf rep) where
 
 -- ## TESTS ##
 
-t1, t2 :: LC rep => rep Z m
+t1, t2 :: LC rep => rep Z Nothing
 t1 = lam var
 t2 = t1 `app` t1
 
