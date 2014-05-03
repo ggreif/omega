@@ -7,7 +7,7 @@ import Data.Function
 import Unsafe.Coerce
 import Prelude hiding (succ)
 
-data Nat = Z | S Nat
+data Nat = Z | S Nat deriving Show
 data Cardinality = Finite | Infinite
 
 -- Alternative: Use Maybe Nat for the storeys
@@ -79,9 +79,6 @@ data N :: Cardinality -> Nat -> * where
   O' :: N Infinite n -> N Infinite (S n)
 
 deriving instance Show (N c n)
-
-type family Omega where
-  Omega = S Omega
 
 pattern Omega o = O' o
 
