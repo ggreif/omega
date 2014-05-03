@@ -46,6 +46,19 @@ instance Card UNatStr where
   zero = UNatStr "0"
   succ (UNatStr p) = UNatStr $ 'S' : p
 
+data UNat (sem :: Maybe Nat) where
+  Ze :: UNat (Just Z)
+  Su :: UNat (Just n) -> UNat (Just (S n))
+  Inf :: UNat Nothing
+
+instance Card UNat where
+  zero = Ze
+  succ Ze = Su Ze
+  succ (Su a) = Su (Su a)
+  succ Inf = Inf
+
+deriving instance Show (UNat sem)
+
 
 data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
 
