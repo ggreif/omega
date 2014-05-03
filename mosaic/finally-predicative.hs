@@ -89,17 +89,18 @@ class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   pi' :: rep (S n) m -> rep (S n) m
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
-  star :: rep (S (S n)) m
-  int :: rep (S n) m
-  cnst :: Int -> rep Z m
+  star :: rep (S (S n)) Nothing
+  int :: rep (S Z) Nothing
+  io :: rep (S Z) UZ
+  cnst :: Int -> rep Z Nothing
 
 -- ##############
 --     TypeOf
 -- ##############
 
-newtype TypeOf (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) = T { unT :: rep (S n) (Climb m) }
+newtype TypeOf (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) = T (rep (S n) Nothing) -- So far all type-y result things are unbounded
 
-deriving instance Show (rep (S n) (Climb m)) => Show (TypeOf rep n m)
+deriving instance Show (rep (S n) Nothing) => Show (TypeOf rep n m)
 
 instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
   var = T var
@@ -120,8 +121,11 @@ t1, t2 :: LC rep => rep Z Nothing
 t1 = lam var
 t2 = t1 `app` t1
 
-t3 :: (LC rep, BuiltinLC rep) => rep Z m
+t3 :: (LC rep, BuiltinLC rep) => rep Z Nothing
 t3 = t1 `app` cnst 42
+
+t4 :: (LC rep, BuiltinLC rep) => rep (S Z) UZ
+t4 = io `app` int
 
 newtype LString (n :: Nat) (m :: Maybe Nat) = L { unL :: String } deriving Show
 instance IsString (LString n m) where
@@ -150,6 +154,7 @@ instance BuiltinLC LString where
   cnst i = L $ show i
   star = "*"
   int = "Int"
+  io = "IO"
 
 instance TypedLC LString where
   pi' body = L $ "(|| " ++ unL body ++ ")"
