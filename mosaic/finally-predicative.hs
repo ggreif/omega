@@ -19,7 +19,15 @@ type family Min (l :: Maybe Nat) (r :: Maybe Nat) :: Maybe Nat where
   Min l Nothing = l
   Min (Just Z) r = Just Z
   Min l (Just Z) = Just Z
-  Min (Just (S l)) (Just (S r)) = Just (S (Min (Just l) (Just r)))
+  Min (Just (S l)) (Just (S r)) = Just (S (NatMin l r))
+
+type family NatMin (l :: Nat) (r :: Nat) :: Nat where
+  NatMin Z r = Z
+  NatMin l Z = Z
+  NatMin (S l) (S r) = S (NatMin l r)
+
+
+--class Card (rep :: 
 
 data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
 
@@ -129,4 +137,4 @@ instance TypedLC LString where
 
 
 instance LC (Tw c) where
-  var = Tw undefined omega
+  --var = Tw undefined omega
