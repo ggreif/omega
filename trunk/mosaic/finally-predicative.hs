@@ -1,10 +1,11 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
-           , GADTs, PatternSynonyms, TypeFamilies #-}
+           , GADTs, PatternSynonyms, TypeFamilies, RankNTypes #-}
 
 import Data.String
 import Data.Function
 import Unsafe.Coerce
+import Prelude hiding (succ)
 
 data Nat = Z | S Nat
 data Cardinality = Finite | Infinite
@@ -26,16 +27,22 @@ type family NatMin (l :: Nat) (r :: Nat) :: Nat where
   NatMin l Z = Z
   NatMin (S l) (S r) = S (NatMin l r)
 
-type UNat = Maybe Nat
 type UZ = Just Z
-type Inf = Nothing
 
 type family Norm (unat :: Maybe Nat) :: Maybe Nat where
   Norm UZ = UZ
-  Norm Inf = Inf
+  Norm Nothing = Nothing
 
-class Card (rep :: UNat -> *) where
+class Card (rep :: Maybe Nat -> *) where
   zero :: Norm a ~ UZ => rep a
+  succ :: Norm (Climb p) ~ Norm s => rep p -> rep s
+
+newtype UNatStr (sem :: Maybe Nat) = UNatStr String
+instance Card UNatStr where
+  --zero = UNatStr "0" :: UNatStr UZ
+  zero = UNatStr "0" :: forall a . a ~ UZ => UNatStr a
+  succ (UNatStr p) = UNatStr $ 'S' : p
+
 
 data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
 
