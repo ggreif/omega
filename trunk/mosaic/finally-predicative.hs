@@ -8,7 +8,6 @@ import Unsafe.Coerce
 import Prelude hiding (succ)
 
 data Nat = Z | S Nat deriving Show
-data Cardinality = Finite | Infinite
 
 -- Alternative: Use Maybe Nat for the storeys
 type family Climb (n :: Maybe Nat) :: Maybe Nat where
@@ -31,11 +30,12 @@ type family NatMin (l :: Nat) (r :: Nat) :: Nat where
   NatMin l Z = Z
   NatMin (S l) (S r) = S (NatMin l r)
 
-type UZ = Just Z
+type family NatMax (l :: Nat) (r :: Nat) :: Nat where
+  NatMax Z r = r
+  NatMax l Z = l
+  NatMax (S l) (S r) = S (NatMax l r)
 
-type family Norm (unat :: Maybe Nat) :: Maybe Nat where
-  Norm UZ = UZ
-  Norm Nothing = Nothing
+type UZ = Just Z
 
 class Card (rep :: Maybe Nat -> *) where
   infty :: rep Nothing
@@ -62,12 +62,7 @@ instance Card UNat where
 
 deriving instance Show (UNat sem)
 
-
-data Tw (from :: Nat) (to :: Maybe Nat) = Tw (N Finite from) (UNat to) deriving Show
-
---type family Up tw where
---  Up (Tw Finite n (S m)) = Tw Finite (S n) m
---  Up (Tw Infinite n (S m)) = Tw Infinite (S n) m
+data Tw (from :: Nat) (to :: Maybe Nat) = Tw (Nat' from) (UNat to) deriving Show
 
 up :: Tw from to -> Tw (S from) (Climb to)
 up (Tw n m) = Tw (S' n) (pred m)
@@ -75,21 +70,11 @@ up (Tw n m) = Tw (S' n) (pred m)
         pred Inf = Inf
         pred (Su p) = p
 
-data N :: Cardinality -> Nat -> * where
-  Z' :: N Finite Z
-  S' :: N Finite n -> N Finite (S n)
-  --O' :: N Infinite n -> N Infinite (S n)
+data Nat' :: Nat -> * where
+  Z' :: Nat' Z
+  S' :: Nat' n -> Nat' (S n)
 
-deriving instance Show (N c n)
-
---pattern Omega o = O' o
-
-type Nat' n = N Finite n
-
--- omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
-
---test :: N Infinite (S n) -> N Infinite n
---test (Omega ii) = ii
+deriving instance Show (Nat' n)
 
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
