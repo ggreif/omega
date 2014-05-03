@@ -10,16 +10,16 @@ data Nat = Z | S Nat
 data Cardinality = Finite | Infinite
 
 -- Alternative: Use Maybe Nat for the storeys
-type family Climb (Maybe Nat) :: Maybe Nat where
+type family Climb (n :: Maybe Nat) :: Maybe Nat where
   Climb Nothing = Nothing
   Climb (Just (S n)) = Just n
 
-type family Min (Maybe Nat) (Maybe Nat) :: Maybe Nat where
+type family Min (l :: Maybe Nat) (r :: Maybe Nat) :: Maybe Nat where
   Min Nothing r = r
   Min l Nothing = l
   Min (Just Z) r = Just Z
   Min l (Just Z) = Just Z
-  Min (Just (S l) (Just (S r)) = Just (S (Min (Just l) (Just r)))
+  Min (Just (S l)) (Just (S r)) = Just (S (Min (Just l) (Just r)))
 
 data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
 
