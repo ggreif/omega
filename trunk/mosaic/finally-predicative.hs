@@ -38,11 +38,13 @@ type family Norm (unat :: Maybe Nat) :: Maybe Nat where
   Norm Nothing = Nothing
 
 class Card (rep :: Maybe Nat -> *) where
+  infty :: rep Nothing
   zero :: rep UZ
   succ :: rep p -> rep (Succ p)
 
 newtype UNatStr (sem :: Maybe Nat) = UNatStr String deriving Show
 instance Card UNatStr where
+  infty = UNatStr "oo"
   zero = UNatStr "0"
   succ (UNatStr p) = UNatStr $ 'S' : p
 
@@ -52,6 +54,7 @@ data UNat (sem :: Maybe Nat) where
   Inf :: UNat Nothing
 
 instance Card UNat where
+  infty = Inf
   zero = Ze
   succ Ze = Su Ze
   succ (Su a) = Su (Su a)
