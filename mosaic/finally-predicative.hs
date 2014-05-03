@@ -63,44 +63,47 @@ instance Card UNat where
 deriving instance Show (UNat sem)
 
 
-data Tw (ord :: Cardinality) (from :: Nat) (to :: Nat) = Tw (N Finite from) (N ord to) deriving Show
+data Tw (from :: Nat) (to :: Maybe Nat) = Tw (N Finite from) (UNat to) deriving Show
 
 --type family Up tw where
 --  Up (Tw Finite n (S m)) = Tw Finite (S n) m
 --  Up (Tw Infinite n (S m)) = Tw Infinite (S n) m
 
-up :: Tw ord from (S to) -> Tw ord (S from) to
-up (Tw n (S' m)) = Tw (S' n) m
-up (Tw n (Omega m)) = Tw (S' n) m
+up :: Tw from to -> Tw (S from) (Climb to)
+up (Tw n m) = Tw (S' n) (pred m)
+  where pred :: UNat m -> UNat (Climb m)
+        pred Inf = Inf
+        pred (Su p) = p
 
 data N :: Cardinality -> Nat -> * where
   Z' :: N Finite Z
   S' :: N Finite n -> N Finite (S n)
-  O' :: N Infinite n -> N Infinite (S n)
+  --O' :: N Infinite n -> N Infinite (S n)
 
 deriving instance Show (N c n)
 
-pattern Omega o = O' o
+--pattern Omega o = O' o
 
 type Nat' n = N Finite n
 
-omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
+-- omega = fix (unsafeCoerce O' :: N Infinite (S n) -> N Infinite (S n))
 
-test :: N Infinite (S n) -> N Infinite n
-test (Omega ii) = ii
+--test :: N Infinite (S n) -> N Infinite n
+--test (Omega ii) = ii
 
-class LC (rep :: Nat -> Nat -> *) where
+class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
+  --var :: rep Z Nothing
   lam :: rep n m -> rep n m
   app :: rep n m -> rep n m -> rep n m -- FIX upper
 
-class TypedLC (rep :: Nat -> Nat -> *) where
+class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
-  typeof :: rep n (S m) -> rep (S n) m
+  typeof :: rep n m -> rep (S n) (Climb m)
   --arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi'
   pi' :: rep (S n) m -> rep (S n) m
 
-class BuiltinLC (rep :: Nat -> Nat -> *) where
+class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
   star :: rep (S (S n)) m
   int :: rep (S n) m
   cnst :: Int -> rep Z m
@@ -109,9 +112,9 @@ class BuiltinLC (rep :: Nat -> Nat -> *) where
 --     TypeOf
 -- ##############
 
-newtype TypeOf (rep :: Nat -> Nat -> *) (n :: Nat) (m :: Nat) = T { unT :: rep (S n) m }
+newtype TypeOf (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) = T { unT :: rep (S n) (Climb m) }
 
-deriving instance Show (rep (S n) m) => Show (TypeOf rep n m)
+deriving instance Show (rep (S n) (Climb m)) => Show (TypeOf rep n m)
 
 instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
   var = T var
@@ -135,7 +138,7 @@ t2 = t1 `app` t1
 t3 :: (LC rep, BuiltinLC rep) => rep Z m
 t3 = t1 `app` cnst 42
 
-newtype LString (n :: Nat) (m :: Nat) = L { unL :: String } deriving Show
+newtype LString (n :: Nat) (m :: Maybe Nat) = L { unL :: String } deriving Show
 instance IsString (LString n m) where
   fromString = L
 
@@ -167,5 +170,5 @@ instance TypedLC LString where
   pi' body = L $ "(|| " ++ unL body ++ ")"
 
 
-instance LC (Tw c) where
-  --var = Tw undefined omega
+instance LC Tw where
+  var = Tw undefined undefined -- Inf
