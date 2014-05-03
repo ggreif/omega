@@ -39,7 +39,6 @@ type family Norm (unat :: Maybe Nat) :: Maybe Nat where
 
 class Card (rep :: Maybe Nat -> *) where
   zero :: rep UZ
-  --succ :: Norm (Succ p) ~ Norm s => rep p -> rep s
   succ :: rep p -> rep (Succ p)
 
 newtype UNatStr (sem :: Maybe Nat) = UNatStr String deriving Show
