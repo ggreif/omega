@@ -14,3 +14,25 @@ class MachModel arch => CallingConv [Loc arch] where
   -- calculate (stack) area
   -- etc.
 }}}
+
+== `Loc` can be ==
+
+  * Push for passing data
+  * Pop for passing results
+  * (:>) and (:<) for passing and returning in registers
+  * Cont for multiple returns (continuations)
+  * Preserve for declaring invariants
+
+These are typed locations
+
+(Should we model the PC, program counter?)
+
+== The types ==
+
+come from an architecture-specific universe (PPC, PPC64, PPC64le, x86, ARM, etc.)
+
+Haskell types map to these, and strictness is reflected in the types.
+
+== The registers ==
+
+These are architecture-specific too.
