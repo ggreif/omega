@@ -51,6 +51,13 @@ import "../tests/Nat.prg"
 --             At this point we are doing algebraic topology, and dealing with
 --             closed manifolds, so that we can do homology etc. on them.
 --             In logic this corresponds to relations, satisfiability.
+--             NB.: It is not enough to make O cartesian. I also need
+--                  a way to invoke specific inference rules from my logic.
+--                  I must be able to parse a tree into a semantics, i.e.
+--                  have binding stations, deBruijn/global references, 
+--                  punctuation, rule invocation etc. The key to all this
+--                  are non-occupied "binding stations" which encode the
+--                  additional linguistic stuff.
 
 -- Quoting: So far we have only dealt with data, i.e. quoted (inert) syntax.
 --          we need a way to convert this syntax to code (e.g. at some stage),
