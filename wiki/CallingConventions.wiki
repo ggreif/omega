@@ -3,7 +3,7 @@
 
 = Introduction =
 
-CCs are not types but constraints on them
+CCs are not types but constraints on them! See also the reversed direction [http://lambda-the-ultimate.org/node/3319 types are calling conventions].
 
 e.g. {{{'[Int :> R3, Bool :> CR0, Push Int, Push Bool] :: [Loc arch]}}}
 
