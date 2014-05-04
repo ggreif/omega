@@ -109,6 +109,7 @@ instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
   pi' _ = T star
+  --pi' body = body
 
 instance (BuiltinLC rep, TypedLC rep) => BuiltinLC (TypeOf rep) where
   star = T star
