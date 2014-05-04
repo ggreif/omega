@@ -17,8 +17,8 @@ class MachModel arch => CallingConv [Loc arch] where
 
 == `Loc` can be ==
 
-  * `Push` for passing data
-  * `Pop` for passing results
+  * `Push` for passing data on the stack
+  * `Pop` for receiving results from the stack
   * `(:>)` and `(:<)` for passing and returning in registers
   * `Cont` for multiple returns (continuations)
   * `Preserve` for declaring invariants
