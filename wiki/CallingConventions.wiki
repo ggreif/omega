@@ -5,7 +5,7 @@
 
 CCs are not types but constraints on them! See also the reversed direction [http://lambda-the-ultimate.org/node/3319 types are calling conventions].
 
-e.g. {{{'[Int :> R3, Bool :> CR0, Push Int, Push Bool] :: [Loc arch]}}}
+e.g. {{{'[Int :> R3, Bool :> CR0, Push Int, Push Bool, Bool :> R4!3, Word8 :> R4!!(8,16)] :: [Loc arch]}}}
 
 It must satisfy the Constraint
 {{{
@@ -33,6 +33,8 @@ come from an architecture-specific universe (`PPC`, `PPC64`, `PPC64le`, `x86`, `
 
 Haskell types map to these, and strictness is reflected in the types.
 
+Metainformation is reflected in the types too. I.e. waymarked lists live in (linearly used while buildup) chunks, tagspace is either the values, or when unboxed or exhausted tagspace then in the first word of the chunk.
+
 == The registers ==
 
-These are architecture-specific too.
+These are architecture-specific too. Support for bit-slicing.
