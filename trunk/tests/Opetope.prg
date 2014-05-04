@@ -57,7 +57,10 @@ import "../tests/Nat.prg"
 --                  have binding stations, deBruijn/global references, 
 --                  punctuation, rule invocation etc. The key to all this
 --                  are non-occupied "binding stations" which encode the
---                  additional linguistic stuff.
+--                  additional linguistic stuff. This includes 'data'
+--                  declarations, i.e. axioms, naming contexts, exports.
+--                  This is the canned presheaf Eric speaks about in the
+--                  video, that has its free brother in Cat.
 
 -- Quoting: So far we have only dealt with data, i.e. quoted (inert) syntax.
 --          we need a way to convert this syntax to code (e.g. at some stage),
