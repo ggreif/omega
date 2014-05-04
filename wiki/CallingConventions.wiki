@@ -1,0 +1,16 @@
+#summary Calling conventions are not types!
+#labels Phase-Design
+
+= Introduction =
+
+CCs are not types but constraints on them
+
+e.g. {{{'[Int :> R3, Bool :> CR0, Push Int, Push Bool] :: [Loc arch]}}}
+
+It must satisfy the Constraint
+{{{
+class MachModel arch => CallingConv [Loc arch] where
+  -- extract values codegen
+  -- calculate (stack) area
+  -- etc.
+}}}
