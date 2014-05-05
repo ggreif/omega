@@ -35,3 +35,5 @@ Naturally, as I nest `data` declarations deeper and deeper I have to start at ev
 I can only imagine, that longer nontrivial typing chains allow us to model invariants even more precisely, giving the type-checker even more power.
 
 I can only draw the analogy to homology theories, where short exact sequences describe something simple, but longer exact sequences also exist and characterize fancier spaces.
+
+Can these be artifacts of _alien_ (i.e. non-`Hask`) categories?
