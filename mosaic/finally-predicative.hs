@@ -90,7 +90,7 @@ class TypedLC (rep :: Nat -> Maybe Nat -> *) where
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
   star :: rep (S (S n)) Nothing -- FIXME: S (S Z)
-  int :: rep (S Z) Nothing
+  int :: rep (S n) Nothing
   io :: rep (S Z) UZ
   cnst :: Int -> rep Z Nothing
 
@@ -102,14 +102,13 @@ newtype TypeOf (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) = T (r
 
 deriving instance Show (rep (S n) Nothing) => Show (TypeOf rep n m)
 
-instance (LC rep, TypedLC rep) => LC (TypeOf rep) where
-  var = T var
+instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
+  var = T int
   lam (T body) = T $ pi' body
   app (T f) (T e) = T $ f `app` e
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
-  pi' _ = T star
-  --pi' body = body
+  pi' body = body
 
 instance (BuiltinLC rep, TypedLC rep) => BuiltinLC (TypeOf rep) where
   star = T star
