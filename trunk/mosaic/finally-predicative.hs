@@ -77,7 +77,7 @@ data Nat' :: Nat -> * where
 deriving instance Show (Nat' n)
 
 -- --------------+ at  -+ room
-                 v      v
+--               v      v
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
   lam :: rep n m -> rep n m
