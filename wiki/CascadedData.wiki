@@ -15,16 +15,15 @@ However, even dependently typed languages don't allow (nontrivial) connection of
 
 For Ωmega2, I'd like to allow cascaded `data` declarations.
 
-
 = Cascaded `data` Declarations =
 
 For eventual higher kind `*1` (or higher) one could declare
 {{{
 data Baz :: *1 ~> *1 where
-  data Bar :: *0 ~> Baz *0 where
-    Foo :: Bar Int
-    Quux :: a -> Bar a
-  Howdy :: Baz b
+    data Bar :: *0 ~> Baz *0 where
+        Foo :: Bar Int
+        Quux :: a ~> Bar a
+    Howdy :: Baz b
 }}}
 
 This way we would get a user-defined four-level construct `Foo :: Bar Int :: Baz *0 :: *1`. Consequently `Foo`, as well as `Quux`, lives on the value (i.e. runtime) level.
