@@ -76,9 +76,10 @@ data Nat' :: Nat -> * where
 
 deriving instance Show (Nat' n)
 
+-- --------------+ at  -+ room
+                 v      v
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
-  --var :: rep Z Nothing -- FIXME
   lam :: rep n m -> rep n m
   app :: rep n m -> rep n' m' -> rep (NatMax n n') (Min m m')
 
@@ -89,7 +90,7 @@ class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   pi' :: rep (S n) m -> rep (S n) m
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
-  star :: rep (S (S n)) Nothing -- FIXME: S (S Z)
+  star :: rep (S (S n)) Nothing
   int :: rep (S n) Nothing
   io :: rep (S Z) UZ
   cnst :: Int -> rep Z Nothing
