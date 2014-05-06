@@ -96,6 +96,17 @@ class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
   cnst :: Int -> rep Z Nothing
 
 -- ##############
+--     Pairing
+-- ##############
+
+data P (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) at room = P !(rep at room) !(rep' at room)
+
+instance (LC rep, LC rep') => LC (P rep rep') where
+  var = P var var
+  lam (P body body') = P (lam body) (lam body')
+  app (P f f') (P a a') = P (f `app` a) (f' `app` a')
+
+-- ##############
 --     TypeOf
 -- ##############
 
