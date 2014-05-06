@@ -106,7 +106,7 @@ deriving instance Show (rep (S n) Nothing) => Show (TypeOf rep n m)
 instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   var = T int
   lam (T body) = T $ pi' body
-  app (T f) (T e) = T $ f `app` e
+  app (T f) _ = unsafeCoerce (T f) -- FIXME: need explicit levels as Nat' to calculate NatMax n n'
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
   pi' body = body
