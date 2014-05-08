@@ -35,6 +35,10 @@ type family NatMax (l :: Nat) (r :: Nat) :: Nat where
   NatMax l Z = l
   NatMax (S l) (S r) = S (NatMax l r)
 
+type family Plus (l :: Nat) (r :: Nat) :: Nat where
+  Plus Z r = r
+  Plus (S l) r = S (Plus l r)
+
 type UZ = Just Z
 
 class Card (rep :: Maybe Nat -> *) where
@@ -81,6 +85,7 @@ deriving instance Show (Nat' n)
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
   lam :: rep n m -> rep n m
+  lam' :: Nat' d -> rep n m -> rep n m
   app :: rep n m -> rep n' m' -> rep (NatMax n n') (Min m m')
 
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
@@ -117,6 +122,8 @@ deriving instance Show (rep (S n) Nothing) => Show (TypeOf rep n m)
 instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   var = T int
   lam (T body) = T $ pi' body
+  lam' Z' body = body -- factually a Pi
+  lam' (S' n) (T body) = T $ lam' n body
   app (T f) _ = unsafeCoerce (T f) -- FIXME: need explicit levels as Nat' to calculate NatMax n n'
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
