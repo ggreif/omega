@@ -5,7 +5,7 @@
 import Data.String
 import Data.Function
 import Unsafe.Coerce
-import Prelude hiding (succ)
+import Prelude hiding (succ, pi)
 
 data Nat = Z | S Nat deriving Show
 
@@ -94,8 +94,8 @@ lam = lam' (S' Z')
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
   typeof :: rep n m -> rep (S n) (Climb m)
-  --arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi'
-  pi' :: rep (S n) m -> rep (S n) m
+  --arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi
+  pi :: rep (S n) m -> rep (S n) m
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
   star :: rep (S (S n)) Nothing
@@ -129,13 +129,13 @@ instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   app (T f) _ = unsafeCoerce (T f) -- FIXME: need explicit levels as Nat' to calculate NatMax n n'
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
-  pi' body = body
+  pi body = body
 
 instance (BuiltinLC rep, TypedLC rep) => BuiltinLC (TypeOf rep) where
   star = T star
   int = T star
   cnst _ = T int
-  io = T $ pi' star
+  io = T $ pi star
 
 
 -- ## TESTS ##
@@ -181,7 +181,7 @@ instance BuiltinLC LString where
   io = "IO"
 
 instance TypedLC LString where
-  pi' body = L $ "(|| " ++ unL body ++ ")"
+  pi body = L $ "(|| " ++ unL body ++ ")"
 
 
 instance LC Tw where
