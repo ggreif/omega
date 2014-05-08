@@ -139,7 +139,7 @@ instance (BuiltinLC rep, TypedLC rep) => BuiltinLC (TypeOf rep) where
 -- ## TESTS ##
 
 t1, t2 :: LC rep => rep Z Nothing
-t1 = lam var
+t1 = lam' (S' Z') var
 t2 = t1 `app` t1
 
 t3 :: (LC rep, BuiltinLC rep) => rep Z Nothing
@@ -154,7 +154,9 @@ instance IsString (LString n m) where
 
 instance {-HasLevel (LString n) => -}LC LString where
   var = {-addLevel $-} "?"
-  lam body = L $ "(\\ " ++ unL body ++ ")"
+  --lam body = L $ "(\\ " ++ unL body ++ ")"
+  lam' Z' body = L $ "(|| " ++ unL body ++ ")"
+  lam' (S' Z') body = L $ "(\\ " ++ unL body ++ ")"
   app e1 e2 = L $ "(" ++ unL e1 ++ " " ++ unL e2 ++ ")"
 
 {-
