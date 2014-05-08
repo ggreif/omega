@@ -84,9 +84,12 @@ deriving instance Show (Nat' n)
 --               v      v
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
-  lam :: rep n m -> rep n m
   lam' :: Nat' d -> rep n m -> rep n m
   app :: rep n m -> rep n' m' -> rep (NatMax n n') (Min m m')
+
+-- helpers
+lam :: LC rep => rep n m -> rep n m
+lam = lam' (S' Z')
 
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
@@ -108,7 +111,7 @@ data P (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) at room = 
 
 instance (LC rep, LC rep') => LC (P rep rep') where
   var = P var var
-  lam (P body body') = P (lam body) (lam body')
+  lam' d (P body body') = P (lam' d body) (lam' d body')
   app (P f f') (P a a') = P (f `app` a) (f' `app` a')
 
 -- ##############
@@ -121,7 +124,6 @@ deriving instance Show (rep (S n) Nothing) => Show (TypeOf rep n m)
 
 instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   var = T int
-  lam (T body) = T $ pi' body
   lam' Z' body = body -- factually a Pi
   lam' (S' n) (T body) = T $ lam' n body
   app (T f) _ = unsafeCoerce (T f) -- FIXME: need explicit levels as Nat' to calculate NatMax n n'
@@ -139,7 +141,7 @@ instance (BuiltinLC rep, TypedLC rep) => BuiltinLC (TypeOf rep) where
 -- ## TESTS ##
 
 t1, t2 :: LC rep => rep Z Nothing
-t1 = lam' (S' Z') var
+t1 = lam var
 t2 = t1 `app` t1
 
 t3 :: (LC rep, BuiltinLC rep) => rep Z Nothing
@@ -154,7 +156,6 @@ instance IsString (LString n m) where
 
 instance {-HasLevel (LString n) => -}LC LString where
   var = {-addLevel $-} "?"
-  --lam body = L $ "(\\ " ++ unL body ++ ")"
   lam' Z' body = L $ "(|| " ++ unL body ++ ")"
   lam' (S' Z') body = L $ "(\\ " ++ unL body ++ ")"
   app e1 e2 = L $ "(" ++ unL e1 ++ " " ++ unL e2 ++ ")"
