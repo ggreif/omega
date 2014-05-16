@@ -507,3 +507,5 @@ Baez et al.: [http://math.ucr.edu/home/baez/rosetta.pdf Rosetta Stone]
 Blender models
 
 A nice blog about [http://devmag.org.za/2012/07/29/how-to-choose-colours-procedurally-algorithms picking colors].
+
+... and [https://medium.com/programming-ideas-tutorial-and-experience/3a6db2743a1e semantic highlighting].
