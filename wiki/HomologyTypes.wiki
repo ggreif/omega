@@ -285,7 +285,7 @@ So technically, B appears on the equation's RHS, forming a partial application, 
 
 Since (unary) constructors name a bijection between input and bound name, it is possible to regard sigma as identifying the input with the constructor application, effectively peeling off the constructor:
 
-INPUT == ctor <bound-name>.
+INPUT == ctor `<bound-name>`.
 In the dependently-curried case when peeling twice this is sigma.
 
 ==== Higher ranks ====
