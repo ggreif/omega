@@ -291,6 +291,7 @@ class Category (--+) => Compilable (--+) where
   compile :: a --+ b -> a -> b
 }}}
 
+----
 = The Category of Patterned Types and Abiding Maps =
 
 Objects are patterned types `p ° T` where `p` is a level-lifted inhabitant of `T` with possibly added _wildcards_.
