@@ -295,6 +295,10 @@ class Category (--+) => Compilable (--+) where
 
 Objects are patterned types `p ° T` where `p` is a lifted inhabitant of `T` with possibly added _wildcards_.
 
-Morphisms are maps `p ° T ~> q ° U` that abide the patterns `p` and `q` beside being functions from `T` to `U`.
+Morphisms are maps `p°T ~> q°U` that abide the patterns `p` and `q` beside being functions from `T` to `U`.
 
 Identity and composition are defined in the usual way.
+
+== Questions waiting to be answered ==
+
+Can we use _guarded patterns_, i.e. does this correspond to qualified types?
