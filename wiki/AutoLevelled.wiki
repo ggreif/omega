@@ -290,3 +290,5 @@ But wait! We could add more hidden type indices, e.g. one that describes the int
 class Category (--+) => Compilable (--+) where
   compile :: a --+ b -> a -> b
 }}}
+
+= The Category of Patterned Types and Abiding Maps =
