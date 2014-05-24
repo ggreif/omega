@@ -292,3 +292,9 @@ class Category (--+) => Compilable (--+) where
 }}}
 
 = The Category of Patterned Types and Abiding Maps =
+
+Objects are patterned types `p ° T` where `p` is a lifted inhabitant of `T` with possibly added _wildcards_.
+
+Morphisms are maps `p ° T ~> q ° U` that abide the patterns `p` and `q` beside being functions from `T` to `U`.
+
+Identity and composition are defined in the usual way.
