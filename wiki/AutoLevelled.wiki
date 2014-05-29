@@ -313,3 +313,5 @@ Here `x` is _defined to be_ `Cons 4 Nil`. Mixing in proper patterns partially de
 Can we use _guarded patterns_, i.e. does this correspond to qualified types?
 
 Do we need `::` in contexts? If yes, what extra expressivity is obtained by having both pattern variables and typed variables (besides these having shifted levels)?
+
+This project has a similar notion of pairing types with a predicate on the values: https://github.com/tomprimozic/type-systems/tree/master/refined_types#readme
