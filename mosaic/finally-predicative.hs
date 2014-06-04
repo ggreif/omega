@@ -87,10 +87,10 @@ class LC (rep :: Nat -> Maybe Nat -> *) where
   app :: rep n m -> rep n m' -> rep n (Min m m')
 
 -- helpers
-lam :: LC rep => rep n m -> rep n m
+lam :: LC rep => rep Z Nothing -> rep Z Nothing
 lam = lam' (S' Z')
 
-lAM :: LC rep => rep n m -> rep n m
+lAM :: LC rep => rep (S Z) Nothing -> rep (S Z) Nothing
 lAM = lam' $ S' (S' Z')
 
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
@@ -189,3 +189,28 @@ instance TypedLC LString where
 
 instance LC Tw where
   var = Tw undefined undefined -- Inf
+
+
+-- ############
+--     Eval
+-- ############
+
+-- context can hold one binding at most :-)
+
+newtype Eval a (n :: Nat) (m :: Maybe Nat) = E (Maybe a -> a)
+
+instance Show a => Show (Eval a n m) where
+  show (E f) = show $ f Nothing
+
+instance LC (Eval a) where
+  var = E $ \(Just a) -> a
+  lam' (S' Z') body = body
+  app (E f) (E a) = let a' = a Nothing in E $ \Nothing -> f $ Just a'
+
+instance BuiltinLC (Eval Int) where
+  cnst i = E $ \Nothing -> i
+
+-- a small test: (\x->x) 42
+--
+e1 :: Eval Int Z Nothing
+e1 = lam var `app` cnst 42
