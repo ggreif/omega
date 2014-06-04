@@ -128,7 +128,7 @@ instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   var = T int
   lam' Z' body = body -- factually a Pi
   lam' (S' n) (T body) = T $ lam' n body
-  app (T f) _ = T f -- FIXME: how to substitute??
+  app (T f) _ = T f -- FIXME: dependent types?
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
   pi body = body
