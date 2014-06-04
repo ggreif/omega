@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
-           , GADTs, PatternSynonyms, TypeFamilies, RankNTypes #-}
+           , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns #-}
 
 import Data.String
 import Data.Function
@@ -80,6 +80,10 @@ data Nat' :: Nat -> * where
 
 deriving instance Show (Nat' n)
 
+nat2int :: Nat' n -> Int
+nat2int Z' = 0
+nat2int (S' n) = 1 + nat2int n
+
 -- --------------+ at  -+ room
 --               v      v
 class LC (rep :: Nat -> Maybe Nat -> *) where
@@ -90,6 +94,9 @@ class LC (rep :: Nat -> Maybe Nat -> *) where
 -- helpers
 lam :: LC rep => rep n m -> rep n m
 lam = lam' (S' Z')
+
+lAM :: LC rep => rep n m -> rep n m
+lAM = lam' $ S' (S' Z')
 
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
@@ -158,6 +165,7 @@ instance {-HasLevel (LString n) => -}LC LString where
   var = {-addLevel $-} "?"
   lam' Z' body = L $ "(|| " ++ unL body ++ ")"
   lam' (S' Z') body = L $ "(\\ " ++ unL body ++ ")"
+  lam' (nat2int -> n) body = L $ "(" ++ show n ++ "\\ " ++ unL body ++ ")"
   app e1 e2 = L $ "(" ++ unL e1 ++ " " ++ unL e2 ++ ")"
 
 {-
