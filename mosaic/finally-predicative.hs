@@ -208,9 +208,10 @@ instance LC (Eval a) where
   app (E f) (E a) = let a' = a Nothing in E $ \Nothing -> f $ Just a'
 
 instance BuiltinLC (Eval Int) where
-  cnst i = E $ \Nothing -> i
+  cnst i = E $ \_ -> i
 
 -- a small test: (\x->x) 42
 --
-e1 :: Eval Int Z Nothing
+e1, e2 :: Eval Int Z Nothing
 e1 = lam var `app` cnst 42
+e2 = lam (cnst 25) `app` cnst 42
