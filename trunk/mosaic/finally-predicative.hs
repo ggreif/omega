@@ -208,7 +208,7 @@ instance LC (Eval a) where
   app (E f) (E a) = let a' = a Nothing in E $ \Nothing -> f $ Just a'
 
 instance BuiltinLC (Eval Int) where
-  cnst i = E $ \_ -> i
+  cnst i = E $ const i
 
 -- a small test: (\x->x) 42
 --
