@@ -196,7 +196,8 @@ instance LC Tw where
 -- ############
 
 -- context can hold one binding at most :-)
-
+--
+--                                 context ~~~~~vvvvvvv    v~~~~~ result
 newtype Eval a (n :: Nat) (m :: Maybe Nat) = E (Maybe a -> a)
 
 instance Show a => Show (Eval a n m) where
