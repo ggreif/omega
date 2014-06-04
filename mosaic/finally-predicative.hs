@@ -30,11 +30,6 @@ type family NatMin (l :: Nat) (r :: Nat) :: Nat where
   NatMin l Z = Z
   NatMin (S l) (S r) = S (NatMin l r)
 
-type family NatMax (l :: Nat) (r :: Nat) :: Nat where
-  NatMax Z r = r
-  NatMax l Z = l
-  NatMax (S l) (S r) = S (NatMax l r)
-
 type family Plus (l :: Nat) (r :: Nat) :: Nat where
   Plus Z r = r
   Plus (S l) r = S (Plus l r)
@@ -89,7 +84,7 @@ nat2int (S' n) = 1 + nat2int n
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: rep n m
   lam' :: Nat' d -> rep n m -> rep n m
-  app :: rep n m -> rep n' m' -> rep (NatMax n n') (Min m m')
+  app :: rep n m -> rep n m' -> rep n (Min m m')
 
 -- helpers
 lam :: LC rep => rep n m -> rep n m
@@ -133,7 +128,7 @@ instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   var = T int
   lam' Z' body = body -- factually a Pi
   lam' (S' n) (T body) = T $ lam' n body
-  app (T f) _ = unsafeCoerce (T f) -- FIXME: need explicit levels as Nat' to calculate NatMax n n'
+  app (T f) _ = T f -- FIXME: how to substitute??
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
   pi body = body
