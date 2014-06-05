@@ -151,6 +151,10 @@ I am tempted to introduce a unification node (besides application nodes) to reco
 
 NB.: This seems to rhyme well with "equality types" of MLTT, where these are needed as a primitive.
 
+NB.: HoTT defines higher inductive types (data constructors have types as unification nodes). Can we neatly model this? Maybe we do not need unification nodes, just splitting patterns, as the concepts are pretty much identical.
+
+NB.: using splitting moves can we reduce the exponential complexity of inference for `id id id id id id ...`?
+
 NB.: One could track intermediate reduction steps of the normalization process as on-top graphs connected by unification nodes.
 
 NB.: The defining equations of functional programs correspond to application nodes (e.g. `letrec`, context extension). Can unification nodes play this role too? How big is the overlap?
