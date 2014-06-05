@@ -79,6 +79,12 @@ A coherent sequence of steps is a _movement_. These form a category.
 
 Since primitive movements only affect _free references_ (those into the context) stream fusion like techniques could be applied to avoid multiple traversals of the tree.
 
+== Improvements ==
+
+  * Get rid of `Down`, use `Right` instead.
+
+  * Have splits as steps. A split is an expression (in terms of the current location) used to decompose a pattern: `a@(Cons head tail)` which establishes an equivalence relation between the two sides of the `@`, and is used to introduce bindings for parts of values.
+
 = Notes =
 
 There is only one binder (in the spirit of [http://journals.cambridge.org/action/displayAbstract?fromPage=online&aid=331521 Kamareddine, JFP 2005]) and by resorting to level inference, it can be recovered whether it is a ∏, λ or Λ.
