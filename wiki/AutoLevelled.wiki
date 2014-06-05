@@ -296,7 +296,7 @@ class Category (--+) => Compilable (--+) where
 
 Objects are patterned types `p ° T` where `p` is a level-lifted inhabitant of `T` with possibly added _wildcards_.
 
-Morphisms are maps `p°T ~> q°U` that abide the patterns `p` and `q` beside being functions from `T` to `U`.
+Morphisms are maps `p°T ~> q°U` that abide the patterns `p` and `q` beside being functions from `T` to `U`. What does _abiding_ mean? We allow _relations_ between p and q, i.e. `S p == q`. Furthermore patterns can be _tensored_ to obtain the concept of a piecewise defined relation.
 
 Identity and composition are defined in the usual way.
 
@@ -315,3 +315,5 @@ Can we use _guarded patterns_, i.e. does this correspond to qualified types?
 Do we need `::` in contexts? If yes, what extra expressivity is obtained by having both pattern variables and typed variables (besides these having shifted levels)?
 
 This project has a similar notion of pairing types with a predicate on the values: https://github.com/tomprimozic/type-systems/tree/master/refined_types#readme
+
+With the definition of _abiding_ do we cover _logical relations_?
