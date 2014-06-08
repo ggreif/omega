@@ -231,19 +231,16 @@ class Data (rep :: Nat -> Maybe Nat -> *) where
 
 -- in Initial representation we would have
 
---data Morphology = Func | Body | Data
---data Defn (m :: Morphology) (lev :: Nat) where
-
 type Sig = String -- for now
-data Defn (bod :: Bool) (dat :: Bool)  (typ :: Bool) (lev :: Nat) where
-  Postulate :: Defn b d t lev
-  Data :: String -> Sig -> Defn False dat typ n -> Defn False True False (S n)
-  Type :: String -> Sig -> Defn False False True (S n) -- should be constr
-  Func :: String -> Sig -> Defn True False False n -> Defn False False False (S n)
+data Defn (bod :: Bool) (dat :: Bool)  (con :: Bool) (lev :: Nat) where
+  Postulate :: Defn True False False lev
+  Data :: String -> Sig -> Defn False dat con lev -> Defn False True False (S lev)
+  Constr :: String -> Sig -> Defn False False True lev
+  Func :: String -> Sig -> Defn True False False lev -> Defn False False False lev
 
 
-y = Data "Nut" "*" (Type "Y" "Nut")
-r = Data "Nut" "*" (Type "R" "Nut->Nut")
+y = Data "Nut" "*" (Constr "Y" "Nut")
+r = Data "Nut" "*" (Constr "R" "Nut->Nut")
 forw = Func "timestwo" "Nat->Nat" Postulate
 mutual = Data "Mut" "*" (Func "foo" "Mut->Mut" Postulate) -- Agda style?
-nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Type "C3" "N2")))
+nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
