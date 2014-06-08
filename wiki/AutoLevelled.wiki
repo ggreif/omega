@@ -318,4 +318,4 @@ This project has a similar notion of pairing types with a predicate on the value
 
 With the definition of _abiding_ do we cover _logical relations_?
 
-When tensoring definitions we'd like to not get mired into order dependency. Ωmega1 solves this by requiring _sequentially inductive_ definitions at the higher levels. Google for "Overlapping and Order-Independent Patterns" for a new definitional approach in Agda (by Jesper Cockx).
+When tensoring definitions we'd like to not get mired into order dependency. Ωmega1 solves this by requiring _inductively sequential_ definitions at the higher levels. Google for "Overlapping and Order-Independent Patterns" for a new definitional approach in Agda (by Jesper Cockx).
