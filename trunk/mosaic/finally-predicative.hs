@@ -216,3 +216,34 @@ instance BuiltinLC (Eval Int) where
 e1, e2 :: Eval Int Z Nothing
 e1 = lam var `app` cnst 42
 e2 = lam (cnst 25) `app` cnst 42
+
+
+-- ## Constructors ##
+
+-- we want to write to write:
+
+data Nut :: * where {Y::Nut; R::Nut->Nut}
+
+class Data (rep :: Nat -> Maybe Nat -> *) where
+  dat :: rep (S (S l)) Nothing -> String -> rep (S l) Nothing -> ep l Nothing
+
+--d1 :: rep (S Z) Nothing
+
+-- in Initial representation we would have
+
+--data Morphology = Func | Body | Data
+--data Defn (m :: Morphology) (lev :: Nat) where
+
+type Sig = String -- for now
+data Defn (bod :: Bool) (dat :: Bool)  (typ :: Bool) (lev :: Nat) where
+  Postulate :: Defn b d t lev
+  Data :: String -> Sig -> Defn False dat typ n -> Defn False True False (S n)
+  Type :: String -> Sig -> Defn False False True (S n) -- should be constr
+  Func :: String -> Sig -> Defn True False False n -> Defn False False False (S n)
+
+
+y = Data "Nut" "*" (Type "Y" "Nut")
+r = Data "Nut" "*" (Type "R" "Nut->Nut")
+forw = Func "timestwo" "Nat->Nat" Postulate
+mutual = Data "Mut" "*" (Func "foo" "Mut->Mut" Postulate) -- Agda style?
+nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Type "C3" "N2")))
