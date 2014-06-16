@@ -5,7 +5,7 @@
 
 [http://ix.cs.uoregon.edu/~ariola/cycles.pdf Ariola's work] contains an early mention of the _lambda-graph_. It remains to be seen whether my treatment of `letrec` is different/better and how.
 
-Recent research uses TermGraph as the name: http://arxiv.org/pdf/1401.1460.pdf
+Recent research uses !TermGraph as the name: http://arxiv.org/pdf/1401.1460.pdf
 
 = Main Idea =
 
