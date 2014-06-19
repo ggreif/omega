@@ -30,7 +30,8 @@ var = TH.varE . TH.mkName
 con = TH.conE . TH.mkName
 int = TH.litE . TH.IntegerL
 
-trans (Right (IntLit i)) = (con "Int") `TH.appE` (int (toInteger i))
+trans :: Either a (Exp Int) -> TH.ExpQ
+trans (Right (IntLit i)) = con "Int" `TH.appE` int (toInteger i)
 
 parseExprExp :: String -> TH.Q TH.Exp
 parseExprExp "" = fail "empty parse"
