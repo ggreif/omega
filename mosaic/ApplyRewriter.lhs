@@ -6,7 +6,7 @@ Load this file with
  $ ghci -XTemplateHaskell ApplyRewriter.lhs
 
 And then execute
- > $(dullness [| negate 1 |])
+ > $$(dullness [|| negate 1 ||])
 
 
 
@@ -37,13 +37,13 @@ And then execute
 >   cry = curry
 >   ucr = uncurry
 
-> dullness :: ExpQ -> Q Exp
-> dullness e = e >>= return Prelude.. walkAST
+> dullness :: Q (TExp a) -> Q (TExp Integer)
+> dullness e = e >>= return Prelude.. walkAST Prelude.. unType
 
-> walkAST :: Exp -> Exp
-> walkAST l@(LitE {}) = l
-> walkAST v@(VarE {}) = v
-> walkAST (AppE f a) = f  -- AppE (AppE (VarE (mkName "<$>")) (walkAST f)) (walkAST a)
+> walkAST :: Exp -> TExp Integer
+> walkAST l@(LitE {}) = TExp l
+> walkAST v@(VarE {}) = TExp v
+> walkAST (AppE f a) = TExp f  -- AppE (AppE (VarE (mkName "<$>")) (walkAST f)) (walkAST a)
 
 Now that we can perform the transformation, it would be interesting
 to give a different instance.
