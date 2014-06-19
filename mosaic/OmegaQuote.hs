@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds, KindSignatures, QuasiQuotes, GADTs,
              StandaloneDeriving, UnicodeSyntax #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 import OmegaParser
 
@@ -23,3 +24,5 @@ a = µ 1 2
 
 c = [ω|33|]
 
+c1 = [e|33|]
+c2 = [e||id 33||]
