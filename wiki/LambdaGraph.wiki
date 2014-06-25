@@ -7,6 +7,8 @@
 
 Recent research uses !TermGraph as the name: http://arxiv.org/pdf/1401.1460.pdf
 
+There is a [http://www.cas.mcmaster.ca/~kahl/HOPS/ANIM/index.html nice animation of termgraphs] too.
+
 = Main Idea =
 
 A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up`*`{down|left|right}`*`) references.
