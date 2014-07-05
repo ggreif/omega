@@ -1,6 +1,6 @@
 {-# LANGUAGE RebindableSyntax, PolyKinds, DataKinds, KindSignatures
            , GADTs, StandaloneDeriving, FlexibleInstances, FlexibleContexts
-             #-}
+           , RankNTypes #-}
 
 module IndexedMonad where
 
@@ -34,8 +34,12 @@ deriving instance Show (Thrist Ch st end)
 data Parser dat st end where
    P :: (Nat' st -> Thrist Ch st end -> Maybe (dat st cool, Nat' cool, Thrist Ch cool end)) -> Parser dat st end
 
-(>>=) :: Parser dat st end -> (dat st point -> Parser dat' st end) -> Parser dat' st end
-_ >>= _ = undefined
+(>>=) :: Parser dat st end -> (forall point . dat st point -> Parser dat' point end) -> Parser dat' st end
+P f >>= g = P effect
+    where effect n thr = case f n thr of
+                           Just (dat, n, rest) -> case g dat of
+                                                    P h -> h n rest
+
 
 return :: dat st point -> Parser dat st end
 return = undefined
