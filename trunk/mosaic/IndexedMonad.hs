@@ -1,9 +1,10 @@
-{-# LANGUAGE NoImplicitPrelude, PolyKinds, DataKinds, KindSignatures
-           , GADTs, StandaloneDeriving, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE RebindableSyntax, PolyKinds, DataKinds, KindSignatures
+           , GADTs, StandaloneDeriving, FlexibleInstances, FlexibleContexts
+             #-}
 
 module IndexedMonad where
 
-import Prelude (Show(..), undefined, (==), ($))
+import Prelude (Show(..), error, undefined, (==), ($))
 import Data.Char
 import Data.Maybe
 import Data.Thrist
@@ -33,12 +34,22 @@ deriving instance Show (Thrist Ch st end)
 data Parser dat st end where
    P :: (Nat' st -> Thrist Ch st end -> Maybe (dat st cool, Nat' cool, Thrist Ch cool end)) -> Parser dat st end
 
+(>>=) :: Parser dat st end -> (dat st point -> Parser dat' st end) -> Parser dat' st end
+_ >>= _ = undefined
+
+return :: dat st point -> Parser dat st end
+return = undefined
+
+fail = error
 
 char :: Char -> Nat' st -> Thrist Ch st end -> Maybe (Ch st (S st), Nat' (S st), Thrist Ch (S st) end)
 char c n (Ch c' `Cons` rest) | c == c' = Just (Ch c', S' n, rest)
 char _ _ (_ `Cons` rest) = Nothing
 
 ca = P $ char 'a'
+caa = do Ch a <- ca
+         Ch a <- ca
+         return undefined
 
 data Split :: (Nat -> Nat -> *) -> Nat -> Nat -> * where
   Split :: dat st point -> Nat' point -> Thrist Ch point end -> Split dat st end
