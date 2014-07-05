@@ -1,8 +1,9 @@
-{-# LANGUAGE NoImplicitPrelude, PolyKinds, DataKinds, KindSignatures, GADTs #-}
+{-# LANGUAGE NoImplicitPrelude, PolyKinds, DataKinds, KindSignatures
+           , GADTs, StandaloneDeriving, FlexibleInstances, FlexibleContexts #-}
 
 module IndexedMonad where
 
-import Prelude (undefined, (==), ($))
+import Prelude (Show(..), undefined, (==), ($))
 import Data.Char
 import Data.Maybe
 import Data.Thrist
@@ -14,8 +15,12 @@ data Nat' :: Nat -> * where
   Z' :: Nat' Z
   S' :: Nat' n -> Nat' (S n)
 
+deriving instance Show (Nat' n)
+
 data Ch :: Nat -> Nat -> * where
   Ch :: Char -> Ch n (S n)
+
+deriving instance Show (Ch m n)
 
 (|.) = Cons
 infixr 5 |.
@@ -23,21 +28,27 @@ infixr 5 |.
 substrate :: Thrist Ch Z (S(S(S(S Z))))
 substrate = Ch 'a' |. Ch 'b' |. Ch 'c' |. Ch 'd' |. Nil
 
+deriving instance Show (Thrist Ch st end)
 
 data Parser dat st end where
-   P :: (Thrist Ch st end -> (Maybe (dat st cool), Thrist Ch cool end)) -> Parser dat st end
+   P :: (Nat' st -> Thrist Ch st end -> Maybe (dat st cool, Nat' cool, Thrist Ch cool end)) -> Parser dat st end
 
 
-char :: Char -> Thrist Ch st end -> (Maybe (Ch st (S st)), Thrist Ch (S st) end)
-char c (Ch c' `Cons` rest) | c == c' = (Just (Ch c'), rest)
---char _ (_ `Cons` rest) = (Nothing, rest)
+char :: Char -> Nat' st -> Thrist Ch st end -> Maybe (Ch st (S st), Nat' (S st), Thrist Ch (S st) end)
+char c n (Ch c' `Cons` rest) | c == c' = Just (Ch c', S' n, rest)
+char _ _ (_ `Cons` rest) = Nothing
 
 ca = P $ char 'a'
 
 data Split :: (Nat -> Nat -> *) -> Nat -> Nat -> * where
   Split :: dat st point -> Nat' point -> Thrist Ch point end -> Split dat st end
 
-run :: Parser dat st end -> Thrist Ch st end -> Maybe (Split dat st end)
-run (P f) thr = case f thr of
-                  (Just got, rest) -> Just $ Split got undefined rest
+--deriving instance Show (Split dat st end)
 
+
+run :: Nat' st -> Parser dat st end -> Thrist Ch st end -> Maybe (Split dat st end)
+run st (P f) thr = case f st thr of
+                  Just (got, n, rest) -> Just $ Split got n rest
+                  Nothing -> Nothing
+
+t0 = run Z' ca substrate
