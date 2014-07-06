@@ -282,7 +282,7 @@ instance LC NameSupply where
 instance PLC NameSupply where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> NameSupply n m) -> NameSupply n m
-  plam (S' Z') f = N $ \(n:ns) -> "\\" ++ n ++ "." ++ unN (f $ N $ const n) ns
+  plam (S' Z') f = N $ \(n:ns) -> "\\" ++ n ++ "." ++ unN (f . N $ const n) ns
 
 instance Show (NameSupply n m) where
   show (N f) = f $ map (('v':) . show) [0..]
@@ -293,7 +293,7 @@ instance Show (NameSupply n m) where
 instance PLC (Eval a) where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Eval a n m) -> Eval a n m
-  plam (S' Z') f = E $ \(Just n) -> unE (f $ E $ const n) Nothing
+  plam (S' Z') f = E $ \(Just v) -> unE (f . E $ const v) Nothing
 
 unE (E l) = l
 
