@@ -257,7 +257,6 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   type Inspectable rep a = rep ~ a
   pvar :: Inspectable rep p => p n m -> rep n m
-  --pvar = id
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> rep n m) -> rep n m
 
 pl0,pl1,pl2 :: (LC rep, PLC rep) => rep Z Nothing
@@ -271,7 +270,6 @@ pla f = plam (S' Z') (f . pvar)
 pl2 = pla $ \x -> pla $ \y -> y `app` x
 
 instance PLC LString where
-  --type Inspectable LString a = LString ~ a
   pvar = id
   plam (S' Z') f = L ("\\a." ++ (unL . f $ L "a"))
 
@@ -282,7 +280,6 @@ instance LC NameSupply where
   N f `app` N a = N (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
 instance PLC NameSupply where
-  --type Inspectable NameSupply a = NameSupply ~ a
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> NameSupply n m) -> NameSupply n m
   plam (S' Z') f = N $ \(n:ns) -> "\\" ++ n ++ "." ++ unN (f $ N (const n)) ns
