@@ -266,7 +266,6 @@ pl1' = pl1
 
 pla :: PLC rep => (rep n m -> rep n m) -> rep n m
 pla f = plam (S' Z') (f . pvar)
---pl2 = pla (\x -> pla (\y -> y `app` x))
 pl2 = pla $ \x -> pla $ \y -> y `app` x
 
 instance PLC LString where
@@ -278,7 +277,7 @@ instance PLC LString where
 newtype NameSupply (n :: Nat) (m :: Maybe Nat) = N { unN :: [String] -> String }
 
 instance LC NameSupply where
-  _ `app` _ = N (\ns -> "APP")
+  N f `app` N a = N (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
 instance PLC NameSupply where
   type Inspectable NameSupply a = NameSupply ~ a
