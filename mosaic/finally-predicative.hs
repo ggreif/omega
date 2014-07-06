@@ -251,23 +251,24 @@ nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
 ---- Some PHOAS ideas (playing around)
 
 -- represent binders with some lambda where the domain is sufficiently parametric
--- i.e. "\a->2*x" --> \bound ::
+-- i.e. "\a->2*x" --> \(bound :: p) -> 2 * bound
 
 class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   pvar :: Inspectable rep p => p n m -> rep n m
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> rep n m) -> rep n m
 
-pl0,pl1 :: (LC rep, PLC rep) => rep Z Nothing
+pl0,pl1,pl2 :: (LC rep, PLC rep) => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
 pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1' :: LString Z Nothing
 pl1' = pl1
 
+pla :: PLC rep => (rep n m -> rep n m) -> rep n m
+pla f = plam (S' Z') (f . pvar)
+pl2 = pla (\x -> pla (\y -> y `app` x))
+
 instance PLC LString where
   type Inspectable LString a = LString ~ a
-  pvar a = a --"VAR"
-  --plam :: Nat' d -> (forall p . p n m -> LString n m) -> LString n m
+  pvar a = a
   plam (S' Z') f = L ("\a." ++ (unL . f $ L "a"))
-
---instance Inspectable LString a 
