@@ -271,7 +271,7 @@ pl2 = pla $ \x -> pla $ \y -> y `app` x
 
 instance PLC LString where
   type Inspectable LString a = LString ~ a
-  pvar a = a
+  pvar = id
   plam (S' Z') f = L ("\\a." ++ (unL . f $ L "a"))
 
 
@@ -282,9 +282,9 @@ instance LC NameSupply where
 
 instance PLC NameSupply where
   type Inspectable NameSupply a = NameSupply ~ a
-  pvar _ = N head
+  pvar = id
   plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> NameSupply n m) -> NameSupply n m
-  plam (S' Z') f = N $ \(n:ns) -> ("\\" ++ n ++ "." ++ (unN (f $ N (\_ -> "HEY")) ns))
+  plam (S' Z') f = N $ \(n:ns) -> "\\" ++ n ++ "." ++ unN (f $ N (const n)) ns
 
 instance Show (NameSupply n m) where
   show (N f) = f $ map (('v':) . show) [0..]
