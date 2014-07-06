@@ -253,7 +253,7 @@ nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
 
 class PLC (rep :: Nat -> Maybe Nat -> *) where
   pvar :: p n -> rep n m
-  plam :: Nat' d -> (forall (p :: Nat -> *) . p n -> rep n m) -> rep n m
+  plam :: Nat' d -> (forall p . p n -> rep n m) -> rep n m
 
 pl0 :: PLC rep => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
