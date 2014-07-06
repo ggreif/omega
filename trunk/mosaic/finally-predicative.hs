@@ -244,3 +244,16 @@ r = Data "Nut" "*" (Constr "R" "Nut->Nut")
 forw = Func "timestwo" "Nat->Nat" Postulate
 mutual = Data "Mut" "*" (Func "foo" "Mut->Mut" Postulate) -- Agda style?
 nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
+
+
+---- Some PHOAS ideas (playing around)
+
+-- represent binders with some lambda where he domain is sufficiently parametric
+-- i.e. "\a->2*x" --> \bound ::
+
+class PLC (rep :: Nat -> Maybe Nat -> *) where
+  pvar :: p n -> rep n m
+  plam :: Nat' d -> (forall (p :: Nat -> *) . p n -> rep n m) -> rep n m
+
+pl0 :: PLC rep => rep Z Nothing
+pl0 = plam (S' Z') (\x -> pvar x)
