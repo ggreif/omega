@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
-           , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns #-}
+           , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns
+           , InstanceSigs #-}
 
 import Data.String
 import Data.Function
@@ -248,12 +249,21 @@ nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
 
 ---- Some PHOAS ideas (playing around)
 
--- represent binders with some lambda where he domain is sufficiently parametric
+-- represent binders with some lambda where the domain is sufficiently parametric
 -- i.e. "\a->2*x" --> \bound ::
 
 class PLC (rep :: Nat -> Maybe Nat -> *) where
-  pvar :: p n -> rep n m
-  plam :: Nat' d -> (forall p . p n -> rep n m) -> rep n m
+  pvar :: p n m -> rep n m
+  plam :: Nat' d -> (forall p . p n m -> rep n m) -> rep n m
 
-pl0 :: PLC rep => rep Z Nothing
+pl0,pl1 :: (LC rep, PLC rep) => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
+pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
+pl1' :: LString Z Nothing
+pl1' = pl1
+
+instance PLC LString where
+  pvar _ = "VAR"
+  plam :: Nat' d -> (forall p . p n m -> LString n m) -> LString n m
+  plam (S' Z') f = L ("\a." ++ (unL . f $ L "a"))
+
