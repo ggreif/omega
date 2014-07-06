@@ -300,3 +300,10 @@ unE (E l) = l
 pe1, pe2 :: Eval Int Z Nothing
 pe1 = pla id `app` cnst 42
 pe2 = pla (\_ -> cnst 25) `app` cnst 42
+
+-- TODOs:
+--  o Num instaces
+--  o TyEnv :: [*] -> *, simply typed LC
+--  o Type inference
+--  o Emax-style unityped->typed compiler (Emil Axelsson)
+--  o Shape :: LambdaTree(Graph) -> *, shapely LC
