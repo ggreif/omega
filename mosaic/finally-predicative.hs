@@ -307,3 +307,42 @@ pe2 = pla (\_ -> cnst 25) `app` cnst 42
 --  o Type inference
 --  o Emax-style unityped->typed compiler (Emil Axelsson)
 --  o Shape :: LambdaTree(Graph) -> *, shapely LC
+
+
+-- Anonymous datatypes
+-----------------------
+
+{-
+Here is the story:
+
+Model data types as (type)functions
+
+ty :: Nat -> [*] -> *
+ty 0 [_] = Nat' Z
+ty 1 [Nat n] = (Nat' n -> Nat' (S n))
+
+-}
+
+type family Na (alt :: Nat) (env :: [*]) where
+  Na Z ignore = Nat' Z -- Z' :: Nat' Z
+  Na (S Z) '[Nat' n] = (Nat' n -> Nat' (S n)) -- S :: ...
+  --Na (S Z) '[] = (Nat' n -> Nat' (S n)) -- S :: ...
+
+type family Tup arr where
+  Tup (a -> b -> c) = (a, b)
+  Tup (a -> b) = a
+  Tup a = ()
+
+data Fin :: Nat -> Nat -> * where
+  FZ :: Fin (S m) Z
+  FS :: Fin m n -> Fin (S m) (S n)
+
+
+data Anon :: Nat -> [*] -> (Nat -> [*] -> *) -> * where
+  Constru :: Fin max con -> Tup (t con prms) -> Anon max prms t
+
+type Nuzz n = Anon (S (S Z)) '[Nat' n] Na
+
+z'' :: Nuzz n
+z'' = Constru FZ ()
+s'' = Constru (FS FZ) () -- FIXME
