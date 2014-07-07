@@ -266,7 +266,8 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   --type Augment rep = rep
   pvar :: Inspectable rep p => p n m -> Augment rep n m
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
-
+  lift :: (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
+  unlift :: (Augment rep n m -> Augment rep n m) -> (rep n m -> rep n m)
 
 instance LC (Augment rep) where
 
@@ -276,13 +277,13 @@ pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1' :: LString Z Nothing
 pl1' = pl1
 
-pla :: PLC rep => (Augment rep n m -> Augment rep n m) -> rep n m
-pla f = plam (S' Z') (f . pvar)
+pla :: PLC rep => (rep n m -> rep n m) -> rep n m
+pla f = plam (S' Z') (lift f . pvar)
 pl2 = pla $ \x -> pla $ \y -> y `app` x
 
 instance PLC LString where
   pvar = id
-  plam (S' Z') f = L ("\\a." ++ (raise f "a"))
+  plam (S' Z') f = L ("\\a." ++ (raise (unlift f) "a"))
 
 
 type NameSupply = Levelled ([String] -> String)
@@ -293,7 +294,7 @@ instance LC NameSupply where
 instance PLC NameSupply where
   pvar = id
   --plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
-  plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (f . L . const $ n) ns
+  plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
 
 instance Show (NameSupply n m) where
   show (L f) = f $ map (('v':) . show) [0..]
@@ -304,7 +305,7 @@ instance Show (NameSupply n m) where
 instance PLC (Eval a) where
   pvar = id
   --plam :: Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment Eval a n m) -> Eval a n m
-  plam (S' Z') f = E $ \(Just v) -> unE (f . E . const $ v) Nothing
+  plam (S' Z') f = E $ \(Just v) -> unE (unlift f . E . const $ v) Nothing
 
 unE (E l) = l
 
