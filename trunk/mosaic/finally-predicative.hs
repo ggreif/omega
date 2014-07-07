@@ -278,7 +278,7 @@ pla f = plam (S' Z') (lift f . pvar)
 instance LC rep => LC (Augment rep) where
    --- TODO!!!!!
 
-pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
+pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl6a,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
 pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1' :: LString Z Nothing
@@ -293,6 +293,7 @@ pl10 = pl3 `app` pl0 `app` pl0 `app` pl0
 pl4 = pl0 `app` cnst 4
 pl5 = pl2 `app` cnst 4 `app` pl0
 pl5a = pl2a `app` cnst 4 `app` cnst 3
+pl6a = pla (\x->pl2a) `app` cnst 4 `app` cnst 3 `app` cnst 1
 
 instance PLC LString where
   pvar = id
