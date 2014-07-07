@@ -278,19 +278,21 @@ pla f = plam (S' Z') (lift f . pvar)
 instance LC rep => LC (Augment rep) where
    --- TODO!!!!!
 
-pl0,pl1,pl2,pl3,pl4,pl5,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
+pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
 pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1' :: LString Z Nothing
 pl1' = pl1
 
 pl2 = pla $ \x -> pla $ \y -> y `app` x
+pl2a = pla $ \x -> pla $ \y -> cnst 45
 pl3 = pla $ \x -> pla $ \y -> pla $ \z -> y `app` x
 pl10 = pl3 `app` pl0 `app` pl0 `app` pl0
 
 
 pl4 = pl0 `app` cnst 4
 pl5 = pl2 `app` cnst 4 `app` pl0
+pl5a = pl2a `app` cnst 4 `app` cnst 3
 
 instance PLC LString where
   pvar = id
@@ -323,6 +325,7 @@ newtype EvalL a n m = Env { unEnv :: Levelled ([a] -> a) n m }
 instance Show a => Show (EvalL a n m) where
   show (Env (L f)) = show $ f $ []
 
+{-
 instance PLC (EvalL a) where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
@@ -330,12 +333,20 @@ instance PLC (EvalL a) where
   newtype Augment (EvalL a) n m = Deeper { unDeeper :: EvalL a n m }
   lift f = Deeper . f . unDeeper
   unlift f = unDeeper . f . Deeper
+-}
+instance PLC (EvalL Int) where
+  pvar = id
+  plam :: Nat' d -> (forall p . Inspectable (EvalL Int) p => p n m -> Augment (EvalL Int) n m) -> (EvalL Int) n m
+  plam (S' Z') f = Env . L $ \vs -> traceShow ({-length-} vs) $ (unL . unEnv) (unlift f . Env . L . const $ head vs) $ tail vs
+  newtype Augment (EvalL Int) n m = Deeper { unDeeper :: EvalL Int n m }
+  lift f = Deeper . f . unDeeper
+  unlift f = unDeeper . f . Deeper
 
 instance LC (EvalL a) where
   Env (L f) `app` Env (L a) = Env . L $ \vs -> let av = a vs in f $ av:vs
 
 instance BuiltinLC (EvalL Int) where
-  cnst i = Env . L $ \[] -> i
+  cnst i = Env . L . const $ i
 
 
 instance PLC (Eval a) where
