@@ -271,7 +271,7 @@ pl2 = pla $ \x -> pla $ \y -> y `app` x
 
 instance PLC LString where
   pvar = id
-  plam (S' Z') f = L ("\\a." ++ (unL . f $ L "a"))
+  plam (S' Z') f = L ("\\a." ++ (unL . f . L $ "a"))
 
 
 newtype NameSupply (n :: Nat) (m :: Maybe Nat) = N { unN :: [String] -> String }
