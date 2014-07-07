@@ -361,6 +361,12 @@ pe1, pe2 :: Eval Int Z Nothing
 pe1 = pla id `app` cnst 42
 pe2 = pla (\_ -> cnst 25) `app` cnst 42
 
+-- TypeOf for PHOAS
+instance PLC (TypeOf rep) where
+  pvar = id
+  plam Z' f = unlift f undefined -- TODO!!! factually a Pi
+
+
 -- TODOs:
 --  o Num instaces
 --  o TyEnv :: [*] -> *, simply typed LC
