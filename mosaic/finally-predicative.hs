@@ -154,9 +154,10 @@ t3 = t1 `app` cnst 42
 t4 :: (LC rep, BuiltinLC rep) => rep (S Z) UZ
 t4 = io `app` int
 
-newtype Levelled a (n :: Nat) (m :: Maybe Nat) = L { unL :: a } deriving Show
+newtype Levelled a (n :: Nat) (m :: Maybe Nat) = L { unL :: a } --deriving Show
 
 type LString = Levelled String
+deriving instance Show (LString n m)
 
 raise f = unL . f . L
 
@@ -262,24 +263,28 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   type Inspectable rep a = Augment rep ~ a
   data Augment rep :: Nat -> Maybe Nat -> *
-  --type Augment rep :: Nat -> Maybe Nat -> *
-  --type Augment rep = rep
+  --data Augment (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat)
+  --newtype Augment rep n m = A { unA :: rep n m }
   pvar :: Inspectable rep p => p n m -> Augment rep n m
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   lift :: (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
   unlift :: (Augment rep n m -> Augment rep n m) -> (rep n m -> rep n m)
 
-instance LC (Augment rep) where
+-- parametric lambda (helper)
+pla :: PLC rep => (rep n m -> rep n m) -> rep n m
+pla f = plam (S' Z') (lift f . pvar)
 
-pl0,pl1,pl2 :: (LC rep, PLC rep) => rep Z Nothing
+instance LC rep => LC (Augment rep) where
+   --- TODO!!!!!
+
+pl0,pl1,pl2,pl3 :: (LC rep, PLC rep) => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
 pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1' :: LString Z Nothing
 pl1' = pl1
 
-pla :: PLC rep => (rep n m -> rep n m) -> rep n m
-pla f = plam (S' Z') (lift f . pvar)
 pl2 = pla $ \x -> pla $ \y -> y `app` x
+pl3 = pla $ \x -> pla $ \y -> pla $ \z -> y `app` x
 
 instance PLC LString where
   pvar = id
@@ -295,6 +300,10 @@ instance PLC NameSupply where
   pvar = id
   --plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
+  newtype Augment NameSupply n m = A { unA :: NameSupply n m }
+  lift f = A . f . unA
+  unlift f = unA . f . A
+
 
 instance Show (NameSupply n m) where
   show (L f) = f $ map (('v':) . show) [0..]
