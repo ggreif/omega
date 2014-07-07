@@ -260,9 +260,15 @@ nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
 
 class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
-  type Inspectable rep a = rep ~ a
-  pvar :: Inspectable rep p => p n m -> rep n m
-  plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> rep n m) -> rep n m
+  type Inspectable rep a = Augment rep ~ a
+  data Augment rep :: Nat -> Maybe Nat -> *
+  --type Augment rep :: Nat -> Maybe Nat -> *
+  --type Augment rep = rep
+  pvar :: Inspectable rep p => p n m -> Augment rep n m
+  plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
+
+
+instance LC (Augment rep) where
 
 pl0,pl1,pl2 :: (LC rep, PLC rep) => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
@@ -286,7 +292,7 @@ instance LC NameSupply where
 
 instance PLC NameSupply where
   pvar = id
-  plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> NameSupply n m) -> NameSupply n m
+  --plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (f . L . const $ n) ns
 
 instance Show (NameSupply n m) where
@@ -297,7 +303,7 @@ instance Show (NameSupply n m) where
 
 instance PLC (Eval a) where
   pvar = id
-  plam :: Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Eval a n m) -> Eval a n m
+  --plam :: Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment Eval a n m) -> Eval a n m
   plam (S' Z') f = E $ \(Just v) -> unE (f . E . const $ v) Nothing
 
 unE (E l) = l
