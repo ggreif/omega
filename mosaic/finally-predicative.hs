@@ -154,16 +154,13 @@ t3 = t1 `app` cnst 42
 t4 :: (LC rep, BuiltinLC rep) => rep (S Z) UZ
 t4 = io `app` int
 
-newtype Levelled a (n :: Nat) (m :: Maybe Nat) = LL { unLL :: a } deriving Show --(Show, Functor)
+newtype Levelled a (n :: Nat) (m :: Maybe Nat) = L { unL :: a } deriving Show
 
-type Lev n m a = Levelled a n m
---deriving instance Functor (Lev n m a)
-
-
-newtype LString (n :: Nat) (m :: Maybe Nat) = L { unL :: String } deriving Show
---type LString (n :: Nat) (m :: Maybe Nat) = Levelled n m String
+--newtype LString (n :: Nat) (m :: Maybe Nat) = L { unL :: String } deriving Show
+type LString = Levelled String
 
 raise f = unL . f . L
+--raiseL f = unLL . f . LL
 
 instance IsString (LString n m) where
   fromString = L
