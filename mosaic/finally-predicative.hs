@@ -8,6 +8,7 @@ import Data.Function
 import Unsafe.Coerce
 import Prelude hiding (succ, pi)
 import GHC.Exts
+import Debug.Trace
 
 data Nat = Z | S Nat deriving Show
 
@@ -306,7 +307,7 @@ instance BuiltinLC NameSupply where
 
 instance PLC NameSupply where
   pvar = id
-  --plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
+  plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   newtype Augment NameSupply n m = A { unA :: NameSupply n m }
   lift f = A . f . unA
@@ -324,7 +325,8 @@ instance Show a => Show (EvalL a n m) where
 
 instance PLC (EvalL a) where
   pvar = id
-  plam (S' Z') f = Env . L $ \(v:vs) -> (unL . unEnv) (unlift f . Env . L . const $ v) vs
+  plam :: Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
+  plam (S' Z') f = Env . L $ \(v:vs) -> traceShow (length vs) $ (unL . unEnv) (unlift f . Env . L . const $ v) vs
   newtype Augment (EvalL a) n m = Deeper { unDeeper :: EvalL a n m }
   lift f = Deeper . f . unDeeper
   unlift f = unDeeper . f . Deeper
@@ -338,7 +340,7 @@ instance BuiltinLC (EvalL Int) where
 
 instance PLC (Eval a) where
   pvar = id
-  --plam :: Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment Eval a n m) -> Eval a n m
+  plam :: Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment (Eval a) n m) -> Eval a n m
   plam (S' Z') f = E $ \(Just v) -> unE (unlift f . E . const $ v) Nothing
 
 unE (E l) = l
