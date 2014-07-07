@@ -276,7 +276,7 @@ pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1' :: LString Z Nothing
 pl1' = pl1
 
-pla :: PLC rep => (rep n m -> rep n m) -> rep n m
+pla :: PLC rep => (Augment rep n m -> Augment rep n m) -> rep n m
 pla f = plam (S' Z') (f . pvar)
 pl2 = pla $ \x -> pla $ \y -> y `app` x
 
