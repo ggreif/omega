@@ -279,7 +279,6 @@ instance PLC LString where
   plam (S' Z') f = L ("\\a." ++ (raise f "a"))
 
 
---newtype NameSupply (n :: Nat) (m :: Maybe Nat) = N { unN :: [String] -> String }
 type NameSupply = Levelled ([String] -> String)
 
 instance LC NameSupply where
