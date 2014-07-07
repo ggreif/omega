@@ -156,11 +156,9 @@ t4 = io `app` int
 
 newtype Levelled a (n :: Nat) (m :: Maybe Nat) = L { unL :: a } deriving Show
 
---newtype LString (n :: Nat) (m :: Maybe Nat) = L { unL :: String } deriving Show
 type LString = Levelled String
 
 raise f = unL . f . L
---raiseL f = unLL . f . LL
 
 instance IsString (LString n m) where
   fromString = L
@@ -281,18 +279,19 @@ instance PLC LString where
   plam (S' Z') f = L ("\\a." ++ (raise f "a"))
 
 
-newtype NameSupply (n :: Nat) (m :: Maybe Nat) = N { unN :: [String] -> String }
+--newtype NameSupply (n :: Nat) (m :: Maybe Nat) = N { unN :: [String] -> String }
+type NameSupply = Levelled ([String] -> String)
 
 instance LC NameSupply where
-  N f `app` N a = N (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
+  L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
 instance PLC NameSupply where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> NameSupply n m) -> NameSupply n m
-  plam (S' Z') f = N $ \(n:ns) -> "\\" ++ n ++ "." ++ unN (f . N . const $ n) ns
+  plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (f . L . const $ n) ns
 
 instance Show (NameSupply n m) where
-  show (N f) = f $ map (('v':) . show) [0..]
+  show (L f) = f $ map (('v':) . show) [0..]
 
 
 --newtype EvalL a (n :: Nat) (m :: Maybe Nat) = Env ([a] -> a)
