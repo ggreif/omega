@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
            , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns
-           , InstanceSigs, ConstraintKinds #-}
+           , InstanceSigs, ConstraintKinds, DeriveFunctor #-}
 
 import Data.String
 import Data.Function
@@ -154,7 +154,12 @@ t3 = t1 `app` cnst 42
 t4 :: (LC rep, BuiltinLC rep) => rep (S Z) UZ
 t4 = io `app` int
 
+--newtype Levelled (n :: Nat) (m :: Maybe Nat) a = L { unL :: a } deriving (Show, Functor)
+
+
 newtype LString (n :: Nat) (m :: Maybe Nat) = L { unL :: String } deriving Show
+--type LString (n :: Nat) (m :: Maybe Nat) = Levelled n m String
+
 instance IsString (LString n m) where
   fromString = L
 
