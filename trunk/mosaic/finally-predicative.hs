@@ -277,7 +277,7 @@ pla f = plam (S' Z') (lift f . pvar)
 instance LC rep => LC (Augment rep) where
    --- TODO!!!!!
 
-pl0,pl1,pl2,pl3,pl10 :: (LC rep, PLC rep) => rep Z Nothing
+pl0,pl1,pl2,pl3,pl4,pl5,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
 pl0 = plam (S' Z') (\x -> pvar x)
 pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1' :: LString Z Nothing
@@ -286,6 +286,10 @@ pl1' = pl1
 pl2 = pla $ \x -> pla $ \y -> y `app` x
 pl3 = pla $ \x -> pla $ \y -> pla $ \z -> y `app` x
 pl10 = pl3 `app` pl0 `app` pl0 `app` pl0
+
+
+pl4 = pl0 `app` cnst 4
+pl5 = pl2 `app` cnst 4 `app` pl0
 
 instance PLC LString where
   pvar = id
@@ -296,6 +300,9 @@ type NameSupply = Levelled ([String] -> String)
 
 instance LC NameSupply where
   L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
+
+instance BuiltinLC NameSupply where
+  cnst i = L . const . show $ i
 
 instance PLC NameSupply where
   pvar = id
@@ -312,19 +319,21 @@ instance Show (NameSupply n m) where
 -- List-Env evaluation
 --
 newtype EvalL a n m = Env { unEnv :: Levelled ([a] -> a) n m }
+instance Show a => Show (EvalL a n m) where
+  show (Env (L f)) = show $ f $ []
 
 instance PLC (EvalL a) where
   pvar = id
   plam (S' Z') f = Env . L $ \(v:vs) -> (unL . unEnv) (unlift f . Env . L . const $ v) vs
   newtype Augment (EvalL a) n m = Deeper { unDeeper :: EvalL a n m }
-  lift f = Deeper . f . unDeeper --Env . Deeper . f . unDeeper . unEnv
+  lift f = Deeper . f . unDeeper
   unlift f = unDeeper . f . Deeper
 
 instance LC (EvalL a) where
-  Env (L f) `app` Env (L a) = Env . L $ \vs -> let a' = a vs in f $ [a']
-                  -- let a' = a Nothing in E $ \Nothing -> f $ Just a'
-  --L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
+  Env (L f) `app` Env (L a) = Env . L $ \vs -> let av = a vs in f $ av:vs
 
+instance BuiltinLC (EvalL Int) where
+  cnst i = Env . L $ \[] -> i
 
 
 instance PLC (Eval a) where
