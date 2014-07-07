@@ -373,7 +373,7 @@ instance PLC (TypeOf rep) where
 --  o Type inference
 --  o Emax-style unityped->typed compiler (Emil Axelsson)
 --  o Shape :: LambdaTree(Graph) -> *, shapely LC
-
+--  o PHOAS <--> DeBruijn conversions
 
 -- Anonymous datatypes
 -----------------------
