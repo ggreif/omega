@@ -375,7 +375,7 @@ instance PLC (TypeOf rep) where
 
 
 -- TODOs:
---  o Num instaces
+--  o Num instances
 --  o TyEnv :: [*] -> *, simply typed LC (we need a non-trivial Augment for this)
 --  o Type inference
 --  o Emax-style unityped->typed compiler (Emil Axelsson)
