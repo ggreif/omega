@@ -131,7 +131,7 @@ instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   var = T int
   lam' Z' body = body -- factually a Pi
   lam' (S' n) (T body) = T $ lam' n body
-  app (T f) _ = T f -- FIXME: dependent types?
+  app (T f) _ = T f -- FIXME: dependent types? -- substitute argument into f's body
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
   --annot etc. --> TODO
