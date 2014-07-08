@@ -266,9 +266,15 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   data Augment rep :: Nat -> Maybe Nat -> *
   pvar :: Inspectable rep p => p n m -> Augment rep n m
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
+  ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
+
+  -- these need not be class methods:
   lift :: (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
+  lift f = fst ep . f . snd ep
   unlift :: (Augment rep n m -> Augment rep n m) -> (rep n m -> rep n m)
+  unlift f = snd ep . f . fst ep
   augment :: (p n m -> rep n m) -> p n m -> Augment rep n m
+  augment f = fst ep . f
 
 -- parametric lambda (helper)
 pla :: PLC rep => (rep n m -> rep n m) -> rep n m
@@ -315,9 +321,10 @@ instance PLC NameSupply where
   plam Z' f = L $ \(n:ns) -> "||" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   newtype Augment NameSupply n m = A { unA :: NameSupply n m }
-  lift f = A . f . unA
-  unlift f = unA . f . A
-  augment = (A.)
+  ep = (A, unA)
+  --lift f = A . f . unA
+  --unlift f = unA . f . A
+  --augment = (A.)
 
 instance Show (NameSupply n m) where
   show (L f) = f $ map (('v':) . show) [0..]
@@ -334,16 +341,18 @@ instance PLC (EvalL a) where
   plam :: Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
   plam (S' Z') f = Env . L $ \(v:vs) -> traceShow (length vs) $ (unL . unEnv) (unlift f . Env . L . const $ v) vs
   newtype Augment (EvalL a) n m = Deeper { unDeeper :: EvalL a n m }
-  lift f = Deeper . f . unDeeper
-  unlift f = unDeeper . f . Deeper
+  ep = (Deeper, unDeeper)
+  --lift f = Deeper . f . unDeeper
+  --unlift f = unDeeper . f . Deeper
 -}
 instance PLC (EvalL Int) where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable (EvalL Int) p => p n m -> Augment (EvalL Int) n m) -> (EvalL Int) n m
   plam (S' Z') f = Env . L $ \vs -> traceShow ({-length-} vs) $ (unL . unEnv) (unlift f . Env . L . const $ head vs) $ tail vs
   newtype Augment (EvalL Int) n m = Deeper { unDeeper :: EvalL Int n m }
-  lift f = Deeper . f . unDeeper
-  unlift f = unDeeper . f . Deeper
+  ep = (Deeper, unDeeper)
+  --lift f = Deeper . f . unDeeper
+  --unlift f = unDeeper . f . Deeper
 
 instance LC (EvalL a) where
   Env (L f) `app` Env (L a) = Env . L $ \vs -> let av = a vs in f $ av:vs
@@ -369,9 +378,10 @@ instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
   plam Z' f = unlift f . T $ int -- factually a Pi
   plam (S' n) f = T $ plam n $ augment $ \x -> unT . unlift f . T $ int
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
-  lift f = InnerTypeOf . f . unInnerTypeOf
-  unlift f = unInnerTypeOf . f . InnerTypeOf
-  augment = (InnerTypeOf.)
+  ep = (InnerTypeOf, unInnerTypeOf)
+  --lift f = InnerTypeOf . f . unInnerTypeOf
+  --unlift f = unInnerTypeOf . f . InnerTypeOf
+  --augment = (InnerTypeOf.)
 
 -- TODOs:
 --  o Num instances
