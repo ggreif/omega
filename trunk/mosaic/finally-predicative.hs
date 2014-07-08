@@ -332,21 +332,13 @@ instance Show a => Show (EvalL a n m) where
 instance PLC (EvalL a) where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
-  plam (S' Z') f = Env . L $ feed -- \(v:vs) -> traceShow (length vs) $ (unL . unEnv) (unlift f . Env . L . const $ v) vs
+  plam (S' Z') f = Env . L $ feed
     where
     feed (v:vs) = (unL . unEnv) (unlift f . Env . L . const $ v) vs
     feed [] = Nothing
   newtype Augment (EvalL a) n m = Deeper { unDeeper :: EvalL a n m }
   ep = (Deeper, unDeeper)
 
-{-
-instance PLC (EvalL Int) where
-  pvar = id
-  plam :: Nat' d -> (forall p . Inspectable (EvalL Int) p => p n m -> Augment (EvalL Int) n m) -> (EvalL Int) n m
-  plam (S' Z') f = Env . L $ \vs -> traceShow ({-length-} vs) $ (unL . unEnv) (unlift f . Env . L . const $ head vs) $ tail vs
-  newtype Augment (EvalL Int) n m = Deeper { unDeeper :: EvalL Int n m }
-  ep = (Deeper, unDeeper)
--}
 instance LC (EvalL a) where
   Env (L f) `app` Env (L a) = Env . L $ \vs -> let av = a vs in f $ av:vs
 
