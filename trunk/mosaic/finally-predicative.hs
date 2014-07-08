@@ -24,10 +24,10 @@ instance KnownNat n => KnownNat (S n) where
 
 
 
-data Ev :: * where
-  Ev :: KnownNat n => Nat' n -> Ev
+data NatEv :: (Nat -> Constraint) -> * where
+  NatEv :: c n => Nat' n -> NatEv c
 
-deriving instance Show Ev
+deriving instance Show (NatEv c)
 
 natMin :: Nat' l -> Nat' r -> Nat' (l `NatMin` r)
 natMin Z' r = Z'
@@ -41,8 +41,8 @@ natEq (S' l) (S' r) = do Refl <- natEq l r; return Refl
 natEq _ _ = Nothing
 
 ev :: KnownNat result => Nat' l -> Nat' r -> Nat' result -> Maybe (result :~: NatMin l r)
-ev l r res = case (natMin l r, Ev res) of
-                  (lr, Ev res') -> do Refl <- lr `natEq` res; Refl <- res `natEq` res'; return Refl
+ev l r res = case (natMin l r, NatEv res :: NatEv KnownNat) of
+                  (lr, NatEv res') -> do Refl <- lr `natEq` res; Refl <- res `natEq` res'; return Refl
 
 
 -- Alternative: Use Maybe Nat for the storeys
