@@ -367,9 +367,8 @@ pe2 = pla (\_ -> cnst 25) `app` cnst 42
 -- TypeOf for PHOAS
 instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
   pvar = id
-  plam Z' f = traceShow 'o' $ (unlift f . T $ int) -- factually a Pi
-  --plam (S' n) f = T (plam n (augment (\x -> int))) -- InnerTypeOf $ undefined -- unT (unlift f . T $ int)
-  plam (S' n) f = T (plam n (augment (\x -> unT(unlift f $ T int)))) -- InnerTypeOf $ undefined -- unT (unlift f . T $ int)
+  plam Z' f = unlift f . T $ int -- factually a Pi
+  plam (S' n) f = T (plam n (augment (\x -> unT (unlift f . T $ int))))
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
   lift f = InnerTypeOf . f . unInnerTypeOf
   unlift f = unInnerTypeOf . f . InnerTypeOf
