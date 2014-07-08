@@ -99,9 +99,6 @@ lAM = lam' $ S' (S' Z')
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
   typeof :: rep n m -> rep (S n) (Climb m)
-  --arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi
-  --pi :: rep (S n) m -> rep (S n) m
-  --suspend :: rep n m -> rep (S n) (Climb m)
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
   star :: rep (S (S n)) Nothing
@@ -137,7 +134,7 @@ instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   app (T f) _ = T f -- FIXME: dependent types?
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
-  --pi body = body
+  --annot etc. --> TODO
 
 instance (LC rep, BuiltinLC rep) => BuiltinLC (TypeOf rep) where
   star = T star
@@ -196,7 +193,7 @@ instance BuiltinLC LString where
   io = "IO"
 
 instance TypedLC LString where
-  --pi body = L $ "(|| " ++ unL body ++ ")"
+  --TODO
 
 
 instance LC Tw where
