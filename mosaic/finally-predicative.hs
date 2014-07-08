@@ -312,6 +312,7 @@ instance BuiltinLC NameSupply where
 instance PLC NameSupply where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
+  plam Z' f = L $ \(n:ns) -> "||" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   newtype Augment NameSupply n m = A { unA :: NameSupply n m }
   lift f = A . f . unA
@@ -363,11 +364,11 @@ pe1 = pla id `app` cnst 42
 pe2 = pla (\_ -> cnst 25) `app` cnst 42
 
 -- TypeOf for PHOAS
-instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
+instance {-(BuiltinLC NameSupply, PLC NameSupply) => -}PLC (TypeOf NameSupply) where
   pvar = id
   plam Z' f = traceShow 'o' $ (unlift f . T $ int) -- factually a Pi
-  plam (S' n) f = T . plam n $ undefined -- \x -> InnerTypeOf $ undefined -- unT (unlift f . T $ int)
-  newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
+  plam (S' n) f = T (plam n $ \x -> A int) -- InnerTypeOf $ undefined -- unT (unlift f . T $ int)
+  newtype Augment (TypeOf NameSupply) n m = InnerTypeOf { unInnerTypeOf :: TypeOf NameSupply n m }
   lift f = InnerTypeOf . f . unInnerTypeOf
   unlift f = unInnerTypeOf . f . InnerTypeOf
 
