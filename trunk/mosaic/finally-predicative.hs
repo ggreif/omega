@@ -100,7 +100,8 @@ class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
   typeof :: rep n m -> rep (S n) (Climb m)
   --arr :: rep (S n) -> rep (S n) -> rep (S n) -- NONO! see pi
-  pi :: rep (S n) m -> rep (S n) m
+  --pi :: rep (S n) m -> rep (S n) m
+  --suspend :: rep n m -> rep (S n) (Climb m)
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
   star :: rep (S (S n)) Nothing
@@ -125,6 +126,8 @@ instance (LC rep, LC rep') => LC (P rep rep') where
 
 newtype TypeOf (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) = T (rep (S n) Nothing) -- So far all type-y result things are unbounded
 
+unT (T t) = t
+
 deriving instance Show (rep (S n) Nothing) => Show (TypeOf rep n m)
 
 instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
@@ -134,13 +137,13 @@ instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   app (T f) _ = T f -- FIXME: dependent types?
 
 instance BuiltinLC rep => TypedLC (TypeOf rep) where
-  pi body = body
+  --pi body = body
 
-instance (BuiltinLC rep, TypedLC rep) => BuiltinLC (TypeOf rep) where
+instance (LC rep, BuiltinLC rep) => BuiltinLC (TypeOf rep) where
   star = T star
   int = T star
   cnst _ = T int
-  io = T $ pi star
+  io = T $ lam' Z' star
 
 
 -- ## TESTS ##
@@ -193,7 +196,7 @@ instance BuiltinLC LString where
   io = "IO"
 
 instance TypedLC LString where
-  pi body = L $ "(|| " ++ unL body ++ ")"
+  --pi body = L $ "(|| " ++ unL body ++ ")"
 
 
 instance LC Tw where
@@ -264,8 +267,6 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   type Inspectable rep a = Augment rep ~ a
   data Augment rep :: Nat -> Maybe Nat -> *
-  --data Augment (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat)
-  --newtype Augment rep n m = A { unA :: rep n m }
   pvar :: Inspectable rep p => p n m -> Augment rep n m
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   lift :: (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
@@ -365,9 +366,10 @@ pe1 = pla id `app` cnst 42
 pe2 = pla (\_ -> cnst 25) `app` cnst 42
 
 -- TypeOf for PHOAS
-instance PLC (TypeOf rep) where
+instance BuiltinLC (rep) => PLC (TypeOf rep) where
   pvar = id
-  plam Z' f = unlift f $ error "tau(pi_x:Int.T(x)) must be free of x" -- factually a Pi
+  --plam Z' f = unlift f $ suspend int -- factually a Pi
+  plam Z' f = unlift f . T $ int
   plam (S' n) f = plam n f
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
   lift f = InnerTypeOf . f . unInnerTypeOf
