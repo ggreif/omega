@@ -27,6 +27,8 @@ instance KnownNat n => KnownNat (S n) where
 data Ev :: * where
   Ev :: KnownNat n => Nat' n -> Ev
 
+deriving instance Show Ev
+
 natMin :: Nat' l -> Nat' r -> Nat' (l `NatMin` r)
 natMin Z' r = Z'
 natMin l Z' = Z'
