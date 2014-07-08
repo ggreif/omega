@@ -325,30 +325,33 @@ instance Show (NameSupply n m) where
 
 -- List-Env evaluation
 --
-newtype EvalL a n m = Env { unEnv :: Levelled ([a] -> a) n m }
+newtype EvalL a n m = Env { unEnv :: Levelled ([Maybe a] -> Maybe a) n m }
 instance Show a => Show (EvalL a n m) where
   show (Env (L f)) = show $ f $ []
 
-{-
 instance PLC (EvalL a) where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
-  plam (S' Z') f = Env . L $ \(v:vs) -> traceShow (length vs) $ (unL . unEnv) (unlift f . Env . L . const $ v) vs
+  plam (S' Z') f = Env . L $ feed -- \(v:vs) -> traceShow (length vs) $ (unL . unEnv) (unlift f . Env . L . const $ v) vs
+    where
+    feed (v:vs) = (unL . unEnv) (unlift f . Env . L . const $ v) vs
+    feed [] = Nothing
   newtype Augment (EvalL a) n m = Deeper { unDeeper :: EvalL a n m }
   ep = (Deeper, unDeeper)
--}
+
+{-
 instance PLC (EvalL Int) where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable (EvalL Int) p => p n m -> Augment (EvalL Int) n m) -> (EvalL Int) n m
   plam (S' Z') f = Env . L $ \vs -> traceShow ({-length-} vs) $ (unL . unEnv) (unlift f . Env . L . const $ head vs) $ tail vs
   newtype Augment (EvalL Int) n m = Deeper { unDeeper :: EvalL Int n m }
   ep = (Deeper, unDeeper)
-
+-}
 instance LC (EvalL a) where
   Env (L f) `app` Env (L a) = Env . L $ \vs -> let av = a vs in f $ av:vs
 
 instance BuiltinLC (EvalL Int) where
-  cnst i = Env . L . const $ i
+  cnst i = Env . L . const . Just $ i
 
 
 instance PLC (Eval a) where
