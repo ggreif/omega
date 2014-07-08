@@ -274,13 +274,9 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
 pla :: PLC rep => (rep n m -> rep n m) -> rep n m
 pla f = plam (S' Z') (lift f . pvar)
 
---instance LC rep => LC (Augment rep) where
-   --- TODO!!!!!
 
 pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl6a,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
---pl0 = plam (S' Z') (\x -> pvar x)
 pl0 = pla $ \x -> x
---pl1 = plam (S' Z') (\x -> pvar x `app` pvar x)
 pl1 = pla (\x -> x `app` x)
 pl1' :: LString Z Nothing
 pl1' = pl1
