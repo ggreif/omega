@@ -363,11 +363,10 @@ pe1 = pla id `app` cnst 42
 pe2 = pla (\_ -> cnst 25) `app` cnst 42
 
 -- TypeOf for PHOAS
-instance BuiltinLC (rep) => PLC (TypeOf rep) where
+instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
   pvar = id
-  --plam Z' f = unlift f $ suspend int -- factually a Pi
-  plam Z' f = unlift f . T $ int
-  plam (S' n) f = plam n f
+  plam Z' f = traceShow 'o' $ (unlift f . T $ int) -- factually a Pi
+  plam (S' n) f = T . plam n $ undefined -- \x -> InnerTypeOf $ undefined -- unT (unlift f . T $ int)
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
   lift f = InnerTypeOf . f . unInnerTypeOf
   unlift f = unInnerTypeOf . f . InnerTypeOf
