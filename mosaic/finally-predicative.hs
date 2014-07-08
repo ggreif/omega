@@ -307,6 +307,7 @@ instance LC NameSupply where
 instance TypedLC NameSupply where
 
 instance BuiltinLC NameSupply where
+  star = L . const $ "*"
   int = L . const $ "Int"
   cnst i = L . const . show $ i
 
@@ -372,7 +373,7 @@ instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
   lift f = InnerTypeOf . f . unInnerTypeOf
   unlift f = unInnerTypeOf . f . InnerTypeOf
-
+  augment = (InnerTypeOf.)
 
 -- TODOs:
 --  o Num instances
