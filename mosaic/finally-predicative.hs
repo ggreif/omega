@@ -268,12 +268,9 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
--- these need not be class methods:
---lift :: (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
+-- lifting helpers
 lift f = fst ep . f . snd ep
--- unlift :: (Augment rep n m -> Augment rep n m) -> (rep n m -> rep n m)
 unlift f = snd ep . f . fst ep
- -- augment :: (p n m -> rep n m) -> p n m -> Augment rep n m
 augment f = fst ep . f
 
 -- parametric lambda (helper)
