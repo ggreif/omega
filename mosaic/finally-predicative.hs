@@ -272,6 +272,10 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
 lift f = fst ep . f . snd ep
 unlift f = snd ep . f . fst ep
 augment f = fst ep . f
+--shrink :: PLC rep => (rep n m -> Augment rep n m) -> (rep n m -> rep n m)
+--shrink f = snd ep . f
+testss :: Int -> a
+testss = undefined
 
 -- parametric lambda (helper)
 pla :: PLC rep => (rep n m -> rep n m) -> rep n m
@@ -325,7 +329,11 @@ instance Show (NameSupply n m) where
 
 -- List-Env evaluation
 --
-newtype EvalL a n m = Env { unEnv :: Levelled ([Maybe a] -> Maybe a) n m }
+data Evaler a n = forall m . Evaler (EvalL a n m -> EvalL a n m)
+--newtype EvalL a n m = Env { unEnv :: Levelled ([Either (EvalL a n m -> EvalL a n m) a] -> Either (EvalL a n m -> EvalL a n m) a) n m }
+newtype EvalL a n m = Env { unEnv :: Levelled ([Either (Evaler a n) a] -> Either (Evaler a n) a) n m }
+instance Show a => Show (Evaler a n) where
+  show = const "CLOSURE"
 instance Show a => Show (EvalL a n m) where
   show (Env (L f)) = show $ f $ []
 
@@ -333,9 +341,8 @@ instance PLC (EvalL a) where
   pvar = id
   plam :: Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
   plam (S' Z') f = Env . L $ feed
-    where
-    feed (v:vs) = (unL . unEnv) (unlift f . Env . L . const $ v) vs
-    feed [] = Nothing
+    where feed (v:vs) = (unL . unEnv) (unlift f . Env . L . const $ v) vs
+          feed [] = Left $ Evaler (unlift f)
   newtype Augment (EvalL a) n m = Deeper { unDeeper :: EvalL a n m }
   ep = (Deeper, unDeeper)
 
@@ -343,7 +350,7 @@ instance LC (EvalL a) where
   Env (L f) `app` Env (L a) = Env . L $ \vs -> let av = a vs in f $ av:vs
 
 instance BuiltinLC (EvalL Int) where
-  cnst i = Env . L . const . Just $ i
+  cnst i = Env . L . const . Right $ i
 
 
 instance PLC (Eval a) where
