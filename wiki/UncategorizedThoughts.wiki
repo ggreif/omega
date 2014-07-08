@@ -213,3 +213,9 @@ Lots of good stuff here: https://uf-ias-2012.wikispaces.com/Semantics+of+type+th
   * https://github.com/mikeizbicki/typeparams#the-typeparams-library
   * http://www.timphilipwilliams.com/posts/2014-06-05-map-comprehensions.html
   * http://www.jonmsterling.com/posts/2012-11-10-faking-it-with-style.html
+
+= Entropy in Biology =
+
+http://johncarlosbaez.wordpress.com/2013/11/02/entropy-and-information-in-biological-systems/
+
+I always said that "The road to intelligence leads through entropy."
