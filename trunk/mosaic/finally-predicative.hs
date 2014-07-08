@@ -7,7 +7,7 @@ import Data.String
 import Data.Function
 import Unsafe.Coerce
 import Prelude hiding (succ, pi)
-import GHC.Exts
+import GHC.Exts hiding (augment)
 import Debug.Trace
 
 data Nat = Z | S Nat deriving Show
@@ -268,6 +268,7 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   lift :: (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
   unlift :: (Augment rep n m -> Augment rep n m) -> (rep n m -> rep n m)
+  augment :: (p n m -> rep n m) -> p n m -> Augment rep n m
 
 -- parametric lambda (helper)
 pla :: PLC rep => (rep n m -> rep n m) -> rep n m
@@ -317,7 +318,7 @@ instance PLC NameSupply where
   newtype Augment NameSupply n m = A { unA :: NameSupply n m }
   lift f = A . f . unA
   unlift f = unA . f . A
-
+  augment = (A.)
 
 instance Show (NameSupply n m) where
   show (L f) = f $ map (('v':) . show) [0..]
@@ -364,11 +365,12 @@ pe1 = pla id `app` cnst 42
 pe2 = pla (\_ -> cnst 25) `app` cnst 42
 
 -- TypeOf for PHOAS
-instance {-(BuiltinLC NameSupply, PLC NameSupply) => -}PLC (TypeOf NameSupply) where
+instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
   pvar = id
   plam Z' f = traceShow 'o' $ (unlift f . T $ int) -- factually a Pi
-  plam (S' n) f = T (plam n $ \x -> A int) -- InnerTypeOf $ undefined -- unT (unlift f . T $ int)
-  newtype Augment (TypeOf NameSupply) n m = InnerTypeOf { unInnerTypeOf :: TypeOf NameSupply n m }
+  --plam (S' n) f = T (plam n $ \x -> A int) -- InnerTypeOf $ undefined -- unT (unlift f . T $ int)
+  plam (S' n) f = T (plam n $ augment (\x -> int)) -- InnerTypeOf $ undefined -- unT (unlift f . T $ int)
+  newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
   lift f = InnerTypeOf . f . unInnerTypeOf
   unlift f = unInnerTypeOf . f . InnerTypeOf
 
