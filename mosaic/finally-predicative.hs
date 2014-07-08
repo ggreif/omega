@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds, KindSignatures, FlexibleContexts, StandaloneDeriving
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
            , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns
-           , InstanceSigs, ConstraintKinds, DeriveFunctor #-}
+           , InstanceSigs, ConstraintKinds, DeriveFunctor, TypeOperators
+           , PolyKinds, ImpredicativeTypes #-}
 
 import Data.String
 import Data.Function
@@ -9,8 +10,38 @@ import Unsafe.Coerce
 import Prelude hiding (succ, pi)
 import GHC.Exts hiding (augment)
 import Debug.Trace
+import Data.Type.Equality
 
 data Nat = Z | S Nat deriving Show
+
+class KnownNat (n :: Nat) where
+  it :: Nat' n
+
+instance KnownNat Z where
+  it = Z'
+instance KnownNat n => KnownNat (S n) where
+  it = S' it
+
+
+
+data Ev :: * where
+  Ev :: KnownNat n => Nat' n -> Ev
+
+natMin :: Nat' l -> Nat' r -> Nat' (l `NatMin` r)
+natMin Z' r = Z'
+natMin l Z' = Z'
+natMin (S' l) (S' r) = S' (natMin l r)
+
+
+natEq :: Nat' l -> Nat' r -> Maybe (l :~: r)
+natEq Z' Z' = Just Refl
+natEq (S' l) (S' r) = do Refl <- natEq l r; return Refl
+natEq _ _ = Nothing
+
+ev :: KnownNat result => Nat' l -> Nat' r -> Nat' result -> Maybe (result :~: NatMin l r)
+ev l r res = case (natMin l r, Ev res) of
+                  (lr, Ev res') -> do Refl <- lr `natEq` res; Refl <- res `natEq` res'; return Refl
+
 
 -- Alternative: Use Maybe Nat for the storeys
 type family Climb (n :: Maybe Nat) :: Maybe Nat where
