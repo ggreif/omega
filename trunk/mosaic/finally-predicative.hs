@@ -305,7 +305,10 @@ type NameSupply = Levelled ([String] -> String)
 instance LC NameSupply where
   L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
+instance TypedLC NameSupply where
+
 instance BuiltinLC NameSupply where
+  int = L . const $ "Int"
   cnst i = L . const . show $ i
 
 instance PLC NameSupply where
@@ -364,12 +367,16 @@ pe2 = pla (\_ -> cnst 25) `app` cnst 42
 -- TypeOf for PHOAS
 instance PLC (TypeOf rep) where
   pvar = id
-  plam Z' f = unlift f undefined -- TODO!!! factually a Pi
+  plam Z' f = unlift f $ error "tau(pi_x:Int.T(x)) must be free of x" -- factually a Pi
+  plam (S' n) f = plam n f
+  newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
+  lift f = InnerTypeOf . f . unInnerTypeOf
+  unlift f = unInnerTypeOf . f . InnerTypeOf
 
 
 -- TODOs:
 --  o Num instaces
---  o TyEnv :: [*] -> *, simply typed LC
+--  o TyEnv :: [*] -> *, simply typed LC (we need a non-trivial Augment for this)
 --  o Type inference
 --  o Emax-style unityped->typed compiler (Emil Axelsson)
 --  o Shape :: LambdaTree(Graph) -> *, shapely LC
