@@ -150,9 +150,9 @@ nat2int (S' n) = 1 + nat2int n
 -- --------------+ at  -+ room
 --               v      v
 class LC (rep :: Nat -> Maybe Nat -> *) where
-  var :: rep n m
-  lam' :: Nat' d -> rep n m -> rep n m
-  app :: rep n m -> rep n m' -> rep n (Min m m')
+  var :: KnownNat n => rep n m
+  lam' :: KnownNat n => Nat' d -> rep n m -> rep n m
+  app :: KnownNat n => rep n m -> rep n m' -> rep n (Min m m')
 
 -- helpers
 lam :: LC rep => rep Z Nothing -> rep Z Nothing
@@ -167,7 +167,7 @@ class TypedLC (rep :: Nat -> Maybe Nat -> *) where
 
 class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
   star :: rep (S (S n)) Nothing
-  int :: rep (S n) Nothing
+  int :: KnownNat n => rep (S n) Nothing
   io :: rep (S Z) UZ
   cnst :: Int -> rep Z Nothing
 
@@ -231,7 +231,9 @@ instance IsString (LString n m) where
   fromString = L
 
 instance {-HasLevel (LString n) => -}LC LString where
-  var = {-addLevel $-} "?"
+  var = addLevel "?" it -- $ show (nat2int it) ++ "?"
+      where addLevel :: LString n m -> Nat' n -> LString n m
+            addLevel (L s) n = L $ show (nat2int n) ++ s
   lam' Z' body = L $ "(|| " ++ unL body ++ ")"
   lam' (S' Z') body = L $ "(\\ " ++ unL body ++ ")"
   lam' (nat2int -> n) body = L $ "(" ++ show n ++ "\\ " ++ unL body ++ ")"
@@ -329,7 +331,7 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   type Inspectable rep a = Augment rep ~ a
   data Augment rep :: Nat -> Maybe Nat -> *
-  pvar :: Inspectable rep p => p n m -> Augment rep n m
+  pvar :: KnownNat n => Inspectable rep p => p n m -> Augment rep n m
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
