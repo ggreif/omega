@@ -330,7 +330,7 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable rep a = Augment rep ~ a
   data Augment rep :: Nat -> Maybe Nat -> *
   pvar :: Inspectable rep p => p n m -> Augment rep n m
-  plam :: Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
+  plam :: KnownNat n => Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
 -- lifting helpers
@@ -343,7 +343,7 @@ testss :: Int -> a
 testss = undefined
 
 -- parametric lambda (helper)
-pla :: PLC rep => (rep n m -> rep n m) -> rep n m
+pla :: (KnownNat n, PLC rep) => (rep n m -> rep n m) -> rep n m
 pla f = plam (S' Z') (lift f . pvar)
 
 
@@ -383,7 +383,7 @@ instance BuiltinLC NameSupply where
 
 instance PLC NameSupply where
   pvar = id
-  plam :: Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
+  plam :: KnownNat n => Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
   plam Z' f = L $ \(n:ns) -> "||" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   newtype Augment NameSupply n m = A { unA :: NameSupply n m }
@@ -404,7 +404,7 @@ instance Show a => Show (EvalL a n m) where
 
 instance PLC (EvalL a) where
   pvar = id
-  plam :: Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
+  plam :: KnownNat n => Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
   plam (S' Z') f = Env . L $ feed
     where feed (v:vs) = (unL . unEnv) (unlift f . Env . L . const $ v) vs
           feed [] = Left $ Evaler (unlift f)
@@ -420,7 +420,7 @@ instance BuiltinLC (EvalL Int) where
 
 instance PLC (Eval a) where
   pvar = id
-  plam :: Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment (Eval a) n m) -> Eval a n m
+  plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment (Eval a) n m) -> Eval a n m
   plam (S' Z') f = E $ \(Just v) -> unE (unlift f . E . const $ v) Nothing
 
 unE (E l) = l
