@@ -327,10 +327,6 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
 lift f = fst ep . f . snd ep
 unlift f = snd ep . f . fst ep
 augment f = fst ep . f
---shrink :: PLC rep => (rep n m -> Augment rep n m) -> (rep n m -> rep n m)
---shrink f = snd ep . f
-testss :: Int -> a
-testss = undefined
 
 -- parametric lambda (helper)
 pla :: (KnownNat n, PLC rep) => (rep n m -> rep n m) -> rep n m
