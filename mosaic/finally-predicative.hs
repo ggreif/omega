@@ -10,7 +10,7 @@ import Unsafe.Coerce
 import Prelude hiding (succ, pi)
 import GHC.Exts hiding (augment)
 import Debug.Trace
-import Data.Type.Equality
+import Data.Type.Equality hiding (outer)
 
 data Nat = Z | S Nat deriving Show
 
@@ -147,7 +147,7 @@ nat2int :: Nat' n -> Int
 nat2int Z' = 0
 nat2int (S' n) = 1 + nat2int n
 
--- --------------+ at  -+ room
+-- --------------+ at   +-- headroom
 --               v      v
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: KnownNat n => rep n m
@@ -160,6 +160,21 @@ lam = lam' (S' Z')
 
 lAM :: LC rep => rep (S Z) Nothing -> rep (S Z) Nothing
 lAM = lam' $ S' (S' Z')
+
+--outer :: KnownNat n => Nest rep n m -> rep n m
+
+v :: (KnownNat n, LC rep) => Nat' depth -> rep n m
+v Z' = var
+v (S' n) = outer (v n)
+    where outer (Nest v) = v
+
+-- variable nesting (later: zipping)
+--newtype Nest (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) = Nest (rep n m)
+newtype Nest (rep :: Nat -> Maybe Nat -> *) n m = Nest (rep n m)
+
+instance LC rep => LC (Nest rep) where
+  var = Nest var
+  -- Nest should not happen for other things, only vars
 
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
