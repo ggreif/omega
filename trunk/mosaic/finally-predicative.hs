@@ -381,7 +381,6 @@ instance Show (NameSupply n m) where
 -- List-Env evaluation
 --
 data Evaler a n = forall m . Evaler (EvalL a n m -> EvalL a n m)
---newtype EvalL a n m = Env { unEnv :: Levelled ([Either (EvalL a n m -> EvalL a n m) a] -> Either (EvalL a n m -> EvalL a n m) a) n m }
 newtype EvalL a n m = Env { unEnv :: Levelled ([Either (Evaler a n) a] -> Either (Evaler a n) a) n m }
 instance Show a => Show (Evaler a n) where
   show = const "CLOSURE"
