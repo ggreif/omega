@@ -49,9 +49,17 @@ type family Climb (n :: Maybe Nat) :: Maybe Nat where
   Climb Nothing = Nothing
   Climb (Just (S n)) = Just n
 
+climb :: Limit n -> Limit (Climb n)
+climb Utmost = Utmost
+climb (Limited (S' n)) = Limited n
+
 type family Succ (n :: Maybe Nat) :: Maybe Nat where
   Succ Nothing = Nothing
   Succ (Just n) = Just (S n)
+
+limSucc :: Limit n -> Limit (Succ n)
+limSucc Utmost = Utmost
+limSucc (Limited n) = Limited (S' n)
 
 type family Min (l :: Maybe Nat) (r :: Maybe Nat) :: Maybe Nat where
   Min Nothing r = r
