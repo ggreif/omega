@@ -230,28 +230,16 @@ raise f = unL . f . L
 instance IsString (LString n m) where
   fromString = L
 
-instance {-HasLevel (LString n) => -}LC LString where
-  var = addLevel "?" it -- $ show (nat2int it) ++ "?"
+instance LC LString where
+  var = addLevel "?" it
       where addLevel :: LString n m -> Nat' n -> LString n m
-            addLevel (L s) n = L $ show (nat2int n) ++ s
+            addLevel s Z' = s
+            addLevel (L s) (nat2int -> n) = L $ s ++ "^" ++ show n
   lam' Z' body = L $ "(|| " ++ unL body ++ ")"
   lam' (S' Z') body = L $ "(\\ " ++ unL body ++ ")"
   lam' (nat2int -> n) body = L $ "(" ++ show n ++ "\\ " ++ unL body ++ ")"
   app e1 e2 = L $ "(" ++ unL e1 ++ " " ++ unL e2 ++ ")"
 
-{-
-class HasLevel p where
-  addLevel :: p -> p
-  level :: p -> Int
-
-instance HasLevel (LString Z) where
-  addLevel p = unL p ++ "@" ++ (show . level) p
-  level _ = 0
-
-instance HasLevel (LString n) => HasLevel (LString (S n)) where
-  addLevel p = unL p ++ "@" ++ (show . level) p
-  level _ = 1
--}
 
 instance BuiltinLC LString where
   cnst i = L $ show i
