@@ -45,7 +45,6 @@ ev l r res = case (natMin l r, NatEv res :: NatEv KnownNat) of
                   (lr, NatEv res') -> do Refl <- lr `natEq` res; Refl <- res `natEq` res'; return Refl
 
 
--- Alternative: Use Maybe Nat for the storeys
 type family Climb (n :: Maybe Nat) :: Maybe Nat where
   Climb Nothing = Nothing
   Climb (Just (S n)) = Just n
