@@ -27,10 +27,6 @@ data Ev :: (k -> *) -> (k -> Constraint) -> * where
   Ev :: c n => f n -> Ev f c
 
 type NatEv = Ev Nat'
-{-
-data NatEv :: (Nat -> Constraint) -> * where
-  NatEv :: c n => Nat' n -> NatEv c
--}
 deriving instance Show (NatEv c)
 
 natMin :: Nat' l -> Nat' r -> Nat' (l `NatMin` r)
