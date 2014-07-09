@@ -2,7 +2,7 @@
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
            , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns
            , InstanceSigs, ConstraintKinds, DeriveFunctor, TypeOperators
-           , PolyKinds, ImpredicativeTypes #-}
+           , PolyKinds #-}
 
 import Data.String
 import Data.Function
