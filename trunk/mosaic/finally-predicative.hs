@@ -60,6 +60,28 @@ type family Min (l :: Maybe Nat) (r :: Maybe Nat) :: Maybe Nat where
   Min l (Just Z) = Just Z
   Min (Just (S l)) (Just (S r)) = Just (S (NatMin l r))
 
+limMin :: Limit l -> Limit r -> Limit (l `Min` r)
+limMin Utmost r = r
+limMin l Utmost = l
+limMin (Limited Z') r = Limited Z'
+limMin l (Limited Z') = Limited Z'
+limMin (Limited (S' l)) (Limited (S' r)) = --case Limited l `limMin` Limited r of Limited lr -> Limited $ S' lr
+  Limited . S' $ l `natMin` r
+
+
+data Limit :: Maybe Nat -> * where
+  Utmost :: Limit Nothing
+  Limited :: Nat' l -> Limit (Just l)
+
+class KnownLimit (l :: Maybe Nat) where
+  limit :: Limit l
+
+instance KnownLimit Nothing where
+  limit = Utmost
+instance KnownNat l => KnownLimit (Just l) where
+  limit = Limited it
+
+
 type family NatMin (l :: Nat) (r :: Nat) :: Nat where
   NatMin Z r = Z
   NatMin l Z = Z
