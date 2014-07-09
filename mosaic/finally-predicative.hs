@@ -44,6 +44,10 @@ ev :: KnownNat result => Nat' l -> Nat' r -> Nat' result -> Maybe (result :~: Na
 ev l r res = case (natMin l r, Ev res :: NatEv KnownNat) of
                   (lr, Ev res') -> do Refl <- lr `natEq` res; Refl <- res `natEq` res'; return Refl
 
+{- this should work
+ev' :: (KnownNat l, KnownNat r, KnownNat result, KnownNat (NatMin l r)) => Nat' result -> Maybe (result :~: NatMin l r)
+ev' res = ev it it res
+-}
 
 type family Climb (n :: Maybe Nat) :: Maybe Nat where
   Climb Nothing = Nothing
