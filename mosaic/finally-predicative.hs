@@ -65,8 +65,7 @@ limMin Utmost r = r
 limMin l Utmost = l
 limMin (Limited Z') r = Limited Z'
 limMin l (Limited Z') = Limited Z'
-limMin (Limited (S' l)) (Limited (S' r)) = --case Limited l `limMin` Limited r of Limited lr -> Limited $ S' lr
-  Limited . S' $ l `natMin` r
+limMin (Limited (S' l)) (Limited (S' r)) = Limited . S' $ l `natMin` r
 
 
 data Limit :: Maybe Nat -> * where
