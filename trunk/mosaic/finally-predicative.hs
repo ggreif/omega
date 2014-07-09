@@ -23,10 +23,14 @@ instance KnownNat n => KnownNat (S n) where
   it = S' it
 
 
+data Ev :: (k -> *) -> (k -> Constraint) -> * where
+  Ev :: c n => f n -> Ev f c
 
+type NatEv = Ev Nat'
+{-
 data NatEv :: (Nat -> Constraint) -> * where
   NatEv :: c n => Nat' n -> NatEv c
-
+-}
 deriving instance Show (NatEv c)
 
 natMin :: Nat' l -> Nat' r -> Nat' (l `NatMin` r)
@@ -41,8 +45,8 @@ natEq (S' l) (S' r) = do Refl <- natEq l r; return Refl
 natEq _ _ = Nothing
 
 ev :: KnownNat result => Nat' l -> Nat' r -> Nat' result -> Maybe (result :~: NatMin l r)
-ev l r res = case (natMin l r, NatEv res :: NatEv KnownNat) of
-                  (lr, NatEv res') -> do Refl <- lr `natEq` res; Refl <- res `natEq` res'; return Refl
+ev l r res = case (natMin l r, Ev res :: NatEv KnownNat) of
+                  (lr, Ev res') -> do Refl <- lr `natEq` res; Refl <- res `natEq` res'; return Refl
 
 
 type family Climb (n :: Maybe Nat) :: Maybe Nat where
