@@ -332,7 +332,7 @@ nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
 
 class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
-  type Inspectable rep a = Augment rep ~ a
+  type Inspectable rep p = Augment rep ~ p
   data Augment rep :: Nat -> Maybe Nat -> *
   pvar :: KnownNat n => Inspectable rep p => p n m -> Augment rep n m
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
@@ -436,6 +436,13 @@ instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
   plam (S' n) f = T $ plam n $ augment $ \x -> unT . unlift f . T $ int
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
   ep = (InnerTypeOf, unInnerTypeOf)
+
+data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
+  Shapely :: LC rep => rep n m -> Shapely rep n m
+
+instance LC rep => PLC (Shapely rep) where
+  --type Inspectable (Shapely rep) p = Augment (Shapely rep) ~ p
+  pvar _ = fst ep (Shapely var)
 
 -- TODOs:
 --  o Num instances
