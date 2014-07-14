@@ -318,4 +318,6 @@ This project has a similar notion of pairing types with a predicate on the value
 
 With the definition of _abiding_ do we cover _logical relations_?
 
+What is the connection to [http://www.cse.chalmers.se/~peterd/papers/InternalTT.pdf categories with families]? See definitions in 2.1.
+
 When tensoring definitions we'd like to not get mired into order dependency. Ωmega1 solves this by requiring _inductively sequential_ definitions at the higher levels. Google for "Overlapping and Order-Independent Patterns" for a new definitional approach in Agda (by Jesper Cockx).
