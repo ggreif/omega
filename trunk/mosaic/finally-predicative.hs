@@ -449,9 +449,15 @@ data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
 
 deriving instance Show (rep n m) => Show (Shapely rep n m)
 
+class DepthAware (rep :: Nat -> Maybe Nat -> *)
+
+--instance DepthAware (Shapely rep)
+instance DepthAware (Augment (Shapely rep))
+--instance DepthAware rep => DepthAware (Augment rep)
+
 instance LC rep => PLC (Shapely rep) where
-  --type Inspectable (Shapely rep) p = rep ~ Augment (Shapely p)
-  pvar = id --undefined -- id
+  type Inspectable (Shapely rep) p = (DepthAware p, Augment (Shapely rep) ~ p)
+  pvar = id
   plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
   newtype Augment (Shapely rep) n m = SH (rep n m)
   ep = (SH . unShapely, Shapely . unSH) where unSH (SH a) = a; unShapely (Shapely a) = a
