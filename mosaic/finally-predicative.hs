@@ -374,6 +374,7 @@ instance PLC LString where
 type NameSupply = Levelled ([String] -> String)
 
 instance LC NameSupply where
+  var = L . const $ "VAR"
   L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
 instance TypedLC NameSupply where
@@ -452,6 +453,8 @@ instance (LC rep, LC (Augment rep)) => PLC (Augment rep) where
 data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
   Shapely :: LC rep => rep n m -> Shapely rep n m
 
+deriving instance Show (rep n m) => Show (Shapely rep n m)
+
 instance LC rep => PLC (Shapely rep) where
   --type Inspectable (Shapely rep) p = Augment rep ~ p
   pvar _ = fst ep (Shapely var)
@@ -459,7 +462,9 @@ instance LC rep => PLC (Shapely rep) where
   --plam d f = Shapely $ lam' d $ case f undefined of (Shapely body) -> body
   plam d f = Shapely $ lam' d $ case f undefined of (SH (Shapely body)) -> body
   newtype Augment (Shapely rep) n m = SH (Shapely rep n m)
+  ep = (SH, unSH)
 
+unSH (SH a) = a
 
 -- TODOs:
 --  o Num instances
