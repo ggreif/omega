@@ -368,6 +368,7 @@ pl6a = pla (\x->pl2a) `app` cnst 4 `app` cnst 3 `app` cnst 1
 instance PLC LString where
   pvar = id
   plam (S' Z') f = L ("\\a." ++ (raise (unlift f) "a"))
+  --ep = () -- TODO!
 
 
 type NameSupply = Levelled ([String] -> String)
@@ -437,13 +438,28 @@ instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
   ep = (InnerTypeOf, unInnerTypeOf)
 
+{-
+instance (LC rep, LC (Augment rep)) => PLC (Augment rep) where
+  type Inspectable (Augment rep) p = Augment rep ~ p
+  --pvar _ = fst ep (Shapely var)
+  pvar _ = fst ep var
+  --plam d f = Shapely $ lam' d $ case f undefined of (Shapely body) -> body
+  plam d f = Shapely $ lam' d $ case f undefined of (Shapely (Shapely body)) -> body
+  data Augment (Augment rep) (n :: Nat) (m :: Maybe Nat) where
+    Shapely :: LC rep => rep n m -> Augment (Augment rep) n m
+-}
+
 data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
   Shapely :: LC rep => rep n m -> Shapely rep n m
 
 instance LC rep => PLC (Shapely rep) where
-  --type Inspectable (Shapely rep) p = Augment (Shapely rep) ~ p
+  --type Inspectable (Shapely rep) p = Augment rep ~ p
   pvar _ = fst ep (Shapely var)
-  plam d f = Shapely $ lam' d undefined
+  --pvar _ = fst ep var
+  --plam d f = Shapely $ lam' d $ case f undefined of (Shapely body) -> body
+  plam d f = Shapely $ lam' d $ case f undefined of (SH (Shapely body)) -> body
+  newtype Augment (Shapely rep) n m = SH (Shapely rep n m)
+
 
 -- TODOs:
 --  o Num instances
