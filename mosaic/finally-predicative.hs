@@ -375,6 +375,8 @@ type NameSupply = Levelled ([String] -> String)
 
 instance LC NameSupply where
   var = L . const $ "VAR"
+  lam' Z' (L body) = (L body)--undefined
+  lam' (S' Z') (L body) = L $ \ns -> "\\(" ++ body (tail ns) ++ ")"
   L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
 instance TypedLC NameSupply where
