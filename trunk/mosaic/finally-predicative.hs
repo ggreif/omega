@@ -443,6 +443,7 @@ data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
 instance LC rep => PLC (Shapely rep) where
   --type Inspectable (Shapely rep) p = Augment (Shapely rep) ~ p
   pvar _ = fst ep (Shapely var)
+  plam d f = Shapely $ lam' d undefined
 
 -- TODOs:
 --  o Num instances
