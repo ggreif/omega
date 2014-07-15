@@ -450,10 +450,11 @@ data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
 deriving instance Show (rep n m) => Show (Shapely rep n m)
 
 instance LC rep => PLC (Shapely rep) where
-  pvar = id
-  plam d f = case f (SH (Shapely var)) of (SH (Shapely body)) -> Shapely $ lam' d $ body
-  newtype Augment (Shapely rep) n m = SH (Shapely rep n m)
-  ep = (SH, unSH) where unSH (SH a) = a
+  --type Inspectable (Shapely rep) p = rep ~ Augment (Shapely p)
+  pvar = id --undefined -- id
+  plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
+  newtype Augment (Shapely rep) n m = SH (rep n m)
+  ep = (SH . unShapely, Shapely . unSH) where unSH (SH a) = a; unShapely (Shapely a) = a
 
 -- TODOs:
 --  o Num instances
