@@ -451,11 +451,9 @@ deriving instance Show (rep n m) => Show (Shapely rep n m)
 
 instance LC rep => PLC (Shapely rep) where
   pvar = id
-  plam d f = Shapely $ lam' d $ case f (SH (Shapely var)) of (SH (Shapely body)) -> body
+  plam d f = case f (SH (Shapely var)) of (SH (Shapely body)) -> Shapely $ lam' d $ body
   newtype Augment (Shapely rep) n m = SH (Shapely rep n m)
-  ep = (SH, unSH)
-
-unSH (SH a) = a
+  ep = (SH, unSH) where unSH (SH a) = a
 
 -- TODOs:
 --  o Num instances
