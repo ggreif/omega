@@ -334,7 +334,7 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   type Inspectable rep p = Augment rep ~ p
   data Augment rep :: Nat -> Maybe Nat -> *
-  pvar :: (KnownNat n,Inspectable rep p) => p n m -> Augment rep n m
+  pvar :: (KnownNat n, Inspectable rep p) => p n m -> Augment rep n m
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
