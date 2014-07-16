@@ -339,6 +339,8 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
 -- lifting helpers
+--lift :: forall rep p n m . Inspectable rep p => (p n m -> rep n m) -> (p n m -> Augment rep n m)
+lift :: (PLC rep) => (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
 lift f = fst ep . f . snd ep
 unlift f = snd ep . f . fst ep
 augment f = fst ep . f
@@ -458,6 +460,7 @@ instance DepthAware rep => DepthAware (Augment rep)
 instance LC rep => PLC (Shapely rep) where
   type Inspectable (Shapely rep) p = (DepthAware p, Augment (Shapely rep) ~ p)
   pvar = id
+  plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Shapely rep) p => p n m -> Augment (Shapely rep) n m) -> (Shapely rep) n m
   plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
   newtype Augment (Shapely rep) n m = SH (rep n m)
   ep = (SH . unShapely, Shapely . unSH) where unSH (SH a) = a; unShapely (Shapely a) = a
