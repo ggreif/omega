@@ -376,7 +376,6 @@ pl5a = pl2a `app` cnst 4 `app` cnst 3
 pl6a = pla (\x->pl2a) `app` cnst 4 `app` cnst 3 `app` cnst 1
 
 instance PLC LString where
-  --pvar = id
   plam (S' Z') f = L ("\\a." ++ (raise (unlift f) "a"))
   --ep = () -- TODO!
 
@@ -399,7 +398,6 @@ instance BuiltinLC NameSupply where
   cnst i = L . const . show $ i
 
 instance PLC NameSupply where
-  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
   plam Z' f = L $ \(n:ns) -> "||" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
@@ -419,7 +417,6 @@ instance Show a => Show (EvalL a n m) where
   show (Env (L f)) = show $ f $ []
 
 instance PLC (EvalL a) where
-  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
   plam (S' Z') f = Env . L $ feed
     where feed (v:vs) = (unL . unEnv) (unlift f . Env . L . const $ v) vs
@@ -435,7 +432,6 @@ instance BuiltinLC (EvalL Int) where
 
 
 instance PLC (Eval a) where
-  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment (Eval a) n m) -> Eval a n m
   plam (S' Z') f = E $ \(Just v) -> unE (unlift f . E . const $ v) Nothing
 
@@ -447,7 +443,6 @@ pe2 = pla (\_ -> cnst 25) `app` cnst 42
 
 -- TypeOf for PHOAS
 instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
-  --pvar = id
   plam Z' f = unlift f . T $ int -- factually a Pi
   plam (S' n) f = T $ plam n $ augment $ \x -> unT . unlift f . T $ int
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
@@ -467,7 +462,6 @@ instance DepthAware rep => DepthAware (Augment rep)
 
 instance LC rep => PLC (Shapely rep) where
   type Inspectable (Shapely rep) p = (DepthAware p, Augment (Shapely rep) ~ p)
-  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Shapely rep) p => p n m -> Augment (Shapely rep) n m) -> (Shapely rep) n m
   plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
   newtype Augment (Shapely rep) n m = SH (rep n m)
