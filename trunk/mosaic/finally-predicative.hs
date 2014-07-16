@@ -339,8 +339,11 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
 -- lifting helpers
+--lift
+--  :: (PLC rep1, PLC rep) =>
+--     (rep1 n1 m1 -> rep n m) -> Augment rep1 n1 m1 -> Augment rep n m
 --lift :: forall rep p n m . Inspectable rep p => (p n m -> rep n m) -> (p n m -> Augment rep n m)
-lift :: (PLC rep) => (rep n m -> rep n m) -> (Augment rep n m -> Augment rep n m)
+--lift :: (PLC rep, PLC rep') => (rep' n m -> rep n m) -> (forall p . Inspectable rep p => p n m -> Augment rep n m)
 lift f = fst ep . f . snd ep
 unlift f = snd ep . f . fst ep
 augment f = fst ep . f
