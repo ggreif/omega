@@ -451,9 +451,9 @@ deriving instance Show (rep n m) => Show (Shapely rep n m)
 
 class DepthAware (rep :: Nat -> Maybe Nat -> *)
 
---instance DepthAware (Shapely rep)
-instance DepthAware (Augment (Shapely rep))
---instance DepthAware rep => DepthAware (Augment rep)
+instance DepthAware (Shapely rep)
+--instance DepthAware rep => DepthAware (Augment (Shapely rep))
+instance DepthAware rep => DepthAware (Augment rep)
 
 instance LC rep => PLC (Shapely rep) where
   type Inspectable (Shapely rep) p = (DepthAware p, Augment (Shapely rep) ~ p)
