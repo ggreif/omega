@@ -2,7 +2,7 @@
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
            , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns
            , InstanceSigs, ConstraintKinds, DeriveFunctor, TypeOperators
-           , PolyKinds #-}
+           , PolyKinds, DefaultSignatures #-}
 
 import Data.String
 import Data.Function
@@ -335,6 +335,8 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable rep p = Augment rep ~ p
   data Augment rep :: Nat -> Maybe Nat -> *
   pvar :: (KnownNat n, Inspectable rep p) => p n m -> Augment rep n m
+  default pvar :: (KnownNat n, Augment rep ~ p) => p n m -> Augment rep n m
+  pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable rep p => p n m -> Augment rep n m) -> rep n m
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
@@ -344,6 +346,9 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
 --     (rep1 n1 m1 -> rep n m) -> Augment rep1 n1 m1 -> Augment rep n m
 --lift :: forall rep p n m . Inspectable rep p => (p n m -> rep n m) -> (p n m -> Augment rep n m)
 --lift :: (PLC rep, PLC rep') => (rep' n m -> rep n m) -> (forall p . Inspectable rep p => p n m -> Augment rep n m)
+lift :: PLC rep =>
+     (rep n1 m1 -> rep n m) -> Augment rep n1 m1 -> Augment rep n m
+
 lift f = fst ep' . f . snd ep' where ep' = ep
 unlift f = snd ep' . f . fst ep' where ep' = ep
 augment f = fst ep . f
@@ -371,7 +376,7 @@ pl5a = pl2a `app` cnst 4 `app` cnst 3
 pl6a = pla (\x->pl2a) `app` cnst 4 `app` cnst 3 `app` cnst 1
 
 instance PLC LString where
-  pvar = id
+  --pvar = id
   plam (S' Z') f = L ("\\a." ++ (raise (unlift f) "a"))
   --ep = () -- TODO!
 
@@ -394,7 +399,7 @@ instance BuiltinLC NameSupply where
   cnst i = L . const . show $ i
 
 instance PLC NameSupply where
-  pvar = id
+  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable NameSupply p => p n m -> Augment NameSupply n m) -> NameSupply n m
   plam Z' f = L $ \(n:ns) -> "||" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
   plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
@@ -414,7 +419,7 @@ instance Show a => Show (EvalL a n m) where
   show (Env (L f)) = show $ f $ []
 
 instance PLC (EvalL a) where
-  pvar = id
+  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (EvalL a) p => p n m -> Augment (EvalL a) n m) -> (EvalL a) n m
   plam (S' Z') f = Env . L $ feed
     where feed (v:vs) = (unL . unEnv) (unlift f . Env . L . const $ v) vs
@@ -430,7 +435,7 @@ instance BuiltinLC (EvalL Int) where
 
 
 instance PLC (Eval a) where
-  pvar = id
+  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Eval a) p => p n m -> Augment (Eval a) n m) -> Eval a n m
   plam (S' Z') f = E $ \(Just v) -> unE (unlift f . E . const $ v) Nothing
 
@@ -442,7 +447,7 @@ pe2 = pla (\_ -> cnst 25) `app` cnst 42
 
 -- TypeOf for PHOAS
 instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
-  pvar = id
+  --pvar = id
   plam Z' f = unlift f . T $ int -- factually a Pi
   plam (S' n) f = T $ plam n $ augment $ \x -> unT . unlift f . T $ int
   newtype Augment (TypeOf rep) n m = InnerTypeOf { unInnerTypeOf :: TypeOf rep n m }
@@ -462,7 +467,7 @@ instance DepthAware rep => DepthAware (Augment rep)
 
 instance LC rep => PLC (Shapely rep) where
   type Inspectable (Shapely rep) p = (DepthAware p, Augment (Shapely rep) ~ p)
-  pvar = id
+  --pvar = id
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Shapely rep) p => p n m -> Augment (Shapely rep) n m) -> (Shapely rep) n m
   plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
   newtype Augment (Shapely rep) n m = SH (rep n m)
