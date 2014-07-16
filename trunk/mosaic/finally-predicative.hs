@@ -344,8 +344,8 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
 --     (rep1 n1 m1 -> rep n m) -> Augment rep1 n1 m1 -> Augment rep n m
 --lift :: forall rep p n m . Inspectable rep p => (p n m -> rep n m) -> (p n m -> Augment rep n m)
 --lift :: (PLC rep, PLC rep') => (rep' n m -> rep n m) -> (forall p . Inspectable rep p => p n m -> Augment rep n m)
-lift f = fst ep . f . snd ep
-unlift f = snd ep . f . fst ep
+lift f = fst ep' . f . snd ep' where ep' = ep
+unlift f = snd ep' . f . fst ep' where ep' = ep
 augment f = fst ep . f
 
 -- parametric lambda (helper)
