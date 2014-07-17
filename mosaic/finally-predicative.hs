@@ -2,7 +2,7 @@
            , UndecidableInstances, FlexibleInstances, OverloadedStrings
            , GADTs, PatternSynonyms, TypeFamilies, RankNTypes, ViewPatterns
            , InstanceSigs, ConstraintKinds, DeriveFunctor, TypeOperators
-           , PolyKinds, DefaultSignatures #-}
+           , PolyKinds, DefaultSignatures, MultiParamTypeClasses #-}
 
 import Data.String
 import Data.Function
@@ -333,6 +333,8 @@ nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
 class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   type Inspectable rep p = Augment rep ~ p
+  type Stackable rep :: Constraint
+  type Stackable rep = ()
   data Augment rep :: Nat -> Maybe Nat -> *
   pvar :: (KnownNat n, Inspectable rep p) => p n m -> Augment rep n m
   default pvar :: (KnownNat n, Augment rep ~ p) => p n m -> Augment rep n m
@@ -346,7 +348,7 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
 --     (rep1 n1 m1 -> rep n m) -> Augment rep1 n1 m1 -> Augment rep n m
 --lift :: forall rep p n m . Inspectable rep p => (p n m -> rep n m) -> (p n m -> Augment rep n m)
 --lift :: (PLC rep, PLC rep') => (rep' n m -> rep n m) -> (forall p . Inspectable rep p => p n m -> Augment rep n m)
-lift :: PLC rep =>
+lift :: (Stackable rep, PLC rep) =>
      (rep n1 m1 -> rep n m) -> Augment rep n1 m1 -> Augment rep n m
 
 lift f = fst ep' . f . snd ep' where ep' = ep
@@ -354,11 +356,11 @@ unlift f = snd ep' . f . fst ep' where ep' = ep
 augment f = fst ep . f
 
 -- parametric lambda (helper)
-pla :: (KnownNat n, PLC rep) => (rep n m -> rep n m) -> rep n m
+pla :: (KnownNat n, PLC rep, Stackable rep) => (rep n m -> rep n m) -> rep n m
 pla f = plam (S' Z') (lift f . pvar)
 
 
-pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl6a,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
+pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl6a,pl10 :: (LC rep, BuiltinLC rep, PLC rep, Stackable rep) => rep Z Nothing
 pl0 = pla $ \x -> x
 pl1 = pla (\x -> x `app` x)
 pl1' :: LString Z Nothing
@@ -454,18 +456,40 @@ data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
 
 deriving instance Show (rep n m) => Show (Shapely rep n m)
 
-class DepthAware (rep :: Nat -> Maybe Nat -> *)
+class DepthAware (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) where
+  foo :: rep n m -> rep' n' m' -> Int
 
-instance DepthAware (Shapely rep)
+instance DepthAware (Shapely rep) (Augment (Shapely rep))
 --instance DepthAware rep => DepthAware (Augment (Shapely rep))
-instance DepthAware rep => DepthAware (Augment rep)
+--instance DepthAware rep => DepthAware (Augment rep)
 
 instance LC rep => PLC (Shapely rep) where
-  type Inspectable (Shapely rep) p = (DepthAware p, Augment (Shapely rep) ~ p)
+  type Inspectable (Shapely rep) p = (DepthAware (Shapely rep) p, Augment (Shapely rep) ~ p)
+  --type Stackable (Shapely rep) = DepthAware rep
+  pvar :: (KnownNat n, Inspectable (Shapely rep) p) =>
+              p n m -> Augment (Shapely rep) n m
+  pvar a = traceShow (foo a a) a
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Shapely rep) p => p n m -> Augment (Shapely rep) n m) -> (Shapely rep) n m
   plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
   newtype Augment (Shapely rep) n m = SH (rep n m)
   ep = (SH . unShapely, Shapely . unSH) where unSH (SH a) = a; unShapely (Shapely a) = a
+
+
+
+-- let's do something simpler
+
+data Test a where
+  Test :: Can a => a -> Test a
+
+deriving instance Show a => Show (Test a)
+
+class Can a
+instance Can Int
+instance Can a => Can (Test a)
+
+zz = Test (3 :: Int)
+zzz = Test zz
+zzzz = Test zzz
 
 -- TODOs:
 --  o Num instances
