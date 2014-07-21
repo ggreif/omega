@@ -491,9 +491,14 @@ newtype Nest' a = Nest' a
 instance Test Int
 instance Test a => Test (Nest' a)
 
+{- non-injective calamity
 class Can a where type TT a :: Nat; can :: Nat' (TT a)
 instance Can Int where type TT Int = Z; can = Z'
 instance Can a => Can (Nest' a) where type TT (Nest' a) = S (TT a); can = S' can
+-}
+class Can a where data TT a; can :: TT a
+instance Can Int where newtype TT Int = TZ (); can = TZ ()
+instance Can a => Can (Nest' a) where newtype TT (Nest' a) = TS (TT a); can = TS can
 
 zz :: Int -- Test a => a
 zz = t (\j -> t (\i -> va i))
