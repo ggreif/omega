@@ -474,25 +474,31 @@ instance LC rep => PLC (Shapely rep) where
   pvar a = traceShow (foo (snd ep a) a, '#') a
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Shapely rep) p => p n m -> Augment (Shapely rep) n m) -> (Shapely rep) n m
   plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
-  newtype Augment (Shapely rep) n m = SH (rep n m)
+  data Augment (Shapely rep) n m where SH :: {-DepthAware (Shapely rep) (Augment rep) =>-} rep n m -> Augment (Shapely rep) n m
   ep = (SH . unShapely, Shapely . unSH) where unSH (SH a) = a; unShapely (Shapely a) = a
 
 
 
 -- let's do something simpler
 
-data Test a where
-  Test :: Can a => a -> Test a
+class Test a where
+  va :: Can a => a -> Nest' a
+  t :: Can a => (a -> Nest' a) -> a
 
-deriving instance Show a => Show (Test a)
+newtype Nest' a = Nest' a
+--deriving instance Show a => Show (Test a)
+
+instance Test Int
+instance Test a => Test (Nest' a)
 
 class Can a
 instance Can Int
-instance Can a => Can (Test a)
+instance Can a => Can (Nest' a)
 
-zz = Test (3 :: Int)
-zzz = Test zz
-zzzz = Test zzz
+zz :: Int -- Test a => a
+zz = t (\j -> t (\i -> va i))
+--zzz = Test zz
+--zzzz = Test zzz
 
 -- TODOs:
 --  o Num instances
