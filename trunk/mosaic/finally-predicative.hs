@@ -452,6 +452,7 @@ instance (BuiltinLC rep, PLC rep) => PLC (TypeOf rep) where
 
 
 data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
+  --Shapely :: (LC rep, DepthAware rep) => rep n m -> Shapely rep n m
   Shapely :: LC rep => rep n m -> Shapely rep n m
 
 deriving instance Show (rep n m) => Show (Shapely rep n m)
@@ -459,7 +460,8 @@ deriving instance Show (rep n m) => Show (Shapely rep n m)
 class DepthAware (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) where
   foo :: rep n m -> rep' n' m' -> Int
 
-instance DepthAware (Shapely rep) (Augment (Shapely rep))
+instance DepthAware (Shapely rep) (Augment (Shapely rep)) where
+  foo _ _ = 1
 --instance DepthAware rep => DepthAware (Augment (Shapely rep))
 --instance DepthAware rep => DepthAware (Augment rep)
 
@@ -468,7 +470,8 @@ instance LC rep => PLC (Shapely rep) where
   --type Stackable (Shapely rep) = DepthAware rep
   pvar :: (KnownNat n, Inspectable (Shapely rep) p) =>
               p n m -> Augment (Shapely rep) n m
-  pvar a = traceShow (foo a a) a
+  --pvar a = traceShow (foo (Shapely (unSH a)) a, '#') a  where unSH (SH a) = a; unShapely (Shapely a) = a
+  pvar a = traceShow (foo (snd ep a) a, '#') a
   plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Shapely rep) p => p n m -> Augment (Shapely rep) n m) -> (Shapely rep) n m
   plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
   newtype Augment (Shapely rep) n m = SH (rep n m)
