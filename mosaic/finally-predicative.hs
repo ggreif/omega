@@ -491,9 +491,9 @@ newtype Nest' a = Nest' a
 instance Test Int
 instance Test a => Test (Nest' a)
 
-class Can a
-instance Can Int
-instance Can a => Can (Nest' a)
+class Can a where type TT a :: Nat; can :: Nat' (TT a)
+instance Can Int where type TT Int = Z; can = Z'
+instance Can a => Can (Nest' a) where type TT (Nest' a) = S (TT a); can = S' can
 
 zz :: Int -- Test a => a
 zz = t (\j -> t (\i -> va i))
