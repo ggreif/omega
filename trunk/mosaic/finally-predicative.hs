@@ -503,8 +503,9 @@ zz = t (\j -> t (\i -> va i))
 --  o TyEnv :: [*] -> *, simply typed LC (we need a non-trivial Augment for this)
 --  o Type inference
 --  o Emax-style unityped->typed compiler (Emil Axelsson)
---  o Shape :: LambdaTree(Graph) -> *, shapely LC
---  o PHOAS <--> DeBruijn conversions
+--  o Shape :: LambdaTree(Graph) -> *, shapely LC (DONE! do we need Augment???, Nat' for PHOAS->DeBruijn?)
+--  o PHOAS <-- DeBruijn conversion
+--  o beta reduction, letrec?
 
 -- Anonymous datatypes
 -----------------------
