@@ -456,33 +456,12 @@ data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
   Shapely :: LC rep => (Nat -> rep n m) -> Shapely rep n m
 
 --deriving instance Show (rep n m) => Show (Shapely rep n m)
-instance LC rep => LC (Shapely rep)
-
---class DepthAware (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) where
---  foo :: rep n m -> rep' n' m' -> Int
-
---instance DepthAware (Shapely rep) (Augment (Shapely rep)) where
---  foo _ _ = 1
---instance DepthAware rep => DepthAware (Augment (Shapely rep))
---instance DepthAware rep => DepthAware (Augment rep)
+instance LC (Shapely rep)
+  where lam' d (Shapely f) = Shapely $ \n -> lam' d (f n)
 
 instance LC rep => PLC (Shapely rep) where
-  --type Inspectable (Shapely rep) p = (DepthAware (Shapely rep) p, Augment (Shapely rep) ~ p)
-  --type Stackable (Shapely rep) = DepthAware rep
-  pvar :: (KnownNat n, Inspectable (Shapely rep) p) =>
-              p n m -> Augment (Shapely rep) n m
-  --pvar a = traceShow (foo (Shapely (unSH a)) a, '#') a  where unSH (SH a) = a; unShapely (Shapely a) = a
-  --pvar a = traceShow (foo (snd ep a) a, '#') a
-  --pvar a = a
-  plam :: KnownNat n => Nat' d -> (forall p . Inspectable (Shapely rep) p => p n m -> Augment (Shapely rep) n m) -> (Shapely rep) n m
-  --plam d f = case f (SH var) of SH body -> Shapely $ lam' d $ body
-  plam d f = Shapely $ \n -> unShapely (lam' d (unlift f . Shapely $ const var)) (S n)     -- case f (SH var) of SH body -> Shapely $ lam' d $ body
-
-   where unShapely (Shapely a) = a
-      --where e = fst ep
-  --plam (S' Z') f = L $ \(n:ns) -> "\\" ++ n ++ "." ++ unL (unlift f . L . const $ n) ns
-
-
+  plam d f = Shapely $ \n -> unShapely (lam' d (unlift f . Shapely $ const var)) (S n)
+      where unShapely (Shapely a) = a
   data Augment (Shapely rep) n m where SH :: Shapely rep n m -> Augment (Shapely rep) n m
   ep = (SH, unSH) where unSH (SH a) = a
 
