@@ -151,6 +151,7 @@ nat2int (S' n) = 1 + nat2int n
 --               v      v
 class LC (rep :: Nat -> Maybe Nat -> *) where
   var :: KnownNat n => rep n m
+  outer :: KnownNat n => rep n m -> rep n m
   lam' :: KnownNat n => Nat' d -> rep n m -> rep n m
   app :: KnownNat n => rep n m -> rep n m' -> rep n (Min m m')
 
@@ -386,6 +387,7 @@ type NameSupply = Levelled ([String] -> String)
 
 instance LC NameSupply where
   var = L . const $ "VAR"
+  outer (L f) = L $ \ns -> '^' : f ns
   lam' n (L body) = L $ \ns -> pref n ++ "(" ++ body (tail ns) ++ ")"
       where pref Z' = "|~|"
             pref (S' Z') = "\\"
@@ -459,10 +461,12 @@ instance LC (Shapely rep) where
   Shapely ff `app` Shapely fa = Shapely $ \n -> ff n `app` fa n
 
 instance LC rep => PLC (Shapely rep) where
-  plam d f = Shapely $ \n -> unShapely (lam' d (unlift f . Shapely $ \(S n') -> traceShow (n `diffNat` n') var)) (S n)
+  plam d f = Shapely $ \n -> unShapely (lam' d (unlift f . Shapely $ \(S n') -> deep $ n `diffNat` n')) (S n)
       where unShapely (Shapely a) = a
-            diffNat (S m) (S n) = diffNat m n
-            diffNat Z n = n
+            S m `diffNat` S n = m `diffNat` n
+            Z `diffNat` n = n
+            deep Z = var
+            deep (S n) = outer $ deep n
   newtype Augment (Shapely rep) n m = SH { unSH :: Shapely rep n m }
   ep = (SH, unSH)
 
