@@ -456,8 +456,9 @@ data Shapely (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) where
   Shapely :: LC rep => (Nat -> rep n m) -> Shapely rep n m
 
 --deriving instance Show (rep n m) => Show (Shapely rep n m)
-instance LC (Shapely rep)
-  where lam' d (Shapely f) = Shapely $ \n -> lam' d (f n)
+instance LC (Shapely rep) where
+  lam' d (Shapely f) = Shapely $ \n -> lam' d (f n)
+  Shapely ff `app` Shapely fa = Shapely $ \n -> ff n `app` fa n
 
 instance LC rep => PLC (Shapely rep) where
   plam d f = Shapely $ \n -> unShapely (lam' d (unlift f . Shapely $ const var)) (S n)
