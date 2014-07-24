@@ -162,20 +162,6 @@ lam = lam' (S' Z')
 lAM :: LC rep => rep (S Z) Nothing -> rep (S Z) Nothing
 lAM = lam' $ S' (S' Z')
 
---outer :: KnownNat n => Nest rep n m -> rep n m
-
-v :: (KnownNat n, LC rep) => Nat' depth -> rep n m
-v Z' = var
-v (S' n) = outer (v n)
-    where outer (Nest v) = v
-
--- variable nesting (later: zipping)
---newtype Nest (rep :: Nat -> Maybe Nat -> *) (n :: Nat) (m :: Maybe Nat) = Nest (rep n m)
-newtype Nest (rep :: Nat -> Maybe Nat -> *) n m = Nest (rep n m)
-
-instance LC rep => LC (Nest rep) where
-  var = Nest var
-  -- Nest should not happen for other things, only vars
 
 class TypedLC (rep :: Nat -> Maybe Nat -> *) where
   annot :: rep n m -> rep (S n) m -> rep n m
@@ -334,8 +320,6 @@ nested = Data "Nest" "*" (Data "N1" "Nest" (Data "N2" "N1" (Constr "C3" "N2")))
 class PLC (rep :: Nat -> Maybe Nat -> *) where
   type Inspectable (rep :: Nat -> Maybe Nat -> *) (i :: Nat -> Maybe Nat -> *) :: Constraint
   type Inspectable rep p = Augment rep ~ p
-  type Stackable rep :: Constraint
-  type Stackable rep = ()
   data Augment rep :: Nat -> Maybe Nat -> *
   pvar :: (KnownNat n, Inspectable rep p) => p n m -> Augment rep n m
   default pvar :: (KnownNat n, Augment rep ~ p) => p n m -> Augment rep n m
@@ -344,24 +328,16 @@ class PLC (rep :: Nat -> Maybe Nat -> *) where
   ep :: (rep n m -> Augment rep n m, Augment rep n m -> rep n m) -- embedding/projection pair
 
 -- lifting helpers
---lift
---  :: (PLC rep1, PLC rep) =>
---     (rep1 n1 m1 -> rep n m) -> Augment rep1 n1 m1 -> Augment rep n m
---lift :: forall rep p n m . Inspectable rep p => (p n m -> rep n m) -> (p n m -> Augment rep n m)
---lift :: (PLC rep, PLC rep') => (rep' n m -> rep n m) -> (forall p . Inspectable rep p => p n m -> Augment rep n m)
-lift :: (Stackable rep, PLC rep) =>
-     (rep n1 m1 -> rep n m) -> Augment rep n1 m1 -> Augment rep n m
-
 lift f = fst ep' . f . snd ep' where ep' = ep
 unlift f = snd ep' . f . fst ep' where ep' = ep
 augment f = fst ep . f
 
 -- parametric lambda (helper)
-pla :: (KnownNat n, PLC rep, Stackable rep) => (rep n m -> rep n m) -> rep n m
+pla :: (KnownNat n, PLC rep) => (rep n m -> rep n m) -> rep n m
 pla f = plam (S' Z') (lift f . pvar)
 
 
-pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl6a,pl10 :: (LC rep, BuiltinLC rep, PLC rep, Stackable rep) => rep Z Nothing
+pl0,pl1,pl2,pl2a,pl3,pl4,pl5,pl5a,pl6a,pl10 :: (LC rep, BuiltinLC rep, PLC rep) => rep Z Nothing
 pl0 = pla $ \x -> x
 pl1 = pla (\x -> x `app` x)
 pl1' :: LString Z Nothing
