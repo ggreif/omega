@@ -461,7 +461,7 @@ instance LC (Shapely rep) where
   Shapely ff `app` Shapely fa = Shapely $ \n -> ff n `app` fa n
 
 instance LC rep => PLC (Shapely rep) where
-  plam d f = Shapely $ \n -> lam' d (unShapely (unlift f . Shapely $ \(S n') -> deep $ n `diffNat` n') (S n))
+  plam d f = Shapely $ \n -> lam' d $ (unShapely . unlift f . Shapely $ \(S n') -> deep $ n `diffNat` n') (S n)
       where unShapely (Shapely a) = a
             S m `diffNat` S n = m `diffNat` n
             Z `diffNat` n = n
