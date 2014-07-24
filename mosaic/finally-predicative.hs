@@ -459,11 +459,12 @@ instance LC (Shapely rep) where
   Shapely ff `app` Shapely fa = Shapely $ \n -> ff n `app` fa n
 
 instance LC rep => PLC (Shapely rep) where
-  --pvar (SH (Shapely f)) = SH . Shapely $ \n -> traceShow n (f n)
-  plam d f = Shapely $ \n -> unShapely (lam' d (unlift f . Shapely $ \n' -> traceShow (S n, n') var)) (S n)
+  plam d f = Shapely $ \n -> unShapely (lam' d (unlift f . Shapely $ \(S n') -> traceShow (n `diffNat` n') var)) (S n)
       where unShapely (Shapely a) = a
-  data Augment (Shapely rep) n m where SH :: Shapely rep n m -> Augment (Shapely rep) n m
-  ep = (SH, unSH) where unSH (SH a) = a
+            diffNat (S m) (S n) = diffNat m n
+            diffNat Z n = n
+  newtype Augment (Shapely rep) n m = SH { unSH :: Shapely rep n m }
+  ep = (SH, unSH)
 
 
 
