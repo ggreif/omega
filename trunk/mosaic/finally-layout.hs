@@ -11,22 +11,22 @@ import Data.String
 data Size s where Size :: KnownNat s => Size s
 data Name n where Name :: KnownSymbol n => Name n
 
-data L = Done | Symbol `Reg` Nat | L `After` L
-infixr 1 `After`
+data L = Done | Symbol `Reg` Nat | L `Then` L | Origin Nat
+infixr 1 `Then`
 infixr 2 `Reg`
 
 class Layout (proxy :: L -> *) where
-  reg :: Name n -> Size s -> proxy (n `Reg` s)
-  reg' :: (KnownSymbol n, KnownNat s) => proxy (n `Reg` s)
+  base :: KnownNat o => proxy (Origin o)
+  reg :: (KnownSymbol n, KnownNat s) => proxy (n `Reg` s)
   return :: a -> proxy Done
-  (>>) :: proxy l -> proxy l' ->  proxy (l `After` l')
-  (>>=) :: proxy l -> (proxy l -> proxy l') -> proxy (l `After` l')
+  (>>) :: proxy l -> proxy l' ->  proxy (l `Then` l')
+  (>>=) :: proxy l -> (proxy l -> proxy l') -> proxy (l `Then` l')
   fail :: String -> proxy a
 
-t1 :: Layout Proxy => Proxy (("FOO" `Reg` 4) `After` ("BAR" `Reg` 4) `After` Done)
---t1 :: Layout Proxy => Proxy Lens
-t1 = do {-lens1 <- -}reg' :: Proxy ("FOO" `Reg` 4)
-        {-lens2 <- -}reg' :: Proxy ("BAR" `Reg` 4)
-                     return () -- return (lens1, lens2)
+t1 :: Layout Proxy => Proxy (Origin 42 `Then` "FOO" `Reg` 4 `Then` "BAR" `Reg` 4 `Then` Done)
+t1 = do base :: Proxy (Origin 42)
+        reg :: Proxy ("FOO" `Reg` 4)
+        reg :: Proxy ("BAR" `Reg` 4)
+        return ()
 
---instance Map
+instance Layout Proxy
