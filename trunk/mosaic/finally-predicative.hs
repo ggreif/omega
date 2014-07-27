@@ -375,7 +375,7 @@ instance LC NameSupply where
   L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
 instance TypedLC NameSupply where
-  annot (L body) (L ty) = L $ \ns -> body ns ++ " :: " ++ ty ns
+  L body `annot` L ty = L $ \ns -> body ns ++ " :: " ++ ty ns
   typeof = todo
 
 instance BuiltinLC NameSupply where
