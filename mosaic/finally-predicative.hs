@@ -202,8 +202,9 @@ instance (LC rep, TypedLC rep, BuiltinLC rep) => LC (TypeOf rep) where
   lam' (S' n) (T body) = T $ lam' n body
   app (T f) _ = T f -- FIXME: dependent types? -- substitute argument into f's body
 
-instance BuiltinLC rep => TypedLC (TypeOf rep) where
-  --annot etc. --> TODO
+instance TypedLC rep => TypedLC (TypeOf rep) where
+  T body `annot` T ty = T $ body `annot` ty
+  typeof = todo
 
 instance (LC rep, BuiltinLC rep) => BuiltinLC (TypeOf rep) where
   star = T star
@@ -252,7 +253,7 @@ instance BuiltinLC LString where
   io = "IO"
 
 instance TypedLC LString where
-  annot (L body) (L ty) = L $ body ++ " :: " ++ ty
+  L body `annot` L ty = L $ body ++ " :: " ++ ty
   typeof = todo
 
 
@@ -359,7 +360,7 @@ pl6a = pla (\x->pl2a) `app` cnst 4 `app` cnst 3 `app` cnst 1
 
 instance PLC LString where
   plam (S' Z') f = L ("\\a." ++ (raise (unlift f) "a"))
-  --ep = () -- TODO!
+  ep = todo
 
 
 type NameSupply = Levelled ([String] -> String)
