@@ -8,7 +8,7 @@ import Data.String
 import Data.Function
 import Unsafe.Coerce
 import Prelude hiding (succ, pi)
-import GHC.Exts hiding (augment)
+import GHC.Exts hiding (augment, the)
 import Debug.Trace
 import Data.Type.Equality hiding (outer)
 
@@ -451,7 +451,15 @@ instance LC rep => PLC (Shapely rep) where
 --   o type annotations
 --   o type inference (elaboration)
 
+the :: TypedLC rep => rep n m -> rep (S n) m -> rep n m
+the = annot
+
+ann1 :: (BuiltinLC rep, TypedLC rep) => rep Z Nothing
+ann1 = cnst 42 `the` int
+
 -- let's do something simpler
+-- (can we have scope depth from the types (Augment) alone?
+--   -- I do not think so (in our setting with 'pla'))
 
 class Test a where
   va :: Can a => a -> Nest' a
