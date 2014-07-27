@@ -446,7 +446,10 @@ instance LC rep => PLC (Shapely rep) where
   newtype Augment (Shapely rep) n m = SH { unSH :: Shapely rep n m }
   ep = (SH, unSH)
 
-
+-- NEXT STEPS
+-- ~~~~~~~~~~~
+--   o type annotations
+--   o type inference (elaboration)
 
 -- let's do something simpler
 
