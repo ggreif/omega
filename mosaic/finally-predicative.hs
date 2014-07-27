@@ -12,6 +12,8 @@ import GHC.Exts hiding (augment, the)
 import Debug.Trace
 import Data.Type.Equality hiding (outer)
 
+todo = undefined
+
 data Nat = Z | S Nat deriving Show
 
 class KnownNat (n :: Nat) where
@@ -237,10 +239,10 @@ instance LC LString where
       where addLevel :: LString n m -> Nat' n -> LString n m
             addLevel s Z' = s
             addLevel (L s) (nat2int -> n) = L $ s ++ "^" ++ show n
-  lam' Z' body = L $ "(|| " ++ unL body ++ ")"
-  lam' (S' Z') body = L $ "(\\ " ++ unL body ++ ")"
-  lam' (nat2int -> n) body = L $ "(" ++ show n ++ "\\ " ++ unL body ++ ")"
-  app e1 e2 = L $ "(" ++ unL e1 ++ " " ++ unL e2 ++ ")"
+  lam' Z' (L body) = L $ "(|| " ++ body ++ ")"
+  lam' (S' Z') (L body) = L $ "(\\ " ++ body ++ ")"
+  lam' (nat2int -> n) (L body) = L $ "(" ++ show n ++ "\\ " ++ body ++ ")"
+  app (L e1) (L e2) = L $ "(" ++ e1 ++ " " ++ e2 ++ ")"
 
 
 instance BuiltinLC LString where
@@ -250,7 +252,8 @@ instance BuiltinLC LString where
   io = "IO"
 
 instance TypedLC LString where
-  --TODO
+  annot (L body) (L ty) = L $ body ++ " :: " ++ ty
+  typeof = todo
 
 
 instance LC Tw where
@@ -371,6 +374,8 @@ instance LC NameSupply where
   L f `app` L a = L (\ns -> "(" ++ f ns ++ " " ++ a ns ++ ")")
 
 instance TypedLC NameSupply where
+  annot (L body) (L ty) = L $ \ns -> body ns ++ " :: " ++ ty ns
+  typeof = todo
 
 instance BuiltinLC NameSupply where
   star = L . const $ "*"
@@ -456,6 +461,9 @@ the = annot
 
 ann1 :: (BuiltinLC rep, TypedLC rep) => rep Z Nothing
 ann1 = cnst 42 `the` int
+
+ann2 :: (BuiltinLC rep, TypedLC rep) => rep (S (S Z)) Nothing
+ann2 = star `the` star
 
 -- let's do something simpler
 -- (can we have scope depth from the types (Augment) alone?
