@@ -181,10 +181,11 @@ class BuiltinLC (rep :: Nat -> Maybe Nat -> *) where
 
 data P (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) at room = P !(rep at room) !(rep' at room)
 
-instance (LC rep, LC rep') => LC (P rep rep') where
-  var = P var var
-  lam' d (P body body') = P (lam' d body) (lam' d body')
-  app (P f f') (P a a') = P (f `app` a) (f' `app` a')
+instance (LC rep, LC rep') => LC (rep `P` rep') where
+  var = var `P` var
+  outer (a `P` a') = outer a `P` outer a'
+  lam' d (body `P` body') = lam' d body `P` lam' d body'
+  P f f' `app` P a a' = (f `app` a) `P` (f' `app` a')
 
 -- ##############
 --     TypeOf
@@ -465,6 +466,36 @@ ann1 = cnst 42 `the` int
 
 ann2 :: (BuiltinLC rep, TypedLC rep) => rep (S (S Z)) Nothing
 ann2 = star `the` star
+
+-- #########
+--   Check
+-- #########
+
+data Concrete (n :: Nat) (m :: Maybe Nat) where
+  App :: KnownNat n => Concrete n m -> Concrete n m' -> Concrete n (Min m m')
+  Var :: KnownNat n => Concrete n m
+  Outer :: KnownNat n => Concrete n m -> Concrete n m
+
+
+instance LC Concrete where
+  var = Var
+  outer = Outer
+  app = App
+
+-- ##############
+--     Arrow
+-- ##############
+
+data (:->) (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) at room = rep at room :-> Maybe (rep' at room)
+infixr 7 :->
+
+instance LC (Concrete :-> Concrete) where
+  var = todo -- P var var
+  lam' d (body :-> body') = todo -- P (lam' d body) (lam' d body')
+  (f :-> f') `app` (a :-> a') = todo -- P (f `app` a) (f' `app` a')
+
+
+  
 
 -- let's do something simpler
 -- (can we have scope depth from the types (Augment) alone?
