@@ -486,10 +486,12 @@ instance LC Concrete where
 --     Arrow
 -- ##############
 
-data (:->) (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) at room = Arr (rep at room -> Maybe (rep' at room))
+data Obligations = Obligations
+
+data Infer (rep :: Nat -> Maybe Nat -> *) at room = rep at room :-> (rep at room -> Obligations)
 infixr 7 :->
 
-instance LC (Concrete :-> Concrete) where
+instance LC (Infer Concrete) where
   var = todo -- P var var
   lam' d (body :-> body') = todo -- P (lam' d body) (lam' d body')
   (f :-> f') `app` (a :-> a') = todo -- P (f `app` a) (f' `app` a')
