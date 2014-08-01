@@ -486,7 +486,7 @@ instance LC Concrete where
 --     Arrow
 -- ##############
 
-data (:->) (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) at room = rep at room :-> Maybe (rep' at room)
+data (:->) (rep :: Nat -> Maybe Nat -> *) (rep' :: Nat -> Maybe Nat -> *) at room = Arr (rep at room -> Maybe (rep' at room))
 infixr 7 :->
 
 instance LC (Concrete :-> Concrete) where
