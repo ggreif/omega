@@ -105,7 +105,7 @@ parse2 p input
 -- There are other attempts to indentation-aware parsing such as
 --  - https://hackage.haskell.org/package/indentation
 --        possibly explained here: http://michaeldadams.org/papers/layout_parsing/LayoutParsing.pdf
---        (see also Haskell Workshop paper 2014)
+--        (see also Haskell Symposium paper 2014)
 --  - http://hackage.haskell.org/package/indents
 
 layoutSep :: Parsec (Layout String Identity) u ()
