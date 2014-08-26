@@ -502,6 +502,8 @@ Occurs check fails, but the type is finitely representable!
 Awodey: Homotopy lambda calculus
 Baez et al.: [http://math.ucr.edu/home/baez/rosetta.pdf Rosetta Stone]
 
+[http://youtu.be/sKqt6e7EcCs How to turn a sphere inside-out] does this invalidate the contravariance (hyperboloid) construction idea?
+
 = Appendix =
 
 Blender models
