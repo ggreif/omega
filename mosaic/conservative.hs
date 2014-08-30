@@ -6,7 +6,6 @@ class Datatype d where
 
 
 data Foo
-data Foo'
 instance Datatype Foo where
   moduleName = const "Hey"
   datatypeName = const "Foo"
@@ -15,10 +14,10 @@ class Constructor c where
   constructorName :: (Datatype d, c ~ f d) => c -> String
 
 
-data C1 d -- = HHH
+data C1 d
 
 hhh :: C1 Foo
-hhh = undefined -- HHH
+hhh = undefined
 
 instance Constructor (C1 Foo) where
   constructorName = const "C1"
