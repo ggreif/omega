@@ -11,7 +11,7 @@ There are no constraints on `a` whatsoever, so we can call `Bar` with any argume
 
 = Details =
 
-Similar observations exist when a is weakly constrained, i.e. there is a function or dictionary of functions attached to it which has `a` in contravariant position. Like this:
+Similar observations exist when a is _weakly constrained_, i.e. there is a function or dictionary of functions attached to it which has `a` in contravariant position. Like this:
 {{{
 data Foo where Bar :: (a -> String) -> a -> Foo
 }}}
