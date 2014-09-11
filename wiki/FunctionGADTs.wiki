@@ -38,7 +38,7 @@ is not of the form *n, for some Level n.
   * ... type classes? _gasp!_ How can dictionary passing be emulated? Open type classes too?
   * how costly would it be to modify Ωmega to accept this construct? And GHC ? ;-)
 
-== Crazier Still ==
+= Crazier Still =
 
 {{{
 newtype Bar = Foo Int
@@ -52,6 +52,6 @@ For `data` we need constrained variables (polynomials)
 data Baz = A Int | B Bar
 }}}
 
-Baz = A * Int + B * Bar where A, B in {0, 1} and A + B == 1
+Baz = A `*` Int + B `*` Bar where A, B in {0, 1} and A + B == 1
 
 Can we have a datatype algebra this way? Dependent types too?
