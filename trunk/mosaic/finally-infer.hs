@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures #-}
+{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs #-}
 import GHC.TypeLits
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
@@ -13,7 +13,7 @@ class LC (a :: Nat -> *) where
   zero :: a 0
   inc :: a 0
   lam :: (a l -> a l) -> a l
-  annotInt :: a 0 -> a 0
+  as :: a 0 -> a 1 -> a 0
 
 one, two, three :: LC a => a 0
 one = inc & zero
@@ -35,7 +35,7 @@ instance LC N where
   F f & Z = f Z
   F f & a@(S _) = f a
   lam = F
-  annotInt = id
+  as a _ = a
 
 newtype Str (l :: Nat) = Str String deriving Show
 unStr (Str a) = a
@@ -44,10 +44,17 @@ instance LC Str where
   inc = Str "S"
   lam f = Str $ "\a->" ++ unStr (f (Str "a"))
   Str f & Str a = Str $ "(" ++ f ++ " & " ++ a ++ ")"
-  annotInt (Str a) = Str $ "(" ++ a ++ " :: Int)"
+  as (Str a) (Str t) = Str $ "(" ++ a ++ " :: " ++ show t ++ ")"
 
 -- interpret these into a primitive type universe
-data Univ (l :: Nat) = Int | Univ l `Arr` Univ l | Unkn (Ref l) deriving (Show, Eq)
+data Univ (l :: Nat) where
+  Int :: Univ 0
+  Arr :: Univ l -> Univ l -> Univ l
+  Unkn :: Ref l -> Univ l
+
+deriving instance Show (Univ l)
+deriving instance Eq (Univ l)
+
 data Ref l = Ref (IORef (Maybe (Univ l)))
 instance Show (Ref l) where
   show (Ref r) = "|" ++ show current ++ "|"
@@ -64,8 +71,8 @@ instance LC Univ where
   (Unkn r `Arr` c) & a | f <- r `unifies` a = f c
   f & a = error $ '(' : show f ++ ") & (" ++ show a ++ ")"
   lam f = let u = Unkn (Ref (unsafePerformIO $ newIORef Nothing)) in f u `seq` (u `Arr` f u)
-  annotInt Int = Int
-  annotInt (Unkn r) | f <- r `unifies` Int = f (Unkn r)
+  as Int _ = Int
+  as (Unkn r) _ | f <- r `unifies` Int = f (Unkn r)
 
 unifies (Ref r) (Unkn _) = error "UNIMPL!"
 
