@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs, TypeOperators #-}
+{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs, TypeOperators, FlexibleInstances #-}
 import GHC.TypeLits
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
@@ -15,7 +15,8 @@ class LC (a :: Nat -> *) where
   zero :: a 0
   inc :: a 0
   lam :: (a l -> a l) -> a l
-  as :: a 0 -> a 1 -> a 0
+  as :: a l -> a (1+l) -> a l
+  --lift :: a l -> a (1+l)
 
 infixr `inh`
 
@@ -24,6 +25,8 @@ one = inc & zero
 two = twice inc & zero
 three = inc & two
 twice f = lam (\a -> f & (f & a))
+twice' :: LC a => a 0
+twice' = lam (\f -> twice f)
 
 -- interpret these into Nat
 data N (l :: Nat) = Z | S (N l) | F (N l -> N l)
@@ -53,11 +56,28 @@ instance LC Str where
   int = Str "Int"
   star = Str "*"
 
+data Norm :: Nat -> * where
+  Zero :: Norm 0
+  Inc :: Norm 0
+  Lam :: (Norm l -> Norm l) -> Norm l
+  App :: Norm l -> Norm l -> Norm l
+
+deriving instance Show (Norm l)
+instance Show (Norm l -> Norm l) where
+  show _ = "<fn>"
+
+instance LC Norm where
+  zero = Zero
+  inc = Inc
+  lam = Lam
+  Lam f & a = f a
+  l & a = l `App` a
+
 -- interpret these into a primitive type universe
 data Univ (l :: Nat) where
-  Int :: Univ 0
+  Int :: Univ l
   Arr :: Univ l -> Univ l -> Univ l
-  IntTy :: Univ 1
+  IntTy :: Univ (1+l)
   Ty :: String -> Univ (1+l) -> Univ l
   Inh :: String -> Univ (1+l) -> Univ l
   Star :: Univ (2+l)
@@ -83,7 +103,9 @@ instance LC Univ where
   f & a = error $ '(' : show f ++ ") & (" ++ show a ++ ")"
   lam f = let u = Unkn (Ref (unsafePerformIO $ newIORef Nothing)) in f u `seq` (u `Arr` f u)
   as Int IntTy = Int
+  as IntTy Star = IntTy
   as (Unkn r) IntTy | f <- r `unifies` Int = f (Unkn r)
+  --as (Unkn r) t@(name `Inh` _) | f <- r `unifies` t = f (Unkn r)
   int = IntTy
   inh = Inh
   star = Star
