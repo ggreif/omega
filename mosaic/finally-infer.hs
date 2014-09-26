@@ -13,6 +13,7 @@ class LC (a :: Nat -> *) where
   zero :: a 0
   inc :: a 0
   lam :: (a l -> a l) -> a l
+  annotInt :: a 0 -> a 0
 
 one, two, three :: LC a => a 0
 one = inc & zero
@@ -34,6 +35,7 @@ instance LC N where
   F f & Z = f Z
   F f & a@(S _) = f a
   lam = F
+  annotInt = id
 
 newtype Str (l :: Nat) = Str String deriving Show
 unStr (Str a) = a
@@ -42,6 +44,7 @@ instance LC Str where
   inc = Str "S"
   lam f = Str $ "\a->" ++ unStr (f (Str "a"))
   Str f & Str a = Str $ "(" ++ f ++ " & " ++ a ++ ")"
+  annotInt (Str a) = Str $ "(" ++ a ++ " :: Int)"
 
 -- interpret these into a primitive type universe
 data Univ (l :: Nat) = Int | Univ l `Arr` Univ l | Unkn (Ref l) deriving Show
@@ -59,6 +62,8 @@ instance LC Univ where
   (Unkn r `Arr` c) & a | f <- r `unifies` a = f c
   f & a = error $ '(' : show f ++ ") & (" ++ show a ++ ")"
   lam f = let u = Unkn (Ref (unsafePerformIO $ newIORef Nothing)) in f u `seq` (u `Arr` f u)
+  annotInt Int = Int
+  annotInt (Unkn r) | f <- r `unifies` Int = f (Unkn r)
 
 unifies (Ref r) Int = case current of
                         Just Int -> id
