@@ -2,21 +2,21 @@
 import GHC.TypeLits
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
-
+import Unsafe.Coerce (unsafeCoerce)
 
 -- stratified simply-typed first-order lambda calculus
 -- in finally-tagless (typed) HOAS form
 
 class LC (a :: Nat -> *) where
   (&) :: a l -> a l -> a l
-  star :: a 2
-  int :: a 1
+  star :: a (2+l)
+  int :: a (1+l)
   inh :: String -> a (1+l) -> a l
   zero :: a 0
   inc :: a 0
   lam :: (a l -> a l) -> a l
   as :: a l -> a (1+l) -> a l
-  --lift :: a l -> a (1+l)
+  lift :: a l -> a (1+l)
 
 infixr `inh`
 
@@ -57,10 +57,13 @@ instance LC Str where
   star = Str "*"
 
 data Norm :: Nat -> * where
-  Zero :: Norm 0
-  Inc :: Norm 0
+  Zero :: Norm l
+  Inc :: Norm l
   Lam :: (Norm l -> Norm l) -> Norm l
   App :: Norm l -> Norm l -> Norm l
+  StarN :: Norm (2+l)
+  IntN :: Norm (1+l)
+  InhN :: String -> Norm (1+l) -> Norm l
 
 deriving instance Show (Norm l)
 instance Show (Norm l -> Norm l) where
@@ -72,6 +75,22 @@ instance LC Norm where
   lam = Lam
   Lam f & a = f a
   l & a = l `App` a
+  v `as` _ = v
+  star = StarN
+  int = IntN
+  inh = InhN
+  lift Zero = Zero
+  lift Inc = Inc
+  lift IntN = IntN
+  lift (name `InhN` t) = name `InhN` lift t
+  lift (f `App` a) = lift f `App` lift a
+  lift (Lam f) = lam $ lift . f . unlift
+    where unlift Zero = Zero
+          unlift Inc = Inc
+          unlift IntN = unsafeCoerce IntN
+          unlift (name `InhN` t) = name `InhN` unsafeCoerce t
+          unlift (f `App` a) = unlift f `App` unlift a
+          unlift (Lam f) = lam $ unlift . f . lift
 
 -- interpret these into a primitive type universe
 data Univ (l :: Nat) where
