@@ -1,7 +1,8 @@
-{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs #-}
+{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs, TypeOperators #-}
 import GHC.TypeLits
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
+
 
 -- stratified simply-typed first-order lambda calculus
 -- in finally-tagless (typed) HOAS form
@@ -10,10 +11,13 @@ class LC (a :: Nat -> *) where
   (&) :: a l -> a l -> a l
   star :: a 2
   int :: a 1
+  inh :: String -> a (1+l) -> a l
   zero :: a 0
   inc :: a 0
   lam :: (a l -> a l) -> a l
   as :: a 0 -> a 1 -> a 0
+
+infixr `inh`
 
 one, two, three :: LC a => a 0
 one = inc & zero
@@ -45,11 +49,18 @@ instance LC Str where
   lam f = Str $ "\a->" ++ unStr (f (Str "a"))
   Str f & Str a = Str $ "(" ++ f ++ " & " ++ a ++ ")"
   as (Str a) (Str t) = Str $ "(" ++ a ++ " :: " ++ show t ++ ")"
+  inh name (Str parent) = Str $ name ++ " `inh` " ++ parent
+  int = Str "Int"
+  star = Str "*"
 
 -- interpret these into a primitive type universe
 data Univ (l :: Nat) where
   Int :: Univ 0
   Arr :: Univ l -> Univ l -> Univ l
+  IntTy :: Univ 1
+  Ty :: String -> Univ (1+l) -> Univ l
+  Inh :: String -> Univ (1+l) -> Univ l
+  Star :: Univ (2+l)
   Unkn :: Ref l -> Univ l
 
 deriving instance Show (Univ l)
@@ -71,8 +82,11 @@ instance LC Univ where
   (Unkn r `Arr` c) & a | f <- r `unifies` a = f c
   f & a = error $ '(' : show f ++ ") & (" ++ show a ++ ")"
   lam f = let u = Unkn (Ref (unsafePerformIO $ newIORef Nothing)) in f u `seq` (u `Arr` f u)
-  as Int _ = Int
-  as (Unkn r) _ | f <- r `unifies` Int = f (Unkn r)
+  as Int IntTy = Int
+  as (Unkn r) IntTy | f <- r `unifies` Int = f (Unkn r)
+  int = IntTy
+  inh = Inh
+  star = Star
 
 unifies (Ref r) (Unkn _) = error "UNIMPL!"
 
