@@ -58,10 +58,10 @@ instance LC Univ where
   (Int `Arr` c) & Unkn r | f <- r `unifies` Int = f c
   (Unkn r `Arr` c) & a | f <- r `unifies` a = f c
   f & a = error $ '(' : show f ++ ") & (" ++ show a ++ ")"
-  lam f = let u = Unkn (Ref (unsafePerformIO $ newIORef Nothing)) in u `Arr` f u
+  lam f = let u = Unkn (Ref (unsafePerformIO $ newIORef Nothing)) in f u `seq` (u `Arr` f u)
 
 unifies (Ref r) Int = case current of
                         Just Int -> id
-                        Nothing -> unsafePerformIO $ (writeIORef r (Just Int) >> putStrLn "DID IT" >> return id)
+                        Nothing -> unsafePerformIO $ (writeIORef r (Just Int) >> return id)
   where current = unsafePerformIO $ readIORef r
         
