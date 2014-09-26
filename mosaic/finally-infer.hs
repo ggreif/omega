@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures #-}
 import GHC.TypeLits
+import Data.IORef
+import System.IO.Unsafe (unsafePerformIO)
 
 -- stratified simply-typed first-order lambda calculus
 -- in finally-tagless (typed) HOAS form
@@ -33,9 +35,20 @@ instance LC N where
   F f & a@(S _) = f a
   lam = F
 
+newtype Str (l :: Nat) = Str String deriving Show
+unStr (Str a) = a
+instance LC Str where
+  zero = Str "Z"
+  inc = Str "S"
+  lam f = Str $ "\a->" ++ unStr (f (Str "a"))
+  Str f & Str a = Str $ "(" ++ f ++ " & " ++ a ++ ")"
+
 -- interpret these into a primitive type universe
-data Univ (l :: Nat) = Int | Univ l `Arr` Univ l | Unkn Ref deriving Show
-data Ref = Ref deriving Show
+data Univ (l :: Nat) = Int | Univ l `Arr` Univ l | Unkn (Ref l) deriving Show
+data Ref l = Ref (IORef (Maybe (Univ l)))
+instance Show (Ref l) where
+  show (Ref r) = "|" ++ show current ++ "|"
+    where current = unsafePerformIO $ readIORef r
 
 instance LC Univ where
   --int = Int
@@ -45,6 +58,10 @@ instance LC Univ where
   (Int `Arr` c) & Unkn r | f <- r `unifies` Int = f c
   (Unkn r `Arr` c) & a | f <- r `unifies` a = f c
   f & a = error $ '(' : show f ++ ") & (" ++ show a ++ ")"
-  lam f = let u = Unkn Ref in u `Arr` f u
+  lam f = let u = Unkn (Ref (unsafePerformIO $ newIORef Nothing)) in u `Arr` f u
 
-unifies Ref Int = id
+unifies (Ref r) Int = case current of
+                        Just Int -> id
+                        Nothing -> unsafePerformIO $ (writeIORef r (Just Int) >> putStrLn "DID IT" >> return id)
+  where current = unsafePerformIO $ readIORef r
+        
