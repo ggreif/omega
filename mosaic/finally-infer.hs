@@ -47,11 +47,13 @@ instance LC Str where
   annotInt (Str a) = Str $ "(" ++ a ++ " :: Int)"
 
 -- interpret these into a primitive type universe
-data Univ (l :: Nat) = Int | Univ l `Arr` Univ l | Unkn (Ref l) deriving Show
+data Univ (l :: Nat) = Int | Univ l `Arr` Univ l | Unkn (Ref l) deriving (Show, Eq)
 data Ref l = Ref (IORef (Maybe (Univ l)))
 instance Show (Ref l) where
   show (Ref r) = "|" ++ show current ++ "|"
     where current = unsafePerformIO $ readIORef r
+instance Eq (Ref l) where
+  a == b = error "cannot compare Refs"
 
 instance LC Univ where
   --int = Int
@@ -65,8 +67,12 @@ instance LC Univ where
   annotInt Int = Int
   annotInt (Unkn r) | f <- r `unifies` Int = f (Unkn r)
 
-unifies (Ref r) Int = case current of
-                        Just Int -> id
-                        Nothing -> unsafePerformIO $ (writeIORef r (Just Int) >> return id)
+unifies (Ref r) (Unkn _) = error "UNIMPL!"
+
+
+unifies (Ref r) a = case current of
+                        Just a' | a' == a -> id
+                        Nothing -> unsafePerformIO $ (writeIORef r (Just a) >> return id)
+                        Just other -> error $ "cannot unify: " ++ show a ++ " and " ++ show other
   where current = unsafePerformIO $ readIORef r
         
