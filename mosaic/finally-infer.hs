@@ -82,10 +82,13 @@ instance LC Norm where
   inh = InhN
   lift = unsafeCoerce
 
+--norm :: LC a => a l -> Norm l
+--norm = id
+
 unNorm :: LC a => Norm l -> a l
 unNorm Zero = zero
 unNorm Inc = inc
---unNorm (Lam f) = lam (\a -> unNorm $ f a)
+--unNorm (Lam f) = lam (\a -> unNorm $ f (norm a))
 unNorm (f `App` a) = unNorm f & unNorm a
 unNorm StarN = star
 unNorm IntN = int
@@ -137,4 +140,3 @@ unifies (Ref r) a = case current of
                         Nothing -> unsafePerformIO $ (writeIORef r (Just a) >> return id)
                         Just other -> error $ "cannot unify: " ++ show a ++ " and " ++ show other
   where current = unsafePerformIO $ readIORef r
-        
