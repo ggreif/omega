@@ -12,8 +12,8 @@ class LC (a :: Nat -> *) where
   star :: a (2+l)
   int :: a (1+l)
   inh :: String -> a (1+l) -> a l
-  zero :: a 0
-  inc :: a 0
+  zero :: a l
+  inc :: a l
   lam :: (a l -> a l) -> a l
   as :: a l -> a (1+l) -> a l
   lift :: a l -> a (1+l)
@@ -64,6 +64,7 @@ data Norm :: Nat -> * where
   StarN :: Norm (2+l)
   IntN :: Norm (1+l)
   InhN :: String -> Norm (1+l) -> Norm l
+  -- Lift :: Norm l -> Norm (1+l) -- not needed, we use unsafeCoerce
 
 deriving instance Show (Norm l)
 instance Show (Norm l -> Norm l) where
@@ -79,18 +80,17 @@ instance LC Norm where
   star = StarN
   int = IntN
   inh = InhN
-  lift Zero = Zero
-  lift Inc = Inc
-  lift IntN = IntN
-  lift (name `InhN` t) = name `InhN` lift t
-  lift (f `App` a) = lift f `App` lift a
-  lift (Lam f) = lam $ lift . f . unlift
-    where unlift Zero = Zero
-          unlift Inc = Inc
-          unlift IntN = unsafeCoerce IntN
-          unlift (name `InhN` t) = name `InhN` unsafeCoerce t
-          unlift (f `App` a) = unlift f `App` unlift a
-          unlift (Lam f) = lam $ unlift . f . lift
+  lift = unsafeCoerce
+
+unNorm :: LC a => Norm l -> a l
+unNorm Zero = zero
+unNorm Inc = inc
+--unNorm (Lam f) = lam (\a -> unNorm $ f a)
+unNorm (f `App` a) = unNorm f & unNorm a
+unNorm StarN = star
+unNorm IntN = int
+unNorm (name `InhN` ty) = name `inh` unNorm ty
+
 
 -- interpret these into a primitive type universe
 data Univ (l :: Nat) where
