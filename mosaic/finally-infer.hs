@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs, TypeOperators, FlexibleInstances #-}
+{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs, TypeOperators, FlexibleInstances, ViewPatterns #-}
 import GHC.TypeLits
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
@@ -140,3 +140,18 @@ unifies (Ref r) a = case current of
                         Nothing -> unsafePerformIO $ (writeIORef r (Just a) >> return id)
                         Just other -> error $ "cannot unify: " ++ show a ++ " and " ++ show other
   where current = unsafePerformIO $ readIORef r
+
+
+-- Zippers?
+
+--data Zipper all part (l :: Nat) = Zipper part (part -> all)
+data Zipper all (l :: Nat) = Zipper1 all (all -> all) | Zipper2 all (all -> all) all (all -> all)
+
+allTogether (Zipper1 a a') = a' a
+allTogether (Zipper2 a a' b b') = a' a
+
+instance LC all => LC (Zipper (all l)) where
+  -- Zipper1 f f' & Zipper1 a a' = Zipper2 (f' f) (& a' a) (a' a) (f' f &)
+  (allTogether -> f) & (allTogether -> a) = Zipper2 f (& a) a (f &)
+  -- Zipper f f' & Zipper a a' = Zipper (f' f) (& undefined)
+  -- zero 
