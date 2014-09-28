@@ -96,7 +96,7 @@ unNorm (name `InhN` ty) = name `inh` unNorm ty
 
 
 -- interpret these into a primitive type universe
-data Univ (l :: Nat) where
+data Univ :: Nat -> * where
   Int :: Univ l
   Arr :: Univ l -> Univ l -> Univ l
   IntTy :: Univ (1+l)
