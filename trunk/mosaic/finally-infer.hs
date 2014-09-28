@@ -145,13 +145,15 @@ unifies (Ref r) a = case current of
 -- Zippers?
 
 --data Zipper all part (l :: Nat) = Zipper part (part -> all)
-data Zipper all (l :: Nat) = Zipper1 all (all -> all) | Zipper2 all (all -> all) all (all -> all)
+data Zipper all (l :: Nat) = Zipper0 all | Zipper1 all (all -> all) | Zipper2 all (all -> all) all (all -> all)
 
+allTogether (Zipper0 a) = a
 allTogether (Zipper1 a a') = a' a
-allTogether (Zipper2 a a' b b') = a' a
+allTogether (Zipper2 a a' b b') = a' a & b' b
 
 instance LC all => LC (Zipper (all l)) where
   -- Zipper1 f f' & Zipper1 a a' = Zipper2 (f' f) (& a' a) (a' a) (f' f &)
   (allTogether -> f) & (allTogether -> a) = Zipper2 f (& a) a (f &)
   -- Zipper f f' & Zipper a a' = Zipper (f' f) (& undefined)
-  -- zero 
+  zero = Zipper0 zero
+  inc = Zipper0 inc
