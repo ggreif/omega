@@ -18,3 +18,4 @@ fill (x `Cons` xs) Hole = (Leaf x, xs)
 fill xs (Fork a b) = (Fork a' b', xs'')
     where (a', xs') = fill xs a
           (b', xs'') = fill xs' b
+fill _ Hole = error "Inaccessible"
