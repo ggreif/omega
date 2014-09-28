@@ -96,26 +96,33 @@ unNorm (name `InhN` ty) = name `inh` unNorm ty
 
 
 -- interpret these into a primitive type universe
-data Univ :: Nat -> * where
-  Int :: Univ l
-  Arr :: Univ l -> Univ l -> Univ l
-  IntTy :: Univ (1+l)
-  Ty :: String -> Univ (1+l) -> Univ l
-  Inh :: String -> Univ (1+l) -> Univ l
-  Star :: Univ (2+l)
-  Unkn :: Ref l -> Univ l
+--           m   >= n      lev
+data Univ :: Nat -> Nat -> Nat -> * where
+  Int :: Univ m m l
+  Arr :: Univ m n l -> Univ n o l -> Univ m o l
+  IntTy :: Univ m m (1+l)
+  Ty :: String -> Univ 0 0 (1+l) -> Univ m m l
+  Inh :: String -> Univ 0 0 (1+l) -> Univ m m l
+  Star :: Univ m m (2+l)
+  Unkn :: Ref l -> Univ m m l
 
-deriving instance Show (Univ l)
-deriving instance Eq (Univ l)
+deriving instance Show (Univ m n l)
+instance Eq (Univ 0 0 l) where
+  Int == Int = True
+  Star == Star = True
+  IntTy == IntTy = True
+  l `Arr` r == l' `Arr` r' = coerce00 l == coerce00 l' && coerce00 r == coerce00 r'
+    where coerce00 :: Univ m n l -> Univ 0 0 l
+          coerce00 = unsafeCoerce
 
-data Ref l = Ref (IORef (Maybe (Univ l)))
+data Ref l = Ref (IORef (Maybe (Univ 0 0 l)))
 instance Show (Ref l) where
   show (Ref r) = "|" ++ show current ++ "|"
     where current = unsafePerformIO $ readIORef r
 instance Eq (Ref l) where
   a == b = error "cannot compare Refs"
 
-instance LC Univ where
+instance LC (Univ 0 0) where
   --int = Int
   zero = Int
   inc = Int `Arr` Int
