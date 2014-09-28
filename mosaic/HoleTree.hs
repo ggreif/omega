@@ -22,7 +22,7 @@ fill :: Vec m a -> HTree m n a -> (HTree o o a, Vec n a)
 fill xs (Leaf x) = (Leaf x, xs)
 fill (x ::: xs) Hole = (Leaf x, xs)
 fill _ Hole = error "Inaccessible"
-fill xs (Fork a b) = (Fork a' b', xs'')
+fill xs (a `Fork` b) = (a' `Fork` b', xs'')
     where (a', xs') = fill xs a
           (b', xs'') = fill xs' b
 
