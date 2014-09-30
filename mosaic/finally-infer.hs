@@ -152,9 +152,7 @@ unifies (Ref r) a = case current of
 
 -- possibly `fix` can help us avoiding two-hole contexts when unifying
 
-
 class Defines a where
-  --start :: a -> a
   (.:=) :: a -> a -> a
   ar :: a -> a -> a
   intt :: a
@@ -167,7 +165,6 @@ data Uni where
   Intt :: Uni
   Ar :: Uni -> Uni -> Uni
 
---deriving instance Show Uni
 instance Show Uni where
   show (Whatnot _) = "Whatnot"
   show Intt = "Intt"
@@ -181,16 +178,15 @@ instance Defines Uni where
   a .:= b = error $ "cannot unify " ++ show (a,b)
   ar = Ar
   intt = Intt
+
 instance Startable Uni where
   start = Whatnot
 
 infixr 5 `ar`
 infixr 4 .:=
 
---fix' f = let x = f (start x) in x .:= x
 fix' :: Startable a => (a -> a) -> a
 fix' f = let x = f (start x) in x
---fix' f = let x = f x in x .:= x
 
 test, test2 :: Defines a => a -> a
 test ex = ex .:= intt `ar` intt
