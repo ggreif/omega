@@ -149,6 +149,54 @@ unifies (Ref r) a = case current of
   where current = unsafePerformIO $ readIORef r
 
 
+
+-- possibly `fix` can help us avoiding two-hole contexts when unifying
+
+
+class Defines a where
+  --start :: a -> a
+  (.:=) :: a -> a -> a
+  ar :: a -> a -> a
+  intt :: a
+
+class Defines a => Startable a where
+  start :: a -> a
+
+data Uni where
+  Whatnot :: x -> Uni
+  Intt :: Uni
+  Ar :: Uni -> Uni -> Uni
+
+--deriving instance Show Uni
+instance Show Uni where
+  show (Whatnot _) = "Whatnot"
+  show Intt = "Intt"
+  show (a `Ar` b) = "(" ++ show a ++ " `Ar` "  ++ show b ++ ")"
+
+instance Defines Uni where
+  a .:= Whatnot _ = a
+  Whatnot _ .:= b = b
+  Intt .:= Intt = Intt
+  (a `Ar` b) .:= (a' `Ar` b') = (a .:= a') `Ar` (b .:= b')
+  a .:= b = error $ "cannot unify " ++ show (a,b)
+  ar = Ar
+  intt = Intt
+instance Startable Uni where
+  start = Whatnot
+
+infixr 5 `ar`
+infixr 4 .:=
+
+--fix' f = let x = f (start x) in x .:= x
+fix' :: Startable a => (a -> a) -> a
+fix' f = let x = f (start x) in x
+--fix' f = let x = f x in x .:= x
+
+test, test2 :: Defines a => a -> a
+test ex = ex .:= intt `ar` intt
+test2 ex = (ex .:= intt `ar` intt) .:= intt
+
+
 -- Zippers?
 
 --data Zipper all part (l :: Nat) = Zipper part (part -> all)
