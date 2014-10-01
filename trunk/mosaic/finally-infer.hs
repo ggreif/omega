@@ -196,13 +196,14 @@ test2 ex = (ex .:= intt `ar` intt) .:= intt
 --
 newtype D a (l :: Nat) = D (a -> a)
 dc = D . const
+unD (D x) = x
 fix'' :: Startable a => D a l -> a
 fix'' (D f) = fix' f
 
 instance Defines a => LC (D a) where
   zero = dc $ intt
   inc = dc $ intt `ar` intt
-  lam f = undefined -- TODO
+  lam f = D $ \a -> let i = intt in a .:= i `ar` (unD (f (dc i)) undefined) -- TODO
 
 -- Zippers?
 
