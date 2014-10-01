@@ -192,6 +192,17 @@ test, test2 :: Defines a => a -> a
 test ex = ex .:= intt `ar` intt
 test2 ex = (ex .:= intt `ar` intt) .:= intt
 
+-- can we marry Defines and LC?
+--
+newtype D a (l :: Nat) = D (a -> a)
+dc = D . const
+fix'' :: Startable a => D a l -> a
+fix'' (D f) = fix' f
+
+instance Defines a => LC (D a) where
+  zero = dc $ intt
+  inc = dc $ intt `ar` intt
+  lam f = undefined -- TODO
 
 -- Zippers?
 
