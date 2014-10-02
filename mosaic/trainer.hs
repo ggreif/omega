@@ -1,3 +1,5 @@
+#!/usr/bin/env runhaskell
+
 import Test.QuickCheck
 import System.IO.Unsafe
 
