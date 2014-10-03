@@ -156,6 +156,7 @@ class Defines a where
   (.:=) :: a -> a -> a
   ar :: a -> a -> a
   intt :: a
+  split :: (a -> a) -> (a -> a) -> (a -> a) -- check/infer variant of `ar`
 
 class Defines a => Startable a where
   start :: a -> a
@@ -193,18 +194,20 @@ test ex = ex .:= intt `ar` intt
 test2 ex = (ex .:= intt `ar` intt) .:= intt
 
 -- can we marry Defines and LC?
---
+--                 check ---+    +--- infer
+--                          v    v
 newtype D a (l :: Nat) = D (a -> a)
-dc = D . const
+dc a = D $ \x -> x .:= a
 unD (D x) = x
 fix'' :: Startable a => D a l -> a
 fix'' (D f) = fix' f
 
 instance Defines a => LC (D a) where
-  zero = dc $ intt
+  zero = dc intt
   inc = dc $ intt `ar` intt
-  lam f = D $ \a -> let i = intt in a .:= i `ar` (unD (f (dc i)) undefined) -- TODO
-
+  -- D f & D a = 
+  -- lam f = D $ \a -> let i = intt in a .:= i `ar` (unD (f (dc i)) undefined) -- TODO
+  -- lam f = D $ split (\arg -> ) (id)
 -- Zippers?
 
 --data Zipper all part (l :: Nat) = Zipper part (part -> all)
