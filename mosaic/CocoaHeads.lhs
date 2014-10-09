@@ -30,13 +30,13 @@ Swift: Value types.
 These "go together like a horse and carriage"!
 https://www.youtube.com/watch?v=xtS46Wfsxnw
 
-The 'Option' type
+The 'Optional' type
 
-> data Option a = None | Some a
+> data Optional a = None | Some a
 
 In Swift
 
-enum Option<T> {
+enum Optional<T> {
   case None
   case Some(a)
 }
