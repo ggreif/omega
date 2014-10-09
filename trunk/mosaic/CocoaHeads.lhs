@@ -74,4 +74,30 @@ Examples: =map=, =foldr=
 ** Applications
 
 *** QuickCheck
- 
+
+Consider this homework:
+
+        +-------+
+        |  17   |
+    +-------+-------+
+    |       |   9   |
++-------+-------+-------+
+|       |   3   |       |
++-------+-------+-------+
+
+Let's generate these for the pupil...
+
+import Test.QuickCheck
+
+        +-------+
+        |   c   |
+    +-------+-------+
+    |   a   |   b   |
+    +-------+-------+
+
+prop_tri a b c = sum (map (maybe 1 (const 0)) [a, b, c]) == 1
+                 ==> tri a b c === pupil a b c
+
+tri (Just a) (Just b) Nothing = a + b
+tri Nothing (Just b) (Just c) = c - b
+tri (Just a) Nothing (Just c) = c - a
