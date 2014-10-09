@@ -1,3 +1,6 @@
+> import Test.QuickCheck
+> import System.IO.Unsafe
+
 * Functional Programming for Assurance and Performance
 
  - assurance: are we faithfully implementing the specification
@@ -32,16 +35,25 @@ https://www.youtube.com/watch?v=xtS46Wfsxnw
 
 The 'Optional' type
 
+> -- data Bool = True | False
 > data Optional a = None | Some a
 
 In Swift
 
 enum Optional<T> {
   case None
-  case Some(a)
+  case Some(T)
 }
 
+data City = Manchester | London | ...
+
 > data Dialect = US | British
+> --- data Dialect = 1 + City * Bool
+
+enum Dialect {
+  case US
+  case British(city: City, downtown: Boolean)
+}
 
 *** Sums of products
 
@@ -57,7 +69,7 @@ The process of opening a value up:
 
 *** Function types
 
-> greeting :: Dialect -> Option String -> String
+> greeting :: Dialect -> Optional String -> String
 > greeting British None = "Good morning Sir!"
 > greeting British (Some person) = "Good morning, "++ person ++ "!"
 > greeting US None = "Hi!"
@@ -74,6 +86,9 @@ Examples: =map=, =foldr=
 ** Applications
 
 *** QuickCheck
+
+> prop_foldr as = foldr (+) (1::Int) as == sum as
+
 
 Consider this homework:
 
@@ -95,9 +110,16 @@ import Test.QuickCheck
     |   a   |   b   |
     +-------+-------+
 
-prop_tri a b c = sum (map (maybe 1 (const 0)) [a, b, c]) == 1
-                 ==> tri a b c === pupil a b c
+> prop_tri a b c = sum (map (maybe 1 (const 0)) [a, b, c]) == 1
+>                 ==> tri a b c == unsafePerformIO (pupil a b c)
 
-tri (Just a) (Just b) Nothing = a + b
-tri Nothing (Just b) (Just c) = c - b
-tri (Just a) Nothing (Just c) = c - a
+> tri (Just a) (Just b) Nothing = a + b
+> tri Nothing (Just b) (Just c) = c - b
+> tri (Just a) Nothing (Just c) = c - a
+
+> pupil (Just a) (Just b) Nothing = do putStrLn ("a = " ++ show a ++ "  b = " ++ show b)
+>                                      fmap (read :: String -> Int) getLine
+> pupil Nothing (Just b) (Just c) = do putStrLn ("b = " ++ show b ++ "  c = " ++ show c)
+>                                      fmap (read :: String -> Int) getLine
+> pupil (Just a) Nothing (Just c) = do putStrLn ("a = " ++ show a ++ "  c = " ++ show c)
+>                                      fmap (read :: String -> Int) getLine
