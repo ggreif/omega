@@ -117,7 +117,12 @@ import Test.QuickCheck
 > tri Nothing (Just b) (Just c) = c - b
 > tri (Just a) Nothing (Just c) = c - a
 
-> pupil (Just a) (Just b) Nothing = do putStrLn ("a = " ++ show a ++ "  b = " ++ show b)
+> pupil (Just a) (Just b) Nothing = do 
+>                                      putStrLn  "        +-------+"
+>                                      putStrLn  "        |   ?   |"
+>                                      putStrLn  "    +-------+-------+"
+>                                      putStrLn ("    |   " ++ show a ++ "   |   " ++ show b ++ "   |")
+>                                      putStrLn  "    +-------+-------+"
 >                                      fmap (read :: String -> Int) getLine
 > pupil Nothing (Just b) (Just c) = do putStrLn ("b = " ++ show b ++ "  c = " ++ show c)
 >                                      fmap (read :: String -> Int) getLine
