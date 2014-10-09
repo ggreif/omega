@@ -59,7 +59,7 @@ The process of opening a value up:
 
 > greeting :: Dialect -> Option String -> String
 > greeting British None = "Good morning Sir!"
-> greeting British (Some person) = "Good morning "++ person ++ "!"
+> greeting British (Some person) = "Good morning, "++ person ++ "!"
 > greeting US None = "Hi!"
 > greeting US (Some person) = "Hi "++ person ++ "!"
 
@@ -68,6 +68,8 @@ The process of opening a value up:
 Works for every =T=
 
 Brings compositionality and correctness.
+
+Examples: =map=, =foldr=
 
 ** Applications
 
