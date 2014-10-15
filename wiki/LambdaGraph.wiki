@@ -9,6 +9,10 @@ Recent research uses !TermGraph as the name: http://arxiv.org/pdf/1401.1460.pdf
 
 There is a [http://www.cas.mcmaster.ca/~kahl/HOPS/ANIM/index.html nice animation of termgraphs] too.
 
+Classical paper on termgraphs (http://citeseer.ist.psu.edu/viewdoc/summary;jsessionid=7F973111F89A8D21CB4D3449D9917A8B?doi=10.1.1.42.8384)
+
+See also Thorsten Wißmann's project thesis on rational fixpoints in nominal sets.
+
 = Main Idea =
 
 A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up`*`{down|left|right}`*`) references.
