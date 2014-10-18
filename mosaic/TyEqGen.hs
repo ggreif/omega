@@ -6,9 +6,9 @@ import Data.Type.Equality
 import GHC.Generics
 import Unsafe.Coerce (unsafeCoerce)
 
-sameRep' :: (Generic a, Generic b, Rep a ~ D1 d f, Rep b ~ D1 d' f') => Rep a x -> Rep b x -> Maybe (a :~: b)
+sameRep' :: (Generic a, Generic b, Rep a ~ D1 d f, Rep b ~ D1 d' f', Datatype d, Datatype d', SameStructure f f') => Rep a x -> Rep b x -> Maybe (a :~: b)
 sameRep' l r = do Refl <- sameRep l r
-	       	  return Refl
+	       	  return $ unsafeCoerce Refl
 
 sameRep :: (Datatype d, Datatype d', SameStructure f f') => D1 d f a -> D1 d' f' a -> Maybe (D1 d f :~: D1 d' f')
 sameRep l@(M1 l') r@(M1 r') = do Refl <- sameDatatype l r
