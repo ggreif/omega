@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, TypeOperators, ViewPatterns #-}
+{-# LANGUAGE TypeOperators, ViewPatterns #-}
 
 module Data.Type.Equality.Generics where
 
@@ -17,8 +17,13 @@ sameDatatype :: (Datatype d, Datatype d') => D1 d f a -> D1 d' f' a' -> Maybe (d
 sameDatatype (nameAndMod -> l) (nameAndMod -> r) | l == r = Just $ unsafeCoerce Refl
 sameDatatype _ _ = Nothing
 
+
+sameConstructor :: (Constructor c, Constructor c') => C1 c f a -> C1 c' f' a' -> Maybe (c :~: c')
+sameConstructor (conName -> l) (conName -> r) | l == r = Just $ unsafeCoerce Refl
+sameConstructor _ _ = Nothing
+
 {-
-class Datatype d where
-  datatypeName :: t d f a -> [Char]
-  moduleName :: t d f a -> [Char]
+class Constructor c where
+  conName :: t c f a -> [Char]
+
 -}
