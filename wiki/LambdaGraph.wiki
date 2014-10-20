@@ -13,6 +13,8 @@ Classical paper on termgraphs (http://citeseer.ist.psu.edu/viewdoc/summary?doi=1
 
 See also Thorsten Wißmann's project thesis on rational fixpoints in nominal sets.
 
+Peter Selinger [http://www.mscs.dal.ca/~selinger/papers/combinatory.pdf on lambda algebras].
+
 = Main Idea =
 
 A graph representing (extended) lambda calculus terms is transformed into a _search tree_ and sharing, cycles, etc. are represented by (up`*`{down|left|right}`*`) references.
