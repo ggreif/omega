@@ -44,3 +44,41 @@ main = do putStrLn "Plus oder Minusaufgaben?"
             "-" -> quickCheck $ prop_substDigits 11
             "+-" -> quickCheck prop_plusMinusDigits
             _ -> putStrLn "Antworte mit '+' oder '-'." >> main
+
+
+
+
+data Verbo = Regular String
+           | Irregular String String String
+
+data Substantivo = Normal String
+                 | SingOnly String
+
+verbos = [ Irregular    "go"    "went"  "gone"
+         , Irregular    "eat"   "ate"   "eaten"
+         , Irregular     "sleep"   "slept"   "slept"
+         , Irregular     "hide"   "hid"   "hidden"
+         , Irregular     "do"   "did"   "done"
+         , Irregular     "take"   "took"   "taken"
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         , Irregular     ""   ""   ""
+         ]
