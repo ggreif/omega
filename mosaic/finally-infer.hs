@@ -156,29 +156,34 @@ class Defines a where
   (.:=) :: a -> a -> a
   ar :: a -> a -> a
   intt :: a
-  split :: (a -> a) -> (a -> a) -> (a -> a) -- check/infer variant of `ar`
+  split :: (a -> a -> a) -> (a -> a) -- check/infer variant of `ar`
 
 class Defines a => Startable a where
-  start :: a -> a
+  start :: (a -> a) -> a -> a
 
 data Uni where
-  Whatnot :: x -> Uni
+  Whatnot :: Startable a => Int -> (a -> a) -> x -> Uni
+  --Whatnot :: (Uni -> Uni) -> x -> Uni
   Intt :: Uni
   Ar :: Uni -> Uni -> Uni
 
 instance Show Uni where
-  show (Whatnot _) = "Whatnot"
+  show (Whatnot _ _) = "Whatnot"
   show Intt = "Intt"
   show (a `Ar` b) = "(" ++ show a ++ " `Ar` "  ++ show b ++ ")"
 
 instance Defines Uni where
-  a .:= Whatnot _ = a
-  Whatnot _ .:= b = b
+  l@(Whatnot i _ _) .:= Whatnot j _ b | i == j = l
+  Whatnot _ f a .:= r@(Whatnot _ _ _) = r .:= fix' f
+  a .:= Whatnot _ _ = a
+  Whatnot _ _ .:= b = b
   Intt .:= Intt = Intt
   (a `Ar` b) .:= (a' `Ar` b') = (a .:= a') `Ar` (b .:= b')
   a .:= b = error $ "cannot unify " ++ show (a,b)
   ar = Ar
   intt = Intt
+  split f e = e .:= f (Whatnot id e) (Whatnot id e)
+  --split f e = e .:= f (Whatnot (const $ error "tricky domain") e) (Whatnot (const $ error "tricky codomain") e)
 
 instance Startable Uni where
   start = Whatnot
@@ -187,11 +192,21 @@ infixr 5 `ar`
 infixr 4 .:=
 
 fix' :: Startable a => (a -> a) -> a
-fix' f = let x = f (start x) in x
+fix' f = let x = f (start f x) in x
 
-test, test2 :: Defines a => a -> a
+instance Defines Int where
+  a .:= b = a `max` b
+  dom `ar` cod = error "heh"
+  
+
+instance Startable Int where
+  start f _ = 0
+
+test, test2, test3, test4 :: Defines a => a -> a
 test ex = ex .:= intt `ar` intt
 test2 ex = (ex .:= intt `ar` intt) .:= intt
+test3 ex = ex .:= ex
+test4 = split (\ dom cod -> dom .:= cod `ar` cod)
 
 -- can we marry Defines and LC?
 --                 check ---+    +--- infer
@@ -205,7 +220,7 @@ fix'' (D f) = fix' f
 instance Defines a => LC (D a) where
   zero = dc intt
   inc = dc $ intt `ar` intt
-  -- D f & D a = 
+  --D f & D a = 
   -- lam f = D $ \a -> let i = intt in a .:= i `ar` (unD (f (dc i)) undefined) -- TODO
   -- lam f = D $ split (\arg -> ) (id)
 -- Zippers?
