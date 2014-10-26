@@ -7,7 +7,9 @@ import System.IO.Unsafe
 import System.Exit
 import System.Posix.Process
 
-prop_addDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a + b == leleka ((+), "Summe", "+") a b
+prop_addDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a' + b' == leleka ((+), "Summe", "+") a' b'
+    where (a', b') = (a + 2, b + 2)
+
 
 prop_substDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a' - b' == leleka ((-), "Differenz", "-") a' b'
     where (a', b') = if a >= b then (a, b) else (b, a)
