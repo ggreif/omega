@@ -12,7 +12,8 @@ prop_addDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a
 
 
 prop_substDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a' - b' == leleka ((-), "Differenz", "-") a' b'
-    where (a', b') = if a >= b then (a, b) else (b, a)
+    where (a'', b'') = if a >= b then (a, b) else (b, a)
+          (a', b') = (a'' + 3, b'' + 3)
 
 leleka :: (Int -> Int -> Int, String, String) -> Int -> Int -> Int
 leleka (calc, job, op) a b = unsafePerformIO $ do
