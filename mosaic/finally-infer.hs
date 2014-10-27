@@ -159,10 +159,10 @@ class Defines a where
   split :: (a -> a -> a) -> (a -> a) -- check/infer variant of `ar`
 
 class Defines a => Startable a where
-  start :: (forall a . Startable a => a -> a) -> a -> a
+  start :: (forall a . Defines a => a -> a) -> a -> a
 
 data Uni where
-  Whatnot :: (forall a . Startable a => a -> a) -> x -> Uni
+  Whatnot :: (forall a . Defines a => a -> a) -> x -> Uni
   Intt :: Uni
   Ar :: Uni -> Uni -> Uni
 
@@ -190,7 +190,7 @@ instance Startable Uni where
 infixr 5 `ar`
 infixr 4 .:=
 
-fix' :: Startable a => (forall a . Startable a => a -> a) -> a
+fix' :: Startable a => (forall a . Defines a => a -> a) -> a
 fix' f = let x = f (start f x) in x
 
 instance Defines Int where
