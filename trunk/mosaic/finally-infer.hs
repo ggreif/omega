@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures, StandaloneDeriving, GADTs, TypeOperators, FlexibleInstances, ViewPatterns #-}
+{-# LANGUAGE DataKinds, KindSignatures, RankNTypes, StandaloneDeriving, GADTs, TypeOperators, FlexibleInstances, ViewPatterns #-}
 import GHC.TypeLits
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
@@ -159,11 +159,12 @@ class Defines a where
   split :: (a -> a -> a) -> (a -> a) -- check/infer variant of `ar`
 
 class Defines a => Startable a where
-  start :: (a -> a) -> a -> a
+  start :: (forall a . Startable a => a -> a) -> a -> a
 
 data Uni where
+  Whatnot :: (forall a . Startable a => a -> a) -> x -> Uni
   --Whatnot :: Startable a => (a -> a) -> x -> Uni
-  Whatnot :: (Uni -> Uni) -> x -> Uni
+  --Whatnot :: (Uni -> Uni) -> x -> Uni
   Intt :: Uni
   Ar :: Uni -> Uni -> Uni
 
@@ -174,6 +175,9 @@ instance Show Uni where
 
 instance Defines Uni where
   Whatnot f _ .:= Whatnot g _ = fix' (g . f)
+      where f', g' :: Uni -> Uni
+            f' = f
+            g' = g
   -- Whatnot f a .:= r@(Whatnot _ _) = r .:= fix' f
   a .:= Whatnot _ _ = a
   Whatnot _ _ .:= b = b
@@ -191,7 +195,7 @@ instance Startable Uni where
 infixr 5 `ar`
 infixr 4 .:=
 
-fix' :: Startable a => (a -> a) -> a
+fix' :: Startable a => (forall a . Startable a => a -> a) -> a
 fix' f = let x = f (start f x) in x
 
 instance Defines Int where
@@ -208,6 +212,7 @@ test2 ex = (ex .:= intt `ar` intt) .:= intt
 test3 ex = ex .:= ex
 test4 = split (\ dom cod -> dom .:= cod `ar` cod)
 
+{-
 -- can we marry Defines and LC?
 --                 check ---+    +--- infer
 --                          v    v
@@ -223,6 +228,9 @@ instance Defines a => LC (D a) where
   --D f & D a = 
   -- lam f = D $ \a -> let i = intt in a .:= i `ar` (unD (f (dc i)) undefined) -- TODO
   -- lam f = D $ split (\arg -> ) (id)
+-}
+
+
 -- Zippers?
 
 --data Zipper all part (l :: Nat) = Zipper part (part -> all)
