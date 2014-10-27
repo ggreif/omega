@@ -163,8 +163,6 @@ class Defines a => Startable a where
 
 data Uni where
   Whatnot :: (forall a . Startable a => a -> a) -> x -> Uni
-  --Whatnot :: Startable a => (a -> a) -> x -> Uni
-  --Whatnot :: (Uni -> Uni) -> x -> Uni
   Intt :: Uni
   Ar :: Uni -> Uni -> Uni
 
@@ -175,9 +173,6 @@ instance Show Uni where
 
 instance Defines Uni where
   Whatnot f _ .:= Whatnot g _ = fix' (g . f)
-      where f', g' :: Uni -> Uni
-            f' = f
-            g' = g
   -- Whatnot f a .:= r@(Whatnot _ _) = r .:= fix' f
   a .:= Whatnot _ _ = a
   Whatnot _ _ .:= b = b
