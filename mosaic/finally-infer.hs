@@ -193,6 +193,9 @@ infixr 4 .:=
 fix' :: Startable a => (forall a . Defines a => a -> a) -> a
 fix' f = let x = f (start f x) in x
 
+-- Relevant:
+-- http://www.cse.chalmers.se/~emax/documents/axelsson2013using.pdf
+--
 instance Defines Int where
   a .:= b = a `max` b
   dom `ar` cod = error "heh"
