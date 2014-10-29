@@ -2,14 +2,12 @@
 
 import Data.Monoid hiding ((<>))
 
-class (Monoid a, Monad m, a ~ m i) => Bag m a i | a -> i where
+--class (Monoid a, Monad m, a ~ m i) => Bag m a i | a -> i where
+class (Monoid a, Monad m, a ~ m i) => Bag m a i where
   into :: i -> m i
   into = return
   (<>) :: a -> a -> a
   (<>) = mappend
-
---class Monad (Bag m a) where
---  return = into
 
 instance Monoid (IO ()) where
   mempty = return ()
@@ -25,15 +23,16 @@ test2 = do a <- putStrLn "Hey"
            b <- into a
            putStrLn "You"
 
-class (i ~ (), Bag m a i) => API m a i | a -> i where
+class (i ~ (), Bag m a i) => API m a i where
   silly :: String -> m ()
   nilly :: Bool -> a -> a -> a
 
-test3 :: API m (m ()) () => m ()
-test3 = do silly "You"
-           nilly True (silly "a") $ do
-              silly "else"
-              (silly "more" <> silly "of it")
+--test3 :: API m (m ()) () => Bool -> m ()
+test3 :: API m a i => Bool -> a
+test3 b = do silly "You"
+             nilly b (silly "a") $ do
+                silly "else"
+                (silly "more" <> silly "of it")
 
 instance API IO (IO ()) () where
   silly s = putStrLn $ ("A silly " ++ s)
