@@ -2,6 +2,10 @@
 
 import Data.Monoid hiding ((<>))
 
+-- We would like to work in a monoid, but obtain the `do` syntax for free
+--  Additionally we would like to have a reifiable monad.
+--  See http://www.cse.chalmers.se/~joels/writing/bb.pdf
+
 --class (Monoid a, Monad m, a ~ m i) => Bag m a i | a -> i where
 class (Monoid a, Monad m, a ~ m i) => Bag m a i where
   into :: i -> m i
