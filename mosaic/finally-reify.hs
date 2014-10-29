@@ -1,9 +1,10 @@
-{-# LANGUAGE FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, TypeFamilies #-}
 
 import Data.Monoid hiding ((<>))
 
-class (Monoid a, Monad m, a ~ m i) => Bag m a i | a -> m i where
+class (Monoid a, Monad m, a ~ m i) => Bag m a i | a -> i where
   into :: i -> m i
+  into = return
   (<>) :: a -> a -> a
   (<>) = mappend
 
@@ -15,12 +16,22 @@ instance Monoid (IO ()) where
   mappend = (>>)
 
 instance Bag IO (IO ()) () where
-  into = return
+--  into = return
 
 test1 :: Bag m a i => a
 test1 = mempty
 
-test2 :: Bag m a i => a
+test2 :: Bag IO a () => a
 test2 = do a <- putStrLn "Hey"
            b <- into a
            putStrLn "You"
+
+class Bag m a i => API m a i | a -> i where
+  silly :: String -> m ()
+  nilly :: Bool -> a -> a -> a
+
+test3 :: API m (m ()) () => m ()
+test3 = do silly "You"
+           nilly True (silly "a") $ do
+              silly "else"
+--              silly "more"
