@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies, MultiParamTypeClasses
+           , TypeFamilies, GADTs, StandaloneDeriving #-}
 
 import Data.Monoid hiding ((<>))
 
@@ -6,7 +7,6 @@ import Data.Monoid hiding ((<>))
 --  Additionally we would like to have a reifiable monad.
 --  See http://www.cse.chalmers.se/~joels/writing/bb.pdf
 
---class (Monoid a, Monad m, a ~ m i) => Bag m a i | a -> i where
 class (Monoid a, Monad m, a ~ m i) => Bag m a i where
   into :: i -> m i
   into = return
@@ -41,3 +41,32 @@ test3 b = do silly "You"
 instance API IO (IO ()) () where
   silly s = putStrLn $ ("A silly " ++ s)
   nilly b t e = if b then t else e
+
+
+data Rei a where
+  Silly :: String -> Rei ()
+  Nilly :: Bool -> Rei () -> Rei () -> Rei ()
+  Return :: a -> Rei a
+  -- Bind :: Rei a -> (a -> Rei b) -> Rei b
+  Seq :: Rei a -> Rei a -> Rei a
+  Par :: Rei a -> Rei a -> Rei a
+
+deriving instance Show a => Show (Rei a)
+
+
+instance Monad Rei where
+  return = Return
+  --(>>=) = Bind
+  --(>>) = Seq
+
+instance Monoid (Rei ()) where
+  mempty = return ()
+  mappend = Par
+
+instance Bag Rei (Rei ()) ()
+
+
+instance API Rei (Rei ()) () where
+  silly = Silly
+  nilly = Nilly
+
