@@ -153,9 +153,9 @@ unifies (Ref r) a = case current of
 -- possibly `fix` can help us avoiding two-hole contexts when unifying
 
 class Defines a where
-  (.:=) :: a -> a -> a
-  ar :: a -> a -> a
-  intt :: a
+  (.:=) :: a -> a -> a  -- unify arguments
+  ar :: a -> a -> a     -- form an arrow type
+  intt :: a             -- the integer type
   split :: (a -> a -> a) -> (a -> a) -- check/infer variant of `ar`
 
 class Defines a => Startable a where
