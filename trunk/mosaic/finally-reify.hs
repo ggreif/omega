@@ -7,11 +7,13 @@ import Data.Monoid hiding ((<>))
 --  Additionally we would like to have a reifiable monad.
 --  See http://www.cse.chalmers.se/~joels/writing/bb.pdf
 
+-- ##################################################
 class (Monoid a, Monad m, a ~ m i) => Bag m a i where
   into :: i -> m i
   into = return
   (<>) :: a -> a -> a
   (<>) = mappend
+-- ##################################################
 
 instance Monoid (IO ()) where
   mempty = return ()
@@ -27,9 +29,12 @@ test2 = do a <- putStrLn "Hey"
            b <- into a
            putStrLn "You"
 
+
+-- ##########################################
 class (i ~ (), Bag m a i) => API m a i where
   silly :: String -> m ()
   nilly :: Bool -> a -> a -> a
+-- ##########################################
 
 --test3 :: API m (m ()) () => Bool -> m ()
 test3 :: API m a i => Bool -> a
