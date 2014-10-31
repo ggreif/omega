@@ -220,6 +220,8 @@ http://johncarlosbaez.wordpress.com/2013/11/02/entropy-and-information-in-biolog
 
 I always said that "The road to intelligence leads through entropy."
 
+Newer developments: https://plus.google.com/117663015413546257905/posts/icqQ6smt5yp
+
 = STG Machine =
 
 http://www.reddit.com/r/haskell/comments/2kswnp/the_guts_of_a_spineless_machine/
