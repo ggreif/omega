@@ -219,3 +219,7 @@ Lots of good stuff here: https://uf-ias-2012.wikispaces.com/Semantics+of+type+th
 http://johncarlosbaez.wordpress.com/2013/11/02/entropy-and-information-in-biological-systems/
 
 I always said that "The road to intelligence leads through entropy."
+
+= STG Machine =
+
+http://www.reddit.com/r/haskell/comments/2kswnp/the_guts_of_a_spineless_machine/
