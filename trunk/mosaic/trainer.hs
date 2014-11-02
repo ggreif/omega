@@ -4,6 +4,8 @@
 
 import Test.QuickCheck
 import System.IO.Unsafe
+import Data.IORef
+import Control.Monad
 import System.Exit
 import System.Posix.Process
 
@@ -17,6 +19,8 @@ prop_substDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 &&
 
 leleka :: (Int -> Int -> Int, String, String) -> Int -> Int -> Int
 leleka (calc, job, op) a b = unsafePerformIO $ do
+    c <- incCounter
+    when (c > 0 && 0 == c `rem` 5) (putStrLn $ "(du hast jetzt " ++ show c ++ " gemacht)")
     putStrLn $ "Was ist die " ++ job ++ " von " ++ show a ++ " und " ++ show b ++ " ?"
     getLine >>= correct 1
   where correct :: Int -> String -> IO Int
@@ -40,6 +44,12 @@ leleka (calc, job, op) a b = unsafePerformIO $ do
 prop_plusMinusDigits pl a b = if pl
                                then prop_addDigits 15 a b
                                else prop_substDigits 10 a b
+
+counter :: IORef Int
+counter = unsafePerformIO $ newIORef (-1)
+
+incCounter :: IO Int
+incCounter = modifyIORef counter succ >> readIORef counter
 
 main = do putStrLn "Plus oder Minusaufgaben?"
           getLine >>= \case
