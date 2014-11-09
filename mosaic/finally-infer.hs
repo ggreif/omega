@@ -231,15 +231,17 @@ instance Defines a => LC (D a) where
 -- Places in a lambda graph
 --   how can this be injected into our HOAS?
 
-data Place = Root | Lft Place | Rght Place
+data Place = Root | Lft Place | Rght Place | Def Place
 class HOAS exp where
   app :: exp (Lft p) -> exp (Rght p) -> exp p
-  lum :: (exp (Rght p) -> exp p') -> exp p
+  lum :: (exp (Def p) -> exp p') -> exp p
+  use :: exp (Def p) -> exp use
 
-{- NEEDS moooore thought
-tt1 :: HOAS exp => exp Root
-tt1 = lum (\a -> a `app` a) `app` lum id
--}
+{- NEEDS moooore thought-}
+tt1, tt2 :: HOAS exp => exp Root
+tt1 = lum (\a -> use a `app` use a) `app` lum id
+tt2 = lum (\a -> (lum id) `app` use a) `app` lum id
+
 
 
 
