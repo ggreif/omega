@@ -269,6 +269,46 @@ l@Lft' `samePlace'` r@Lft' = do Refl <- l `samePlace` r; return Refl
 l@Rght' `samePlace'` r@Rght' = do Refl <- l `samePlace` r; return Refl
 _ `samePlace'` _ = Nothing
 
+class Defines' a where
+  (.~.) :: a -> a -> a  -- unify arguments
+  aar :: a -> a -> a     -- form an arrow type
+  iintt :: a             -- the integer type
+
+class Defines' a => Startable' a where
+  startt :: (forall a . Defines' a => a -> a) -> a -> a
+
+data Uni' pla where
+  Whatnot' :: (forall a . Defines' a => a -> a) -> x -> Uni' pl
+  IIntt :: Uni' pl
+  AAr :: Uni' pl' -> Uni' pl'' -> Uni' pl
+
+instance Show (Uni' pl) where
+  show (Whatnot' _ _) = "Whatnot"
+  show IIntt = "IIntt"
+  show (a `AAr` b) = "(" ++ show a ++ " `AAr` "  ++ show b ++ ")"
+
+data SomePlace where
+  Some :: Uni' pl -> SomePlace
+
+instance Defines' SomePlace where
+  Some (Whatnot' f _) .~. Some (Whatnot' g _) = fixX' (g . f)
+  {-
+  -- Whatnot f a .:= r@(Whatnot _ _) = r .:= fix' f
+  a .:= Whatnot _ _ = a
+  Whatnot _ _ .:= b = b
+  Intt .:= Intt = Intt
+  (a `Ar` b) .:= (a' `Ar` b') = (a .:= a') `Ar` (b .:= b')
+  a .:= b = error $ "cannot unify " ++ show (a,b)
+  ar = Ar
+  intt = Intt
+-}
+instance Startable' SomePlace where
+  startt f a = Some (Whatnot' f a)
+
+
+fixX' :: Startable' a => (forall a . Defines' a => a -> a) -> a
+fixX' f = let x = f (startt f x) in x
+
 
 -- Zippers?
 
