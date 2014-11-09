@@ -234,14 +234,14 @@ instance Defines a => LC (D a) where
 
 data Place = Root | Lft Place | Rght Place | Def Place
 class HOAS exp where
-  app :: exp (Lft p) -> exp (Rght p) -> exp p
-  lum :: (exp (Def p) -> exp p') -> exp p
-  use :: exp (Def p) -> exp use
+  app :: KnownPlace p => exp (Lft p) -> exp (Rght p) -> exp p
+  lum :: KnownPlace p => (exp (Def p) -> exp (Def p)) -> exp p
+  use :: KnownPlace p => exp (Def p) -> exp use
 
-{- NEEDS moooore thought-}
-tt1, tt2 :: HOAS exp => exp Root
+tt1, tt2, tt3 :: (HOAS exp, KnownPlace p)  => exp p
 tt1 = lum (\a -> use a `app` use a) `app` lum id
-tt2 = lum (\a -> (lum id) `app` use a) `app` lum id
+tt2 = lum (\a -> lum id `app` use a) `app` lum id
+tt3 = lum (\_ -> lum id)
 
 class KnownPlace (p :: Place) where
   place :: Pl p
@@ -264,6 +264,9 @@ l `samePlace` r = placeOf l `samePlace'` placeOf r
 
 samePlace' :: Pl p -> Pl p' -> Maybe (p :~: p')
 Root' `samePlace'` Root' = return Refl
+l@Def' `samePlace'` r@Def' = do Refl <- l `samePlace` r; return Refl
+l@Lft' `samePlace'` r@Lft' = do Refl <- l `samePlace` r; return Refl
+l@Rght' `samePlace'` r@Rght' = do Refl <- l `samePlace` r; return Refl
 _ `samePlace'` _ = Nothing
 
 
