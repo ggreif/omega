@@ -3,6 +3,7 @@ import GHC.TypeLits
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Type.Equality
 
 -- stratified simply-typed first-order lambda calculus
 -- in finally-tagless (typed) HOAS form
@@ -242,7 +243,28 @@ tt1, tt2 :: HOAS exp => exp Root
 tt1 = lum (\a -> use a `app` use a) `app` lum id
 tt2 = lum (\a -> (lum id) `app` use a) `app` lum id
 
+class KnownPlace (p :: Place) where
+  place :: Pl p
 
+data Pl :: Place -> * where
+  Root' :: Pl Root
+  Def' :: KnownPlace p => Pl (Def p)
+  Lft' :: KnownPlace p => Pl (Lft p)
+  Rght' :: KnownPlace p => Pl (Rght p)
+
+instance KnownPlace Root where place = Root'
+instance KnownPlace p => KnownPlace (Def p) where place = Def'
+instance KnownPlace p => KnownPlace (Lft p) where place = Lft'
+instance KnownPlace p => KnownPlace (Rght p) where place = Rght'
+
+samePlace :: (KnownPlace p, KnownPlace p') => prox p -> prox' p' -> Maybe (p :~: p')
+l `samePlace` r = placeOf l `samePlace'` placeOf r
+  where placeOf :: KnownPlace p => prox p -> Pl p
+        placeOf _ = place
+
+samePlace' :: Pl p -> Pl p' -> Maybe (p :~: p')
+Root' `samePlace'` Root' = return Refl
+_ `samePlace'` _ = Nothing
 
 
 -- Zippers?
