@@ -199,7 +199,7 @@ fix' f = let x = f (start f x) in x
 instance Defines Int where
   a .:= b = a `max` b
   dom `ar` cod = error "heh"
-  
+
 
 instance Startable Int where
   start f _ = 0
@@ -223,10 +223,24 @@ fix'' (D f) = fix' f
 instance Defines a => LC (D a) where
   zero = dc intt
   inc = dc $ intt `ar` intt
-  --D f & D a = 
+  --D f & D a =
   -- lam f = D $ \a -> let i = intt in a .:= i `ar` (unD (f (dc i)) undefined) -- TODO
   -- lam f = D $ split (\arg -> ) (id)
 -}
+
+-- Places in a lambda graph
+--   how can this be injected into our HOAS?
+
+data Place = Root | Lft Place | Rght Place
+class HOAS exp where
+  app :: exp (Lft p) -> exp (Rght p) -> exp p
+  lum :: (exp (Rght p) -> exp p') -> exp p
+
+{- NEEDS moooore thought
+tt1 :: HOAS exp => exp Root
+tt1 = lum (\a -> a `app` a) `app` lum id
+-}
+
 
 
 -- Zippers?
