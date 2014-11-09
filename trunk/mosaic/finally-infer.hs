@@ -270,7 +270,7 @@ l@Rght' `samePlace'` r@Rght' = do Refl <- l `samePlace` r; return Refl
 _ `samePlace'` _ = Nothing
 
 class Defines' a where
-  (.~.) :: a -> a -> a  -- unify arguments
+  (.~.) :: a -> a -> a   -- unify arguments
   aar :: a -> a -> a     -- form an arrow type
   iintt :: a             -- the integer type
 
@@ -278,7 +278,7 @@ class Defines' a => Startable' a where
   startt :: (forall a . Defines' a => a -> a) -> a -> a
 
 data Uni' pla where
-  Whatnot' :: (forall a . Defines' a => a -> a) -> x -> Uni' pl
+  Whatnot' :: KnownPlace pl => (forall a . Defines' a => a -> a) -> x -> Uni' pl
   IIntt :: Uni' pl
   AAr :: Uni' pl' -> Uni' pl'' -> Uni' pl
 
@@ -290,20 +290,21 @@ instance Show (Uni' pl) where
 data SomePlace where
   Some :: Uni' pl -> SomePlace
 
+deriving instance Show SomePlace
+
 instance Defines' SomePlace where
-  Some (Whatnot' f _) .~. Some (Whatnot' g _) = fixX' (g . f)
-  {-
-  -- Whatnot f a .:= r@(Whatnot _ _) = r .:= fix' f
-  a .:= Whatnot _ _ = a
-  Whatnot _ _ .:= b = b
-  Intt .:= Intt = Intt
-  (a `Ar` b) .:= (a' `Ar` b') = (a .:= a') `Ar` (b .:= b')
-  a .:= b = error $ "cannot unify " ++ show (a,b)
-  ar = Ar
-  intt = Intt
--}
+  Some l@(Whatnot' f _) .~. Some r@(Whatnot' g _) | Just Refl <- l `samePlace` r = Some l
+  Some (Whatnot' f _) .~. Some (Whatnot' g _) = fixX' (g . f) -- FIXME: make the places congruent, but how? UNION?
+  a .~. Some (Whatnot' _ _) = a
+  Some (Whatnot' _ _) .~. b = b
+  l@(Some IIntt) .~. Some IIntt = l
+  --(a `Ar` b) .:= (a' `Ar` b') = (a .:= a') `Ar` (b .:= b')
+  a .~. b = error $ "cannot unify " ++ show (a,b)
+  --aar = AAr
+  iintt = Some IIntt
+
 instance Startable' SomePlace where
-  startt f a = Some (Whatnot' f a)
+  startt f a = Some (Whatnot' f a :: Uni' Root)
 
 
 fixX' :: Startable' a => (forall a . Defines' a => a -> a) -> a
