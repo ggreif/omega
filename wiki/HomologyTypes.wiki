@@ -156,7 +156,7 @@ classes, representants
 
 From each type an algebraic structure can be distilled. This is the signature functor, having some polynomial-like properties. What is lost in the process are the names of types, constructors and the order of elements in tuples as well as exponentials. After all these objects are all modulo isomorphism.
 
-There is another [http://en.wikipedia.org/wiki/Simplicial_homology similar distilling process], going from simplicial sets to modules over some ring. This is another lossy functor. But ∂∂ = 0. This admits exactness, but it becomes interesting where exactness is broken. H,,n,,(X, X0) is ker∂,,n,, / im ∂,,n+1,,. Hn exposes the generators of our geometry as module dimensions which are not trivial. A torus has two of them: Z+Z. Compare this to Bool = 1+1.
+There is another [http://en.wikipedia.org/wiki/Simplicial_homology similar distilling process], going from simplicial sets to modules over some ring. This is another lossy functor. But ∂∂ = 0. This admits exactness, but it becomes interesting where exactness is broken. H,,n,,(X, X0) is ker∂,,n,, / im ∂,,n+1,,. H,,n,, exposes the generators of our geometry as module dimensions which are not trivial. A torus has two of them: Z+Z. Compare this to Bool = 1+1.
 
 So the basic idea is to find surfaces which are the coimages of the data type's signature under some homology-like functor. The rest is to paint the coimage with pretty colors to account for the lost information.
 
@@ -188,7 +188,7 @@ We get a homology theory when we have
        ← ∂ ―
 
 [actually we have to define a Value/Type/etc. at each level as a 'triad' (X; X0, X1)]
-[Mayer-Vietoris sequences?] Update 2014-11-12: http://www.qmac.ox.ac.uk/events/Talk%20slides/Evan%20Cavallo.pdf
+[Mayer-Vietoris sequences?] [http://www.qmac.ox.ac.uk/events/Talk%20slides/Evan%20Cavallo.pdf Update 2014-11-12]
 
 !!! tau thrists, higher degrees, de Bruijn
 
