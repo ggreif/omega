@@ -17,6 +17,13 @@ prop_substDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 &&
     where (a'', b'') = if a >= b then (a, b) else (b, a)
           (a', b') = (a'' + 3, b'' + 3)
 
+
+prop_multDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0
+                                                         && a <= max && b <= max
+               ==> a' * b' == leleka ((*), "Produkt", "*") a' b'
+    where (a', b') = (a + 1, b + 1)
+
+
 leleka :: (Int -> Int -> Int, String, String) -> Int -> Int -> Int
 leleka (calc, job, op) a b = unsafePerformIO $ do
     c <- incCounter
@@ -51,12 +58,13 @@ counter = unsafePerformIO $ newIORef (-1)
 incCounter :: IO Int
 incCounter = modifyIORef counter succ >> readIORef counter
 
-main = do putStrLn "Plus oder Minusaufgaben?"
+main = do putStrLn "Plus, Minus oder Malaufgaben?"
           getLine >>= \case
             "+" -> quickCheck $ prop_addDigits 16
             "-" -> quickCheck $ prop_substDigits 11
             "+-" -> quickCheck prop_plusMinusDigits
-            _ -> putStrLn "Antworte mit '+' oder '-'." >> main
+            "*" -> quickCheck $ prop_multDigits 4
+            _ -> putStrLn "Antworte mit '+', '-' oder '*'." >> main
 
 
 
