@@ -9,18 +9,18 @@ import Control.Monad
 import System.Exit
 import System.Posix.Process
 
-prop_addDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a' + b' == leleka ((+), "Summe", "+") a' b'
+prop_addDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a' + b' == leleka ((+), "die Summe", "+") a' b'
     where (a', b') = (a + 2, b + 2)
 
 
-prop_substDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a' - b' == leleka ((-), "Differenz", "-") a' b'
+prop_substDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0 && a <= max && b <= max ==> a' - b' == leleka ((-), "die Differenz", "-") a' b'
     where (a'', b'') = if a >= b then (a, b) else (b, a)
           (a', b') = (a'' + 3, b'' + 3)
 
 
 prop_multDigits max ((`rem` max) -> a) ((`rem` max) -> b) = a >= 0 && b >= 0
                                                          && a <= max && b <= max
-               ==> a' * b' == leleka ((*), "Produkt", "*") a' b'
+               ==> a' * b' == leleka ((*), "das Produkt", "*") a' b'
     where (a', b') = (a + 1, b + 1)
 
 
@@ -28,7 +28,7 @@ leleka :: (Int -> Int -> Int, String, String) -> Int -> Int -> Int
 leleka (calc, job, op) a b = unsafePerformIO $ do
     c <- incCounter
     when (c > 0 && 0 == c `rem` 5) (putStrLn $ "(du hast jetzt " ++ show c ++ " gemacht)")
-    putStrLn $ "Was ist die " ++ job ++ " von " ++ show a ++ " und " ++ show b ++ " ?"
+    putStrLn $ "Was ist " ++ job ++ " von " ++ show a ++ " und " ++ show b ++ " ?"
     getLine >>= correct 1
   where correct :: Int -> String -> IO Int
         correct n "" = do putStrLn "Beenden? (Wenn nicht, die Zahl eingeben.)"
