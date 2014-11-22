@@ -72,9 +72,13 @@ lelekaFeld i = do
   where q = putStrLn $ "Für welche Zahl steht '#'?"
         stars = repeat '*'
         mixed = take (i - 1) stars ++ '#' : take (100 - i) stars
-        break "" = return ()
-        break s = do putStrLn $ take 10 s
+        break "" = putStrLn ""
+        break s = do putStrLn $ part $ take 10 s
+                     if length s == 60
+                       then putStrLn "-----+-----"
+                       else return ()
                      break $ drop 10 s
+        part s = take 5 s ++ '|' : drop 5 s
 
 counter :: IORef Int
 counter = unsafePerformIO $ newIORef (-1)
