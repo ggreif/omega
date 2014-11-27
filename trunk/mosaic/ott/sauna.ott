@@ -5,3 +5,45 @@ Ich muss in die Sauna um mein Hirn abzukuehlen...
 
 Ler este papel e como nadar no mel. Igualmente dificil quanto gostosissimo!
 
+-----------------------------------------------------
+
+Kamareddine contexts
+====================
+
+lambda_{x:A}lambda_{y:B}lambda_{alpha:y}   \equiv Gamma     (note: no dots!)
+                    ^                 |
+                    |   refers to     |
+                    +-----------------+
+
+
+       \partialdiff..\partialdiff..\partialdiff - contexts
+                     {
+                     n
+
+
+    lambda^[\alpha ^o y ^o B ^o \star_n, y ^o B, x ^o A ^o \star_n ]       expression in a context
+          _   expr_{n-1}                                                         (in telescope)
+                                        \emph{dotted pair!}
+
+can also be written as: \lambda_{x:A}\lambda_{y:B}\lambda_{alpha:y} . expr
+
+
+  (empty context [] \congr [\star_n] for \exists n)
+
+Several ways to transcribe as syntax:
+
+  - \lambda^Ctx_expr
+  - [expr . Ctx]
+  - in \Omega: [Ctx; expr] or as LeftList
+  - in Lisp: (Ctx . expr)
+
+The expr is there instead of an empty list, turning a context into an "expression in a context".
+
+"expression in a context" is a morphism!
+
+  - identity: empty context [] \congr [\star_n . \star_n]
+  - composition: (dotted) telescope append: [expr . Ctx_n] \comp [Ctx_n . Ctx_outer]
+                                                                    =
+                                                                  expr upper
+
+-------- page 2 ---------
