@@ -25,7 +25,8 @@ deriving instance Show (Nat n)
 -- Def-Use markers
 
 type PlusFour n = S' (S' (S' (S' n)))
-type PlusFive n = S' (S' (S' (S' (S' n))))
+type PlusFive n = S' (PlusFour n)
+type PlusTen n = PlusFive (PlusFive n)
 
 
 ----------- def     use
@@ -34,11 +35,11 @@ data Lam :: Nat' -> Nat' -> * where
   (:&) :: (KnownNat d, KnownNat d', KnownNat d'', KnownNat u) => (Lam d' (PlusFour d)) -> (Lam d'' (PlusFive d)) -> Lam d u
 
 instance Show (Lam def use) where
-  show lam@(L f) = "(\\"++show (f undefined)++")"++duStr lam
-  show all@(f :& a) = "("++duStr f++"&"++duStr a++")"++duStr all
+  show lam@(L f) = "(\\" ++ show (f undefined) ++ ")" ++ duStr lam
+  show all@(f :& a) = "(" ++ duStr f ++ "&" ++ duStr a ++ ")" ++ duStr all
 
 duStr :: forall def use . (KnownNat def, KnownNat use) => Lam def use -> String
-duStr l = "d" ++ show (nat2int $ def l) ++ "u" ++ show (nat2int $ use l)
+duStr l = "d" ++ nat2str (def l) ++ "u" ++ nat2str (use l)
 
 def :: KnownNat def => Lam def use -> Nat def
 def _ = theNat
@@ -49,5 +50,7 @@ nat2int :: Nat n -> Int
 nat2int Z = 0
 nat2int (S (nat2int -> n)) = n + 1
 
-test :: Lam Z' Z'
+nat2str = show . nat2int
+
+test :: Lam Z' (PlusTen Z')
 test = L (\a -> a :& a)
