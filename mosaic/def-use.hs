@@ -1,10 +1,6 @@
 {-# LANGUAGE DataKinds, KindSignatures, RankNTypes, StandaloneDeriving, GADTs, TypeOperators
            , FlexibleInstances, ViewPatterns, UndecidableInstances #-}
 
---import qualified GHC.TypeLits as L
---import GHC.TypeLits (type (+))
-
-
 data Nat' = Z' | S' Nat'
 
 data Nat :: Nat' -> * where
@@ -31,7 +27,7 @@ type PlusTen n = PlusFive (PlusFive n)
 
 ----------- def     use
 data Lam :: Nat' -> Nat' -> * where
-  L :: (KnownNat d, KnownNat u') => ((forall u . KnownNat u => Lam (S' d) u) -> Lam d u') -> Lam d u'
+  L :: (KnownNat d, KnownNat u) => ((forall u . KnownNat u => Lam (S' d) u) -> Lam d u) -> Lam d u
   (:&) :: (KnownNat d, KnownNat d', KnownNat d'', KnownNat u) => (Lam d' (PlusFour d)) -> (Lam d'' (PlusFive d)) -> Lam d u
 
 instance Show (Lam def use) where
