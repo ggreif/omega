@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds, KindSignatures, RankNTypes, StandaloneDeriving, GADTs, TypeOperators, FlexibleInstances, ViewPatterns, UndecidableInstances #-}
+{-# LANGUAGE DataKinds, KindSignatures, RankNTypes, StandaloneDeriving, GADTs, TypeOperators
+           , FlexibleInstances, ViewPatterns, UndecidableInstances #-}
 
 --import qualified GHC.TypeLits as L
 --import GHC.TypeLits (type (+))
@@ -23,10 +24,14 @@ deriving instance Show (Nat n)
 
 -- Def-Use markers
 
+type PlusFour n = S' (S' (S' (S' n)))
+type PlusFive n = S' (S' (S' (S' (S' n))))
+
+
 ----------- def     use
 data Lam :: Nat' -> Nat' -> * where
-  L :: (Lam a b -> Lam a b) -> Lam a b
-  (:&) :: Lam a b -> Lam a b -> Lam a b
+  L :: ((forall b . Lam a b) -> Lam a b') -> Lam a b'
+  (:&) :: (Lam a' (S' a)) -> (Lam a' a) -> Lam a b
 
 
 
