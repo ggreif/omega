@@ -18,8 +18,9 @@ instance KnownPlace p => KnownPlace (Lunder' p) where thePlace = Lunder
 instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 
 -- define semantics
-class (KnownPlace def, KnownPlace use) => LC (def :: Place') (use :: Place') where
-  lam :: ((forall u . KnownPlace u => Lam (Def' def) u) -> Lam (Def' def) use) -> Lam def use
+class LC (lc :: Place' -> Place' -> *) where
+  lam :: (KnownPlace def, KnownPlace use) => ((forall u . KnownPlace u => lc (Def' def) u) -> lc (Def' def) use) -> lc def use
+  (&) :: (KnownPlace d, KnownPlace u) => lc d' (Lunder' d) -> lc d'' (Runder' d) -> lc d u
 
 -- singleton type isomorphic to (promoted) kind Place'
 data Place :: Place' -> * where
@@ -46,6 +47,7 @@ instance Show (Lam def use) where
   show d@Dummy = duStr d
 
 -- interpret LC semantics into Lam
+instance LC Lam where lam = L; (&) = (:&)
 
 duStr :: forall def use . (KnownPlace def, KnownPlace use) => Lam def use -> String
 duStr l = "d" ++ place2str (def l) ++ "u" ++ place2str (use l)
@@ -57,9 +59,9 @@ def _ = thePlace
 use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
 
-test :: Lam Root' (Lunder' Root')
-test = L $ \a -> a :& a
-test' :: Lam Root' Root'
-test' = L $ \x->x
-test'' :: Lam Root' Root'
-test'' = L $ \x->L $ \x->x
+test :: (lc ~ Lam, LC lc) => lc Root' (Lunder' Root')
+test = lam $ \a -> a & a
+test' :: (lc ~ Lam, LC lc) => lc Root' Root'
+test' = lam $ \x->x
+test'' :: (lc ~ Lam, LC lc) => lc Root' Root'
+test'' = lam $ \x->lam $ \x->x
