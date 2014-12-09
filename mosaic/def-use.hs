@@ -13,7 +13,7 @@ class KnownPlace (p :: Place') where
 -- value inference for a place type
 instance KnownPlace Root' where thePlace = Root
 instance KnownPlace p => KnownPlace (Def' p) where thePlace = Def
-instance KnownPlace p => KnownPlace (Body' p) where thePlace = Body
+--instance KnownPlace p => KnownPlace (Body' p) where thePlace = Body
 instance KnownPlace p => KnownPlace (Lunder' p) where thePlace = Lunder
 instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 
@@ -21,7 +21,7 @@ instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 data Place :: Place' -> * where
   Root :: Place Root'
   Def :: KnownPlace p => Place (Def' p)
-  Body :: KnownPlace p => Place (Body' p)
+--  Body :: KnownPlace p => Place (Body' p)
   Lunder :: KnownPlace p => Place (Lunder' p)
   Runder :: KnownPlace p => Place (Runder' p)
 
@@ -34,7 +34,7 @@ deriving instance Show (Place p)
 data Lam :: Place' -> Place' -> * where
   Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
   L :: (KnownPlace d, KnownPlace u) => ((forall u . KnownPlace u => Lam (Def' d) u) -> Lam (Def' d) u) -> Lam d u
-  (:&) :: (KnownPlace d, KnownPlace d', KnownPlace d'', KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
+  (:&) :: (KnownPlace d, KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
 
 instance Show (Lam def use) where
   show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
@@ -52,7 +52,7 @@ use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
 
 test :: Lam Root' (Lunder' Root')
-test = L (\a -> a :& a)
+test = L $ \a -> a :& a
 test' :: Lam Root' Root'
 test' = L $ \x->x
 test'' :: Lam Root' Root'
