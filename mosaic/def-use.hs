@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds, KindSignatures, RankNTypes, StandaloneDeriving, GADTs, TypeOperators
            , FlexibleInstances, ViewPatterns, UndecidableInstances #-}
 
+
+import Data.Char
+
 --                    var intro     lambda body             v--- app ---v
 data Place' = Root' | Def' Place' | Body' Place' | Lunder' Place' | Runder' Place'
 
@@ -21,6 +24,9 @@ data Place :: Place' -> * where
   Body :: KnownPlace p => Place (Body' p)
   Lunder :: KnownPlace p => Place (Lunder' p)
   Runder :: KnownPlace p => Place (Runder' p)
+
+deriving instance Show (Place p)
+
 
 data Nat' = Z' | S' Nat'
 
@@ -46,24 +52,26 @@ type PlusFive n = S' (PlusFour n)
 type PlusTen n = PlusFive (PlusFive n)
 
 
------------ def     use
-data Lam :: Nat' -> Nat' -> * where
-  Dummy :: (KnownNat d, KnownNat u) => Lam d u -- only for Show!
-  L :: (KnownNat d, KnownNat u) => ((forall u . KnownNat u => Lam (S' d) u) -> Lam (S' d) u) -> Lam d u
-  (:&) :: (KnownNat d, KnownNat d', KnownNat d'', KnownNat u) => (Lam d' (PlusFour d)) -> (Lam d'' (PlusFive d)) -> Lam d u
+----------- def       use
+data Lam :: Place' -> Place' -> * where
+  Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
+  L :: (KnownPlace d, KnownPlace u) => ((forall u . KnownPlace u => Lam (Def' d) u) -> Lam (Def' d) u) -> Lam d u
+  (:&) :: (KnownPlace d, KnownPlace d', KnownPlace d'', KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
 
 instance Show (Lam def use) where
   show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
   show all@(f :& a) = "(" ++ show f ++ " & " ++ show a ++ ")" ++ duStr all
   show d@Dummy = duStr d
 
-duStr :: forall def use . (KnownNat def, KnownNat use) => Lam def use -> String
-duStr l = "d" ++ nat2str (def l) ++ "u" ++ nat2str (use l)
+duStr :: forall def use . (KnownPlace def, KnownPlace use) => Lam def use -> String
+duStr l = "d" ++ place2str (def l) ++ "u" ++ place2str (use l)
+  where place2str :: Place p -> String
+        place2str = filter isUpper . show
 
-def :: KnownNat def => Lam def use -> Nat def
-def _ = theNat
-use :: KnownNat use => Lam def use -> Nat use
-use _ = theNat
+def :: KnownPlace def => Lam def use -> Place def
+def _ = thePlace
+use :: KnownPlace use => Lam def use -> Place use
+use _ = thePlace
 
 nat2int :: Nat n -> Int
 nat2int Z = 0
@@ -71,9 +79,9 @@ nat2int (S n) = nat2int n + 1
 
 nat2str = show . nat2int
 
-test :: Lam Z' (PlusTen Z')
+test :: Lam Root' (Lunder' Root')
 test = L (\a -> a :& a)
-test' :: Lam Z' Z'
+test' :: Lam Root' Root'
 test' = L $ \x->x
-test'' :: Lam Z' Z'
+test'' :: Lam Root' Root'
 test'' = L $ \x->L $ \x->x
