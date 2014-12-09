@@ -1,6 +1,27 @@
 {-# LANGUAGE DataKinds, KindSignatures, RankNTypes, StandaloneDeriving, GADTs, TypeOperators
            , FlexibleInstances, ViewPatterns, UndecidableInstances #-}
 
+--                    var intro     lambda body             v--- app ---v
+data Place' = Root' | Def' Place' | Body' Place' | Lunder' Place' | Runder' Place'
+
+class KnownPlace (p :: Place') where
+  thePlace :: Place p
+
+-- value inference for a place type
+instance KnownPlace Root' where thePlace = Root
+instance KnownPlace p => KnownPlace (Def' p) where thePlace = Def
+instance KnownPlace p => KnownPlace (Body' p) where thePlace = Body
+instance KnownPlace p => KnownPlace (Lunder' p) where thePlace = Lunder
+instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
+
+-- singleton type isomorphic to (promoted) kind Place'
+data Place :: Place' -> * where
+  Root :: Place Root'
+  Def :: KnownPlace p => Place (Def' p)
+  Body :: KnownPlace p => Place (Body' p)
+  Lunder :: KnownPlace p => Place (Lunder' p)
+  Runder :: KnownPlace p => Place (Runder' p)
+
 data Nat' = Z' | S' Nat'
 
 data Nat :: Nat' -> * where
@@ -33,7 +54,6 @@ data Lam :: Nat' -> Nat' -> * where
 
 instance Show (Lam def use) where
   show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
-  --show all@(f :& a) = "(" ++ duStr f ++ " & " ++ duStr a ++ ")" ++ duStr all
   show all@(f :& a) = "(" ++ show f ++ " & " ++ show a ++ ")" ++ duStr all
   show d@Dummy = duStr d
 
