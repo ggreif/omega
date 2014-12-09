@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds, KindSignatures, RankNTypes, StandaloneDeriving, GADTs, TypeOperators
-           , FlexibleInstances, ViewPatterns, UndecidableInstances #-}
+           , FlexibleInstances, ViewPatterns, MultiParamTypeClasses #-}
 
 
 import Data.Char (isUpper)
@@ -16,6 +16,10 @@ instance KnownPlace p => KnownPlace (Def' p) where thePlace = Def
 --instance KnownPlace p => KnownPlace (Body' p) where thePlace = Body
 instance KnownPlace p => KnownPlace (Lunder' p) where thePlace = Lunder
 instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
+
+-- define semantics
+class (KnownPlace def, KnownPlace use) => LC (def :: Place') (use :: Place') where
+  lam :: ((forall u . KnownPlace u => Lam (Def' def) u) -> Lam (Def' def) use) -> Lam def use
 
 -- singleton type isomorphic to (promoted) kind Place'
 data Place :: Place' -> * where
@@ -40,6 +44,8 @@ instance Show (Lam def use) where
   show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
   show all@(f :& a) = "(" ++ show f ++ " & " ++ show a ++ ")" ++ duStr all
   show d@Dummy = duStr d
+
+-- interpret LC semantics into Lam
 
 duStr :: forall def use . (KnownPlace def, KnownPlace use) => Lam def use -> String
 duStr l = "d" ++ place2str (def l) ++ "u" ++ place2str (use l)
