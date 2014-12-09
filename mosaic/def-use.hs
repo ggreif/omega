@@ -4,29 +4,27 @@
 
 import Data.Char (isUpper)
 
---                    var intro     lambda body             v--- app ---v
-data Place' = Root' | Def' Place' | Body' Place' | Lunder' Place' | Runder' Place'
+--                    var intro              v--- app ---v
+data Place' = Root' | Abs' Place' | Lunder' Place' | Runder' Place'
 
 class KnownPlace (p :: Place') where
   thePlace :: Place p
 
 -- value inference for a place type
 instance KnownPlace Root' where thePlace = Root
-instance KnownPlace p => KnownPlace (Def' p) where thePlace = Def
---instance KnownPlace p => KnownPlace (Body' p) where thePlace = Body
+instance KnownPlace p => KnownPlace (Abs' p) where thePlace = Abs
 instance KnownPlace p => KnownPlace (Lunder' p) where thePlace = Lunder
 instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 
 -- define semantics
 class LC (lc :: Place' -> Place' -> *) where
-  lam :: (KnownPlace def, KnownPlace use) => ((forall u . KnownPlace u => lc (Def' def) u) -> lc (Def' def) use) -> lc def use
+  lam :: (KnownPlace def, KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> lc (Abs' def) use) -> lc def use
   (&) :: (KnownPlace d, KnownPlace u) => lc d' (Lunder' d) -> lc d'' (Runder' d) -> lc d u
 
 -- singleton type isomorphic to (promoted) kind Place'
 data Place :: Place' -> * where
   Root :: Place Root'
-  Def :: KnownPlace p => Place (Def' p)
---  Body :: KnownPlace p => Place (Body' p)
+  Abs :: KnownPlace p => Place (Abs' p)
   Lunder :: KnownPlace p => Place (Lunder' p)
   Runder :: KnownPlace p => Place (Runder' p)
 
@@ -38,7 +36,7 @@ deriving instance Show (Place p)
 ----------- def       use
 data Lam :: Place' -> Place' -> * where
   Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
-  L :: (KnownPlace d, KnownPlace u) => ((forall u . KnownPlace u => Lam (Def' d) u) -> Lam (Def' d) u) -> Lam d u
+  L :: (KnownPlace d, KnownPlace u) => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam (Abs' d) u) -> Lam d u
   (:&) :: (KnownPlace d, KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
 
 instance Show (Lam def use) where
