@@ -57,9 +57,9 @@ def _ = thePlace
 use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
 
-test :: (lc ~ Lam, LC lc) => lc Root' (Lunder' Root')
-test = lam $ \a -> a & a
-test' :: (lc ~ Lam, LC lc) => lc Root' Root'
-test' = lam $ \x->x
-test'' :: (lc ~ Lam, LC lc) => lc Root' Root'
-test'' = lam $ \x->lam $ \x->x
+test :: LC lc => lc Root' (Lunder' Root')
+test = lam $ \a -> a & a        -- self application
+test' :: LC lc => lc Root' Root'
+test' = lam $ \x->x             -- identity
+test'' :: LC lc => lc Root' Root'
+test'' = lam $ \_->lam $ \x->x  -- K combinator (FIXME: not really!)
