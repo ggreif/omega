@@ -2,7 +2,7 @@
            , FlexibleInstances, ViewPatterns, UndecidableInstances #-}
 
 
-import Data.Char
+import Data.Char (isUpper)
 
 --                    var intro     lambda body             v--- app ---v
 data Place' = Root' | Def' Place' | Body' Place' | Lunder' Place' | Runder' Place'
@@ -28,29 +28,7 @@ data Place :: Place' -> * where
 deriving instance Show (Place p)
 
 
-data Nat' = Z' | S' Nat'
-
-data Nat :: Nat' -> * where
-  Z :: Nat Z'
-  S :: Nat n -> Nat (S' n)
-
-class KnownNat (n :: Nat') where
-  theNat :: Nat n
-
-instance KnownNat Z' where
-  theNat = Z
-
-instance KnownNat n => KnownNat (S' n) where
-  theNat = S theNat
-
-deriving instance Show (Nat n)
-
 -- Def-Use markers
-
-type PlusFour n = S' (S' (S' (S' n)))
-type PlusFive n = S' (PlusFour n)
-type PlusTen n = PlusFive (PlusFive n)
-
 
 ----------- def       use
 data Lam :: Place' -> Place' -> * where
@@ -72,12 +50,6 @@ def :: KnownPlace def => Lam def use -> Place def
 def _ = thePlace
 use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
-
-nat2int :: Nat n -> Int
-nat2int Z = 0
-nat2int (S n) = nat2int n + 1
-
-nat2str = show . nat2int
 
 test :: Lam Root' (Lunder' Root')
 test = L (\a -> a :& a)
