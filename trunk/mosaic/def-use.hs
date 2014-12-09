@@ -18,7 +18,7 @@ instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 
 -- define semantics
 class LC (lc :: Place' -> Place' -> *) where
-  lam :: (KnownPlace def, KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> lc (Abs' def) use) -> lc def use
+  lam :: (KnownPlace def, KnownPlace use, KnownPlace def') => ((forall u . KnownPlace u => lc (Abs' def) u) -> lc def' use) -> lc def use
   (&) :: (KnownPlace d, KnownPlace u) => lc d' (Lunder' d) -> lc d'' (Runder' d) -> lc d u
 
 -- singleton type isomorphic to (promoted) kind Place'
@@ -36,7 +36,7 @@ deriving instance Show (Place p)
 ----------- def       use
 data Lam :: Place' -> Place' -> * where
   Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
-  L :: (KnownPlace d, KnownPlace u) => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam (Abs' d) u) -> Lam d u
+  L :: (KnownPlace d, KnownPlace u, KnownPlace d') => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam d' u) -> Lam d u
   (:&) :: (KnownPlace d, KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
 
 instance Show (Lam def use) where
@@ -45,7 +45,7 @@ instance Show (Lam def use) where
   show d@Dummy = duStr d
 
 -- interpret LC semantics into Lam
-instance LC Lam where lam = L; (&) = (:&)
+instance LC Lam where lam = L ; (&) = (:&)
 
 duStr :: forall def use . (KnownPlace def, KnownPlace use) => Lam def use -> String
 duStr l = "d" ++ place2str (def l) ++ "u" ++ place2str (use l)
@@ -62,4 +62,4 @@ test = lam $ \a -> a & a        -- self application
 test' :: LC lc => lc Root' Root'
 test' = lam $ \x->x             -- identity
 test'' :: LC lc => lc Root' Root'
-test'' = lam $ \_->lam $ \x->x  -- K combinator (FIXME: not really!)
+test'' = lam $ \x->lam $ \_->x  -- K combinator (FIXME: not really!)
