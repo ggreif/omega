@@ -89,3 +89,16 @@ class TY ty where
   int :: KnownPlace u => ty ({-Named "Int"-}Lunder' Root') u
   (~>) :: ty d u -> ty d' u' -> ty du du
   (.~.) :: ty d u -> ty d' u' -> ty d'' u''
+
+
+  (~&) :: ty d u -> ty d' u' -> ty d'' u'' -- second projection of arrow
+
+--- interpret LC into TY: abstract interpretation of values into types
+--    see dagstuhl paper Aaron Stump
+
+data TyIterpr ty :: Place' -> Place' -> * where
+  --App :: KnownPlace du => TyIterpr d' (Lunder' du) -> TyIterpr d'' (Runder' du) -> TyIterpr du du
+  Ty :: TY ty => ty d u -> TyIterpr ty d u
+
+instance LC (TyIterpr ty) where
+  Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in Ty resty
