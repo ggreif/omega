@@ -30,7 +30,7 @@ data Place :: Place' -> * where
 
 --deriving instance Show (Place p)
 instance Show (Place p) where
-  show Root = "Root"
+  show Root = "rOot"
   show p@Abs = "Abs("++show (par p)++")"
   show p@Lunder = "Lunder("++show (par p)++")"
   show p@Runder = "Runder("++show (par p)++")"
@@ -75,3 +75,7 @@ test'' = lam $ \x->lam $ \_->x  -- K combinator
 tapp, tapp' :: (KnownPlace u, LC lc) => lc u u
 tapp' = (lam $ \x->x) & (lam $ \a -> a & a)
 tapp = test' & test
+
+-- flipped application
+(|>) :: (LC lc, KnownPlace du) => lc d'' ('Runder' du) -> lc d' ('Lunder' du) -> lc du du
+v |> f = f & v
