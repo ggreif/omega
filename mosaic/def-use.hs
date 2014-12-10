@@ -67,12 +67,12 @@ use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
 
 --test :: (KnownPlace u, LC lc) => lc Root' u
-test :: (LC lc) => lc Root' Root'
+test :: LC lc => lc Root' Root'
 test = lam $ \a -> a & a        -- self application
-test' :: (LC lc) => lc Root' Root'
+test' :: LC lc => lc Root' Root'
 test' = lam $ \x->x             -- identity
-test'' :: (LC lc) => lc Root' Root'
-test'' = lam $ \x->lam $ \_->x  -- K combinator (FIXME: not really!)
+test'' :: LC lc => lc Root' Root'
+test'' = lam $ \x->lam $ \_->x  -- K combinator
 
---tapp :: LC lc => lc Root' (Lunder' Root')
---tapp = test' & test
+tapp :: (KnownPlace u, LC lc) => lc u u
+tapp = (lam $ \x->x) & (lam $ \a -> a & a)
