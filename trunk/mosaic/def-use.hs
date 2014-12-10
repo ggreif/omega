@@ -99,6 +99,10 @@ class TY ty where
 data TyIterpr ty :: Place' -> Place' -> * where
   --App :: KnownPlace du => TyIterpr d' (Lunder' du) -> TyIterpr d'' (Runder' du) -> TyIterpr du du
   Ty :: TY ty => ty d u -> TyIterpr ty d u
+  Arr :: TY ty => (ty d u -> ty d' u') -> TyIterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
 
-instance LC (TyIterpr ty) where
+unTy (Ty t) = t
+
+instance TY ty => LC (TyIterpr ty) where
+  lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
   Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in Ty resty
