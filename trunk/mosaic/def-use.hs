@@ -19,7 +19,7 @@ instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 -- define semantics
 class LC (lc :: Place' -> Place' -> *) where
   --lam :: (def ~ use, KnownPlace def, KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> (lc (Abs' def) (Abs' def))) -> lc def use
-  lam :: (def ~ use, {-KnownPlace def',-} KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> (lc (def') (Abs' def))) -> lc def use
+  lam :: (def ~ use, {-KnownPlace def',-} KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> lc def' (Abs' def)) -> lc def use
   (&) :: (d~u, KnownPlace u) => lc (d') (Lunder' d) -> lc (d'') (Runder' d) -> lc u u
 
 -- singleton type isomorphic to (promoted) kind Place'
@@ -29,28 +29,36 @@ data Place :: Place' -> * where
   Lunder :: KnownPlace p => Place (Lunder' p)
   Runder :: KnownPlace p => Place (Runder' p)
 
-deriving instance Show (Place p)
+--deriving instance Show (Place p)
+instance Show (Place p) where
+  show Root = "Root"
+  show p@Abs = "Abs("++show (par p)++")"
+  show p@Lunder = "Lunder("++show (par p)++")"
+  show p@Runder = "Runder("++show (par p)++")"
 
+par :: KnownPlace par => Place (p par) -> Place par
+par _ = thePlace
 
 -- Def-Use markers
 
 ----------- def       use
 data Lam :: Place' -> Place' -> * where
   Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
-  --L :: (KnownPlace d, KnownPlace u) => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam (Abs' d) (Abs' d)) -> Lam d u
+  L :: (d ~ u, KnownPlace u) => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam (d') (Abs' d)) -> Lam d u
   (:&) :: (KnownPlace d, KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
 
 instance Show (Lam def use) where
-  --show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
+  show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
   show all@(f :& a) = "(" ++ show f ++ " & " ++ show a ++ ")" ++ duStr all
   show d@Dummy = duStr d
 
 -- interpret LC semantics into Lam
-instance LC Lam where --lam = L ; (&) = (:&)
+instance LC Lam where lam = L; (&) = (:&)
 
 duStr :: forall def use . (KnownPlace def, KnownPlace use) => Lam def use -> String
 duStr l = "d" ++ place2str (def l) ++ "u" ++ place2str (use l)
   where place2str :: Place p -> String
+        --place2str = show
         place2str = filter isUpper . show
 
 def :: KnownPlace def => Lam def use -> Place def
