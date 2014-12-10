@@ -87,4 +87,5 @@ v |> f = f & v
 
 class TY ty where
   int :: KnownPlace u => ty ({-Named "Int"-}Lunder' Root') u
-  (.~.) :: ty d u -> ty d' u'
+  (~>) :: ty d u -> ty d' u' -> ty du du
+  (.~.) :: ty d u -> ty d' u' -> ty d'' u''
