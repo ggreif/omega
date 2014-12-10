@@ -18,8 +18,8 @@ instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 
 -- define semantics
 class LC (lc :: Place' -> Place' -> *) where
-  lam :: (def ~ use, KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> lc def' (Abs' def)) -> lc def use
-  (&) :: KnownPlace u => lc d' (Lunder' u) -> lc d'' (Runder' u) -> lc u u
+  lam :: KnownPlace du => ((forall u . KnownPlace u => lc (Abs' du) u) -> lc d' (Abs' du)) -> lc du du
+  (&) :: KnownPlace du => lc d' (Lunder' du) -> lc d'' (Runder' du) -> lc du du
 
 -- singleton type isomorphic to (promoted) kind Place'
 data Place :: Place' -> * where
