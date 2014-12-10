@@ -43,8 +43,8 @@ par _ = thePlace
 ----------- def       use
 data Lam :: Place' -> Place' -> * where
   Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
-  L :: (d ~ u, KnownPlace u) => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam d' (Abs' d)) -> Lam d u
-  (:&) :: (KnownPlace d, KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
+  L :: KnownPlace du => ((forall u . KnownPlace u => Lam (Abs' du) u) -> Lam d' (Abs' du)) -> Lam du du
+  (:&) :: KnownPlace du => Lam d' (Lunder' du) -> Lam d'' (Runder' du) -> Lam du du
 
 instance Show (Lam def use) where
   show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
@@ -66,7 +66,7 @@ use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
 
 test :: (KnownPlace u, LC lc) => lc u u
-test = lam $ \a -> a & a        -- self application
+test = lam $ \a -> a & a        -- self-application
 test' :: (KnownPlace u, LC lc) => lc u u
 test' = lam $ \x->x             -- identity
 test'' :: (KnownPlace u, LC lc) => lc u u
