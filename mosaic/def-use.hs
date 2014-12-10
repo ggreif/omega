@@ -79,3 +79,12 @@ tapp = test' & test
 -- flipped application
 (|>) :: (LC lc, KnownPlace du) => lc d'' ('Runder' du) -> lc d' ('Lunder' du) -> lc du du
 v |> f = f & v
+
+-- fix in LC??  fix f = let x = f x in x
+
+
+--- Type level?
+
+class TY ty where
+  int :: KnownPlace u => ty ({-Named "Int"-}Lunder' Root') u
+  (.~.) :: ty d u -> ty d' u'
