@@ -18,9 +18,8 @@ instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 
 -- define semantics
 class LC (lc :: Place' -> Place' -> *) where
-  --lam :: (def ~ use, KnownPlace def, KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> (lc (Abs' def) (Abs' def))) -> lc def use
-  lam :: (def ~ use, {-KnownPlace def',-} KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> lc def' (Abs' def)) -> lc def use
-  (&) :: (d~u, KnownPlace u) => lc (d') (Lunder' d) -> lc (d'') (Runder' d) -> lc u u
+  lam :: (def ~ use, KnownPlace use) => ((forall u . KnownPlace u => lc (Abs' def) u) -> lc def' (Abs' def)) -> lc def use
+  (&) :: KnownPlace u => lc d' (Lunder' u) -> lc d'' (Runder' u) -> lc u u
 
 -- singleton type isomorphic to (promoted) kind Place'
 data Place :: Place' -> * where
@@ -44,7 +43,7 @@ par _ = thePlace
 ----------- def       use
 data Lam :: Place' -> Place' -> * where
   Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
-  L :: (d ~ u, KnownPlace u) => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam (d') (Abs' d)) -> Lam d u
+  L :: (d ~ u, KnownPlace u) => ((forall u . KnownPlace u => Lam (Abs' d) u) -> Lam d' (Abs' d)) -> Lam d u
   (:&) :: (KnownPlace d, KnownPlace u) => Lam d' (Lunder' d) -> Lam d'' (Runder' d) -> Lam d u
 
 instance Show (Lam def use) where
@@ -66,13 +65,13 @@ def _ = thePlace
 use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
 
---test :: (KnownPlace u, LC lc) => lc Root' u
-test :: LC lc => lc Root' Root'
+test :: (KnownPlace u, LC lc) => lc u u
 test = lam $ \a -> a & a        -- self application
-test' :: LC lc => lc Root' Root'
+test' :: (KnownPlace u, LC lc) => lc u u
 test' = lam $ \x->x             -- identity
-test'' :: LC lc => lc Root' Root'
+test'' :: (KnownPlace u, LC lc) => lc u u
 test'' = lam $ \x->lam $ \_->x  -- K combinator
 
-tapp :: (KnownPlace u, LC lc) => lc u u
-tapp = (lam $ \x->x) & (lam $ \a -> a & a)
+tapp, tapp' :: (KnownPlace u, LC lc) => lc u u
+tapp' = (lam $ \x->x) & (lam $ \a -> a & a)
+tapp = test' & test
