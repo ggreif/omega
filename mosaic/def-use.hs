@@ -97,7 +97,7 @@ instance NAT Lam where zero = Zero; succ = Succ
 class TY ty where
   int :: KnownPlace u => ty ({-Named "Int"-}Lunder' Root') u
   (~>) :: ty d'' (Runder' du) -> ty du du -> ty (Lunder' du) (Lunder' du)
-  (.~.) :: ty d u -> ty d' u' -> ty d'' u''
+  (.~.) :: ty d' u -> ty d u -> ty d u
 
 
   (~&) :: ty (Lunder' du) (Lunder' du) -> ty d'' (Runder' du) -> ty du du -- second projection of arrow
@@ -130,8 +130,8 @@ instance TY ty => LC (TyIterpr ty) where
   
   ---------lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
   --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom)) -- where dom = undefined
-  ---------Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in above Ty resty
-  Ty fty & Ty aty = let resty = (aty ~> resty) ~& aty in above2 Ty resty
+  Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in above2 Ty resty
+  --- Ty fty & Ty aty = let resty = (aty ~> resty) ~& aty in above2 Ty resty
 
 {- Place Diagram for application
 +---------------------------------------------------+
