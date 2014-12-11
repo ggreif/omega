@@ -99,10 +99,14 @@ class TY ty where
 data TyIterpr ty :: Place' -> Place' -> * where
   --App :: KnownPlace du => TyIterpr d' (Lunder' du) -> TyIterpr d'' (Runder' du) -> TyIterpr du du
   Ty :: TY ty => ty d u -> TyIterpr ty d u
-  Arr :: TY ty => (ty d u -> ty d' u') -> TyIterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
+  Arr :: TY ty => (ty (Abs' u) (Abs' u) -> ty (Abs' u) (Abs' u)) -> TyIterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
 
 unTy (Ty t) = t
 
+fix :: (x -> x) -> x
+fix f = let x = f x in x
+
 instance TY ty => LC (TyIterpr ty) where
   lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
+  --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom)) -- where dom = undefined
   Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in Ty resty
