@@ -96,7 +96,7 @@ class TY ty where
 --- interpret LC into TY: abstract interpretation of values into types
 --    see dagstuhl paper Aaron Stump
 
-data TyIterpr ty :: Place' -> Place' -> * where
+data TyIterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
   --App :: KnownPlace du => TyIterpr d' (Lunder' du) -> TyIterpr d'' (Runder' du) -> TyIterpr du du
   Ty :: TY ty => ty d u -> TyIterpr ty d u
   Arr :: TY ty => (ty (Abs' u) (Abs' u) -> ty (Abs' u) (Abs' u)) -> TyIterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
