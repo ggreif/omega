@@ -45,6 +45,9 @@ data Lam :: Place' -> Place' -> * where
   Dummy :: (KnownPlace d, KnownPlace u) => Lam d u -- only for Show!
   L :: KnownPlace du => ((forall u . KnownPlace u => Lam (Abs' du) u) -> Lam d' (Abs' du)) -> Lam du du
   (:&) :: KnownPlace du => Lam d' (Lunder' du) -> Lam d'' (Runder' du) -> Lam du du
+  -- NAT fragment
+  Zero :: KnownPlace u => Lam ({-Named "zero"-}Lunder' (Runder' Root')) u
+  Succ :: KnownPlace u => Lam ({-Named "succ"-}Runder' (Runder' Root')) u
 
 instance Show (Lam def use) where
   show lam@(L f) = "(\\" ++ show (f Dummy) ++ ")" ++ duStr lam
@@ -83,11 +86,17 @@ v |> f = f & v
 -- fix in LC??  fix f = let x = f x in x
 
 
+class NAT nat where
+  zero :: KnownPlace u => nat ({-Named "zero"-}Lunder' (Runder' Root')) u
+  succ :: KnownPlace u => nat ({-Named "succ"-}Runder' (Runder' Root')) u
+
+instance NAT Lam where zero = Zero; succ = Succ
+
 --- Type level?
 
 class TY ty where
   int :: KnownPlace u => ty ({-Named "Int"-}Lunder' Root') u
-  (~>) :: ty d u -> ty d' u' -> ty du du
+  (~>) :: ty d (Lunder' du) -> ty d' (Runder' du) -> ty du du
   (.~.) :: ty d u -> ty d' u' -> ty d'' u''
 
 
@@ -98,15 +107,24 @@ class TY ty where
 
 data TyIterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
   --App :: KnownPlace du => TyIterpr d' (Lunder' du) -> TyIterpr d'' (Runder' du) -> TyIterpr du du
-  Ty :: TY ty => ty d u -> TyIterpr ty d u
+  Ty :: TY ty => ty d' u' -> TyIterpr ty d u
   Arr :: TY ty => (ty (Abs' u) (Abs' u) -> ty (Abs' u) (Abs' u)) -> TyIterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
 
-unTy (Ty t) = t
+--unTy (Ty t) = t
 
 fix :: (x -> x) -> x
 fix f = let x = f x in x
 
+
+aboveTy :: TY ty => ty d' u -> TyIterpr ty d u
+aboveTy = Ty
+
+instance TY ty => NAT (TyIterpr ty) where
+  zero = aboveTy int
+  succ = aboveTy (int~>int)
+
 instance TY ty => LC (TyIterpr ty) where
-  lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
+  
+  ---------lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
   --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom)) -- where dom = undefined
-  Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in Ty resty
+  ---Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in Ty resty
