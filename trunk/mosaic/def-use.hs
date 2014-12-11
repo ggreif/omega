@@ -115,13 +115,13 @@ data TyIterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
 fix :: (x -> x) -> x
 fix f = let x = f x in x
 
-
-aboveTy :: TY ty => ty d' u -> TyIterpr ty d u
-aboveTy = Ty
+-- propagate uses to the type plane
+above :: TY ty => (ty d' u -> TyIterpr ty d u) -> (ty d' u -> TyIterpr ty d u)
+above = id
 
 instance TY ty => NAT (TyIterpr ty) where
-  zero = aboveTy int
-  succ = aboveTy (int~>int)
+  zero = above Ty int
+  succ = above Ty (int~>int)
 
 instance TY ty => LC (TyIterpr ty) where
   
