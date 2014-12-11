@@ -96,18 +96,18 @@ instance NAT Lam where zero = Zero; succ = Succ
 
 class TY ty where
   int :: KnownPlace u => ty ({-Named "Int"-}Lunder' Root') u
-  (~>) :: ty d (Lunder' du) -> ty d' (Runder' du) -> ty du du
+  (~>) :: ty d'' (Runder' du) -> ty du du -> ty (Lunder' du) (Lunder' du)
   (.~.) :: ty d u -> ty d' u' -> ty d'' u''
 
 
-  (~&) :: ty d u -> ty d' u' -> ty d'' u'' -- second projection of arrow
+  (~&) :: ty (Lunder' du) (Lunder' du) -> ty d'' (Runder' du) -> ty du du -- second projection of arrow
 
 --- interpret LC into TY: abstract interpretation of values into types
 --    see dagstuhl paper Aaron Stump
 
 data TyIterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
   --App :: KnownPlace du => TyIterpr d' (Lunder' du) -> TyIterpr d'' (Runder' du) -> TyIterpr du du
-  Ty :: TY ty => ty d' u' -> TyIterpr ty d u
+  Ty :: TY ty => ty d' u -> TyIterpr ty d u
   Arr :: TY ty => (ty (Abs' u) (Abs' u) -> ty (Abs' u) (Abs' u)) -> TyIterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
 
 --unTy (Ty t) = t
@@ -119,18 +119,21 @@ fix f = let x = f x in x
 above :: TY ty => (ty d' u -> TyIterpr ty d u) -> (ty d' u -> TyIterpr ty d u)
 above = id
 
+above2 :: TY ty => (ty d u -> TyIterpr ty d u) -> (ty d u -> TyIterpr ty d u)
+above2 = id
+
 instance TY ty => NAT (TyIterpr ty) where
   zero = above Ty int
-  succ = above Ty (int~>int)
+  --succ = above Ty (int~>int)
 
 instance TY ty => LC (TyIterpr ty) where
   
   ---------lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
   --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom)) -- where dom = undefined
   ---------Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in above Ty resty
-  Ty fty & Ty aty = let resty = (aty ~> resty) ~& aty in above Ty resty
+  Ty fty & Ty aty = let resty = (aty ~> resty) ~& aty in above2 Ty resty
 
-{ - Place Diagram for application
+{- Place Diagram for application
 +---------------------------------------------------+
            @ du:du                  B du:du         |
           / \                      / \              |
