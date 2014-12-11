@@ -122,16 +122,32 @@ above = id
 above2 :: TY ty => (ty d u -> TyIterpr ty d u) -> (ty d u -> TyIterpr ty d u)
 above2 = id
 
+above2L :: TY ty => (ty (Lunder' d) (Lunder' u) -> TyIterpr ty d u)
+                 -> (ty (Lunder' d) (Lunder' u) -> TyIterpr ty d u)
+above2L = id
+
 instance TY ty => NAT (TyIterpr ty) where
   zero = above Ty int
-  --succ = above Ty (int~>int)
+  --succ = Ty (int~>int)
 
 instance TY ty => LC (TyIterpr ty) where
   
   ---------lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
-  --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom)) -- where dom = undefined
+  --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom))
+  lam f = above2L Ty . fix $ \dom -> dom ~> _ f dom
   Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in above2 Ty resty
-  --- Ty fty & Ty aty = let resty = (aty ~> resty) ~& aty in above2 Ty resty
+
+{- Place Diagram for lambda
++---------------------------------------------------+
+           λ du:du                  ~> Ldu:Ldu       |
+           |                       /  \              |
+    Adu:u  -> C d':Adu            /    \             |
+                                 /      \            |
+                     d':Ldu F  ~>        A  d'':Rdu  |
+                              /  \                  |
+                             /    \                 |
+                   d'':Rdu  A      B  du:du         |
+-}
 
 {- Place Diagram for application
 +---------------------------------------------------+
