@@ -127,4 +127,17 @@ instance TY ty => LC (TyIterpr ty) where
   
   ---------lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
   --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom)) -- where dom = undefined
-  ---Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in Ty resty
+  ---------Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in above Ty resty
+  Ty fty & Ty aty = let resty = (aty ~> resty) ~& aty in above Ty resty
+
+{ - Place Diagram for application
++---------------------------------------------------+
+           @ du:du                  B du:du         |
+          / \                      / \              |
+  d':Ldu F   A d'':Rdu            /   \             |
+                                 /     \            |
+                     d':Ldu F  ~>       A  d'':Rdu  |
+                              /  \                  |
+                             /    \                 |
+                   d'':Rdu  A      B  du:du         |
+-}
