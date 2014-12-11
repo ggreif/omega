@@ -101,6 +101,7 @@ class TY ty where
 
 
   (~&) :: ty (Lunder' du) (Lunder' du) -> ty d'' (Runder' du) -> ty du du -- second projection of arrow
+  split :: (ty d'' (Runder' du) -> ty du du -> ty du du) -> ty du du -- split arrow
 
 --- interpret LC into TY: abstract interpretation of values into types
 --    see dagstuhl paper Aaron Stump
@@ -112,8 +113,8 @@ data TyIterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
 
 --unTy (Ty t) = t
 
-fix :: (x -> x) -> x
-fix f = let x = f x in x
+--fix :: (ty d u -> ty d u) -> ty d u
+--fix f = let x = f x in x
 
 -- propagate uses to the type plane
 above :: TY ty => (ty d' u -> TyIterpr ty d u) -> (ty d' u -> TyIterpr ty d u)
@@ -122,9 +123,12 @@ above = id
 above2 :: TY ty => (ty d u -> TyIterpr ty d u) -> (ty d u -> TyIterpr ty d u)
 above2 = id
 
+{-
 above2L :: TY ty => (ty (Lunder' d) (Lunder' u) -> TyIterpr ty d u)
                  -> (ty (Lunder' d) (Lunder' u) -> TyIterpr ty d u)
 above2L = id
+-}
+
 
 instance TY ty => NAT (TyIterpr ty) where
   zero = above Ty int
@@ -134,19 +138,17 @@ instance TY ty => LC (TyIterpr ty) where
   
   ---------lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
   --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom))
-  lam f = above2L Ty . fix $ \dom -> dom ~> _ f dom
+  --lam f = above2L Ty . fix $ \dom -> dom ~> _ f dom
+  lam f = above2 Ty (split $ \cod dom -> undefined) 
   Ty fty & Ty aty = let resty = (fty .~. (aty ~> resty)) ~& aty in above2 Ty resty
 
 {- Place Diagram for lambda
 +---------------------------------------------------+
-           λ du:du                  ~> Ldu:Ldu       |
-           |                       /  \              |
-    Adu:u  -> C d':Adu            /    \             |
-                                 /      \            |
-                     d':Ldu F  ~>        A  d'':Rdu  |
-                              /  \                  |
-                             /    \                 |
-                   d'':Rdu  A      B  du:du         |
+           λ du:du                  ~> Ldu:Ldu      |
+           |                       /  \             |
+   Adu:u D -> C d':Adu            /    \            |
+                                 /      \           |
+                         Adu:u  D        C  d':Adu  |
 -}
 
 {- Place Diagram for application
