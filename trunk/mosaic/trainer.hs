@@ -53,8 +53,8 @@ sicher n antw t q = if t antw
 zahl x = not (null x) && all (`elem` ['0'..'9']) x
 
 prop_plusMinusDigits pl a b = if pl
-                               then prop_addDigits 15 a b
-                               else prop_substDigits 10 a b
+                               then prop_addDigits 20 a b
+                               else prop_substDigits 20 a b
 
 
 prop_hunderterFeld :: Int -> Property
@@ -88,8 +88,8 @@ incCounter = modifyIORef counter succ >> readIORef counter
 
 main = do putStrLn "Plus, Minus oder Malaufgaben? Oder 100erfeld?"
           getLine >>= \case
-            "+" -> quickCheck $ prop_addDigits 16
-            "-" -> quickCheck $ prop_substDigits 11
+            "+" -> quickCheck $ prop_addDigits 20
+            "-" -> quickCheck $ prop_substDigits 20
             "+-" -> quickCheck prop_plusMinusDigits
             "*" -> quickCheck $ prop_multDigits 5
             "100" -> quickCheck $ prop_hunderterFeld
