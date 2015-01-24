@@ -69,11 +69,9 @@ def _ = thePlace
 use :: KnownPlace use => Lam def use -> Place use
 use _ = thePlace
 
-test :: (KnownPlace u, LC lc) => lc u u
+test, test', test'' :: (KnownPlace u, LC lc) => lc u u
 test = lam $ \a -> a & a        -- self-application
-test' :: (KnownPlace u, LC lc) => lc u u
 test' = lam $ \x->x             -- identity
-test'' :: (KnownPlace u, LC lc) => lc u u
 test'' = lam $ \x->lam $ \_->x  -- K combinator
 
 tapp, tapp' :: (KnownPlace u, LC lc) => lc u u
@@ -113,12 +111,17 @@ class TY ty where
   split :: (ty d'' (Runder' du) -> ty du du -> ty du du) -> ty du du -- split arrow
 
 --- interpret LC into TY: abstract interpretation of values into types
---    see dagstuhl paper Aaron Stump
+--    see, e.g., dagstuhl paper Aaron Stump
+--         or http://arxiv.org/pdf/1211.0865.pdf
 
 data TyInterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
   --App :: KnownPlace du => TyInterpr d' (Lunder' du) -> TyInterpr d'' (Runder' du) -> TyInterpr du du
   Ty :: TY ty => ty d' u -> TyInterpr ty d u
   Arr :: TY ty => (ty (Abs' u) (Abs' u) -> ty (Abs' u) (Abs' u)) -> TyInterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
+
+
+tyst' :: (KnownPlace u, TY ty) => TyInterpr ty u u
+tyst' = test'
 
 --unTy (Ty t) = t
 
