@@ -4,7 +4,7 @@
 
 import Data.Char (isUpper)
 
---                    var intro              v--- app ---v
+--                    var intro            v----- app ------v
 data Place' = Root' | Abs' Place' | Lunder' Place' | Runder' Place'
 
 class KnownPlace (p :: Place') where
@@ -17,6 +17,7 @@ instance KnownPlace p => KnownPlace (Lunder' p) where thePlace = Lunder
 instance KnownPlace p => KnownPlace (Runder' p) where thePlace = Runder
 
 -- define semantics
+--              def       use
 class LC (lc :: Place' -> Place' -> *) where
   lam :: KnownPlace du => ((forall u . KnownPlace u => lc (Abs' du) u) -> lc d' (Abs' du)) -> lc du du
   (&) :: KnownPlace du => lc d' (Lunder' du) -> lc d'' (Runder' du) -> lc du du
@@ -85,6 +86,14 @@ v |> f = f & v
 
 -- fix in LC??  fix f = let x = f x in x
 
+-- establish primitive name tree
+
+--          o
+--        /   \
+--      Int    o
+--           /   \
+--         zero  succ
+
 
 class NAT nat where
   zero :: KnownPlace u => nat ({-Named "zero"-}Lunder' (Runder' Root')) u
@@ -106,10 +115,10 @@ class TY ty where
 --- interpret LC into TY: abstract interpretation of values into types
 --    see dagstuhl paper Aaron Stump
 
-data TyIterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
-  --App :: KnownPlace du => TyIterpr d' (Lunder' du) -> TyIterpr d'' (Runder' du) -> TyIterpr du du
-  Ty :: TY ty => ty d' u -> TyIterpr ty d u
-  Arr :: TY ty => (ty (Abs' u) (Abs' u) -> ty (Abs' u) (Abs' u)) -> TyIterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
+data TyInterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
+  --App :: KnownPlace du => TyInterpr d' (Lunder' du) -> TyInterpr d'' (Runder' du) -> TyInterpr du du
+  Ty :: TY ty => ty d' u -> TyInterpr ty d u
+  Arr :: TY ty => (ty (Abs' u) (Abs' u) -> ty (Abs' u) (Abs' u)) -> TyInterpr ty d u  -- TODO: should this be Ex? (existential tyvar intro?) fix that strips the (Ex v.)???
 
 --unTy (Ty t) = t
 
@@ -117,24 +126,24 @@ data TyIterpr :: (Place' -> Place' -> *) -> Place' -> Place' -> * where
 --fix f = let x = f x in x
 
 -- propagate uses to the type plane
-above :: TY ty => (ty d' u -> TyIterpr ty d u) -> (ty d' u -> TyIterpr ty d u)
+above :: TY ty => (ty d' u -> TyInterpr ty d u) -> (ty d' u -> TyInterpr ty d u)
 above = id
 
-above2 :: TY ty => (ty d u -> TyIterpr ty d u) -> (ty d u -> TyIterpr ty d u)
+above2 :: TY ty => (ty d u -> TyInterpr ty d u) -> (ty d u -> TyInterpr ty d u)
 above2 = id
 
 {-
-above2L :: TY ty => (ty (Lunder' d) (Lunder' u) -> TyIterpr ty d u)
-                 -> (ty (Lunder' d) (Lunder' u) -> TyIterpr ty d u)
+above2L :: TY ty => (ty (Lunder' d) (Lunder' u) -> TyInterpr ty d u)
+                 -> (ty (Lunder' d) (Lunder' u) -> TyInterpr ty d u)
 above2L = id
 -}
 
 
-instance TY ty => NAT (TyIterpr ty) where
+instance TY ty => NAT (TyInterpr ty) where
   zero = above Ty int
   --succ = Ty (int~>int)
 
-instance TY ty => LC (TyIterpr ty) where
+instance TY ty => LC (TyInterpr ty) where
   
   ---------lam f = Arr (\dom -> dom ~> unTy (f (Ty dom))) -- where dom = undefined
   --lam f = Ty . fix $ \dom -> dom ~> unTy (f (Ty dom))
