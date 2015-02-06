@@ -1,32 +1,31 @@
 {-# LANGUAGE DataKinds, GADTs, RebindableSyntax #-}
 
 import qualified Prelude as P
-import Prelude (($), error, undefined)
+import Prelude (Bool (..), ($), error, undefined)
 
 data Nat' = Z' | S' Nat'
 
---data Nat = 
+data Lam open lev where
+  App :: Lam o l -> Lam p l -> Lam False l
+  Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
 
-data Lam l where
-  App :: Lam l -> Lam l -> Lam l
-  Inh :: Lam (S' l) ->  (Lam l -> Lam l') -> Lam l'
-
-star :: Lam (S' (S' Z'))
+star :: Lam True (S' (S' Z'))
 star = undefined
 
 
 
-(>>=) :: Lam (S' l) -> (Lam l -> Lam l') -> Lam l'
+(>>=) :: Lam True (S' l) -> (Lam True l -> Lam o l') -> Lam False l'
 (>>=) = Inh
 
 (&) = App
 
-return :: Lam l -> Lam (S' l)
+return :: Lam o l -> Lam False l
 return = undefined
 fail = error
 
 main' = do int <- star
            i <- int
            j <- int
+           -- k <- int & int -- Error: not open, good
+           -- sub <- i       -- Error: cannot descend below zero, good
            i & j
-           
