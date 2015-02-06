@@ -7,23 +7,26 @@ data Nat' = Z' | S' Nat'
 
 --data Nat = 
 
-data Lam l = App (Lam l) (Lam l) | Inh (Lam (S' l)) (Lam l -> Lam l)
+data Lam l where
+  App :: Lam l -> Lam l -> Lam l
+  Inh :: Lam (S' l) ->  (Lam l -> Lam l') -> Lam l'
 
 star :: Lam (S' (S' Z'))
 star = undefined
 
 
 
-(>>=) :: Lam (S' l) -> (Lam l -> Lam l) -> Lam l
+(>>=) :: Lam (S' l) -> (Lam l -> Lam l') -> Lam l'
 (>>=) = Inh
 
 (&) = App
 
 return :: Lam l -> Lam (S' l)
-return a = a
+return = undefined
 fail = error
 
 main' = do int <- star
            i <- int
-           int -- return $ i & i
+           j <- int
+           i & j
            
