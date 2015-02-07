@@ -6,12 +6,15 @@
 
 Löb's theorem
 
-See [http://blog.sigfpe.com/2006/11/from-l-theorem-to-spreadsheet.html Piponi], quchen(github)
+See [http://blog.sigfpe.com/2006/11/from-l-theorem-to-spreadsheet.html Piponi], [https://github.com/quchen/articles/blob/master/loeb-moeb.md quchen(github)]
 
 Video about spreadsheet eval (Boston?)
 Kenneth Foner: http://youtu.be/F7F-BzOB670
 
-Recursive types.
+Recursive types. Linking.
+
+Möb, a generalisation: http://www.reddit.com/r/haskell/comments/1qwjk6/löb_and_möb_strange_loops_in_haskell/
+Effectful: http://www.reddit.com/r/haskell/comments/1rgvr5/effectful_loeb/
 
 
 = Details =
