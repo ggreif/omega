@@ -28,8 +28,8 @@ star = starN
 
 
 
-(>>=) :: Lam True (S' l) -> (Lam True l -> Lam o l') -> Lam False l'
-(>>=) = Inh
+(>>=) :: Inhabitable ent => ent True (S' l) -> (ent True l -> ent o l') -> ent False l'
+(>>=) = inhabit
 
 (&) = App
 
