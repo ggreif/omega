@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, GADTs, RebindableSyntax #-}
+{-# LANGUAGE DataKinds, GADTs, KindSignatures, RebindableSyntax #-}
 
 import qualified Prelude as P
 import Prelude (Bool (..), ($), error, undefined)
@@ -8,6 +8,11 @@ data Nat' = Z' | S' Nat'
 data Lam open lev where
   App :: Lam o l -> Lam p l -> Lam False l
   Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
+
+
+class Inhabitable (ent :: Bool -> Nat' -> *) where
+  starN :: ent True (S' (S' n))
+  inhabit :: ent True (S' l) ->  (ent True l -> ent o l') -> ent False l'
 
 star :: Lam True (S' (S' Z'))
 star = undefined
