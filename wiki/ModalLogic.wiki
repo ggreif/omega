@@ -9,6 +9,7 @@ Löb's theorem
 See Piponi, quchen(github)
 
 Video about spreadsheet eval (Boston?)
+Kenneth Foner: http://youtu.be/F7F-BzOB670
 
 Recursive types.
 
