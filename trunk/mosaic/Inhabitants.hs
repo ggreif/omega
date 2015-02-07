@@ -10,7 +10,7 @@ data Lam open lev where
   App :: Lam o l -> Lam p l -> Lam False l
   Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
   Star :: Lam True (S' (S' n))
-  Close :: Lam o l -> Lam False l
+  Close :: Lam True l -> Lam False l
   Habitant :: Lam True (S' l) -> Lam True l -- needed for concretising
 
 instance Show (Lam o l) where
@@ -34,8 +34,8 @@ instance Inhabitable Lam where
   isle (Habitant a) = Close a
   descope (Inh isle f) = descope $ f $ Habitant isle
   descope (f `App` a) = descope f `App` descope a
-  descope cs@(Close Star) = cs
-  descope (Habitant open) = ch
+  descope cs@(Close _) = cs
+  descope ho@(Habitant open) = Close ho
   descope whatever = error $ " ##### how to descope this:   ### " ++ show whatever
 
 star :: Inhabitable ent => ent True (S' (S' Z'))
@@ -63,7 +63,7 @@ knoth = do int <- star
            j <- int
            -- k <- int & int -- Error: not open, good
            -- sub <- i       -- Error: cannot descend below zero, good
-           return $ i & j
+           i & j
 
 
 regain :: Inhabitable ent => ent False (S' Z')
