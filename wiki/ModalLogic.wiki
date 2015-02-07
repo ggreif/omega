@@ -1,4 +1,4 @@
-#summary `5 ° Int` is a better version of x⃞ Int!
+#summary `5 ° Int` is a better version of `□Int`!
 #labels Phase-Design
 
 = Introduction =
@@ -6,7 +6,7 @@
 
 Löb's theorem
 
-See Piponi, quchen(github)
+See [http://blog.sigfpe.com/2006/11/from-l-theorem-to-spreadsheet.html Piponi], quchen(github)
 
 Video about spreadsheet eval (Boston?)
 Kenneth Foner: http://youtu.be/F7F-BzOB670
@@ -16,12 +16,7 @@ Recursive types.
 
 = Details =
 
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
 
 
-
-Box and partial evaluation ("known")
+Box and partial evaluation ("known"). Applying a known function to a known argument gives us a known result.
 http://ropas.snu.ac.kr/~jwchoi/talks/snt111118.pdf
