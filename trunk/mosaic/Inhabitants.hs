@@ -18,6 +18,7 @@ instance Show (Lam o l) where
   show (Close a) = '[' : (show a ++ "]")
   show (Habitant a) = "habitant of " ++ show a
   show (Inh isle f) = "Below " ++ show isle ++ " is a " ++ show (f (Habitant isle)) 
+  show (f `App` a) = "(" ++ show f ++ " & " ++show a ++ ")" 
 
 class Inhabitable (ent :: Bool -> Nat' -> *) where
   starN :: ent True (S' (S' n))
@@ -40,7 +41,12 @@ star = starN
 (>>=) :: Inhabitable ent => ent True (S' l) -> (ent True l -> ent o l') -> ent False l'
 (>>=) = inhabit
 
-(&) = App
+class LC (ent :: Bool -> Nat' -> *) where
+  (&) :: ent o l -> ent p l -> ent False l
+
+instance LC Lam where
+  (&) = App
+
 
 return :: Lam o l -> Lam False l
 return = undefined
