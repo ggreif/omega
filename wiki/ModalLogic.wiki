@@ -13,8 +13,8 @@ Kenneth Foner: http://youtu.be/F7F-BzOB670
 
 Recursive types. Linking.
 
-Möb, a generalisation: http://www.reddit.com/r/haskell/comments/1qwjk6/löb_and_möb_strange_loops_in_haskell/
-Effectful: http://www.reddit.com/r/haskell/comments/1rgvr5/effectful_loeb/
+  * Möb, a generalisation: http://www.reddit.com/r/haskell/comments/1qwjk6/löb_and_möb_strange_loops_in_haskell/
+  * Effectful: http://www.reddit.com/r/haskell/comments/1rgvr5/effectful_loeb/
 
 
 = Details =
