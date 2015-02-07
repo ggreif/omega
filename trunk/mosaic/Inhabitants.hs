@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, RebindableSyntax #-}
 
 import qualified Prelude as P
-import Prelude (Bool (..), ($), error, undefined)
+import Prelude (Show (..), Bool (..), ($), error, undefined)
+import Data.List
 
 data Nat' = Z' | S' Nat'
 
@@ -10,6 +11,13 @@ data Lam open lev where
   Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
   Star :: Lam True (S' (S' n))
   Close :: Lam o l -> Lam False l
+  Habitant :: Lam True (S' l) -> Lam True l -- needed for concretising
+
+instance Show (Lam o l) where
+  show Star = "*"
+  show (Close a) = '[' : (show a ++ "]")
+  show (Habitant a) = "habitant of " ++ show a
+  show (Inh isle f) = "Below " ++ show isle ++ " is a " ++ show (f (Habitant isle)) 
 
 class Inhabitable (ent :: Bool -> Nat' -> *) where
   starN :: ent True (S' (S' n))
@@ -22,6 +30,7 @@ instance Inhabitable Lam where
   inhabit = Inh
   isle Star = Close Star
   isle (Close a) = isle a
+  isle (Habitant a) = Close a
 
 star :: Lam True (S' (S' Z'))
 star = starN
@@ -37,9 +46,15 @@ return :: Lam o l -> Lam False l
 return = undefined
 fail = error
 
-main' = do int <- star
+-- knoth :: (Inhabitable ent, LC ent) => ent False Z'
+knoth = do int <- star
            i <- int
            j <- int
            -- k <- int & int -- Error: not open, good
            -- sub <- i       -- Error: cannot descend below zero, good
            i & j
+
+
+regain = do int <- star
+            i <- int
+            isle i
