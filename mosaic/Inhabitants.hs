@@ -8,14 +8,23 @@ data Nat' = Z' | S' Nat'
 data Lam open lev where
   App :: Lam o l -> Lam p l -> Lam False l
   Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
-
+  Star :: Lam True (S' (S' n))
+  Close :: Lam o l -> Lam False l
 
 class Inhabitable (ent :: Bool -> Nat' -> *) where
   starN :: ent True (S' (S' n))
   inhabit :: ent True (S' l) ->  (ent True l -> ent o l') -> ent False l'
+  isle :: ent o l -> ent False (S' l)
+
+
+instance Inhabitable Lam where
+  starN = Star
+  inhabit = Inh
+  isle Star = Close Star
+  isle (Close a) = isle a
 
 star :: Lam True (S' (S' Z'))
-star = undefined
+star = starN
 
 
 
