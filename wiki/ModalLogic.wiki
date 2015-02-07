@@ -1,4 +1,4 @@
-#summary 5 kringel Int is a better version of box Int!
+#summary `5 ° Int` is a better version of x⃞ Int!
 #labels Phase-Design
 
 = Introduction =
