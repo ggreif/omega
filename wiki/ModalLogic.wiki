@@ -20,3 +20,7 @@ Recursive types.
 
 Box and partial evaluation ("known"). Applying a known function to a known argument gives us a known result.
 http://ropas.snu.ac.kr/~jwchoi/talks/snt111118.pdf
+
+`□(Int → Int) → □Int → □Int`
+
+Löb is `□(□a → a) → □a`
