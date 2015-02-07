@@ -21,6 +21,10 @@ Recursive types.
 Box and partial evaluation ("known"). Applying a known function to a known argument gives us a known result.
 http://ropas.snu.ac.kr/~jwchoi/talks/snt111118.pdf
 
-`□(Int → Int) → □Int → □Int`
+`□(Int → Int) → □Int → □Int` works like this:
+(1+) 5 → 6
+Some calculations can run at compile time. _Note that we do not need to know the innards of `(1+)` to be able to run it.
+
+This is the essence of an applicative functor: `□(Int → Int) → □Int → □Int`
 
 Löb is `□(□a → a) → □a`
