@@ -473,6 +473,8 @@ Opetopes
 
 [http://vimeo.com/6590617 Tangles, diagrams and monads] by Dan Piponi
 
+
+
 Relative monads (Altenkirch, Chapman, et al.)
 
 === Connections to String Theory ===
@@ -481,6 +483,12 @@ Relative monads (Altenkirch, Chapman, et al.)
   * topological quantum field theories http://en.wikipedia.org/wiki/Topological_quantum_field_theory
 
 === Combinatory Logic ===
+
+
+=== Modal logic and Geometry ===
+
+
+J. Goubault-Larrecq and É. Goubault.  On the Geometry of Intuitionistic S4 Proofs.  Homology, Homotopy and Applications 5(2), pages 137-209, 2003. ( PS | PS.GZ | BibTeX )
 
 === Homotopical Type Theory ===
 
