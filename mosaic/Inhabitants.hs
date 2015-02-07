@@ -24,7 +24,7 @@ class Inhabitable (ent :: Bool -> Nat' -> *) where
   starN :: ent True (S' (S' n))
   inhabit :: ent True (S' l) ->  (ent True l -> ent o l') -> ent False l'
   isle :: ent o l -> ent False (S' l)
-
+  descope :: ent o l -> ent False l
 
 instance Inhabitable Lam where
   starN = Star
@@ -32,8 +32,13 @@ instance Inhabitable Lam where
   isle Star = Close Star
   isle (Close a) = isle a
   isle (Habitant a) = Close a
+  descope (Inh isle f) = descope $ f $ Habitant isle
+  descope (f `App` a) = descope f `App` descope a
+  descope cs@(Close Star) = cs
+  descope (Habitant open) = ch
+  descope whatever = error $ " ##### how to descope this:   ### " ++ show whatever
 
-star :: Lam True (S' (S' Z'))
+star :: Inhabitable ent => ent True (S' (S' Z'))
 star = starN
 
 
@@ -48,19 +53,20 @@ instance LC Lam where
   (&) = App
 
 
-return :: Lam o l -> Lam False l
-return = undefined
+return :: Inhabitable ent => ent o l -> ent False l
+return = descope
 fail = error
 
--- knoth :: (Inhabitable ent, LC ent) => ent False Z'
+knoth :: (Inhabitable ent, LC ent) => ent False Z'
 knoth = do int <- star
            i <- int
            j <- int
            -- k <- int & int -- Error: not open, good
            -- sub <- i       -- Error: cannot descend below zero, good
-           i & j
+           return $ i & j
 
 
+regain :: Inhabitable ent => ent False (S' Z')
 regain = do int <- star
             i <- int
-            isle i
+            return $ isle i
