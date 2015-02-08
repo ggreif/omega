@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, RebindableSyntax #-}
 
 import qualified Prelude as P
-import Prelude (Show (..), Bool (..), ($), error, undefined)
+import Prelude (Show (..), Bool (..), ($), error, undefined, const)
 import Data.List
 
 data Nat' = Z' | S' Nat'
@@ -46,7 +46,8 @@ star = starN
 (>>=) :: Inhabitable ent => ent True (S' l) -> (ent True l -> ent o l') -> ent False l'
 (>>=) = inhabit
 
-class LC (ent :: Bool -> Nat' -> *) where
+class Inhabitable ent => LC (ent :: Bool -> Nat' -> *) where
+  lam :: (ent False l -> ent False l) -> ent False l
   (&) :: ent o l -> ent p l -> ent False l
 
 instance LC Lam where
@@ -57,7 +58,7 @@ return :: Inhabitable ent => ent o l -> ent False l
 return = descope
 fail = error
 
-knoth :: (Inhabitable ent, LC ent) => ent False Z'
+knoth :: LC ent => ent False Z'
 knoth = do int <- star
            i <- int
            j <- int
@@ -70,3 +71,10 @@ regain :: Inhabitable ent => ent False (S' Z')
 regain = do int <- star
             i <- int
             return $ isle i
+
+func :: LC ent => ent False Z'
+func = do int <- star
+          i <- int
+          j <- int
+          let k = lam (\c -> lam (const c))
+          k & i & j
