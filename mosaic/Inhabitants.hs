@@ -78,9 +78,12 @@ regain = descope $ do
             i <- int
             isle i
 
+func' :: LC ent => ent False Z'
+func' = do int <- star
+           i <- int
+           j <- int
+           let k = lam (\c -> lam (const c))
+           k & i & j
+
 func :: LC ent => ent False Z'
-func = do int <- star
-          i <- int
-          j <- int
-          let k = lam (\c -> lam (const c))
-          k & i & j
+func = descope func'
