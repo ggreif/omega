@@ -37,8 +37,9 @@ instance Inhabitable Lam where
   isle (Habitant a) = Close a
   descope (Inh isle f) = descope $ f $ Habitant isle
   descope (f `App` a) = descope f `App` descope a
-  descope cs@(Close _) = cs
-  descope ho@(Habitant open) = Close ho
+  descope cs@Close{} = cs
+  descope ho@Habitant{} = Close ho
+  descope (Lam f) = Lam $ \x -> descope $ f x -- inefficient!
   descope whatever = error $ " ##### how to descope this:   ### " ++ show whatever
 
 star :: Inhabitable ent => ent True (S' (S' Z'))
@@ -58,8 +59,8 @@ instance LC Lam where
   (&) = App
 
 
-return :: Inhabitable ent => ent o l -> ent False l
-return = descope
+--return :: Inhabitable ent => ent o l -> ent False l
+return = undefined
 fail = error
 
 knoth :: LC ent => ent False Z'
@@ -72,9 +73,10 @@ knoth = do int <- star
 
 
 regain :: Inhabitable ent => ent False (S' Z')
-regain = do int <- star
+regain = descope $ do
+            int <- star
             i <- int
-            return $ isle i
+            isle i
 
 func :: LC ent => ent False Z'
 func = do int <- star
