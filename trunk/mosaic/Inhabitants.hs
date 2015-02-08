@@ -12,6 +12,7 @@ data Lam open lev where
   Star :: Lam True (S' (S' n))
   Close :: Lam True l -> Lam False l
   Habitant :: Lam True (S' l) -> Lam True l -- needed for concretising
+  Lam :: (Lam False l -> Lam False l) -> Lam False l
 
 instance Show (Lam o l) where
   show Star = "*"
@@ -19,6 +20,8 @@ instance Show (Lam o l) where
   show (Habitant a) = "habitant of " ++ show a
   show (Inh isle f) = "Below " ++ show isle ++ " is a " ++ show (f (Habitant isle)) 
   show (f `App` a) = "(" ++ show f ++ " & " ++show a ++ ")" 
+  show (Lam f) = "(\\" ++ show inp ++ " . " ++ show (f inp) ++ ")"
+    where inp = Close (Habitant $ Habitant Star) -- FIXME
 
 class Inhabitable (ent :: Bool -> Nat' -> *) where
   starN :: ent True (S' (S' n))
@@ -51,6 +54,7 @@ class Inhabitable ent => LC (ent :: Bool -> Nat' -> *) where
   (&) :: ent o l -> ent p l -> ent False l
 
 instance LC Lam where
+  lam = Lam
   (&) = App
 
 
