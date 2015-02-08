@@ -1,11 +1,23 @@
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, RebindableSyntax #-}
 
 import qualified Prelude as P
-import Prelude (Show (..), Bool (..), ($), error, undefined, const)
+import Prelude (Show (..), Bool (..), ($), error, undefined, const, (.))
 import Data.List
 
 data Nat' = Z' | S' Nat'
 
+class Inhabitable (ent :: Bool -> Nat' -> *) where
+  starN :: ent True (S' (S' n))
+  inhabit :: ent True (S' l) ->  (ent True l -> ent o l') -> ent False l'
+  isle :: ent o l -> ent False (S' l)
+  descope :: ent o l -> ent False l
+
+class Inhabitable ent => LC (ent :: Bool -> Nat' -> *) where
+  lam :: (ent False l -> ent False l) -> ent False l
+  (&) :: ent o l -> ent p l -> ent False l
+
+-- #### Implement these in terms of the Lambda-Pi calculus
+--
 data Lam open lev where
   App :: Lam o l -> Lam p l -> Lam False l
   Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
@@ -13,6 +25,7 @@ data Lam open lev where
   Close :: Lam True l -> Lam False l
   Habitant :: Lam True (S' l) -> Lam True l -- needed for concretising
   Lam :: (Lam False l -> Lam False l) -> Lam False l
+  Pi :: (Lam False l -> Lam False (S' l)) -> Lam False (S' l)
 
 instance Show (Lam o l) where
   show Star = "*"
@@ -23,18 +36,14 @@ instance Show (Lam o l) where
   show (Lam f) = "(\\" ++ show inp ++ " . " ++ show (f inp) ++ ")"
     where inp = Close (Habitant $ Habitant Star) -- FIXME
 
-class Inhabitable (ent :: Bool -> Nat' -> *) where
-  starN :: ent True (S' (S' n))
-  inhabit :: ent True (S' l) ->  (ent True l -> ent o l') -> ent False l'
-  isle :: ent o l -> ent False (S' l)
-  descope :: ent o l -> ent False l
-
 instance Inhabitable Lam where
   starN = Star
   inhabit = Inh
   isle Star = Close Star
   isle (Close a) = isle a
   isle (Habitant a) = Close a
+  isle (Lam f) = Pi $ isle . f
+  isle (Pi f) = Close Star
   descope (Inh isle f) = descope $ f $ Habitant isle
   descope (f `App` a) = descope f `App` descope a
   descope cs@Close{} = cs
@@ -49,10 +58,6 @@ star = starN
 
 (>>=) :: Inhabitable ent => ent True (S' l) -> (ent True l -> ent o l') -> ent False l'
 (>>=) = inhabit
-
-class Inhabitable ent => LC (ent :: Bool -> Nat' -> *) where
-  lam :: (ent False l -> ent False l) -> ent False l
-  (&) :: ent o l -> ent p l -> ent False l
 
 instance LC Lam where
   lam = Lam
