@@ -12,7 +12,7 @@ class Inhabitable (ent :: Bool -> Nat' -> *) where
   isle :: ent o l -> ent False (S' l)
   descope :: ent o l -> ent False l
 
-class Inhabitable ent => LC (ent :: Bool -> Nat' -> *) where
+class LC (ent :: Bool -> Nat' -> *) where
   lam :: (ent False l -> ent False l) -> ent False l
   (&) :: ent o l -> ent p l -> ent False l
 
@@ -68,7 +68,7 @@ instance LC Lam where
 return = undefined
 fail = error
 
-knoth :: LC ent => ent False Z'
+knoth :: (Inhabitable ent, LC ent) => ent False Z'
 knoth = do int <- star
            i <- int
            j <- int
@@ -83,12 +83,12 @@ regain = descope $ do
             i <- int
             isle i
 
-func' :: LC ent => ent False Z'
+func' :: (Inhabitable ent, LC ent) => ent False Z'
 func' = do int <- star
            i <- int
            j <- int
            let k = lam (\c -> lam (const c))
            k & i & j
 
-func :: LC ent => ent False Z'
+func :: (Inhabitable ent, LC ent) => ent False Z'
 func = descope func'
