@@ -1,13 +1,14 @@
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, RebindableSyntax #-}
 
 import qualified Prelude as P
-import Prelude (Show (..), Bool (..), ($), error, undefined, const, (.))
+import Prelude (Show (..), Bool (..), ($), error, undefined, const, (.), flip)
 import Data.List
 
 data Nat' = Z' | S' Nat'
 
 class Inhabitable (ent :: Bool -> Nat' -> *) where
   starN :: ent True (S' (S' n))
+  (^) :: ent o l -> ent o' l -> ent o l -- exponent
   inhabit :: ent True (S' l) ->  (ent True l -> ent o l') -> ent False l'
   isle :: ent o l -> ent False (S' l)
   descope :: ent o l -> ent False l
@@ -22,6 +23,7 @@ data Lam open lev where
   App :: Lam o l -> Lam p l -> Lam False l
   Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
   Star :: Lam True (S' (S' n))
+  (:~>) :: Lam o' l -> Lam o l -> Lam o l
   Close :: Lam True l -> Lam False l
   Habitant :: Lam True (S' l) -> Lam True l -- needed for concretising
   Lam :: (Lam False l -> Lam False l) -> Lam False l
@@ -29,6 +31,7 @@ data Lam open lev where
 
 instance Show (Lam o l) where
   show Star = "*"
+  show (a :~> b) = show a ++ " :~> " ++ show b
   show (Close a) = '[' : (show a ++ "]")
   show (Habitant a) = "habitant of " ++ show a
   show (Inh isle f) = "Below " ++ show isle ++ " is a " ++ show (f (Habitant isle)) 
@@ -38,6 +41,7 @@ instance Show (Lam o l) where
 
 instance Inhabitable Lam where
   starN = Star
+  (^) =  flip (:~>)
   inhabit = Inh
   isle Star = Close Star
   isle (Close a) = isle a
@@ -76,6 +80,9 @@ knoth = do int <- star
            -- sub <- i       -- Error: cannot descend below zero, good
            i & j
 
+exp :: Inhabitable ent => ent False (S' Z')
+exp = descope $ do maybe <- star^star
+                   maybe
 
 regain :: Inhabitable ent => ent False (S' Z')
 regain = descope $ do
