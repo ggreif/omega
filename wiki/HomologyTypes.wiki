@@ -488,7 +488,7 @@ Relative monads (Altenkirch, Chapman, et al.)
 === Modal logic and Geometry ===
 
 
-J. Goubault-Larrecq and É. Goubault.  On the Geometry of Intuitionistic S4 Proofs.  Homology, Homotopy and Applications 5(2), pages 137-209, 2003. ( PS | PS.GZ | BibTeX )
+J. Goubault-Larrecq and É. Goubault.  On the Geometry of Intuitionistic S4 Proofs.  [http://projecteuclid.org/euclid.hha/1088453324 Homology, Homotopy and Applications 5(2), pages 137-209, 2003.]
 
 === Homotopical Type Theory ===
 
