@@ -26,6 +26,7 @@ data Lam open lev where
   (:~>) :: Lam o' l -> Lam o l -> Lam o l
   Close :: Lam True l -> Lam False l
   Habitant :: Lam True (S' l) -> Lam True l -- needed for concretising
+  Univar :: P.String -> Lam o (S' l) -> Lam True l -- later this will be location based
   Lam :: (Lam False l -> Lam False l) -> Lam False l
   Pi :: (Lam False l -> Lam False (S' l)) -> Lam False (S' l)
 
@@ -34,10 +35,12 @@ instance Show (Lam o l) where
   show (a :~> b) = show a ++ " :~> " ++ show b
   show (Close a) = '[' : (show a ++ "]")
   show (Habitant a) = "habitant of " ++ show a
-  show (Inh isle f) = "Below " ++ show isle ++ " is a " ++ show (f (Habitant isle)) 
+  show (Univar n a) = "|" ++ n ++ "| of " ++ show a
+  show (Inh isle f) = "Below " ++ show isle ++ " is a " ++ show (f (Habitant isle))
   show (f `App` a) = "(" ++ show f ++ " & " ++show a ++ ")" 
   show (Lam f) = "(\\" ++ show inp ++ " . " ++ show (f inp) ++ ")"
-    where inp = Close (Habitant $ Habitant Star) -- FIXME
+    where inp = Close (Univar "var" $ Habitant Star) -- FIXME
+    --where inp = Close (Habitant $ Habitant Star) -- FIXME
 
 instance Inhabitable Lam where
   starN = Star
@@ -61,7 +64,7 @@ star = starN
 
 
 (>>=) :: Inhabitable ent => ent True (S' l) -> (ent True l -> ent o l') -> ent False l'
-(>>=) = inhabit
+isle >>= scope = descope $ inhabit isle scope
 
 instance LC Lam where
   lam = Lam
@@ -81,21 +84,17 @@ knoth = do int <- star
            i & j
 
 exp :: Inhabitable ent => ent False (S' Z')
-exp = descope $ do maybe <- star^star
-                   maybe
+exp = do maybe <- star^star
+         maybe
 
 regain :: Inhabitable ent => ent False (S' Z')
-regain = descope $ do
-            int <- star
+regain = do int <- star
             i <- int
             isle i
 
-func' :: (Inhabitable ent, LC ent) => ent False Z'
-func' = do int <- star
-           i <- int
-           j <- int
-           let k = lam (\c -> lam (const c))
-           k & i & j
-
 func :: (Inhabitable ent, LC ent) => ent False Z'
-func = descope func'
+func = do int <- star
+          i <- int
+          j <- int
+          let k = lam (\c -> lam (const c))
+          k & i & j
