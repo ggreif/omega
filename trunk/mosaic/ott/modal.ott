@@ -1,6 +1,7 @@
 % minimal + latex + comments
 
-metavar termvar, V {{ tex \mathcal{V} }} ::= {{ com term variable }}
+metavar termvar, t ::= {{ com term variable }}
+metavar univar, V {{ tex \mathcal{V} }} ::= {{ com unification variable }}
 metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
 metavar diffvar, d {{ tex \mathcal{\delta} }} ::= {{ com level difference variable }}
 metavar namevar, name ::= {{ com name }}
@@ -12,7 +13,7 @@ grammar
 
   T {{ tex \mathcal{T} }} :: t_ ::= {{ com term }}
     | C              ::   :: Const                     {{ com constant }}
-    | V              ::   :: Var                       {{ com variable }}
+    | t              ::   :: Var                       {{ com variable }}
     | T T'           ::   :: App                       {{ com application }}
     | \ d T . T'     ::   :: Abs                       {{ com abstraction }}      {{ tex \lambda_{[[d]]}[[T]].[[T']] }}
     | [ T ] T'       ::   :: Box                       {{ com filled box }}
@@ -25,14 +26,22 @@ terminals :: 'terminals_' ::=
     | :   ::  :: inhabits {{ tex \mathbin{::} }}         {{ com double colon }}
     | *   ::  :: star     {{ tex \star }}                {{ com star }}
 
+
+defns Open :: 'open_' ::= 
+  defn
+  t open :: :: isopen ::'' {{ com [[t]] is an open term }} by
+
+    --------------- :: star_open
+       T open
+
 defns Boxes :: 'box_' ::= 
 
   defn
-  t1 –> t2 :: ::reduce::'' {{ com [[t1]] reduces to [[t2]]}} by
+  t1 : t2 :: :: refine ::'' {{ com [[t1]] refines to [[t2]]}} by
 
       T open
     --------------- :: has_inhabitant
-      [V] T
+      t : [t]T
 
 embed {{ tex
   Above we see the grammar of the objects of the proposed category of levelled terms.
