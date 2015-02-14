@@ -3,8 +3,8 @@
 % minimal + latex + comments
 
 metavar termvar, V {{ tex \mathcal{V} }} ::= {{ com term variable }}
-metavar diffvar, d {{ tex \mathcal{V} }} ::= {{ com term variable }}
 metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
+metavar diffvar, d {{ tex \mathcal{V} }} ::= {{ com level difference variable }}
 
 grammar
 
@@ -21,4 +21,5 @@ terminals :: 'terminals_' ::=
     | []  ::  :: emptybox {{ tex \box }}                 {{ com empty box }}
     | [   ::  :: openbox  {{ tex \openbox }}             {{ com opening box }}
     | ]   ::  :: closebox {{ tex \closebox }}            {{ com closing box }}
+    | :   ::  :: inhabits {{ tex \suchthat }}            {{ com colon }}
 
