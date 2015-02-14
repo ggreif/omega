@@ -3,17 +3,19 @@
 metavar termvar, V {{ tex \mathcal{V} }} ::= {{ com term variable }}
 metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
 metavar diffvar, d {{ tex \mathcal{\delta} }} ::= {{ com level difference variable }}
+metavar namevar, name ::= {{ com name }}
 
 grammar
   C :: c_ ::= {{ com constants }}
     | *              ::   :: Star                      {{ com the type of types }}
+    | name           ::   :: Named                     {{ com named constructor }}
 
   T {{ tex \mathcal{T} }} :: t_ ::= {{ com term }}
     | C              ::   :: Const                     {{ com constant }}
     | V              ::   :: Var                       {{ com variable }}
     | T T'           ::   :: App                       {{ com application }}
-    | \ d T . T'     ::   :: Abs                       {{ com abstraction }}
-    | [T] T'         ::   :: Box                       {{ com filled box }}
+    | \ d T . T'     ::   :: Abs                       {{ com abstraction }}      {{ tex \lambda_{[[d]]}[[T]].[[T']] }}
+    | [ T ] T'       ::   :: Box                       {{ com filled box }}
     | T : T'         ::   :: Inhabits                  {{ com inhabitation }}
     | T l            ::   :: Level                     {{ com level placement }}  {{ tex [[T]]_{[[l]]} }}
 
@@ -25,14 +27,30 @@ terminals :: 'terminals_' ::=
 
 embed {{ tex
   Above we see the grammar of the objects of the proposed category of levelled terms.
-  Every object is tagged with a starting level. For values this is 0 (zero).
+  Every object is implicitly tagged with a starting level. For values this is 0 (zero).
   The types are at level 1 and the kinds at level 2. Superkinds appear at higher levels.
-  The star (${\star}$) is the prototypical open kind. Its level is two or higher.
+  We can make the level explicit by subscripting ($\mathcal{T}_\ell$). When not placed at
+  a fixed level, a term simultaneously occupies all admissible levels ($\ell, \ell+1, ...$).
+  Admissible levels are determined by an object's context. We'll hear about this later.
+  
+  The star ($\star$) is the prototypical open kind. Its level is two or higher. Open objects
+  can be inhabitated to create fresh ones. Whether the fresh objects are themselves open or closed,
+  depends on the way how the inhabitation happens.
 
-  Every object has an implicit object at a higher level that is its classifying type. We can make this
-  explicit by appealing to the inhabitation notation ($\mathcal{T}_l \mathbin{::} \mathcal{T}_{l+1}$).
+  Every object has an implicit object at a higher level, that is its classifying type. We can make this
+  explicit by appealing to the inhabitation notation ($\mathcal{T}_\ell \mathbin{::} \mathcal{T}_{\ell+1}$).
+  $\star_\ell$ inhabits its higher-level self ($\star_\ell \mathbin{::} \star_{\ell+1}$).
 
-  New constants can be defined by inhabiting open terms.
+  We distinguish between classifying types with unknown and known inhabitance. Known inhabitance
+  induces the box modality ($\square\mathcal{T}$). Clearly this modality only makes sense at levels
+  one and up, since level zero objects are effectively always closed. When the exact inhabitant is known
+  we are free to put it into the box (e.g. $[\star_{\ell}]\star_{\ell+1}$).
+  This refines the type, effectively creating a subtype.
+
+  Type equality.
+
+  Constants are terms which have names, and we consider $\star$ a name too.
+  New constants can be defined by inhabiting open terms. Inhabitation scopes. Outwards injection.
 
 }}
 
