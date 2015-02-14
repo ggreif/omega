@@ -17,7 +17,11 @@ grammar
 terminals :: 'terminals_' ::=
     | \   ::  :: lambda   {{ tex \lambda }}              {{ com lambda }}
     | []  ::  :: emptybox {{ tex \square }}              {{ com empty box }}
-    | [   ::  :: openbox  {{ tex \openbox }}             {{ com opening box }}
-    | ]   ::  :: closebox {{ tex \closebox }}            {{ com closing box }}
-    | :   ::  :: inhabits {{ tex \mathbin{::} }}         {{ com colon }}
+    | :   ::  :: inhabits {{ tex \mathbin{::} }}         {{ com double colon }}
+
+embed {{ tex
+  Above we see the grammar of the objects of the proposed category of levelled terms.
+  
+}}
+
 
