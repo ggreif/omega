@@ -25,6 +25,15 @@ terminals :: 'terminals_' ::=
     | :   ::  :: inhabits {{ tex \mathbin{::} }}         {{ com double colon }}
     | *   ::  :: star     {{ tex \star }}                {{ com star }}
 
+defns Boxes :: 'box_' ::= 
+
+  defn
+  t1 –> t2 :: ::reduce::'' {{ com [[t1]] reduces to [[t2]]}} by
+
+      T open
+    --------------- :: has_inhabitant
+      [V] T
+
 embed {{ tex
   Above we see the grammar of the objects of the proposed category of levelled terms.
   Every object is implicitly tagged with a starting level. For values this is 0 (zero).
@@ -45,7 +54,9 @@ embed {{ tex
   induces the box modality ($\square\mathcal{T}$). Clearly this modality only makes sense at levels
   one and up, since level zero objects are effectively always closed. When the exact inhabitant is known
   we are free to put it into the box (e.g. $[\star_{\ell}]\star_{\ell+1}$).
-  This refines the type, effectively creating a subtype.
+  This refines the type, effectively creating a subtype. Putting a variable into the box equates that
+  variable to the known inhabitant, and the variable's name becomes bound in the scope. Thus empty boxes
+  can be regarded as variable filled boxes where the variable is not referred to.
 
   Type equality.
 
