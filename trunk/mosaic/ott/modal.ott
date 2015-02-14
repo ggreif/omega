@@ -5,6 +5,8 @@ metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
 metavar diffvar, d {{ tex \mathcal{\delta} }} ::= {{ com level difference variable }}
 
 grammar
+  C :: c_ ::= {{ com constants }}
+    | *              ::   :: Star                      {{ com the type of types }}
 
   T {{ tex \mathcal{T} }} :: t_ ::= {{ com term }}
     | C              ::   :: Const                     {{ com constant }}
@@ -13,15 +15,25 @@ grammar
     | \ d T . T'     ::   :: Abs                       {{ com abstraction }}
     | [T] T'         ::   :: Box                       {{ com filled box }}
     | T : T'         ::   :: Inhabits                  {{ com inhabitation }}
+    | T l            ::   :: Level                     {{ com level placement }}  {{ tex [[T]]_{[[l]]} }}
 
 terminals :: 'terminals_' ::=
     | \   ::  :: lambda   {{ tex \lambda }}              {{ com lambda }}
     | []  ::  :: emptybox {{ tex \square }}              {{ com empty box }}
     | :   ::  :: inhabits {{ tex \mathbin{::} }}         {{ com double colon }}
+    | *   ::  :: star     {{ tex \star }}                {{ com star }}
 
 embed {{ tex
   Above we see the grammar of the objects of the proposed category of levelled terms.
-  
+  Every object is tagged with a starting level. For values this is 0 (zero).
+  The types are at level 1 and the kinds at level 2. Superkinds appear at higher levels.
+  The star (${\star}$) is the prototypical open kind. Its level is two or higher.
+
+  Every object has an implicit object at a higher level that is its classifying type. We can make this
+  explicit by appealing to the inhabitation notation ($\mathcal{T}_l \mathbin{::} \mathcal{T}_{l+1}$).
+
+  New constants can be defined by inhabiting open terms.
+
 }}
 
 
