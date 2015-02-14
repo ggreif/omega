@@ -1,10 +1,8 @@
-
-
 % minimal + latex + comments
 
 metavar termvar, V {{ tex \mathcal{V} }} ::= {{ com term variable }}
 metavar levar, l {{ tex \ell }} ::= {{ com level variable }}
-metavar diffvar, d {{ tex \mathcal{V} }} ::= {{ com level difference variable }}
+metavar diffvar, d {{ tex \mathcal{\delta} }} ::= {{ com level difference variable }}
 
 grammar
 
@@ -12,14 +10,14 @@ grammar
     | C              ::   :: Const                     {{ com constant }}
     | V              ::   :: Var                       {{ com variable }}
     | T T'           ::   :: App                       {{ com application }}
-    | \d T . T'      ::   :: Abs                       {{ com abstraction }}
+    | \ d T . T'     ::   :: Abs                       {{ com abstraction }}
     | [T] T'         ::   :: Box                       {{ com filled box }}
     | T : T'         ::   :: Inhabits                  {{ com inhabitation }}
 
 terminals :: 'terminals_' ::=
     | \   ::  :: lambda   {{ tex \lambda }}              {{ com lambda }}
-    | []  ::  :: emptybox {{ tex \box }}                 {{ com empty box }}
+    | []  ::  :: emptybox {{ tex \square }}              {{ com empty box }}
     | [   ::  :: openbox  {{ tex \openbox }}             {{ com opening box }}
     | ]   ::  :: closebox {{ tex \closebox }}            {{ com closing box }}
-    | :   ::  :: inhabits {{ tex \suchthat }}            {{ com colon }}
+    | :   ::  :: inhabits {{ tex \mathbin{::} }}         {{ com colon }}
 
