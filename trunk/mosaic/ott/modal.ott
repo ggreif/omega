@@ -29,17 +29,18 @@ terminals :: 'terminals_' ::=
 
 defns Open :: 'open_' ::= 
   defn
-  t open :: :: isopen ::'' {{ com [[t]] is an open term }} by
+  T open :: :: isopen ::'' {{ com [[T]] is an open term }} by
 
     --------------- :: star_open
-       T open
+       * open
 
 defns Boxes :: 'box_' ::= 
 
   defn
-  t1 : t2 :: :: refine ::'' {{ com [[t1]] refines to [[t2]]}} by
+  T1 : T2 :: :: refine ::'' {{ com [[T1]] refines to [[T2]]}} by
 
       T open
+      t : T
     --------------- :: has_inhabitant
       t : [t]T
 
@@ -65,7 +66,7 @@ embed {{ tex
   we are free to put it into the box (e.g. $[\star_{\ell}]\star_{\ell+1}$).
   This refines the type, effectively creating a subtype. Putting a variable into the box equates that
   variable to the known inhabitant, and the variable's name becomes bound in the scope. Thus empty boxes
-  can be regarded as variable filled boxes where the variable is not referred to.
+  can be regarded as variable filled boxes ($[t]\mathcal{T}$) where the variable is not referred to.
 
   Type equality.
 
