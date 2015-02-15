@@ -95,8 +95,10 @@ embed {{ tex
   can proceed in the box.
   
 
-  Type equality.
+  \subsection{Type equality}
+  .
 
+  \subsection{Constants}
   Constants are terms which have names, and we consider $\star$ a name too.
   New constants can be defined by inhabiting open terms. Inhabitation scopes. Outwards injection.
 
@@ -111,6 +113,15 @@ embed {{ tex
   It should be noted that $\tau$ raises the level difference:
   $\tau(\lambda_0\mathcal{T}_\ell.\mathcal{T}_\ell) \longrightarrow \lambda_1\mathcal{T}_\ell.\mathcal{T'}_{\ell+1}$.
   We recognise System F's $\Lambda$ as $\lambda_0\mathcal{T}_1.\mathcal{T}_1$.
+  
+  \section{Removal of Boxes}
+  The endofunctor from our category to e.g. the category of CC is characterised by the removal of all box
+  modalities from the objects. This can be regarded as a limited form of type erasure. It is interesting to
+  consider the left adjoint to this forgetful functor. It can clearly not insert arbitrarily filled boxes at
+  every level, as every level but the smallest is a known categorising type of its level below. So for
+  $\mathcal{T}_\ell \mathbin{::} \mathcal{T'}_{\ell+1} \mathbin{::} \mathcal{T''}_{\ell+2} \mathbin{::} ...$
+  we obtain filled boxes
+  $\mathcal{T}_\ell \mathbin{::} [\mathcal{T}_\ell]\mathcal{T'}_{\ell+1} \mathbin{::} [\mathcal{T'}_{\ell+1}]\mathcal{T''}_{\ell+2} \mathbin{::} ...$
   
 
   \section{Judgements}
