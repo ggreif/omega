@@ -31,8 +31,13 @@ defns Open :: 'open_' ::=
   defn
   T open :: :: isopen ::'' {{ com [[T]] is an open term }} by
 
-    --------------- :: star_open
+    --------------- :: star
        * open
+
+       T open
+       T' : T
+    --------------- :: inhabitant
+       T' open
 
 defns Boxes :: 'box_' ::= 
 
@@ -44,7 +49,23 @@ defns Boxes :: 'box_' ::=
     --------------- :: has_inhabitant
       t : [t]T
 
+      t : [t]T
+      t' : [t0]\ d T . T'
+    ---------------------- :: lossy_fun
+      t' t : [t1]T'
+
+      t : [t0]T
+      t' : [t']\ d T . T'
+    ---------------------- :: lossy_arg
+      t' t : [t1]T'
+
+      t : [t]T
+      t' : [t']\ d T . T'
+    ---------------------- :: faithful
+      t' t : [t' t]T'
+
 embed {{ tex
+  \section{Objects}
   Above we see the grammar of the objects of the proposed category of levelled terms.
   Every object is implicitly tagged with a starting level. For values this is 0 (zero).
   The types are at level 1 and the kinds at level 2. Superkinds appear at higher levels.
@@ -67,12 +88,32 @@ embed {{ tex
   This refines the type, effectively creating a subtype. Putting a variable into the box equates that
   variable to the known inhabitant, and the variable's name becomes bound in the scope. Thus empty boxes
   can be regarded as variable filled boxes ($[t]\mathcal{T}$) where the variable is not referred to.
+  The judgements show how the modal lambda calculus' K rule carries over to our system. The lossy judgements
+  explain how the missing knowledge of the function's definition (apart from its termination) invalidates
+  our precise knowledge about the argument. Conversely precise knowledge of the function is in vain
+  when there is no precise knowledge about the argument. The faithful rule demonstrates how evaluation
+  can proceed in the box.
+  
 
   Type equality.
 
   Constants are terms which have names, and we consider $\star$ a name too.
   New constants can be defined by inhabiting open terms. Inhabitation scopes. Outwards injection.
 
+  \section{Morphisms}
+  The simplest non-trivial morphism is the extraction of a type from an object. We'll refer to it by
+  $\tau\colon \mathcal{T}_{\ell} \to \mathcal{T}_{\ell+1}$.
+
+  The $\lambda$ objects are internalised morphisms. $\lambda_0$ is the function former known from the
+  simply typed lambda calculus. $\lambda_1$ is the dependent function space type former (e.g. from the
+  calculus of constructions). Generally the $\delta$ subscript to $\lambda$ denotes the level difference
+  of the argument and the result. This is necessary to be specified as both can have admissible level ranges.
+  It should be noted that $\tau$ raises the level difference:
+  $\tau(\lambda_0\mathcal{T}_\ell.\mathcal{T}_\ell) \longrightarrow \lambda_1\mathcal{T}_\ell.\mathcal{T'}_{\ell+1}$.
+  We recognise System F's $\Lambda$ as $\lambda_0\mathcal{T}_1.\mathcal{T}_1$.
+  
+
+  \section{Judgements}
 }}
 
 
