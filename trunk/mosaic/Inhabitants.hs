@@ -8,7 +8,7 @@ data Nat' = Z' | S' Nat'
 
 class Inhabitable (ent :: Bool -> Nat' -> *) where
   starN :: ent True (S' (S' n))
-  (^) :: ent o l -> ent o' l -> ent o l -- exponent
+  (^) :: ent o (S' l) -> ent o' (S' l) -> ent o (S' l) -- exponent
   inhabit :: ent True (S' l) ->  (ent True l -> ent o l') -> ent False l'
   isle :: ent o l -> ent False (S' l)
   descope :: ent o l -> ent False l
