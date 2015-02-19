@@ -23,7 +23,7 @@ data Lam open lev where
   App :: Lam o l -> Lam p l -> Lam False l
   Inh :: Lam True (S' l) ->  (Lam True l -> Lam o l') -> Lam False l'
   Star :: Lam True (S' (S' n))
-  (:~>) :: Lam o' l -> Lam o l -> Lam o l
+  (:~>) :: Lam o' l -> Lam o l -> Lam o l -- FIXME: this should be some Pi!
   Close :: Lam True l -> Lam False l
   Habitant :: Lam True (S' l) -> Lam True l -- needed for concretising
   Univar :: P.String -> Lam o (S' l) -> Lam True l -- later this will be location based
