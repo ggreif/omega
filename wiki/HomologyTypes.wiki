@@ -10,7 +10,6 @@ to a wider audience.
 
 [
 would this fit into Journal of Functional Programming (JFP) ?
-Bell Labs Technical Journal?
 What else?
 ]
 ----------------------------------------------------
@@ -473,7 +472,7 @@ Opetopes
 
 [http://vimeo.com/6590617 Tangles, diagrams and monads] by Dan Piponi
 
-
+Gooseflesh paper: http://arxiv.org/pdf/1408.5028.pdf
 
 Relative monads (Altenkirch, Chapman, et al.)
 
