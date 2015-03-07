@@ -22,7 +22,7 @@ class Join t where
   prime :: t -> t
   (|-|) :: t -> t -> t
 
-class (Join t, LC (lc t)) => Max lc t where
+class Max lc t where
   max :: lc t -> t
 
 instance Join name => LC (Lam name) where
