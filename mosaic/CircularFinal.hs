@@ -34,6 +34,12 @@ instance Join name => LC (Lam name) where
     where body = f (Var name)
           name = prime (max body)
 
+-- operator for indeterministic choice
+
+class LC p => Indet p where
+  (~~) :: p -> p -> p
+
+
 instance Join Int where
   bot = 0
   prime = (+1)
@@ -61,16 +67,22 @@ t2 = t2'
 t3' :: Indet p => p
 t3' = lam (\a -> lam (\b -> a ~~ b))
 
-t3 :: Lam (Int, Int)
+--t3 :: Lam (Int, Int)
+t3 :: (Lam Int, Lam Int)
 t3 = t3'
 
+-- ########### the pairing trick ###########
+
+instance (LC r, LC r') => LC (r, r') where
+  (f, f') `app` (a, a') = (f `app` a, f' `app` a')
+  lam f = (lam f1, lam f2)
+      where f1 a = fst $ f (a, undefined) -- provide a bottom
+            f2 a' = snd $ f (undefined, a') -- provide a bottom
+
+instance (Indet p, Indet p') => Indet (p, p') where
+  (l, l') ~~ (r, r') = (l ~~ r, l' ~~ r')
+
 -- ########### can we use a similar trick for type inference? ###########
-
--- operator for indeterministic choice
-
-class LC p => Indet p where
-  (~~) :: p -> p -> p
-
 
 instance Join name => Indet (Lam name) where
   (~~) = Cho
