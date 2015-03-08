@@ -74,8 +74,14 @@ t3 = t3'
 t0' :: Indet p => p
 t0' = lam (\a -> a ~~ a)
 
-t0 :: (Lam Int, Ty)
+t0 :: (Lam Int, Ty Int)
 t0 = t0'
+
+t5' :: Indet p => p
+t5' = lam (\a -> lam (\b -> b ~~ b) `app` a)
+
+t5 :: (Lam Int, Ty Int)
+t5 = t5'
 
 
 -- ########### the pairing trick ###########
@@ -115,13 +121,24 @@ instance LC p => LC (Up p) where
   Up f `app` Up a = Up $ undefined -- plan: intro an abstraction arrow and apply it on type of arg to obtain type of result
 
 
-data Ty = Univ Int | Ty `Equate` Ty | Ty `Arr` Ty | Ty `TApp` Ty | Fresh
+data Ty name = Univ name | Ty name `Equate` Ty name | Ty name `Arr` Ty name | Ty name `TApp` Ty name | Fresh
   deriving Show
 
-instance LC Ty where
-  f `app` a = (f `Equate` (a `Arr` Fresh)) `TApp` a
-  lam f = u `Arr` f u
-    where u = Univ 0
+instance Join name => Max Ty name where
+  max Fresh = bot
+  max (Univ _) = bot
+  max (f `TApp` a) = max f |-| max a
+  max (a `Equate` b) = max a |-| max b
+  --max (Lam name _) = name
+  max (a `Arr` b) = max a |-| max b
 
-instance Indet Ty where
+
+instance Join name => LC (Ty name) where
+  f `app` a = (f `Equate` (a `Arr` Fresh)) `TApp` a
+  lam f = u `Arr` body
+    where u = Univ name
+          body = f u
+          name = prime (max body)
+
+instance Join name => Indet (Ty name) where
   (~~) = Equate
