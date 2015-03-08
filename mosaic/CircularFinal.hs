@@ -12,7 +12,10 @@ class LC p where
 
 -- first order interpretation
 
-data Lam name = Var name | App (Lam name) (Lam name) | Lam name (Lam name)
+data Lam name = Var name
+              | App (Lam name) (Lam name)
+              | Lam name (Lam name)
+              | Cho (Lam name) (Lam name)
   deriving Show
 
 -- join monoid
@@ -39,6 +42,7 @@ instance Join Int where
 instance Join name => Max Lam name where
   max (Var _) = bot
   max (f `App` a) = max f |-| max a
+  max (a `Cho` b) = max a |-| max b
   max (Lam name _) = name
 
 
@@ -53,3 +57,20 @@ t2' = lam (\a -> lam (\b -> a `app` b))
 
 t2 :: Lam Int
 t2 = t2'
+
+t3' :: Indet p => p
+t3' = lam (\a -> lam (\b -> a ~~ b))
+
+t3 :: Lam Int
+t3 = t3'
+
+-- ########### can we use a similar trick for type inference? ###########
+
+-- operator for indeterministic choice
+
+class LC p => Indet p where
+  (~~) :: p -> p -> p
+
+
+instance Join name => Indet (Lam name) where
+  (~~) = Cho
