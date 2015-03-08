@@ -15,7 +15,7 @@ class LC p where
 data Lam name = Var name
               | App (Lam name) (Lam name)
               | Lam name (Lam name)
-              | Cho (Lam name) (Lam name)
+              | Lam name `Cho` Lam name
   deriving Show
 
 -- join monoid
@@ -61,7 +61,7 @@ t2 = t2'
 t3' :: Indet p => p
 t3' = lam (\a -> lam (\b -> a ~~ b))
 
-t3 :: Lam Int
+t3 :: Lam (Int, Int)
 t3 = t3'
 
 -- ########### can we use a similar trick for type inference? ###########
@@ -74,3 +74,8 @@ class LC p => Indet p where
 
 instance Join name => Indet (Lam name) where
   (~~) = Cho
+
+instance Join name => Join (name, Int) where
+  bot = (bot, 42)
+  prime (p, x) = (prime p, x)
+  (a, x) |-| (b, y) = (a |-| b, x)
