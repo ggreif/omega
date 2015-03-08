@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts #-}
 import Prelude hiding (max)
 import qualified Prelude as Prelude (max)
 
@@ -71,6 +71,13 @@ t3' = lam (\a -> lam (\b -> a ~~ b))
 t3 :: (Lam Int, Lam Int)
 t3 = t3'
 
+t0' :: Indet p => p
+t0' = lam (\a -> a ~~ a)
+
+t0 :: (Lam Int, Ty)
+t0 = t0'
+
+
 -- ########### the pairing trick ###########
 
 instance (LC r, LC r') => LC (r, r') where
@@ -87,7 +94,34 @@ instance (Indet p, Indet p') => Indet (p, p') where
 instance Join name => Indet (Lam name) where
   (~~) = Cho
 
+{-
 instance Join name => Join (name, Int) where
   bot = (bot, 42)
   prime (p, x) = (prime p, x)
   (a, x) |-| (b, y) = (a |-| b, x)
+-}
+
+-- develop a vocabulary for inference
+--class LC (Lam name) => Inf p name where
+--  ofvar :: name -> p -- type of variable named
+class LC p => Inf p where
+  ofvar :: p -> p -- type of variable (must be variable!)
+  equate :: p -> p -> p
+  arr :: p -> p -> p
+
+newtype Up a = Up a -- e.g. a LC one level up (vals -> tys)
+
+instance LC p => LC (Up p) where
+  Up f `app` Up a = Up $ undefined -- plan: intro an abstraction arrow and apply it on type of arg to obtain type of result
+
+
+data Ty = Univ Int | Ty `Equate` Ty | Ty `Arr` Ty | Ty `TApp` Ty | Fresh
+  deriving Show
+
+instance LC Ty where
+  f `app` a = (f `Equate` (a `Arr` Fresh)) `TApp` a
+  lam f = u `Arr` f u
+    where u = Univ 0
+
+instance Indet Ty where
+  (~~) = Equate
