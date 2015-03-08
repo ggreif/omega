@@ -58,6 +58,12 @@ t3' = lam (\a -> lam (\b -> a ~~ b))
 t3 :: Lam (Int, Lam Int)
 t3 = t3'
 
+t4' :: Indet p => p
+t4' = lam (\a -> lam (\b -> (a `app` b) ~~ b))
+
+t4 :: Lam (Int, Lam Int)
+t4 = t4'
+
 -- ########### can we use a similar trick for type inference? ###########
 
 -- operator for indeterministic choice
