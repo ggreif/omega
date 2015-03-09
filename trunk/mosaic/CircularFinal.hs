@@ -83,6 +83,12 @@ t5' = lam (\a -> lam (\b -> b ~~ b) `app` a)
 t5 :: (Lam Int, Ty Int)
 t5 = t5'
 
+t6' :: LC p => p
+t6' = lam (\a -> a)
+
+t6 :: (Ty Int, Ty Int, [Ty Int])
+t6 = t6'
+
 
 -- ########### the pairing trick ###########
 
@@ -142,3 +148,20 @@ instance Join name => LC (Ty name) where
 
 instance Join name => Indet (Ty name) where
   (~~) = Equate
+
+
+data AllEquates = AE (Ty Int) ((Int, [Ty Int]) -> (Int, [Ty Int]))
+
+--instance Indet ((Int, [Ty Int]) -> (Int, [Ty Int])) where
+instance Indet (Ty Int, Ty Int, [Ty Int]) where
+  (_, Univ l, ls) ~~ (_, Univ r, rs) | l == r = (undefined, Univ l, ls ++ rs)
+
+instance LC (Ty Int, Ty Int, [Ty Int]) where
+  lam f = f (lam f1, Univ 1, [])
+    where f1 a = fst (f (a, undefined, undefined))
+          fst (a, b, c) = a
+          arrow@(u@Univ{} `Arr` _) = lam f1
+-- ##### experiment with collecting equate constraints
+
+
+-- ##### have a type-level fixpoint, eliminating equated universals.
