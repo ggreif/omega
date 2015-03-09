@@ -71,6 +71,13 @@ t3' = lam (\a -> lam (\b -> a ~~ b))
 t3 :: (Lam Int, Lam Int)
 t3 = t3'
 
+t3'' :: (Ty Int, Ty Int, [Ty Int])
+t3'' = t3'
+
+t3''' :: Ty Int
+t3''' = t3'
+
+
 t0' :: Indet p => p
 t0' = lam (\a -> a ~~ a)
 
@@ -152,16 +159,17 @@ instance Join name => Indet (Ty name) where
 
 data AllEquates = AE (Ty Int) ((Int, [Ty Int]) -> (Int, [Ty Int]))
 
---instance Indet ((Int, [Ty Int]) -> (Int, [Ty Int])) where
+-- ##### experiment with collecting equate constraints
 instance Indet (Ty Int, Ty Int, [Ty Int]) where
-  (_, Univ l, ls) ~~ (_, Univ r, rs) | l == r = (undefined, Univ l, ls ++ rs)
+  (lty, Univ l, ls) ~~ (rty, Univ r, rs) | l == r = (lty ~~ rty, Univ l, ls ++ rs)
+  (lty, Univ l, ls) ~~ (rty, Univ r, rs) | l > r = (lty ~~ rty, Univ l, Univ r : ls)
+  (lty, Univ l, ls) ~~ (rty, Univ r, rs) | l < r = (lty ~~ rty, Univ r, Univ l : rs)
 
 instance LC (Ty Int, Ty Int, [Ty Int]) where
-  lam f = f (lam f1, Univ 1, [])
-    where f1 a = fst (f (a, undefined, undefined))
+  lam f = f (arrow, u, [])
+    where f1 a = fst (f (a, Univ bot, []))
           fst (a, b, c) = a
           arrow@(u@Univ{} `Arr` _) = lam f1
--- ##### experiment with collecting equate constraints
 
 
 -- ##### have a type-level fixpoint, eliminating equated universals.
