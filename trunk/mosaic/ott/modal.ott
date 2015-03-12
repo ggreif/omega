@@ -123,6 +123,14 @@ embed {{ tex
   we obtain filled boxes
   $\mathcal{T}_\ell \mathbin{::} [\mathcal{T}_\ell]\mathcal{T'}_{\ell+1} \mathbin{::} [\mathcal{T'}_{\ell+1}]\mathcal{T''}_{\ell+2} \mathbin{::} ...$
 
+  \section{Iterated Boxes}
+  As we have seen, having an inhabitant (scheme) $inh$ of $\mathcal{T}$ then we can form a boxed type:
+  $inh \mathbin{::} [inh]\mathcal{T}$. Once the type level has picked up the information available from the
+  inhabitant, we can ask whether the process can be iterated? After all the same situation (a known type inhabits
+  a known kind) is occurring a level higher. So given the kinding relation $\mathcal{T} \mathbin{::} \mathcal{K}$
+  we can place $\mathcal{T}$ into $\mathcal{K}$'s box: $\mathcal{T} \mathbin{::} [\mathcal{T}]\mathcal{K}$. But we
+  can go further and even apply $\mathcal{T}$'s refinement: $[inh]\mathcal{T} \mathbin{::} [ [inh]\mathcal{T}]\mathcal{K}$.
+  This his how we obtain (nested) boxes all the way up.
 
   \section{Open Problems}
   We really want our arrows ($\lambda$s above) to be horizontal. So can we come up with a scheme to make this happen?
