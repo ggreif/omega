@@ -130,9 +130,9 @@ embed {{ tex
   
 
   \section{Iterated Boxes}
-  As we have seen, having an inhabitant (scheme) $inh$ of $\mathcal{T}$ then we can form a boxed type:
+  As we have seen, having an inhabitant (scheme) $inh$ of $\mathcal{T}$ means that we can form a boxed type:
   $inh \mathbin{::} [inh]\mathcal{T}$. Once the type level has picked up the information available from the
-  inhabitant, we can ask whether the process can be iterated? After all the same situation (a known type inhabits
+  inhabitant, we can ask whether the process can be iterated? After all, the same situation (a known type inhabits
   a known kind) is occurring a level higher. So given the kinding relation $\mathcal{T} \mathbin{::} \mathcal{K}$
   we can place $\mathcal{T}$ into $\mathcal{K}$'s box: $\mathcal{T} \mathbin{::} [\mathcal{T}]\mathcal{K}$. But we
   can go further and even apply $\mathcal{T}$'s refinement: $[inh]\mathcal{T} \mathbin{::} [ [inh]\mathcal{T}]\mathcal{K}$.
