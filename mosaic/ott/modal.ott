@@ -143,6 +143,11 @@ embed {{ tex
   the boxless type. Melli\`{e}s and Zeilberger have studied such (sub)type systems and stated that these arise as a forgetful
   functor $\mathcal{U}$ between two categories. Our task is to identify this functor. \emph{TODO}. Is it the box removal?
 
+  \section{Inhabitant schemes, Patterns, Guards}
+  The question is what information surplus can be placed in a box. My intuition is that it will be a mixture of
+  \emph{constructors} and type variables. But this is basically the concept of patterns which are a syntax for
+  value/type schemes. Further, guards (even \emph{pattern guards}) could be used to predicate the information.
+
   \section{Open Problems}
   We really want our arrows ($\lambda$s above) to be horizontal. So can we come up with a scheme to make this happen?
 
