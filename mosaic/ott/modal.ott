@@ -123,6 +123,12 @@ embed {{ tex
   we obtain filled boxes
   $\mathcal{T}_\ell \mathbin{::} [\mathcal{T}_\ell]\mathcal{T'}_{\ell+1} \mathbin{::} [\mathcal{T'}_{\ell+1}]\mathcal{T''}_{\ell+2} \mathbin{::} ...$
 
+  Another perspective on box removal is the observation that \emph{integrating} over all level-lifted inhabitants
+  will erase the information we have about the content of the box:
+  $\int^{inh \mathbin{::} \mathcal{T} } [inh]\mathcal{T} \equiv \mathcal{T}$. This in line with the \emph{coend}
+  formulation of existentials: having an existential box filling is like not having a box at all.
+  
+
   \section{Iterated Boxes}
   As we have seen, having an inhabitant (scheme) $inh$ of $\mathcal{T}$ then we can form a boxed type:
   $inh \mathbin{::} [inh]\mathcal{T}$. Once the type level has picked up the information available from the
