@@ -138,6 +138,11 @@ embed {{ tex
   can go further and even apply $\mathcal{T}$'s refinement: $[inh]\mathcal{T} \mathbin{::} [ [inh]\mathcal{T}]\mathcal{K}$.
   This his how we obtain (nested) boxes all the way up.
 
+  \section{Subtyping}
+  Clearly a non-trivial box filling (i.e. the box does not contain a type variable) constitues a \emph{subtype} of
+  the boxless type. Melli\`{e}s and Zeilberger have studied such (sub)type systems and stated that these arise as a forgetful
+  functor $\mathcal{U}$ between two categories. Our task is to identify this functor. \emph{TODO}. Is it the box removal?
+
   \section{Open Problems}
   We really want our arrows ($\lambda$s above) to be horizontal. So can we come up with a scheme to make this happen?
 
