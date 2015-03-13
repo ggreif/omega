@@ -101,11 +101,25 @@ t6 = t6'
 -- ########### a very simple initial type universe ###########
 
 data Type = Va String | Type `Ar` Type | Int | Cannot Type Type
+  deriving (Eq, Show)
 
+can :: Type -> Bool
+can Cannot{} = False
+can (a `Ar` b) = can a && can b
+can Int = True
+can Va{} = True
+
+infix 1 `unify`
 unify :: Type -> Type -> (Type, Map String Type)
-Va a `unify` Va b | a == b = (Va a, empty)
+a `unify` b | a == b = (a, empty)
+--Va a `unify` Va b | a == b = (Va a, empty)
 Va a `unify` b = (Va a, insert a b empty)
 a `unify` Va b = (Va b, insert b a empty)
+Ar a c `unify` Ar b d = if can f && can s
+     then (f `Ar` s, f' `union` s')
+     else (Ar a c `Cannot` Ar b d, empty)
+  where (f, f') = a `unify` b
+        (s, s') = c `unify` d
 
 -- ########### the pairing trick ###########
 
