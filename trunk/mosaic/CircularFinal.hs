@@ -112,14 +112,14 @@ can Va{} = True
 infix 1 `unify`
 unify :: Type -> Type -> (Type, Map String Type)
 a `unify` b | a == b = (a, empty)
---Va a `unify` Va b | a == b = (Va a, empty)
-Va a `unify` b = (Va a, insert a b empty)
-a `unify` Va b = (Va b, insert b a empty)
+Va a `unify` b = (b, singleton a b)
+a `unify` Va b = (a, singleton b a)
 Ar a c `unify` Ar b d = if can f && can s
      then (f `Ar` s, f' `union` s')
      else (Ar a c `Cannot` Ar b d, empty)
   where (f, f') = a `unify` b
         (s, s') = c `unify` d
+a `unify` b = (a `Cannot` b, empty)
 
 -- ########### the pairing trick ###########
 
