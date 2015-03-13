@@ -2,6 +2,8 @@
 import Prelude hiding (max)
 import qualified Prelude as Prelude (max)
 import Data.Map
+--import Data.Set hiding (singleton)
+import qualified Data.Set as S
 
 -- see: Axelsson, Klaessen: Using Circular Programs for Higher-Order Syntax
 -- ICFP 2013
@@ -100,8 +102,10 @@ t6 = t6'
 
 -- ########### a very simple initial type universe ###########
 
-data Type = Va String | Type `Ar` Type | Int | Cannot Type Type
+data Type = Va (S.Set String) | Type `Ar` Type | Int | Cannot Type Type
   deriving (Eq, Show)
+
+va = Va . S.singleton
 
 can :: Type -> Bool
 can Cannot{} = False
@@ -112,14 +116,17 @@ can Va{} = True
 infix 1 `unify`
 unify :: Type -> Type -> (Type, Map String Type)
 a `unify` b | a == b = (a, empty)
-Va a `unify` b = (b, singleton a b)
-a `unify` Va b = (a, singleton b a)
+Va a `unify` Va b = (Va (a `S.union` b), empty)
+Va a `unify` b = (b, a `pointsTo` b)
+a `unify` Va b = (a, b `pointsTo` a)
 Ar a c `unify` Ar b d = if can f && can s
      then (f `Ar` s, f' `union` s')
      else (Ar a c `Cannot` Ar b d, empty)
   where (f, f') = a `unify` b
         (s, s') = c `unify` d
 a `unify` b = (a `Cannot` b, empty)
+
+s `pointsTo` t = S.fold (flip insert t) empty s
 
 -- ########### the pairing trick ###########
 
