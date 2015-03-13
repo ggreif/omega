@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts #-}
 import Prelude hiding (max)
 import qualified Prelude as Prelude (max)
+import Data.Map
 
 -- see: Axelsson, Klaessen: Using Circular Programs for Higher-Order Syntax
 -- ICFP 2013
@@ -96,6 +97,15 @@ t6' = lam (\a -> a)
 t6 :: (Ty Int, Ty Int, [Ty Int])
 t6 = t6'
 
+
+-- ########### a very simple initial type universe ###########
+
+data Type = Va String | Type `Ar` Type | Int | Cannot Type Type
+
+unify :: Type -> Type -> (Type, Map String Type)
+Va a `unify` Va b | a == b = (Va a, empty)
+Va a `unify` b = (Va a, insert a b empty)
+a `unify` Va b = (Va b, insert b a empty)
 
 -- ########### the pairing trick ###########
 
