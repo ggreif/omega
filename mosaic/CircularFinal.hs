@@ -4,6 +4,7 @@ import qualified Prelude as Prelude (max)
 import Data.Map
 --import Data.Set hiding (singleton)
 import qualified Data.Set as S
+import Data.Monoid
 
 -- see: Axelsson, Klaessen: Using Circular Programs for Higher-Order Syntax
 -- ICFP 2013
@@ -115,6 +116,7 @@ can Va{} = True
 
 infix 1 `unify`
 unify :: Type -> Type -> (Type, Map String Type)
+Va a `unify` Va b | A a == A b = (a `vas` b, empty)
 a `unify` b | a == b = (a, empty)
 Va a `unify` Va b = (Va (a `S.union` b), empty)
 Va a `unify` b = (b, a `pointsTo` b)
@@ -124,9 +126,23 @@ Ar a c `unify` Ar b d = if can f && can s
      else (Ar a c `Cannot` Ar b d, empty)
   where (f, f') = a `unify` b
         (s, s') = c `unify` d
+        --`unifion`
 a `unify` b = (a `Cannot` b, empty)
 
 s `pointsTo` t = S.fold (flip insert t) empty s
+
+newtype AliasSet = A (S.Set String)
+instance Eq AliasSet where
+  A l == A r = not . S.null $ l `S.intersection` r
+
+instance Monoid AliasSet where
+  mempty = A S.empty
+  A l `mappend` A r = A $ l `S.union` r
+
+l `vas` r = Va $ l `S.union` r
+
+v0 = va "a" `Ar` Int `unify` va "b" `Ar` va "b"
+v1 = va "a" `Ar` (Int `Ar` va "a") `unify` (Int `Ar` va "b") `Ar` va "d"
 
 -- ########### the pairing trick ###########
 
