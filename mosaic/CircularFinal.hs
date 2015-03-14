@@ -137,6 +137,7 @@ a `unify` b = (a `Cannot` b, empty)
 
 s `pointsTo` t = S.fold (flip insert t) empty s
 
+-- Aliases: non-empty sets of names that are known to unify
 newtype Aliases = A (S.Set String) deriving Show
 
 instance Eq Aliases where
@@ -167,15 +168,32 @@ simplify :: (Type, String `Map` Type) -> Type
 simplify = uncurry substMap
 
 aliasSets :: Type -> S.Set Aliases -> S.Set Aliases
-Va names `aliasSets` set | (sames, diffs) <- (== A names) `S.partition` set = S.union (smash sames) diffs
-  where smash = S.singleton . A . S.unions . (names:) . L.map (\(A s) -> s) . S.toList
+Va names `aliasSets` set = unB $ (B . S.singleton . A) names `mappend` B set
 (a `Ar` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 (a `Cannot` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 Int `aliasSets` set = set
 
-instance Monoid (S.Set Aliases) where
-  --(S.null -> True) `mappend` rs = rs
-  (S.toList -> ls) `mappend` rs = ls `go` rs
+b = B . S.singleton . A
+
+-- repMin-like circularity
+als :: Type -> AliasSet -> (Type, AliasSet)
+Va names `als` B s | Just (A full) <- A names `S.lookupLE` s = (Va full, b names)
+(a `Ar` b) `als` s | (a', as) <- a `als` s
+                   , (b', bs) <- b `als` s
+                   = (a' `Ar` b', as `mappend` bs)
+Int `als` s = (Int, B S.empty)
+
+trace f t = out
+   where (out, feedback) = f t feedback
+
+wumm = trace als
+
+-- AliasSet: alias-disjoint name sets
+newtype AliasSet = B (S.Set Aliases) deriving Show
+unB (B b) = b
+
+instance Monoid AliasSet where
+  (S.toList . unB -> ls) `mappend` (B rs) = B $ ls `go` rs
      where [] `go` rs = rs
            (ls:rest) `go` rs | (sames, diffs) <- (== ls) `S.partition` rs = rest `go` S.union (smash ls sames) diffs
            smash a = S.singleton . A . S.unions . L.map (\(A s) -> s) . (a:) . S.toList
