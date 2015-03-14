@@ -135,7 +135,7 @@ a `unify` b = (a `Cannot` b, empty)
 
 s `pointsTo` t = S.fold (flip insert t) empty s
 
-newtype AliasSet = A (S.Set String)
+newtype AliasSet = A (S.Set String) deriving Show
 instance Eq AliasSet where
   A l == A r = not . S.null $ l `S.intersection` r
 
@@ -158,15 +158,27 @@ c@Cannot{} `subst` _ = c
 
 substMap :: Type -> String `Map` Type -> Type
 ty `substMap` m = ty `subst` \nam -> case nam `lookup` m of Just ty -> ty; _ -> va nam
+-- TODO: canonicalize map first!
 
 simplify :: (Type, String `Map` Type) -> Type
 simplify = uncurry substMap
+
+aliasSets :: Type -> S.Set AliasSet -> S.Set AliasSet
+Va names `aliasSets` set | Just found <- A names `S.lookupLE` set = S.insert (A names `mappend` found) set
+Va names `aliasSets` set =  A names `S.insert` set
+(a `Ar` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
+(a `Cannot` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
+Int `aliasSets` set = set
 
 l `vas` r = Va $ l `S.union` r
 
 v0 = va "a" `Ar` Int `unify` va "b" `Ar` va "b"
 v1 = va "a" `Ar` (Int `Ar` va "a") `unify` (Int `Ar` va "b") `Ar` va "d"
 v2 = va "a" `Ar` va "a" `unify` Int `Ar` Int
+v3 = va "a" `Ar` (Int `Ar` va "b") `unify` va "a1" `Ar` (Int `Ar` va "b1")
+
+av0 = fst v0 `aliasSets` S.empty
+av3 = fst v3 `aliasSets` S.empty
 
 -- ########### the pairing trick ###########
 
