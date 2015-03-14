@@ -137,16 +137,16 @@ a `unify` b = (a `Cannot` b, empty)
 
 s `pointsTo` t = S.fold (flip insert t) empty s
 
-newtype AliasSet = A (S.Set String) deriving Show
+newtype Aliases = A (S.Set String) deriving Show
 
-instance Eq AliasSet where
+instance Eq Aliases where
   A l == A r = not . S.null $ l `S.intersection` r
 
-instance Monoid AliasSet where
+instance Monoid Aliases where
   mempty = A S.empty
   A l `mappend` A r = A $ l `S.union` r
 
-instance Ord AliasSet where
+instance Ord Aliases where
   A l `compare` A r | A l == A r = EQ
   A l `compare` A r = leader l `compare` leader r
 
@@ -166,14 +166,14 @@ ty `substMap` m = ty `subst` \nam -> case nam `lookup` m of Just ty -> ty; _ -> 
 simplify :: (Type, String `Map` Type) -> Type
 simplify = uncurry substMap
 
-aliasSets :: Type -> S.Set AliasSet -> S.Set AliasSet
+aliasSets :: Type -> S.Set Aliases -> S.Set Aliases
 Va names `aliasSets` set | (sames, diffs) <- (== A names) `S.partition` set = S.union (smash sames) diffs
   where smash = S.singleton . A . S.unions . (names:) . L.map (\(A s) -> s) . S.toList
 (a `Ar` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 (a `Cannot` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 Int `aliasSets` set = set
 
-instance Monoid (S.Set AliasSet) where
+instance Monoid (S.Set Aliases) where
   --(S.null -> True) `mappend` rs = rs
   (S.toList -> ls) `mappend` rs = ls `go` rs
      where [] `go` rs = rs
