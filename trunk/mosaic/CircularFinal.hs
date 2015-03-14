@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts #-}
-import Prelude hiding (max)
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts, ViewPatterns #-}
+import Prelude hiding (max, null)
 import qualified Prelude as Prelude (max)
 import Data.Map
 --import Data.Set hiding (singleton)
@@ -122,11 +122,14 @@ Va a `unify` Va b = (Va (a `S.union` b), empty)
 Va a `unify` b = (b, a `pointsTo` b)
 a `unify` Va b = (a, b `pointsTo` a)
 Ar a c `unify` Ar b d = if can f && can s
-     then (f `Ar` s, f' `union` s')
+     then (f `Ar` s, f' `unifion` s')
      else (Ar a c `Cannot` Ar b d, empty)
   where (f, f') = a `unify` b
         (s, s') = c `unify` d
-        --`unifion`
+        l `unifion` r | int <- l `intersection` r
+          = case int of
+            (null -> True) -> l `union` r
+            overlap -> error $ "overlapping keys: " ++ show (keysSet overlap)
 a `unify` b = (a `Cannot` b, empty)
 
 s `pointsTo` t = S.fold (flip insert t) empty s
@@ -143,6 +146,7 @@ l `vas` r = Va $ l `S.union` r
 
 v0 = va "a" `Ar` Int `unify` va "b" `Ar` va "b"
 v1 = va "a" `Ar` (Int `Ar` va "a") `unify` (Int `Ar` va "b") `Ar` va "d"
+v2 = va "a" `Ar` va "a" `unify` Int `Ar` Int
 
 -- ########### the pairing trick ###########
 
