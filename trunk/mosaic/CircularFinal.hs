@@ -177,10 +177,13 @@ b = B . S.singleton . A
 
 -- repMin-like circularity
 als :: Type -> AliasSet -> (Type, AliasSet)
-Va names `als` B s | Just (A full) <- A names `S.lookupLE` s = (Va full, b names)
-(a `Ar` b) `als` s | (a', as) <- a `als` s
-                   , (b', bs) <- b `als` s
-                   = (a' `Ar` b', as `mappend` bs)
+--Va names `als` B s | Just (A full) <- A names `S.lookupLE` s = (Va full, b names)
+Va names `als` B s = (Va full, b names)
+  where Just (A full) = A names `S.lookupLE` s
+(a `Ar` b) `als` s = (a' `Ar` b', as `mappend` bs)
+  where (a', as) = a `als` s
+        (b', bs) = b `als` s
+
 Int `als` s = (Int, B S.empty)
 
 trace f t = out
