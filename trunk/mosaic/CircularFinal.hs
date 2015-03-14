@@ -7,6 +7,7 @@ import qualified Data.List as L
 --import Data.Set hiding (singleton)
 import qualified Data.Set as S
 import Data.Monoid
+import Data.Function
 
 -- see: Axelsson, Klaessen: Using Circular Programs for Higher-Order Syntax
 -- ICFP 2013
@@ -137,6 +138,7 @@ a `unify` b = (a `Cannot` b, empty)
 s `pointsTo` t = S.fold (flip insert t) empty s
 
 newtype AliasSet = A (S.Set String) deriving Show
+
 instance Eq AliasSet where
   A l == A r = not . S.null $ l `S.intersection` r
 
@@ -165,18 +167,18 @@ simplify :: (Type, String `Map` Type) -> Type
 simplify = uncurry substMap
 
 aliasSets :: Type -> S.Set AliasSet -> S.Set AliasSet
---Va names `aliasSets` set | Just found <- A names `S.lookupLE` set = S.insert (A names `mappend` found) set
 Va names `aliasSets` set | (sames, diffs) <- (== A names) `S.partition` set = S.union (smash sames) diffs
   where smash = S.singleton . A . S.unions . (names:) . L.map (\(A s) -> s) . S.toList
---Va names `aliasSets` set =  A names `S.insert` set
 (a `Ar` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 (a `Cannot` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 Int `aliasSets` set = set
 
-instance Monoid (S.Set AliasSet) where 
-  (S.toList -> (ls:_)) `mappend` rs | (sames, diffs) <- (== ls) `S.partition` rs = S.union (smash sames) diffs
-     where smash = S.singleton . A . S.unions . L.map (\(A s) -> s) . (ls:) . S.toList
-
+instance Monoid (S.Set AliasSet) where
+  --(S.null -> True) `mappend` rs = rs
+  (S.toList -> ls) `mappend` rs = ls `go` rs
+     where [] `go` rs = rs
+           (ls:rest) `go` rs | (sames, diffs) <- (== ls) `S.partition` rs = rest `go` S.union (smash ls sames) diffs
+           smash a = S.singleton . A . S.unions . L.map (\(A s) -> s) . (a:) . S.toList
 
 l `vas` r = Va $ l `S.union` r
 
