@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts, ViewPatterns #-}
-import Prelude hiding (max, null)
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts
+           , ViewPatterns, TypeOperators #-}
+import Prelude hiding (max, null, lookup)
 import qualified Prelude as Prelude (max)
 import Data.Map
 --import Data.Set hiding (singleton)
@@ -141,6 +142,25 @@ instance Eq AliasSet where
 instance Monoid AliasSet where
   mempty = A S.empty
   A l `mappend` A r = A $ l `S.union` r
+
+instance Ord AliasSet where
+  A l `compare` A r | A l == A r = EQ
+  A l `compare` A r = leader l `compare` leader r
+
+leader = S.elemAt 0 -- widest in scope: best
+followers = tail . S.toList -- inferiors
+
+subst :: Type -> (String -> Type) -> Type
+Va (leader -> l) `subst` f = f l
+Int `subst` _ = Int
+Ar a b `subst` f = subst a f `Ar` subst b f
+c@Cannot{} `subst` _ = c
+
+substMap :: Type -> String `Map` Type -> Type
+ty `substMap` m = ty `subst` \nam -> case nam `lookup` m of Just ty -> ty; _ -> va nam
+
+simplify :: (Type, String `Map` Type) -> Type
+simplify = uncurry substMap
 
 l `vas` r = Va $ l `S.union` r
 
