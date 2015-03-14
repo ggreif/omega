@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts
            , ViewPatterns, TypeOperators #-}
-import Prelude hiding (max, null, lookup)
+import Prelude hiding (max, null, lookup, map)
 import qualified Prelude as Prelude (max)
 import Data.Map
+import qualified Data.List as L
 --import Data.Set hiding (singleton)
 import qualified Data.Set as S
 import Data.Monoid
@@ -177,8 +178,16 @@ v1 = va "a" `Ar` (Int `Ar` va "a") `unify` (Int `Ar` va "b") `Ar` va "d"
 v2 = va "a" `Ar` va "a" `unify` Int `Ar` Int
 v3 = va "a" `Ar` (Int `Ar` va "b") `unify` va "a1" `Ar` (Int `Ar` va "b1")
 
+aliases = (`aliasSets` S.empty)
 av0 = fst v0 `aliasSets` S.empty
+av1 = aliases $ fst v1
 av3 = fst v3 `aliasSets` S.empty
+av4 = aliases $ Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.map return "bcd")
+                 `Ar` Va (S.fromList $ L.map return "ef")
+av5 = aliases $ (Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.map return "def"))
+                 `Ar` Va (S.fromList $ L.map return "be")
+av5' = aliases $ Va (S.fromList $ L.map return "be")
+                 `Ar`  (Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.map return "def"))
 
 -- ########### the pairing trick ###########
 
