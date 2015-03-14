@@ -165,11 +165,18 @@ simplify :: (Type, String `Map` Type) -> Type
 simplify = uncurry substMap
 
 aliasSets :: Type -> S.Set AliasSet -> S.Set AliasSet
-Va names `aliasSets` set | Just found <- A names `S.lookupLE` set = S.insert (A names `mappend` found) set
-Va names `aliasSets` set =  A names `S.insert` set
+--Va names `aliasSets` set | Just found <- A names `S.lookupLE` set = S.insert (A names `mappend` found) set
+Va names `aliasSets` set | (sames, diffs) <- (== A names) `S.partition` set = S.union (smash sames) diffs
+  where smash = S.singleton . A . S.unions . (names:) . L.map (\(A s) -> s) . S.toList
+--Va names `aliasSets` set =  A names `S.insert` set
 (a `Ar` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 (a `Cannot` b) `aliasSets` set = a `aliasSets` (b `aliasSets` set)
 Int `aliasSets` set = set
+
+instance Monoid (S.Set AliasSet) where 
+  (S.toList -> (ls:_)) `mappend` rs | (sames, diffs) <- (== ls) `S.partition` rs = S.union (smash sames) diffs
+     where smash = S.singleton . A . S.unions . L.map (\(A s) -> s) . (ls:) . S.toList
+
 
 l `vas` r = Va $ l `S.union` r
 
@@ -188,6 +195,8 @@ av5 = aliases $ (Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.ma
                  `Ar` Va (S.fromList $ L.map return "be")
 av5' = aliases $ Va (S.fromList $ L.map return "be")
                  `Ar`  (Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.map return "def"))
+av51 = aliases $ Va (S.fromList $ L.map return "abc")
+av52 = aliases $ Va (S.fromList $ L.map return "def")
 
 -- ########### the pairing trick ###########
 
