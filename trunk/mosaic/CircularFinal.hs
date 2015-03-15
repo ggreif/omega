@@ -136,13 +136,20 @@ Ar a c `unify` Ar b d = if can f && can s
 a `unify` b = (a `Cannot` b, empty)
 
 pointsTo :: S.Set String -> Type -> Aliases `Map` Type
-(A -> s) `pointsTo` t = singleton s t
+s `pointsTo` t = singleton (A s) t
+
+-- TODO: Eliminate overlaps by unification
+
+
 
 -- Aliases: non-empty sets of names that are known to unify
 newtype Aliases = A (S.Set String) deriving Show
 
 instance Eq Aliases where
   A l == A r = not . S.null $ l `S.intersection` r
+-- Note: this is not a transitive thing:
+--       a == b /\ b == c /=> a == c, as there may not be an overlap
+--       a = {1,2}, b = {2,3}, c = {3,4}
 
 instance Monoid Aliases where
   mempty = A S.empty
@@ -151,6 +158,11 @@ instance Monoid Aliases where
 instance Ord Aliases where
   A l `compare` A r | A l == A r = EQ
   A l `compare` A r = leader l `compare` leader r
+-- Note: this is not a transitive thing, so do not expect
+--       the normal indexing into a map to work
+--       we have kind of a partial order, as equality messes up things
+--            a < b /\ b < c => a < c only when a /= c
+
 
 leader = S.elemAt 0 -- widest in scope: best
 followers = tail . S.toList -- inferiors
@@ -185,12 +197,17 @@ Va names `als` B s = (Va full, b names)
         (b', bs) = b `als` s
 Int `als` s = (Int, B S.empty)
 
+alsM :: Aliases `Map` Type -> AliasSet -> (Aliases `Map` Type, AliasSet)
+alsM = undefined
+
 trace f t = out
    where (out, feedback) = f t feedback
 
 wumm = trace als
 
 -- AliasSet: alias-disjoint name sets
+-- CAVEAT: all keys must be mutually disjoint!
+--
 newtype AliasSet = B (S.Set Aliases) deriving Show
 unB (B b) = b
 
