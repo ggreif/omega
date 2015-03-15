@@ -167,17 +167,17 @@ instance Ord Aliases where
 leader = S.elemAt 0 -- widest in scope: best
 followers = tail . S.toList -- inferiors
 
-subst :: Type -> (String -> Type) -> Type
-Va (leader -> l) `subst` f = f l
+subst :: Type -> (Aliases -> Type) -> Type
+Va (A -> l) `subst` f = f l
 Int `subst` _ = Int
 Ar a b `subst` f = subst a f `Ar` subst b f
 c@Cannot{} `subst` _ = c
 
-substMap :: Type -> String `Map` Type -> Type
-ty `substMap` m = ty `subst` \nam -> case nam `lookup` m of Just ty -> ty; _ -> va nam
+substMap :: Type -> Aliases `Map` Type -> Type
+ty `substMap` m = ty `subst` \nam@(A ns) -> case nam `lookup` m of Just ty -> ty; _ -> Va ns
 -- TODO: canonicalize map first!
 
-simplify :: (Type, String `Map` Type) -> Type
+simplify :: (Type, Aliases `Map` Type) -> Type
 simplify = uncurry substMap
 
 aliasSets :: Type -> S.Set Aliases -> S.Set Aliases
