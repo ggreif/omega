@@ -198,12 +198,22 @@ Va names `als` B s = (Va full, b names)
 Int `als` s = (Int, B S.empty)
 
 alsM :: Aliases `Map` Type -> AliasSet -> (Aliases `Map` Type, AliasSet)
-alsM = undefined
+alsM m a@(B s) = (map (fst . flip als a) (mapKeys go m), B (keysSet m))
+  where go k | Just full <- k `S.lookupLE` s = full
+
+als2 :: (Type, Aliases `Map` Type) -> AliasSet -> ((Type, Aliases `Map` Type), AliasSet)
+als2 (t, m) s = ((t', m'), ts `mappend` ms)
+  where (t', ts) = t `als` s
+        (m', ms) = m `alsM` s
 
 trace f t = out
    where (out, feedback) = f t feedback
 
 wumm = trace als
+mumm = trace alsM
+bumm = trace als2
+
+-- Research Q: do alias sets form sheaves/toposes?
 
 -- AliasSet: alias-disjoint name sets
 -- CAVEAT: all keys must be mutually disjoint!
