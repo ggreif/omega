@@ -118,7 +118,7 @@ can Int = True
 can Va{} = True
 
 infix 1 `unify`
-unify :: Type -> Type -> (Type, Map String Type)
+unify :: Type -> Type -> (Type, Aliases `Map` Type)
 Va a `unify` Va b | A a == A b = (a `vas` b, empty)
 a `unify` b | a == b = (a, empty)
 Va a `unify` Va b = (Va (a `S.union` b), empty)
@@ -135,7 +135,8 @@ Ar a c `unify` Ar b d = if can f && can s
             overlap -> error $ "overlapping keys: " ++ show (keysSet overlap)
 a `unify` b = (a `Cannot` b, empty)
 
-s `pointsTo` t = S.fold (flip insert t) empty s
+pointsTo :: S.Set String -> Type -> Aliases `Map` Type
+(A -> s) `pointsTo` t = singleton s t
 
 -- Aliases: non-empty sets of names that are known to unify
 newtype Aliases = A (S.Set String) deriving Show
