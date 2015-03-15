@@ -3,7 +3,7 @@
 
 = The Name =
 
-[http://ix.cs.uoregon.edu/~ariola/cycles.pdf Ariola's work] contains an early mention of the _lambda-graph_. It remains to be seen whether my treatment of `letrec` is different/better and how.
+[http://ix.cs.uoregon.edu/~ariola/cycles.pdf Ariola's work] contains an early mention of the _lambda-graph_. It remains to be seen whether my treatment of `letprec` is different/better and how.
 
 Recent research uses !TermGraph as the name: http://arxiv.org/pdf/1401.1460.pdf
 
@@ -157,7 +157,7 @@ Clearly, references encoding the same path unify, as do variables. Applications 
 
 But when two on-top variables unify, and we integrate the lhs and rhs graphs after the successful unification into a common graph, we have to be careful not to keep both variables around. Instead make a top-to-bottom reference.
 
-I am tempted to introduce a unification node (besides application nodes) to record successful (past) unifications. Reference paths crossing through unification nodes are then the eliminated variables.
+I am tempted to introduce a unification node (besides application nodes) to record successful (past) unifications. Reference paths crossing through unification nodes are then the eliminated variables. May we  consider the unifications as local gluings of "continents" and have something like a sheaf, that describes the globality of our program? The only reference to "unification" and "sheaf" that I found is http://arxiv.org/pdf/1403.3351.pdf
 
 NB.: This seems to rhyme well with "equality types" of MLTT, where these are needed as a primitive.
 
