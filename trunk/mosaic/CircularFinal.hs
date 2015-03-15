@@ -177,13 +177,11 @@ b = B . S.singleton . A
 
 -- repMin-like circularity
 als :: Type -> AliasSet -> (Type, AliasSet)
---Va names `als` B s | Just (A full) <- A names `S.lookupLE` s = (Va full, b names)
 Va names `als` B s = (Va full, b names)
   where Just (A full) = A names `S.lookupLE` s
 (a `Ar` b) `als` s = (a' `Ar` b', as `mappend` bs)
   where (a', as) = a `als` s
         (b', bs) = b `als` s
-
 Int `als` s = (Int, B S.empty)
 
 trace f t = out
@@ -196,6 +194,7 @@ newtype AliasSet = B (S.Set Aliases) deriving Show
 unB (B b) = b
 
 instance Monoid AliasSet where
+  mempty = B mempty
   (S.toList . unB -> ls) `mappend` (B rs) = B $ ls `go` rs
      where [] `go` rs = rs
            (ls:rest) `go` rs | (sames, diffs) <- (== ls) `S.partition` rs = rest `go` S.union (smash ls sames) diffs
