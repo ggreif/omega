@@ -136,7 +136,7 @@ Ar a c `unify` Ar b d = if can f && can s
 a `unify` b = (a `Cannot` b, empty)
 
 pointsTo :: S.Set String -> Type -> Aliases `Map` Type
-s `pointsTo` t = singleton (A s) t
+s `pointsTo` t = singleton (A s) t -- OCCURS CHECK missing, any mentions of `s` in `t`?
 
 -- TODO: Eliminate overlaps by unification
 
@@ -167,15 +167,16 @@ instance Ord Aliases where
 leader = S.elemAt 0 -- widest in scope: best
 followers = tail . S.toList -- inferiors
 
+-- assumes that the alias continents are maximal
 subst :: Type -> (Aliases -> Type) -> Type
-Va (A -> l) `subst` f = f l
+Va l `subst` f = f (A l)
 Int `subst` _ = Int
 Ar a b `subst` f = subst a f `Ar` subst b f
 c@Cannot{} `subst` _ = c
 
+-- assumes that the alias continents are maximal
 substMap :: Type -> Aliases `Map` Type -> Type
-ty `substMap` m = ty `subst` \nam@(A ns) -> case nam `lookup` m of Just ty -> ty; _ -> Va ns
--- TODO: canonicalize map first!
+ty `substMap` m = ty `subst` \as@(A ns) -> case as `lookup` m of Just ty -> ty; _ -> Va ns
 
 simplify :: (Type, Aliases `Map` Type) -> Type
 simplify = uncurry substMap
