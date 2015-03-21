@@ -139,7 +139,8 @@ pointsTo :: S.Set String -> Type -> Aliases `Map` Type
 s `pointsTo` t = singleton (A s) t -- OCCURS CHECK missing, any mentions of `s` in `t`?
 
 -- TODO: Eliminate overlaps by unification
-
+-- TODO: utilize type system to avoid Va as values in Map
+-- CHECK: add assertion that pointsTo dies not cause continent growth
 
 
 -- Aliases: non-empty sets of names that are known to unify
