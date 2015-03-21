@@ -119,6 +119,13 @@ can (a `Ar` b) = can a && can b
 can Int = True
 can Va{} = True
 
+
+-- NOTE: unify must have a *much* more precise type, that describes all the
+--       distinct islands that are known. Then it can be decided whether
+--       obligations surface because of island merging. It must be a minimal
+--       cover. I.e. smallest set of mutually disjoint islands that covers
+--       them all.
+
 infix 1 `unify`
 unify :: Type -> Type -> (Type, Aliases `Map` Type)
 Va a `unify` Va b | A a == A b = (a `vas` b, empty)
@@ -143,6 +150,19 @@ s `pointsTo` t = singleton (A s) t -- OCCURS CHECK missing, any mentions of `s` 
 -- TODO: Eliminate overlaps by unification
 -- TODO: utilize type system to avoid Va as values in Map
 -- CHECK: add assertion that pointsTo does not cause continent growth
+
+-- NOTE: *Any* island growth can lead to fresh unification obligations.
+--       So what we really need is an algo, that returns a list of
+--       obligations too for circular solving purposes.
+
+joinObl :: Aliases `Map` Type -> Aliases `Map` Type -> (Aliases `Map` Type, [(Type, Type)])
+joinObl = error "TODO: cartesian product of keys?"
+
+
+
+
+
+
 
 
 -- Aliases: non-empty sets of names that are known to unify
