@@ -109,7 +109,9 @@ t6 = t6'
 data Type = Va (S.Set String) | Type `Ar` Type | Int | Cannot Type Type
   deriving (Eq, Show)
 
+va, va' :: String -> Type
 va = Va . S.singleton
+va' = Va . S.fromList . fmap return
 
 can :: Type -> Bool
 can Cannot{} = False
@@ -122,8 +124,8 @@ unify :: Type -> Type -> (Type, Aliases `Map` Type)
 Va a `unify` Va b | A a == A b = (a `vas` b, empty)
 a `unify` b | a == b = (a, empty)
 Va a `unify` Va b = (Va (a `S.union` b), empty)
-Va a `unify` b = (b, a `pointsTo` b)
-a `unify` Va b = (a, b `pointsTo` a)
+Va a `unify` b = bumm (b, a `pointsTo` b)
+a `unify` Va b = Va b `unify` a
 Ar a c `unify` Ar b d = if can f && can s
      then (f `Ar` s, f' `unifion` s')
      else (Ar a c `Cannot` Ar b d, empty)
@@ -140,7 +142,7 @@ s `pointsTo` t = singleton (A s) t -- OCCURS CHECK missing, any mentions of `s` 
 
 -- TODO: Eliminate overlaps by unification
 -- TODO: utilize type system to avoid Va as values in Map
--- CHECK: add assertion that pointsTo dies not cause continent growth
+-- CHECK: add assertion that pointsTo does not cause continent growth
 
 
 -- Aliases: non-empty sets of names that are known to unify
@@ -213,6 +215,8 @@ trace f t = out
 
 wumm = trace als
 mumm = trace alsM
+
+bumm :: (Type, Aliases `Map` Type) -> (Type, Aliases `Map` Type)
 bumm = trace als2
 
 -- Research Q: do alias sets form sheaves/toposes?
@@ -241,14 +245,17 @@ aliases = (`aliasSets` S.empty)
 av0 = fst v0 `aliasSets` S.empty
 av1 = aliases $ fst v1
 av3 = fst v3 `aliasSets` S.empty
-av4 = aliases $ Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.map return "bcd")
-                 `Ar` Va (S.fromList $ L.map return "ef")
-av5 = aliases $ (Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.map return "def"))
-                 `Ar` Va (S.fromList $ L.map return "be")
-av5' = aliases $ Va (S.fromList $ L.map return "be")
-                 `Ar`  (Va (S.fromList $ L.map return "abc") `Ar` Va (S.fromList $ L.map return "def"))
-av51 = aliases $ Va (S.fromList $ L.map return "abc")
-av52 = aliases $ Va (S.fromList $ L.map return "def")
+av4 = aliases $ va' "abc" `Ar` va' "bcd"
+                 `Ar` va' "ef"
+av5 = aliases $ (va' "abc" `Ar` va' "def")
+                 `Ar` va' "be"
+av5' = aliases $ va' "be"
+                 `Ar`  (va' "abc" `Ar` va' "def")
+av51 = aliases $ va' "abc"
+av52 = aliases $ va' "def"
+
+b1 = Ar (va "a") (va "c") `unify` va' "abc"
+b2 = Ar (va "a") (va "c") `unify` va' "abc"
 
 -- ########### the pairing trick ###########
 
