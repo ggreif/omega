@@ -1,6 +1,6 @@
 Normally unification is presented in catergory-theoreic terms as a coequalizer:
 
-we have an indexed set of equations s_i = t_i where the ${s_i, t_i}$ are terms.
+we have an indexed set of equations $s_i = t_i$ where the ${s_i, t_i}$ are terms.
 Then we ask the algorithm for a most generic unifier $q$ .
 
 TODO: describe how the unification works.
@@ -11,5 +11,12 @@ The second observation is that having substitutions with just variables as the s
 My suggestion is to create an equivalence class of variable names that contains both $v$ and $w$. We'll revisit this issue later but for now it is enough to hint at path-connectedness (i.e. \emph groupoids).
 
 Then the domain of our Kleisli-arrows must be equivalence classes of variable names. Since a single variable name in $T_{\Omega}W$ uniquely determines the equivalence class of variable names, why not also pass to quotients in $T_{\Omega}W$?
+We'll do so now. What we get is monads over equivalence classes (quotiened sets). This also means that the number of bindings in unifiers will potentially decrease, because \itemize
+a) we do not have variable-to-variable substitutions any more,
+b) we'll have only one instead of $a \to x$, $b \to y$ bindings when $a$ and $b$ happen to land in the same equivalence class.
+
+But this brings us to the principal problem with this approach. When we augment an equivalence class for whatever reason, we have to hunt down all bindings that are affected and coalesce them. Which in turn may expose more obligations to merge classes until a fixpoint is reached. When we had a finite number of variable names to start with, this process will terminate.
+
+
 
 
