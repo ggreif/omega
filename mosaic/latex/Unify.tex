@@ -24,6 +24,12 @@ We'll do so now. What we get is monads over equivalence classes (quotiened sets)
 \item[b)] we'll have only one instead of $\{a \to x, b \to y\}$ bindings when $a$ and $b$ happen to land in the same equivalence class.
 \end{itemize}
 But this brings us to the principal problem with this approach. When we augment an equivalence class for whatever reason, we have to hunt down all bindings that are affected and coalesce them. Which in turn may expose more obligations to merge classes until a fixpoint is reached. When we had a finite number of variable names to start with, this process will terminate.
+\par Our algorithm must keep a worklist of outstanding unification necessities (i.e. unmerged terms) and the current up-to-date substitution with consolidated equivalence classes.
+When the former list becomes empty, we have the desired mgu in our hands.
+If we can establish a correct-by construction data type for substitutions that precludes the possibility of overlapping equivalence classes in the key- as well as the term set of the substitution, then we get an almost machine-checked algorithm.
+
+\section {Groupoids}
+Let's come back to the idea of equivalence classes. We noted that they merge when we encounter two variable names (or more precisely their classes) that must be unified. But how can we make the notion of the classes precise? I propose to build paths between variable names, thus obtain path-connected components in the set of variable names. The elements of the loop space then become the connected components and classes. TODO: check that this is indeed a groupoid. $T_{\Omega}$ is then a functor between groupoids.
 
 \section {Bibliography}
 \begin{itemize}
