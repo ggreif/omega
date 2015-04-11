@@ -8,7 +8,7 @@ view: $(LATEX-FILES:%.tex=%.pdf)
 	acroread $< &
 
 %.pdf: %.tex
-	pdflatex $< > /dev/null && sha1sum $@ > $(@:%.pdf=%.sum)
+	pdflatex -interaction=nonstopmode $< > /dev/null && sha1sum $@ > $(@:%.pdf=%.sum)
 
 clean:
 	rm -f *.log *.tex *.pdf *.aux
