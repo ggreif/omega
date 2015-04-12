@@ -22,8 +22,10 @@ type family AlienTo (t :: k) (ts :: [k]) :: Constraint where
 
 
 instance {-# OVERLAPPING #-} KnownSymbol s => Show (Proxy (s :: Symbol)) where
- -- show (Proxy :: Proxy n) = symbolVal p
-  show p = symbolVal p
+  show = ('#' :) . symbolVal
+instance {-# OVERLAPPING #-} KnownNat n => Show (Proxy (n :: Nat)) where
+  show = ('#' :) . show . natVal
+
 
 class Known (v :: k) where
   --order
@@ -47,3 +49,4 @@ deriving instance Show (Subst bvs tvs)
 
 t1 = V (Proxy :: Proxy "b") :: Term '["a", "b"]
 t2 = Extend (Proxy :: Proxy 0) t1 Empty
+t3 = Extend (Proxy :: Proxy 0) t1 (Extend (Proxy :: Proxy 1) t1 Empty)
