@@ -27,7 +27,11 @@ instance {-# OVERLAPPING #-} KnownNat n => Show (Proxy (n :: Nat)) where
   show = ('#' :) . show . natVal
 
 
-class Known (v :: k) where
+type family MoreKnown (v :: k) :: Constraint where
+  MoreKnown (s :: Symbol) = KnownSymbol s
+  MoreKnown (n :: Nat) = KnownNat n
+
+class MoreKnown v => Known (v :: k) where
   --order
 instance KnownSymbol s => Known s where
   --order = undefined
@@ -38,15 +42,22 @@ data Term :: [k] -> * where
   Arr :: Term vs -> Term vs -> Term vs
   V :: (Known v, v `ElemOf` vs) => Proxy v -> Term vs
 
-deriving instance Show (Term vs)
+deriving instance {-# OVERLAPPING #-} Show (Term (vs :: [Nat]))
+deriving instance {-# OVERLAPPING #-} Show (Term (vs :: [Symbol]))
+deriving instance Show (Term vs) -- BUG?? does not pick up orphans
 
 
 data Subst :: [k] -> [j] -> * where
   Empty :: Subst '[] vs
   Extend :: (Known b, b `AlienTo` bs) => Proxy b -> Term tv -> bs `Subst` tv -> (b ': bs) `Subst` tv
 
+deriving instance {-# OVERLAPPING #-} Show (Subst (bvs :: [Symbol]) (tvs :: [Symbol]))
+deriving instance {-# OVERLAPPING #-} Show (Subst (bvs :: [Nat]) (tvs :: [Symbol]))
+deriving instance {-# OVERLAPPING #-} Show (Subst (bvs :: [Symbol]) (tvs :: [Nat]))
+deriving instance {-# OVERLAPPING #-} Show (Subst (bvs :: [Nat]) (tvs :: [Nat]))
 deriving instance Show (Subst bvs tvs)
 
+t0 = V (Proxy :: Proxy "a") :: Term '["a", "b"]
 t1 = V (Proxy :: Proxy "b") :: Term '["a", "b"]
 t2 = Extend (Proxy :: Proxy 0) t1 Empty
-t3 = Extend (Proxy :: Proxy 0) t1 (Extend (Proxy :: Proxy 1) t1 Empty)
+t3 = Extend (Proxy :: Proxy 0) t0 (Extend (Proxy :: Proxy 1) t1 Empty)
