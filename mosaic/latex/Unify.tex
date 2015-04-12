@@ -3,6 +3,13 @@
 
 \documentclass{article}
 
+\usepackage {xcolor}
+\newcommand \todo[1] {\textcolor{red}{TODO: }#1}
+
+\newcommand \catname[1] {{\normalfont\textbf{#1}}}
+\newcommand \Set {\catname {Set}}
+\newcommand \Cat {\catname {Cat}}
+
 \begin{document}
 
 \section {Intro}
@@ -11,7 +18,7 @@ Normally unification is presented in catergory-theoretic terms as a coequalizer:
 we have an indexed set of equations $s_i = t_i$ where the $\{s_i, t_i\}$ are terms.
 Then we ask the algorithm for a most generic unifier $q$.
 
-TODO: describe how the unification works.
+\todo {describe how the unification works.}
 
 \section {Observation 1}
 The first observation is that why not only deal with substitutions only? I.e. invent a finite set of variable names $vl_i$ and $vr_i$ and let those point to $s_i$ resp. $t_i$. Then we have a bona fide substitution $V \to T_{\Omega}W$, where $W$ is the variable set of our terms $\{s_i, t_i\}$. This appears to be one of the ingredients of the coequalizer approach. We pretend to not unify two (sets of) terms, but two corresponding Kleisli-arrows $vl_i \mapsto s_i$ and $vr_i \mapsto t_i$ (which are substitutions).
@@ -32,8 +39,8 @@ When the former list becomes empty, we have the desired mgu in our hands.
 If we can establish a correct-by construction data type for substitutions that precludes the possibility of overlapping equivalence classes in the key- as well as the term set of the substitution, then we get an almost machine-checked algorithm.
 
 \section {Groupoids}
-Let's come back to the idea of equivalence classes. We noted that they merge when we encounter two variable names (or more precisely their classes) that must be unified. But how can we make the notion of the classes precise? I propose to build paths between variable names, thus obtain path-connected components in the set of variable names. The elements of the loop space then become the connected components and classes. TODO: check that this is indeed a groupoid. $T_{\Omega}$ is then a functor between groupoids. Of course after passage to quotients we have a $Set$ monad again.
-\par When applying the slogan of HoTT, that \emph {types are groupoids}, then we might wonder whether a substitution is a mapping from types to terms with variable sets that are (equivalence classes of) inhabitants of a type. Thus unification, by creating bridges between equivalence classes, could be seen as a way of defining \emph {higher inductive types} (HITs).
+Let's come back to the idea of equivalence classes. We noted that they merge when we encounter two variable names (or more precisely their classes) that must be unified. But how can we make the notion of the classes precise? I propose to build paths between variable names, thus obtain path-connected components in the set of variable names. The elements of the loop space then become the connected components and classes. \todo {check that this is indeed a groupoid.} $T_{\Omega}$ is then a functor between groupoids. Of course passage to quotients reverts $T_{\Omega}$ to a $Set$ monad again.
+\par When applying the slogan of HoTT, that \emph {types are groupoids}, then we might wonder whether a substitution is a mapping from types to terms with variable sets that are (equivalence classes of) inhabitants of a type. Thus unification, by creating bridges between equivalence classes, could be seen as a way of defining \emph {higher inductive types} (HITs). \todo {does this in some way add computational content to HITs?}
 
 \section {Bibliography}
 \begin{itemize}
