@@ -40,6 +40,8 @@ instance KnownNat n => Known n where
 data Term :: [k] -> * where
   -- operator symbols
   Arr :: Term vs -> Term vs -> Term vs
+  Int :: Term vs
+  -- PHOAS variable
   V :: (Known v, v `ElemOf` vs) => Proxy v -> Term vs
 
 deriving instance {-# OVERLAPPING #-} Show (Term (vs :: [Nat]))
@@ -59,5 +61,7 @@ deriving instance Show (Subst bvs tvs)
 
 t0 = V (Proxy :: Proxy "a") :: Term '["a", "b"]
 t1 = V (Proxy :: Proxy "b") :: Term '["a", "b"]
-t2 = Extend (Proxy :: Proxy 0) t1 Empty
-t3 = Extend (Proxy :: Proxy 0) t0 (Extend (Proxy :: Proxy 1) t1 Empty)
+t2 = Extend (Proxy :: Proxy 0) t0 Empty
+t3 = Extend (Proxy :: Proxy 1) t1 t2
+t4 = Extend (Proxy :: Proxy 2) Int t3
+t5 = Extend (Proxy :: Proxy 3) (Arr Int t1) t4
