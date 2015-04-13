@@ -99,8 +99,11 @@ t5 = Extend (Proxy :: Proxy 3) (Arr Int t1) t4
 t10 = V (Proxy :: Proxy '["a"]) :: Term '[ '["a"], '["b"] ]
 
 
-s :: Term (ks :: [k]) -> (ks' :: [k]) `Subst` js -> Term js
+s :: Term ks -> ks `Subst` js -> Term js
 V p `s` (Extend p' t rest) | True = t -- FIXME: compare proxies!
-v@V{} `s` (Extend _ _ rest) = v `s` rest
+v@V{} `s` (Extend _ _ rest) = v `search` rest
+  where search :: Term (ks :: [k]) -> (ks' :: [k]) `Subst` js -> Term js
+        V p `search` (Extend p' t rest) | True = t -- FIXME: compare proxies!
+        v@V{} `search` (Extend _ _ rest) = v `search` rest
 Int `s` _ = Int
 Arr d c `s` subst = Arr (d `s` subst) (c `s` subst)
