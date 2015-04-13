@@ -47,8 +47,8 @@ instance {-# OVERLAPPING #-} KnownNat n => Show (Proxy (n :: Nat)) where
 type family MoreKnown (v :: k) :: Constraint where
   MoreKnown (s :: Symbol) = KnownSymbol s
   MoreKnown (n :: Nat) = KnownNat n
-  MoreKnown (ss :: [Symbol]) = () -- YEAH: ListOf KnownSymbol ss -- KnownSymbols ss
-  MoreKnown (ns :: [Nat]) = () -- KnownNats ns
+  MoreKnown (ss :: [Symbol]) = KnownSymbols ss
+  MoreKnown (ns :: [Nat]) = KnownNats ns
 
 class MoreKnown v => Known (v :: k) where
   --order
@@ -56,8 +56,16 @@ instance KnownSymbol s => Known s where
   --order = undefined
 instance KnownNat n => Known n where
 
-instance {-KnownNats ns =>-} Known (n :: [Nat]) where
-instance {-KnownSymbols ns =>-} Known (n :: [Symbol]) where
+instance KnownNats ns => Known (ns :: [Nat]) where
+instance KnownSymbols ss => Known (ss :: [Symbol]) where
+
+class ListOf (test :: k -> Constraint) (ks :: [k])
+
+instance ListOf test '[]
+instance (test k, ListOf test ks) => ListOf test (k ': ks)
+
+type KnownSymbols = ListOf KnownSymbol
+type KnownNats = ListOf KnownNat
 
 data Term :: [k] -> * where
   -- operator symbols
