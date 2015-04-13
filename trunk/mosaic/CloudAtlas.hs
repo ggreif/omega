@@ -47,12 +47,17 @@ instance {-# OVERLAPPING #-} KnownNat n => Show (Proxy (n :: Nat)) where
 type family MoreKnown (v :: k) :: Constraint where
   MoreKnown (s :: Symbol) = KnownSymbol s
   MoreKnown (n :: Nat) = KnownNat n
+  MoreKnown (ss :: [Symbol]) = () -- YEAH: ListOf KnownSymbol ss -- KnownSymbols ss
+  MoreKnown (ns :: [Nat]) = () -- KnownNats ns
 
 class MoreKnown v => Known (v :: k) where
   --order
 instance KnownSymbol s => Known s where
   --order = undefined
 instance KnownNat n => Known n where
+
+instance {-KnownNats ns =>-} Known (n :: [Nat]) where
+instance {-KnownSymbols ns =>-} Known (n :: [Symbol]) where
 
 data Term :: [k] -> * where
   -- operator symbols
@@ -68,7 +73,7 @@ deriving instance Show (Term vs) -- BUG?? does not pick up orphans
 
 data Subst :: [k] -> [j] -> * where
   Empty :: Subst '[] vs
-  Extend :: (Known b, b `AlienTo` bs) => Proxy b -> Term tv -> bs `Subst` tv -> (b ': bs) `Subst` tv
+  Extend :: (Known b, b `ApartFrom` bs) => Proxy b -> Term tv -> bs `Subst` tv -> (b ': bs) `Subst` tv
 
 deriving instance {-# OVERLAPPING #-} Show (Subst (bvs :: [Symbol]) (tvs :: [Symbol]))
 deriving instance {-# OVERLAPPING #-} Show (Subst (bvs :: [Nat]) (tvs :: [Symbol]))
@@ -82,3 +87,5 @@ t2 = Extend (Proxy :: Proxy 0) t0 Empty
 t3 = Extend (Proxy :: Proxy 1) t1 t2
 t4 = Extend (Proxy :: Proxy 2) Int t3
 t5 = Extend (Proxy :: Proxy 3) (Arr Int t1) t4
+
+t10 = V (Proxy :: Proxy '["a"]) :: Term '[ '["a"], '["b"] ]
