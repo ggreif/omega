@@ -1,6 +1,6 @@
 {-# LANGUAGE ConstraintKinds, GADTs, TypeFamilies, PolyKinds, KindSignatures
            , TypeOperators, DataKinds, FlexibleInstances, UndecidableInstances
-           , StandaloneDeriving #-}
+           , StandaloneDeriving, MultiParamTypeClasses #-}
 
 import Data.Proxy
 import GHC.Exts
@@ -19,6 +19,23 @@ type family AlienTo (t :: k) (ts :: [k]) :: Constraint where
   AlienTo a '[] = ()
   AlienTo a (a ': as) = True ~ False
   AlienTo a (b ': bs) = AlienTo a bs
+
+class ApartFrom (t :: k) (ts :: [k])
+instance AlienTo t ts => ApartFrom t ts
+
+instance ApartFrom (ts :: [k]) ('[] :: [[k]])
+instance ((ts `Intersect` us) ~ '[], ts `ApartFrom` uss) => ApartFrom (ts :: [k]) ((us ': uss) :: [[k]])
+
+type family Intersect (ts :: [k]) (us :: [k]) :: [k] where
+  Intersect '[] r = '[]
+  Intersect l '[] = '[]
+  Intersect (l ': ls) r = InterAppend (Intersect ls r) r l
+
+-- helper
+type family InterAppend (l :: [k]) (r :: [k]) (one :: k) :: [k] where
+  InterAppend acc '[] one = acc
+  InterAppend acc (one ': rs) one = one ': acc
+  InterAppend acc (r ': rs) one = InterAppend acc rs one
 
 
 instance {-# OVERLAPPING #-} KnownSymbol s => Show (Proxy (s :: Symbol)) where
