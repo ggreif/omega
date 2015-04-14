@@ -105,9 +105,6 @@ t10 = V (Proxy :: Proxy '["a"]) :: Term '[ '["a"], '["b"] ]
 
 --instance Known k => TestEquality (Proxy :: k -> *) where
 
---same :: (Known (l :: k), Known (r :: k)) => Proxy l -> Proxy r -> Maybe (l :~: r)
---l `same` r = l `knownSame` r
-
 
 s :: Term ks -> ks `Subst` js -> Term js
 v@V{} `s` subst = v `search` subst
