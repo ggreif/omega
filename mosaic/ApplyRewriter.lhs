@@ -38,12 +38,12 @@ And then execute
 >   ucr = uncurry
 
 > dullness :: Q (TExp a) -> Q (TExp Integer)
-> dullness e = e >>= return Prelude.. walkAST Prelude.. unType
+> dullness e = e >>= return . walkAST . unType
 
 > walkAST :: Exp -> TExp Integer
 > walkAST l@(LitE {}) = TExp l
 > walkAST v@(VarE {}) = TExp v
-> walkAST (AppE f a) = TExp f  -- AppE (AppE (VarE (mkName "<$>")) (walkAST f)) (walkAST a)
+> walkAST (AppE f a) = TExp a -- TExp $ VarE (mkName "<$>") `AppE` unType (walkAST f) `AppE` unType (walkAST a)
 
 Now that we can perform the transformation, it would be interesting
 to give a different instance.

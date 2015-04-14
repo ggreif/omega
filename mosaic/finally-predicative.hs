@@ -486,13 +486,14 @@ instance LC Concrete where
 --     Arrow
 -- ##############
 
-data Obligations = Obligations
+data Obligation = Obligation
+type Obligations = [Obligation]
 
 data Infer (rep :: Nat -> Maybe Nat -> *) at room = rep at room :-> (rep at room -> Obligations)
 infixr 7 :->
 
 instance LC (Infer Concrete) where
-  var = todo -- P var var
+  var = (Var :-> const [])
   lam' d (body :-> body') = todo -- P (lam' d body) (lam' d body')
   (f :-> f') `app` (a :-> a') = todo -- P (f `app` a) (f' `app` a')
 

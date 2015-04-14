@@ -52,17 +52,17 @@ data Rei a where
   Silly :: String -> Rei ()
   Nilly :: Bool -> Rei () -> Rei () -> Rei ()
   Return :: a -> Rei a
-  -- Bind :: Rei a -> (a -> Rei b) -> Rei b
-  Seq :: Rei a -> Rei a -> Rei a
+  Bind :: Rei a -> (a -> Rei b) -> Rei b
+  Seq :: Rei b -> Rei a -> Rei a
   Par :: Rei a -> Rei a -> Rei a
 
-deriving instance Show a => Show (Rei a)
+--deriving instance Show a => Show (Rei a)
 
 
 instance Monad Rei where
   return = Return
-  --(>>=) = Bind
-  --(>>) = Seq
+  (>>=) = Bind
+  (>>) = Seq
 
 instance Monoid (Rei ()) where
   mempty = return ()
@@ -75,3 +75,7 @@ instance API Rei (Rei ()) () where
   silly = Silly
   nilly = Nilly
 
+data Prg m a = P (m a)
+
+instance (m ~ Rei, Monad m) => Monad (Prg m) where
+  return a = undefined
