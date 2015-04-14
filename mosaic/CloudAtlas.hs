@@ -102,14 +102,10 @@ t5 = Extend (Proxy :: Proxy 3) (Arr Int t1) t4
 
 t10 = V (Proxy :: Proxy '["a"]) :: Term '[ '["a"], '["b"] ]
 
-
---instance TestEquality (Proxy :: Nat -> *) where
---  testEquality = same
-
 s :: Term ks -> ks `Subst` js -> Term js
 v@V{} `s` subst = v `search` subst
   where search :: Term (ks :: [k]) -> (ks' :: [k]) `Subst` js -> Term js
-        V p `search` (Extend p' t rest) | Just Refl <- p `same` p' = t -- FIXME: compare proxies!
+        V p `search` (Extend p' t rest) | Just Refl <- p `same` p' = t
         v@V{} `search` (Extend _ _ rest) = v `search` rest
 Int `s` _ = Int
 Arr d c `s` subst = Arr (d `s` subst) (c `s` subst)
