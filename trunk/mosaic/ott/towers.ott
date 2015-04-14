@@ -55,6 +55,7 @@ grammar
     | T0 o T1   ::   :: tower {{ com tower }}
     | T -> T'   ::   :: arrow {{ com arrow }}
     | T _ levs  ::   :: level {{ com levelled }} {{ tex [[T]]_{[[levs]]} }}
+    | case T of T' gives T'' ::   :: scrutinize {{ com single alternative }}
     | ( T )     :: S :: parens {{ com grouping }}
 
   G {{ tex \Gamma }} :: G_ ::= {{ com type environment }}
@@ -120,6 +121,11 @@ defn
     G |- F : (T' -> T) _ l / n
     --------------------------- :: application
     G |- F X : T _ l' / n' /\ l / n
+
+      T ~ K
+    G |- T : T1 o T0
+    ------------------------- :: scrut
+    G |- case T of K gives T''
 
 defns Jlevs :: 'lv_' ::= 
 
