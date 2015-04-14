@@ -103,8 +103,8 @@ t5 = Extend (Proxy :: Proxy 3) (Arr Int t1) t4
 t10 = V (Proxy :: Proxy '["a"]) :: Term '[ '["a"], '["b"] ]
 
 
---instance Known k => TestEquality (Proxy :: k -> *) where
-
+--instance TestEquality (Proxy :: Nat -> *) where
+--  testEquality = same
 
 s :: Term ks -> ks `Subst` js -> Term js
 v@V{} `s` subst = v `search` subst
