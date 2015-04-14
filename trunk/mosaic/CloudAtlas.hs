@@ -116,3 +116,5 @@ v@V{} `s` subst = v `search` subst
         v@V{} `search` (Extend _ _ rest) = v `search` rest
 Int `s` _ = Int
 Arr d c `s` subst = Arr (d `s` subst) (c `s` subst)
+
+t11 = V (Proxy :: Proxy "a") `s` Extend (Proxy :: Proxy "b") Int (Extend (Proxy :: Proxy "a") (Int `Arr` Int) Empty)
