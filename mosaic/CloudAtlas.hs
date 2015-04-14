@@ -52,10 +52,13 @@ type family MoreKnown (v :: k) :: Constraint where
   MoreKnown (ns :: [Nat]) = KnownNats ns
 
 class MoreKnown v => Known (v :: k) where
+  knownSame :: Known (v' :: k) => Proxy v -> Proxy v' -> Maybe (v :~: v')
   --order
 instance KnownSymbol s => Known s where
+  knownSame = sameSymbol
   --order = undefined
 instance KnownNat n => Known n where
+  knownSame = sameNat
 
 instance KnownNats ns => Known (ns :: [Nat]) where
 instance KnownSymbols ss => Known (ss :: [Symbol]) where
@@ -100,10 +103,10 @@ t5 = Extend (Proxy :: Proxy 3) (Arr Int t1) t4
 t10 = V (Proxy :: Proxy '["a"]) :: Term '[ '["a"], '["b"] ]
 
 
-instance TestEquality (Proxy :: k -> *) where
+--instance Known k => TestEquality (Proxy :: k -> *) where
 
-same :: (Known l, Known r) => Proxy l -> Proxy r -> Maybe (l :~: r)
-l `same` r = Nothing
+same :: (Known (l :: k), Known (r :: k)) => Proxy l -> Proxy r -> Maybe (l :~: r)
+l `same` r = l `knownSame` r
 
 
 s :: Term ks -> ks `Subst` js -> Term js
