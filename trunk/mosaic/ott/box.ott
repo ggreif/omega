@@ -1,0 +1,28 @@
+% minimal + latex + comments
+
+embed {{ tex-preamble
+  \usepackage{gensymb}
+}}
+
+grammar
+  T {{ tex \mathcal{T} }} :: t_ ::= {{ com type }}
+    | Int              ::   :: Integer      {{ com integers }}
+    | V ° T            ::   :: Refined      {{ com refined type }}
+
+
+  V {{ tex \mathcal{V} }} :: t_ ::= {{ com value }}
+    | 25               ::   :: TwentyFive     {{ com integer inhabitant }}
+    | 42               ::   :: FourtyTwo      {{ com integer inhabitant }}
+    | V : T            ::   :: Inhabits       {{ com explicit inhabitation }}
+
+
+terminals :: 'terminals_' ::=
+    | :   ::  :: inhabits {{ tex \mathbin{:} }}          {{ com colon }}
+    | °   ::  :: degree   {{ tex \mathbin{\degree} }}    {{ com degree }}
+
+embed {{ tex
+  This is just a preparatory text to gauge the possibilities.
+  Eventually it will be incorporated into \ttype{modal.tex}.
+
+  
+}}
