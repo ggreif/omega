@@ -22,7 +22,7 @@ terminals :: 'terminals_' ::=
 
 embed {{ tex
   This is just a preparatory text to gauge the possibilities.
-  Eventually it will be incorporated into \ttype{modal.tex}.
+  Eventually it will be incorporated into \texttt{modal.tex}.
 
   
 }}
