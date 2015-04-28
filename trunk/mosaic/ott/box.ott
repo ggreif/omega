@@ -4,21 +4,49 @@ embed {{ tex-preamble
   \usepackage{gensymb}
 }}
 
+metavar termvar, v ::=
+metavar typvar, t ::=
+
 grammar
   T {{ tex \mathcal{T} }} :: t_ ::= {{ com type }}
+    | t                ::   :: Var          {{ com variable }}
     | Int              ::   :: Integer      {{ com integers }}
     | V ° T            ::   :: Refined      {{ com refined type }}
 
 
-  V {{ tex \mathcal{V} }} :: t_ ::= {{ com value }}
-    | 25               ::   :: TwentyFive     {{ com integer inhabitant }}
-    | 42               ::   :: FourtyTwo      {{ com integer inhabitant }}
+  V {{ tex \mathcal{V} }} :: v_ ::= {{ com value }}
+    | v                ::   :: Var            {{ com variable }}
+    | 25               ::   :: TwentyFive     {{ com integer inhabitant: 25 }}
+    | 42               ::   :: FourtyTwo      {{ com integer inhabitant: 42 }}
     | V : T            ::   :: Inhabits       {{ com explicit inhabitation }}
 
 
 terminals :: 'terminals_' ::=
     | :   ::  :: inhabits {{ tex \mathbin{:} }}          {{ com colon }}
     | °   ::  :: degree   {{ tex \mathbin{\degree} }}    {{ com degree }}
+    | |-  ::  :: turnstile {{ tex \vdash }}              {{ com turnstile }}
+
+
+defns
+  Jtype :: '' ::= 
+
+defn
+    |- V : T :: :: VT :: VT_ by
+
+
+    ----------- :: int_25
+    |- 25 : Int
+
+    ----------- :: int_42
+    |- 42 : Int
+
+defn
+    |- V ° T :: :: TR :: TR_ by
+
+    |- v : t
+    ----------- :: type_refine
+    |- v ° t
+
 
 embed {{ tex
   This is just a preparatory text to gauge the possibilities.
