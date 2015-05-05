@@ -3,6 +3,8 @@
 
 {-# LANGUAGE TypeOperators #-}
 
+import Control.Monad
+
 data Type = A | B | C | Type :-> Type deriving (Eq, Show)
 
 type TypeChecker = [Type] -> Maybe Type
@@ -14,11 +16,14 @@ var :: Int -> TypeChecker
 var i ctxt = Just $ ctxt !! i
 
 lam :: Type -> TypeChecker -> TypeChecker
-lam = undefined
+lam ty tc ctx = do tbody <- tc $ ty : ctx
+                   return $ ty :-> tbody
 
 app :: TypeChecker -> TypeChecker -> TypeChecker
-app = undefined
-
+app cf ca ctx = do (tf :-> ta) <- cf ctx
+                   ta' <- ca ctx
+                   guard $ ta == ta'
+                   return ta
 
 data Term = Var Int | Lam Type Term | Term `App` Term deriving Show
 
