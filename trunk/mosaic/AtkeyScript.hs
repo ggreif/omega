@@ -33,3 +33,13 @@ typeCheck :: Term -> TypeChecker
 typeCheck (Var i) = var i
 typeCheck (Lam ty tm) = lam ty $ typeCheck tm
 typeCheck (f `App` a) = typeCheck f `app` typeCheck a
+
+
+-- More bits
+failure :: TypeChecker
+failure = const Nothing
+
+have :: Int -> Type -> TypeChecker -> TypeChecker
+have i ty tc ctx = do ty' <- var i ctx
+                      guard $ ty == ty'
+                      tc ctx
