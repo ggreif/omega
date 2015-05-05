@@ -5,7 +5,7 @@
 --  around slide 30
 --   (for previous slides consult revision history)
 
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
 
 import Control.Monad
 
@@ -36,6 +36,17 @@ class TypeChecker a where
   failure :: a
   have :: Int -> Type -> a -> a
   hasType :: Type -> a -> a
+
+instance TypeChecker TypeChecker' where
+  var i = return . (!!i)
+
+  lam ty tc ctx = do tbody <- tc $ ty : ctx
+                     return $ ty :-> tbody
+
+  app cf ca ctx = do (ta :-> tr) <- cf ctx
+                     ta' <- ca ctx
+                     guard $ ta == ta'
+                     return tr
 
 
 data Term = Var Int | Lam Type Term | Term `App` Term deriving Show
