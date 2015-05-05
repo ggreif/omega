@@ -7,13 +7,15 @@ import Control.Monad
 
 data Type = A | B | C | Type :-> Type deriving (Eq, Show)
 
+infixr 9 :->
+
 type TypeChecker = [Type] -> Maybe Type
 
 -- a TypeChecker is basically something that maybe has a type in a context
 --   (e.g. a Term)
 
 var :: Int -> TypeChecker
-var i ctxt = Just $ ctxt !! i
+var i = Just . (!!i)
 
 lam :: Type -> TypeChecker -> TypeChecker
 lam ty tc ctx = do tbody <- tc $ ty : ctx
