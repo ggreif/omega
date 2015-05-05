@@ -15,7 +15,7 @@ type TypeChecker = [Type] -> Maybe Type
 --   (e.g. a Term)
 
 var :: Int -> TypeChecker
-var i = Just . (!!i)
+var i = return . (!!i)
 
 lam :: Type -> TypeChecker -> TypeChecker
 lam ty tc ctx = do tbody <- tc $ ty : ctx
@@ -43,3 +43,8 @@ have :: Int -> Type -> TypeChecker -> TypeChecker
 have i ty tc ctx = do ty' <- var i ctx
                       guard $ ty == ty'
                       tc ctx
+
+hasType :: Type -> TypeChecker -> TypeChecker
+hasType ty tc ctx = do ty' <- tc ctx
+                       guard $ ty == ty'
+                       return ty
