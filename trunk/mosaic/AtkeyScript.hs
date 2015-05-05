@@ -19,20 +19,9 @@ type TypeChecker' = [Type] -> Maybe Type
 --   (e.g. corresponding to a Term)
 
 class TypeChecker a where
-
   var :: Int -> a
--- var i = return . (!!i)
-
   lam :: Type -> a -> a
--- lam ty tc ctx = do tbody <- tc $ ty : ctx
---                    return $ ty :-> tbody
-
   app :: a -> a -> a
---app cf ca ctx = do (ta :-> tr) <- cf ctx
---                   ta' <- ca ctx
---                   guard $ ta == ta'
---                   return tr
-
   failure :: a
   have :: Int -> Type -> a -> a
   hasType :: Type -> a -> a
@@ -48,6 +37,14 @@ instance TypeChecker TypeChecker' where
                      guard $ ta == ta'
                      return tr
 
+  failure = const Nothing
+  have i ty tc ctx = do ty' <- var i ctx
+                        guard $ ty == ty'
+                        tc ctx
+  hasType ty tc ctx = do ty' <- tc ctx
+                         guard $ ty == ty'
+                         return ty
+
 
 data Term = Var Int | Lam Type Term | Term `App` Term deriving Show
 
@@ -56,17 +53,3 @@ typeCheck (Var i) = var i
 typeCheck (Lam ty tm) = lam ty $ typeCheck tm
 typeCheck (f `App` a) = typeCheck f `app` typeCheck a
 
-
--- More bits
-failure' :: TypeChecker'
-failure' = const Nothing
-
-have' :: Int -> Type -> TypeChecker' -> TypeChecker'
-have' i ty tc ctx = do ty' <- var i ctx
-                       guard $ ty == ty'
-                       tc ctx
-
-hasType' :: Type -> TypeChecker' -> TypeChecker'
-hasType' ty tc ctx = do ty' <- tc ctx
-                        guard $ ty == ty'
-                        return ty
