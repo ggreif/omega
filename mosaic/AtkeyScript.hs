@@ -3,7 +3,7 @@
 
 {-# LANGUAGE TypeOperators #-}
 
-data Type = A | B | C | Type :-> Type deriving Eq
+data Type = A | B | C | Type :-> Type deriving (Eq, Show)
 
 type TypeChecker = [Type] -> Maybe Type
 
@@ -20,4 +20,9 @@ app :: TypeChecker -> TypeChecker -> TypeChecker
 app = undefined
 
 
+data Term = Var Int | Lam Type Term | Term `App` Term deriving Show
 
+typeCheck :: Term -> TypeChecker
+typeCheck (Var i) = var i
+typeCheck (Lam ty tm) = lam ty $ typeCheck tm
+typeCheck (f `App` a) = typeCheck f `app` typeCheck a
