@@ -22,10 +22,10 @@ lam ty tc ctx = do tbody <- tc $ ty : ctx
                    return $ ty :-> tbody
 
 app :: TypeChecker -> TypeChecker -> TypeChecker
-app cf ca ctx = do (tf :-> ta) <- cf ctx
+app cf ca ctx = do (ta :-> tr) <- cf ctx
                    ta' <- ca ctx
                    guard $ ta == ta'
-                   return ta
+                   return tr
 
 data Term = Var Int | Lam Type Term | Term `App` Term deriving Show
 
