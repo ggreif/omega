@@ -5,7 +5,8 @@
 --  around slide 30
 --   (for previous slides consult revision history)
 
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators
+           , KindSignatures #-}
 
 import Control.Monad
 
@@ -13,22 +14,22 @@ data Type = A | B | C | Type :-> Type deriving (Eq, Show)
 
 infixr 9 :->
 
-type TypeChecker' = [Type] -> Maybe Type
+--type TypeChecker' g = [Type] -> Maybe Type
 
 -- a TypeChecker is basically something that maybe has a type in a context
 --   (e.g. corresponding to a Term)
 
-class TypeChecker a where
-  var :: Int -> a
-  lam :: Type -> a -> a
-  app :: a -> a -> a
-  failure :: a
-  have :: Int -> Type -> a -> a
-  hasType :: Type -> a -> a
+class TypeChecker (a :: Bool -> *) where
+  --var :: Int -> a
+  lam :: Type -> (a True -> a x) -> a False
+  app :: a x -> a y -> a False
+  failure :: a False
+  have :: a True -> Type -> a x -> a False
+  hasType :: Type -> a x -> a False
 
-instance TypeChecker TypeChecker' where
-  var i = return . (!!i)
-
+--instance TypeChecker TypeChecker' where
+  --var i = return . (!!i)
+{-
   lam ty tc ctx = do tbody <- tc $ ty : ctx
                      return $ ty :-> tbody
 
@@ -44,12 +45,17 @@ instance TypeChecker TypeChecker' where
   hasType ty tc ctx = do ty' <- tc ctx
                          guard $ ty == ty'
                          return ty
+-}
 
+{-
+data Term a = Var | Lam Type (Term a -> Term a) | Term a `App` Term a deriving Show
 
-data Term = Var Int | Lam Type Term | Term `App` Term deriving Show
 
 typeCheck :: Term -> TypeChecker'
-typeCheck (Var i) = var i
-typeCheck (Lam ty tm) = lam ty $ typeCheck tm
+--typeCheck (Var i) = var i
+typeCheck (Lam ty f) = lam ty $ typeCheck (f Var)
 typeCheck (f `App` a) = typeCheck f `app` typeCheck a
+-}
 
+t1 :: TypeChecker r => r False
+t1 = lam A $ \x -> have x B (app x x)
