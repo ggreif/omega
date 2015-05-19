@@ -6,7 +6,7 @@
 --   (for previous slides consult revision history)
 
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators
-           , KindSignatures #-}
+           , KindSignatures, GADTs #-}
 
 import Control.Monad
 
@@ -20,7 +20,6 @@ infixr 9 :->
 --   (e.g. corresponding to a Term)
 
 class TypeChecker (a :: Bool -> *) where
-  --var :: Int -> a
   lam :: Type -> (a True -> a x) -> a False
   app :: a x -> a y -> a False
   failure :: a False
@@ -59,3 +58,25 @@ typeCheck (f `App` a) = typeCheck f `app` typeCheck a
 
 t1 :: TypeChecker r => r False
 t1 = lam A $ \x -> have x B (app x x)
+
+data Script :: Bool -> * where
+  Var :: Script True
+  Lam :: Type -> (Script True -> Script x) -> Script False
+  App :: Script x -> Script y -> Script False
+  Failure :: Script False
+  Have :: Script True -> Type -> Script x -> Script False
+  GoalIs :: Type -> Script x -> Script False
+
+instance TypeChecker Script where
+  lam = Lam
+  app = App
+  failure = Failure
+  have = Have
+  hasType = GoalIs
+
+
+instance Show (Script b) where
+  show Var = "VAR"
+  show (Lam ty fb) = "Lam (" ++ show ty ++ ") (" ++ show (fb Var) ++ ")"
+  show (f `App` a) = show f ++ "@" ++ show a
+  show (Have v ty inn) = "Have " ++ show v ++ ":" ++ show ty ++ " in " ++ show inn
