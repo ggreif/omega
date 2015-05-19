@@ -79,4 +79,6 @@ instance Show (Script b) where
   show Var = "VAR"
   show (Lam ty fb) = "Lam (" ++ show ty ++ ") (" ++ show (fb Var) ++ ")"
   show (f `App` a) = show f ++ "@" ++ show a
+  show Failure = "Failure"
   show (Have v ty inn) = "Have " ++ show v ++ ":" ++ show ty ++ " in " ++ show inn
+  show (GoalIs ty inn) = "GoalIs " ++ show ty ++ "     " ++ show inn
