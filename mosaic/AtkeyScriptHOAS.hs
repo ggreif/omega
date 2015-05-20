@@ -14,7 +14,6 @@ data Type = A | B | C | Type :-> Type deriving (Eq, Show)
 
 infixr 9 :->
 
---type TypeChecker' g = [Type] -> Maybe Type
 
 -- a TypeChecker is basically something that maybe has a type in a context
 --   (e.g. corresponding to a Term)
@@ -26,25 +25,26 @@ class TypeChecker (a :: Bool -> *) where
   have :: a True -> Type -> a x -> a False
   hasType :: Type -> a x -> a False
 
---instance TypeChecker TypeChecker' where
+newtype TypeChecker' (g :: Bool) = TC ([Type] -> Maybe Type)
+instance TypeChecker TypeChecker' where
   --var i = return . (!!i)
-{-
-  lam ty tc ctx = do tbody <- tc $ ty : ctx
-                     return $ ty :-> tbody
 
-  app cf ca ctx = do (ta :-> tr) <- cf ctx
-                     ta' <- ca ctx
-                     guard $ ta == ta'
-                     return tr
+  --lam ty tc ctx = do tbody <- tc $ ty : ctx
+  --                   return $ ty :-> tbody
 
-  failure = const Nothing
-  have i ty tc ctx = do ty' <- var i ctx
-                        guard $ ty == ty'
-                        tc ctx
-  hasType ty tc ctx = do ty' <- tc ctx
-                         guard $ ty == ty'
-                         return ty
--}
+  app (TC cf) (TC ca) = TC (\ctx -> do (ta :-> tr) <- cf ctx
+                                       ta' <- ca ctx
+                                       guard $ ta == ta'
+                                       return tr)
+
+  failure = TC $ const Nothing
+  --have i ty tc ctx = do ty' <- var i ctx
+  --                      guard $ ty == ty'
+  --                      tc ctx
+  ---hasType ty tc ctx = do ty' <- tc ctx
+  ---                       guard $ ty == ty'
+  ---                       return ty
+
 
 
 data Term :: (Bool -> *) -> Bool -> * where
