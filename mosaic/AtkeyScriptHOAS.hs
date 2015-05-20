@@ -47,17 +47,17 @@ class TypeChecker (a :: Bool -> *) where
 -}
 
 
-data Term :: Bool -> * where
-  Var' :: Term True
-  Lam' :: Type -> (Term True -> Term a) -> Term False
-  App' :: Term a -> Term b -> Term False
+data Term :: (Bool -> *) -> Bool -> * where
+  Var' :: r True -> Term r True
+  Lam' :: Type -> (Term r True -> Term r a) -> Term r False
+  App' :: Term r a -> Term r b -> Term r False
 
 --deriving Show
 
 
-typeCheck :: TypeChecker r => Term b -> r b
---typeCheck (Var' i) = var i
-typeCheck (Lam' ty f) = lam ty $ \v -> typeCheck (f Var')
+typeCheck :: TypeChecker r => Term r b -> r b
+typeCheck (Var' v) = v
+typeCheck (Lam' ty f) = lam ty $ \v -> typeCheck (f $ Var' v)
 typeCheck (f `App'` a) = typeCheck f `app` typeCheck a
 
 
