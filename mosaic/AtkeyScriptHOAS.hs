@@ -28,6 +28,9 @@ class TypeChecker (a :: Bool -> *) where
 newtype TypeChecker' (g :: Bool) = TC ([Type] -> Maybe Type)
 unTC (TC a) = a
 
+instance Show (TypeChecker' v) where
+  show (TC a) = show (a [])
+
 instance TypeChecker TypeChecker' where
   lam ty tcf = TC (\ctx -> do tbody <- unTC (tcf $ TC (return . const ty)) (ty : ctx)
                               return $ ty :-> tbody)
