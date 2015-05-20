@@ -6,7 +6,7 @@
 --   (for previous slides consult revision history)
 
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators
-           , KindSignatures, GADTs #-}
+           , KindSignatures, GADTs, DataKinds #-}
 
 import Control.Monad
 
@@ -46,15 +46,20 @@ class TypeChecker (a :: Bool -> *) where
                          return ty
 -}
 
-{-
-data Term a = Var | Lam Type (Term a -> Term a) | Term a `App` Term a deriving Show
+
+data Term :: Bool -> * where
+  Var' :: Term True
+  Lam' :: Type -> (Term True -> Term a) -> Term False
+  App' :: Term a -> Term b -> Term False
+
+--deriving Show
 
 
-typeCheck :: Term -> TypeChecker'
---typeCheck (Var i) = var i
-typeCheck (Lam ty f) = lam ty $ typeCheck (f Var)
-typeCheck (f `App` a) = typeCheck f `app` typeCheck a
--}
+typeCheck :: TypeChecker r => Term b -> r b
+--typeCheck (Var' i) = var i
+typeCheck (Lam' ty f) = lam ty $ \v -> typeCheck (f Var')
+typeCheck (f `App'` a) = typeCheck f `app` typeCheck a
+
 
 t1 :: TypeChecker r => r False
 t1 = lam A $ \x -> have x B (app x x)
