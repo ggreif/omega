@@ -26,11 +26,11 @@ class TypeChecker (a :: Bool -> *) where
   hasType :: Type -> a x -> a False
 
 newtype TypeChecker' (g :: Bool) = TC ([Type] -> Maybe Type)
-instance TypeChecker TypeChecker' where
-  --var i = return . (!!i)
+unTC (TC a) = a
 
-  --lam ty tc ctx = do tbody <- tc $ ty : ctx
-  --                   return $ ty :-> tbody
+instance TypeChecker TypeChecker' where
+  lam ty tcf = TC (\ctx -> do tbody <- unTC (tcf $ TC (return . const ty)) (ty : ctx)
+                              return $ ty :-> tbody)
 
   app (TC cf) (TC ca) = TC (\ctx -> do (ta :-> tr) <- cf ctx
                                        ta' <- ca ctx
@@ -38,13 +38,12 @@ instance TypeChecker TypeChecker' where
                                        return tr)
 
   failure = TC $ const Nothing
-  --have i ty tc ctx = do ty' <- var i ctx
-  --                      guard $ ty == ty'
-  --                      tc ctx
-  ---hasType ty tc ctx = do ty' <- tc ctx
-  ---                       guard $ ty == ty'
-  ---                       return ty
-
+  have (TC v) ty (TC tc) = TC (\ctx -> do ty' <- v ctx
+                                          guard $ ty == ty'
+                                          tc ctx)
+  hasType ty (TC tc) = TC (\ctx -> do ty' <- tc ctx
+                                      guard $ ty == ty'
+                                      return ty)
 
 
 data Term :: (Bool -> *) -> Bool -> * where
