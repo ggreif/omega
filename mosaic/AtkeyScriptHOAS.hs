@@ -90,3 +90,16 @@ instance Show (Script b) where
   show Failure = "Failure"
   show (Have v ty inn) = "Have " ++ show v ++ ":" ++ show ty ++ " in " ++ show inn
   show (GoalIs ty inn) = "GoalIs " ++ show ty ++ "     " ++ show inn
+
+
+-- #### (pre) bidirectional inferencer
+
+newtype Bidir (v :: Bool) = BD (Type -> Type)
+unBD (BD a) = a
+
+instance TypeChecker Bidir where
+  lam ty tcf = BD go
+         where go want = ty :-> tc undefined
+               BD tc = tcf $ BD (const ty)
+  hasType ty (BD tc) = BD go
+         where go want = tc ty
