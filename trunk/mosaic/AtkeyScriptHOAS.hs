@@ -6,7 +6,8 @@
 --   (for previous slides consult revision history)
 
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances, TypeOperators
-           , KindSignatures, GADTs, DataKinds #-}
+           , KindSignatures, GADTs, DataKinds, StandaloneDeriving
+           , ViewPatterns #-}
 
 import Control.Monad
 
@@ -112,4 +113,41 @@ instance TypeChecker Bidir where
   hasType ty (BD tc) = BD go
          where go want = tc ty
 
-  have (BD v) ty (BD body) = undefined
+  have (BD v) ty (BD body) = (BD body) -- v ty -- FIXME!
+
+
+
+data Type' where
+  Univ :: Type'
+  Ground :: Type -> Type'
+  Contradiction :: String -> Type'
+
+deriving instance Show Type'
+
+newtype BidirBetter (v :: Bool) = BB (Type' -> Type')
+unBB (BB a) = a
+
+known :: Type -> Type' -> Type'
+known _ c@Contradiction{} = c
+known ty Univ = Ground ty
+known ty g@(Ground ty') | ty == ty' = g
+known ty (Ground ty') = Contradiction $ show ty ++ " /= " ++ show ty'
+
+
+instance TypeChecker BidirBetter where
+  lam ty tcf = BB go
+         where go Univ = Ground $ ty :-> (case tc Univ of Ground res -> res)
+               BB tc = tcf $ BB (known ty)
+{-
+  BB f `app` BB a = BB go
+         where go want = resT
+                 where argT' :-> resT = f (argT :-> want)
+                       argT = a undefined
+
+  failure = error "failing Bidir"
+
+  hasType ty (BB tc) = BB go
+         where go want = tc ty
+
+  have (BB v) ty (BB body) = (BB body) -- v ty -- FIXME!
+-}
