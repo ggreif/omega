@@ -103,9 +103,9 @@ instance TypeChecker Bidir where
                BD tc = tcf $ BD (const ty)
 
   BD f `app` BD a = BD go
-         where go want = rest
-                 where funt@(argt' :-> rest) = f (argt :-> want)
-                       argt = a undefined
+         where go want = resT
+                 where argT' :-> resT = f (argT :-> want)
+                       argT = a undefined
 
   failure = error "failing Bidir"
 
