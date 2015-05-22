@@ -118,16 +118,16 @@ instance Show (Script b) where
   show (Type ty) = show ty
 
 
-{-
+
 -- #### (pre) bidirectional inferencer
 
 newtype Bidir (v :: Bool) = BD (Type -> Type)
 unBD (BD a) = a
 
 instance TypeChecker Bidir where
-  lam ty tcf = BD go
-         where go want = ty :-> tc undefined
-               BD tc = tcf $ BD (const ty)
+  lam (BD ty) tcf = BD go
+         where go want = ty undefined :-> tc undefined
+               BD tc = tcf $ BD ty
 
   BD f `app` BD a = BD go
          where go want = resT
@@ -136,12 +136,15 @@ instance TypeChecker Bidir where
 
   failure = error "failing Bidir"
 
-  hasType ty (BD tc) = BD go
-         where go want = tc ty
+  hasType (BD ty) (BD tc) = BD go
+         where go want = tc $ ty undefined
 
   have (BD v) ty (BD body) = (BD body) -- v ty -- FIXME!
 
+  a = BD $ const A; b = BD $ const B; c = BD $ const C
+  
 
+{-
 
 data Type' where
   Univ :: Type'
