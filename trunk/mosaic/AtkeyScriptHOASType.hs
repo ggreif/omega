@@ -143,6 +143,10 @@ instance TypeChecker Bidir where
 
   a = BD $ const A; b = BD $ const B; c = BD $ const C
   
+  BD d `arr` BD c = BD $ const $ d undefined :-> c undefined
+
+  BD l `unify` BD r = BD $ l . r
+  
 
 {-
 
