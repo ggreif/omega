@@ -50,6 +50,11 @@ instance TypeChecker TypeChecker' where
   hasType ty (TC tc) = TC (do ty' <- tc
                               guard $ ty == ty'
                               return ty)
+  a = TC $ return A
+  b = TC $ return B
+  c = TC $ return C
+  TC (Just d) `arr` TC (Just c) = TC (Just $ d :-> c)
+
 
 data Type = A | B | C | Type :-> Type deriving (Eq, Show)
 
