@@ -48,12 +48,9 @@ instance TypeChecker TypeChecker' where
   have (TC v) (TC t) (TC tc) = TC (do ty' <- v
                                       ty <- t
                                       unTC $ TC (return ty) `unify` TC (return ty')
-                                      --guard $ ty == ty'
                                       tc)
   hasType (TC t) (TC tc) = TC (do ty' <- tc
                                   ty <- t
-                                  --guard $ ty == ty'
-                                  --return ty
                                   unTC $ TC (return ty) `unify` TC (return ty')
                                   tc)
   a = TC $ return A
