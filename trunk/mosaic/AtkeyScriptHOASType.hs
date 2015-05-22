@@ -78,10 +78,12 @@ typeCheck (Lam' ty f) = lam ty $ \v -> typeCheck (f $ Var' v)
 typeCheck (f `App'` a) = typeCheck f `app` typeCheck a
 -}
 
-t0, t1, t2 :: TypeChecker r => r False
+t0, t1, t2, t3 :: TypeChecker r => r False
 t0 = lam a $ \x -> have x a x -- SUCCESS: a `arr` a
-t1 = lam a $ \x -> have x b (app x x) -- FAIL
+t1 = lam a $ \x -> have x b (app x x) -- FAIL (because of self-application)
 t2 = lam a $ \x -> hasType a x -- SUCCESS: a `arr` a
+t3 = lam (a `arr` b) $ \fun -> lam a $ \arg -> fun `app` arg -- SUCCESS
+
 
 {-
 data Script :: Bool -> * where
