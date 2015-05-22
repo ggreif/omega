@@ -25,7 +25,7 @@ class TypeChecker (a :: Bool -> *) where
   b :: a False
   c :: a False
   arr :: a x -> a y -> a False
-  -- unify :: a x -> a y -> a False
+  unify :: a x -> a y -> a False
 
 newtype TypeChecker' (g :: Bool) = TC (Maybe Type)
 unTC (TC a) = a
@@ -57,6 +57,8 @@ instance TypeChecker TypeChecker' where
   b = TC $ return B
   c = TC $ return C
   TC (Just d) `arr` TC (Just c) = TC (return $ d :-> c)
+  TC (Just l) `unify` TC (Just r) | l == r = TC (Just l)
+  _ `unify` _ = failure
 
 
 data Type = A | B | C | Type :-> Type deriving (Eq, Show)
