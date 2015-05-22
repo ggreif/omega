@@ -56,7 +56,7 @@ instance TypeChecker TypeChecker' where
   a = TC $ return A
   b = TC $ return B
   c = TC $ return C
-  TC (Just d) `arr` TC (Just c) = TC (Just $ d :-> c)
+  TC (Just d) `arr` TC (Just c) = TC (return $ d :-> c)
 
 
 data Type = A | B | C | Type :-> Type deriving (Eq, Show)
@@ -78,9 +78,10 @@ typeCheck (Lam' ty f) = lam ty $ \v -> typeCheck (f $ Var' v)
 typeCheck (f `App'` a) = typeCheck f `app` typeCheck a
 -}
 
-t0, t1 :: TypeChecker r => r False
-t0 = lam a $ \x -> have x a (app x x)
-t1 = lam a $ \x -> have x b (app x x)
+t0, t1, t2 :: TypeChecker r => r False
+t0 = lam a $ \x -> have x a x -- SUCCESS: a `arr` a
+t1 = lam a $ \x -> have x b (app x x) -- FAIL
+t2 = lam a $ \x -> hasType a x -- SUCCESS: a `arr` a
 
 {-
 data Script :: Bool -> * where
