@@ -15,7 +15,7 @@ import Control.Monad
 --   (e.g. corresponding to a Term)
 
 class TypeChecker (a :: Bool -> *) where
-  lam :: Type -> (a True -> a x) -> a False
+  lam :: a t -> (a True -> a x) -> a False
   app :: a x -> a y -> a False
   failure :: a False
   have :: a True -> Type -> a x -> a False
@@ -34,8 +34,9 @@ instance Show (TypeChecker' v) where
   show = show . unTC
 
 instance TypeChecker TypeChecker' where
-  lam ty tcf = TC (do tbody <- unTC (tcf $ TC (return ty))
-                      return $ ty :-> tbody)
+  lam ty tcf = TC (do ty' <- unTC ty
+                      tbody <- unTC (tcf $ TC (return ty'))
+                      return $ ty' :-> tbody)
 
   app (TC cf) (TC ca) = TC (do ta :-> tr <- cf
                                ta' <- ca
@@ -73,11 +74,13 @@ typeCheck :: TypeChecker r => Term r b -> r b
 typeCheck (Var' v) = v
 typeCheck (Lam' ty f) = lam ty $ \v -> typeCheck (f $ Var' v)
 typeCheck (f `App'` a) = typeCheck f `app` typeCheck a
+-}
 
+t0, t1 :: TypeChecker r => r False
+t0 = lam a $ \x -> have x a (app x x)
+t1 = lam a $ \x -> have x b (app x x)
 
-t1 :: TypeChecker r => r False
-t1 = lam A $ \x -> have x B (app x x)
-
+{-
 data Script :: Bool -> * where
   Var :: Script True
   Lam :: Type -> (Script True -> Script x) -> Script False
