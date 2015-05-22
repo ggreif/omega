@@ -89,14 +89,15 @@ t4 = hasType ((a `arr` b) `arr` (a `arr` b)) t3 -- SUCCESS
 t5 = hasType ((a `arr` a) `arr` (a `arr` b)) t3 -- FAIL (because of wrong assert)
 t6 = lam a $ \x -> have x b x -- FAIL (because of wrong assert)
 
-{-
+
 data Script :: Bool -> * where
   Var :: Script True
-  Lam :: Type -> (Script True -> Script x) -> Script False
+  Lam :: Script ty -> (Script True -> Script x) -> Script False
   App :: Script x -> Script y -> Script False
   Failure :: Script False
-  Have :: Script True -> Type -> Script x -> Script False
-  GoalIs :: Type -> Script x -> Script False
+  Have :: Script True -> Script ty -> Script x -> Script False
+  GoalIs :: Script ty -> Script x -> Script False
+  Type :: Type -> Script False
 
 instance TypeChecker Script where
   lam = Lam
@@ -104,7 +105,8 @@ instance TypeChecker Script where
   failure = Failure
   have = Have
   hasType = GoalIs
-
+  a = Type A; b = Type B; c = Type C
+  Type d `arr` Type c = Type $ d :-> c
 
 instance Show (Script b) where
   show Var = "VAR"
@@ -113,8 +115,10 @@ instance Show (Script b) where
   show Failure = "Failure"
   show (Have v ty inn) = "Have " ++ show v ++ ":" ++ show ty ++ " in " ++ show inn
   show (GoalIs ty inn) = "GoalIs " ++ show ty ++ "     " ++ show inn
+  show (Type ty) = show ty
 
 
+{-
 -- #### (pre) bidirectional inferencer
 
 newtype Bidir (v :: Bool) = BD (Type -> Type)
