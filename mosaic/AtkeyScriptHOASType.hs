@@ -47,12 +47,15 @@ instance TypeChecker TypeChecker' where
 
   have (TC v) (TC t) (TC tc) = TC (do ty' <- v
                                       ty <- t
-                                      guard $ ty == ty'
+                                      unTC $ TC (return ty) `unify` TC (return ty')
+                                      --guard $ ty == ty'
                                       tc)
   hasType (TC t) (TC tc) = TC (do ty' <- tc
                                   ty <- t
-                                  guard $ ty == ty'
-                                  return ty)
+                                  --guard $ ty == ty'
+                                  --return ty
+                                  unTC $ TC (return ty) `unify` TC (return ty')
+                                  tc)
   a = TC $ return A
   b = TC $ return B
   c = TC $ return C
@@ -80,12 +83,14 @@ typeCheck (Lam' ty f) = lam ty $ \v -> typeCheck (f $ Var' v)
 typeCheck (f `App'` a) = typeCheck f `app` typeCheck a
 -}
 
-t0, t1, t2, t3 :: TypeChecker r => r False
+t0, t1, t2, t3, t4, t5, t6 :: TypeChecker r => r False
 t0 = lam a $ \x -> have x a x -- SUCCESS: a `arr` a
 t1 = lam a $ \x -> have x b (app x x) -- FAIL (because of self-application)
 t2 = lam a $ \x -> hasType a x -- SUCCESS: a `arr` a
 t3 = lam (a `arr` b) $ \fun -> lam a $ \arg -> fun `app` arg -- SUCCESS
-
+t4 = hasType ((a `arr` b) `arr` (a `arr` b)) t3 -- SUCCESS
+t5 = hasType ((a `arr` a) `arr` (a `arr` b)) t3 -- FAIL (because of wrong assert)
+t6 = lam a $ \x -> have x b x -- FAIL (because of wrong assert)
 
 {-
 data Script :: Bool -> * where
