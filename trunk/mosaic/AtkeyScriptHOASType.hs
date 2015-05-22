@@ -18,8 +18,8 @@ class TypeChecker (a :: Bool -> *) where
   lam :: a t -> (a True -> a x) -> a False
   app :: a x -> a y -> a False
   failure :: a False
-  have :: a True -> Type -> a x -> a False
-  hasType :: Type -> a x -> a False
+  have :: a True -> a ty -> a x -> a False
+  hasType :: a ty -> a x -> a False
   -- Type section
   a :: a False
   b :: a False
@@ -45,12 +45,14 @@ instance TypeChecker TypeChecker' where
 
   failure = TC $ Nothing
 
-  have (TC v) ty (TC tc) = TC (do ty' <- v
+  have (TC v) (TC t) (TC tc) = TC (do ty' <- v
+                                      ty <- t
+                                      guard $ ty == ty'
+                                      tc)
+  hasType (TC t) (TC tc) = TC (do ty' <- tc
+                                  ty <- t
                                   guard $ ty == ty'
-                                  tc)
-  hasType ty (TC tc) = TC (do ty' <- tc
-                              guard $ ty == ty'
-                              return ty)
+                                  return ty)
   a = TC $ return A
   b = TC $ return B
   c = TC $ return C
