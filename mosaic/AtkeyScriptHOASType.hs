@@ -148,7 +148,7 @@ instance TypeChecker Bidir where
   BD l `unify` BD r = BD $ l . r
   
 
-{-
+
 
 data Type' where
   Univ :: Type'
@@ -168,18 +168,20 @@ known ty (Ground ty') = Contradiction $ show ty ++ " /= " ++ show ty'
 
 
 instance TypeChecker BidirBetter where
-  lam ty tcf = BB go
-         where go Univ = Ground $ ty :-> (case tc Univ of Ground res -> res)
-               BB tc = tcf $ BB (known ty)
--}
-{-
+
+  a = BB $ known A; b = BB $ known B; c = BB $ known C
+  lam (BB ty) tcf = BB go
+         where go Univ = Ground $ obtain ty :-> obtain tc
+               BB tc = tcf $ BB ty
+               obtain t = case t Univ of Ground res -> res
+
   BB f `app` BB a = BB go
-         where go want = resT
-                 where argT' :-> resT = f (argT :-> want)
-                       argT = a undefined
+         where go (Ground want) = Ground resT
+                 where Ground (argT' :-> resT) = f . Ground $ argT :-> want
+                       Ground argT = a Univ
 
-  failure = error "failing Bidir"
-
+  failure = BB . const $ Contradiction "failure"
+{-
   hasType ty (BB tc) = BB go
          where go want = tc ty
 
