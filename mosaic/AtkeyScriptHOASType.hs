@@ -142,11 +142,11 @@ instance TypeChecker Bidir where
   have (BD v) ty (BD body) = (BD body) -- v ty -- FIXME!
 
   a = BD $ const A; b = BD $ const B; c = BD $ const C
-  
+
   BD d `arr` BD c = BD $ const $ d undefined :-> c undefined
 
   BD l `unify` BD r = BD $ l . r
-  
+
 
 
 
@@ -170,10 +170,13 @@ known ty (Ground ty') = Contradiction $ show ty ++ " /= " ++ show ty'
 instance TypeChecker BidirBetter where
 
   a = BB $ known A; b = BB $ known B; c = BB $ known C
+
   lam (BB ty) tcf = BB go
          where go Univ = Ground $ obtain ty :-> obtain tc
+               go (Ground (d :-> c)) = Ground $ check ty d :-> check tc c
                BB tc = tcf $ BB ty
                obtain t = case t Univ of Ground res -> res
+               check t ty = case t $ Ground ty of Ground res -> res
 
   BB f `app` BB a = BB go
          where go (Ground want) = Ground resT
@@ -186,4 +189,3 @@ instance TypeChecker BidirBetter where
          where go want = tc ty
 -}
   have (BB v) ty (BB body) = (BB body) -- v ty -- FIXME!
-
