@@ -184,8 +184,7 @@ instance TypeChecker BidirBetter where
                        Ground argT = a Univ
 
   failure = BB . const $ Contradiction "failure"
-{-
-  hasType ty (BB tc) = BB go
-         where go want = tc ty
--}
+
+  hasType (BB ty) (BB tc) = BB $ ty . tc
+
   have (BB v) ty (BB body) = (BB body) -- v ty -- FIXME!
