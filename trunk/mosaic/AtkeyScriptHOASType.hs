@@ -184,6 +184,6 @@ instance TypeChecker BidirBetter where
 {-
   hasType ty (BB tc) = BB go
          where go want = tc ty
-
-  have (BB v) ty (BB body) = (BB body) -- v ty -- FIXME!
 -}
+  have (BB v) ty (BB body) = (BB body) -- v ty -- FIXME!
+
