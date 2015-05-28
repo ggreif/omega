@@ -191,4 +191,7 @@ instance TypeChecker BidirBetter where
 
   unify (BB l) (BB r) = BB $ l . r
 
-  BB d `arr` BB c = undefined
+  BB d `arr` BB c = BB go
+    where go Univ = d Univ `dc` c Univ
+          go (Ground (d' :-> c')) = d (Ground d') `dc` c (Ground c')
+          Ground d `dc` Ground c = Ground $ d :-> c
