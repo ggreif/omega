@@ -188,3 +188,7 @@ instance TypeChecker BidirBetter where
   hasType (BB ty) (BB tc) = BB $ ty . tc
 
   have (BB v) ty (BB body) = (BB body) -- v ty -- FIXME!
+
+  unify (BB l) (BB r) = BB $ l . r
+
+  BB d `arr` BB c = undefined
