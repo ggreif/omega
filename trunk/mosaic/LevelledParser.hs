@@ -1,6 +1,7 @@
-{-# LANGUAGE DataKinds, KindSignatures, GADTs #-}
+{-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections #-}
 
 import Control.Applicative
+import Control.Monad
 
 data Nat = Z | S Nat
 
@@ -31,4 +32,17 @@ dataDefinition = do reserved "data"
     where alt = constructor
 
 
+newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
 
+instance P CharParse where
+  star = CP $ \s -> do ('*' : rest) <- return s -- \do ('*' : rest)
+                       return ((), rest)
+  reserved w = CP $ \s -> do guard $ and $ zipWith (==) w s
+                             return ((), drop (length w) s)
+
+instance Monad (CharParse stratum) where
+  return a = CP $ return . (a,)
+  (CP f) >>= c = CP $ \s -> do (o, rest) <- f s
+                               _ -- c $ CP $ \s -> do 
+
+runCP (CP f) = f
