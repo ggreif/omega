@@ -1,8 +1,5 @@
+{-# LANGUAGE DataKinds, KindSignatures, GADTs #-}
 
-{-# LANGUAGE DataKinds, KindSignatures, GADTs, ScopedTypeVariables #-}
--- import Text.Parsec
-
---import Kinds.TypeMachinery
 import Control.Applicative
 
 data Nat = Z | S Nat
@@ -23,7 +20,7 @@ class P (interp :: Nat -> * -> *) where
 signature :: (P interp, Alternative (interp s)) => interp s ()
 signature = star <|> star
 
-dataDefinition :: forall interp s . (P interp, Monad (interp (S s)), Alternative (interp s), Alternative (interp ('S s))) => interp (S s) (String, (), [String])
+dataDefinition :: (P interp, Monad (interp (S s)), Alternative (interp s), Alternative (interp ('S s))) => interp (S s) (String, (), [String])
 dataDefinition = do reserved "data"
                     name <- constructor
                     operator "::"
@@ -31,7 +28,7 @@ dataDefinition = do reserved "data"
                     reserved "where"
                     alts <- descend $ many alt
                     return (name, sig, alts)
-    where alt = constructor -- :: interp s String
+    where alt = constructor
 
 
 
