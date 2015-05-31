@@ -1,10 +1,15 @@
-{-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns #-}
+{-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns
+           , FlexibleContexts #-}
 
 import Control.Applicative
 import Control.Monad
 import Data.Char
 
 data Nat = Z | S Nat -- >    data Nat :: level l . *l where Z :: Nat; S :: Nat ~> Nat
+
+data Nat' :: Nat -> * where
+  Z' :: Nat' Z
+  S' :: Nat' n -> Nat' (S n)
 
 {-
 data Nat' :: level l . Nat -> *(1+l) where
@@ -20,6 +25,9 @@ Bar :: Foo _::_ Nat' x :: *1
 
 class KnownStratum (stratum :: Nat)
 
+instance KnownStratum Z
+instance KnownStratum n => KnownStratum (S n)
+
 
 class P (parser :: Nat -> * -> *) where
   star :: KnownStratum s => parser s ()
@@ -33,7 +41,7 @@ class P (parser :: Nat -> * -> *) where
 signature :: (P parser, KnownStratum s, Alternative (parser s)) => parser s ()
 signature = star <|> star -- (star >> operator "~>" >> star)
 
-dataDefinition :: (P parser, KnownStratum s, Monad (parser (S s)), Alternative (parser s), Alternative (parser ('S s))) => parser (S s) (String, (), [String])
+dataDefinition :: (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser ('S s))) => parser (S s) (String, (), [String])
 dataDefinition = do reserved "data"
                     name <- constructor
                     operator "::"
