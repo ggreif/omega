@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns
-           , FlexibleContexts #-}
+           , FlexibleContexts, InstanceSigs, ScopedTypeVariables #-}
 
 import Control.Applicative
 import Control.Monad
@@ -23,10 +23,11 @@ Bar :: Foo _::_ Nat' x :: *1
        Bar :: Foo _::_ Nat' x :: *2
 -}
 
-class KnownStratum (stratum :: Nat)
+class KnownStratum (stratum :: Nat) where
+  stratum :: Nat' stratum
 
-instance KnownStratum Z
-instance KnownStratum n => KnownStratum (S n)
+instance KnownStratum Z where stratum = Z'
+instance KnownStratum n => KnownStratum (S n) where stratum = S' stratum
 
 
 class P (parser :: Nat -> * -> *) where
@@ -54,9 +55,15 @@ dataDefinition = do reserved "data"
 
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
 
+parseLevel :: Nat' s -> CharParse s ()
+parseLevel (S' (S' Z')) = reserved "0"
+
 instance P CharParse where
+  star :: forall s . KnownStratum s => CharParse s ()
   star = CP $ \s -> do ('*' : rest) <- return s -- \do ('*' : rest)
-                       return ((), rest)
+                       runCP (parseLevel (stratum :: Nat' s)) rest
+                       --return ((), rest)
+
   reserved w = CP $ \s -> do guard $ and $ zipWith (==) w s
                              return ((), drop (length w) s)
 
