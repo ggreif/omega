@@ -2,34 +2,46 @@
 
 import Control.Applicative
 import Control.Monad
+import Data.Char
 
-data Nat = Z | S Nat
+data Nat = Z | S Nat -- >    data Nat :: level l . *l where Z :: Nat; S :: Nat ~> Nat
 
-data Nat' :: Nat -> * where
+{-
+data Nat' :: level l . Nat -> *(1+l) where
   Z' :: Nat' Z
   S' :: Nat' n -> Nat' (S n)
+  data Foo :: Nat' x
+    Bar :: Foo
 
-class P (interp :: Nat -> * -> *) where
-  star :: interp s ()
-  reserved :: String -> interp s ()
-  operator :: String -> interp s ()
-  identifier :: interp s String
-  constructor :: interp s String
-  ascend :: interp (S s) a -> interp s a
-  descend :: interp s a -> interp (S s) a
+Bar :: Foo _::_ Nat' x :: *1
 
-signature :: (P interp, Alternative (interp s)) => interp s ()
-signature = star <|> star
+       Bar :: Foo _::_ Nat' x :: *2
+-}
 
-dataDefinition :: (P interp, Monad (interp (S s)), Alternative (interp s), Alternative (interp ('S s))) => interp (S s) (String, (), [String])
+class KnownStratum (stratum :: Nat)
+
+
+class P (parser :: Nat -> * -> *) where
+  star :: KnownStratum s => parser s ()
+  reserved :: String -> parser s ()
+  operator :: String -> parser s ()
+  identifier :: parser s String
+  constructor :: parser s String
+  ascend :: parser (S s) a -> parser s a
+  descend :: parser s a -> parser (S s) a
+
+signature :: (P parser, KnownStratum s, Alternative (parser s)) => parser s ()
+signature = star <|> star -- (star >> operator "~>" >> star)
+
+dataDefinition :: (P parser, KnownStratum s, Monad (parser (S s)), Alternative (parser s), Alternative (parser ('S s))) => parser (S s) (String, (), [String])
 dataDefinition = do reserved "data"
                     name <- constructor
                     operator "::"
                     sig <- signature
                     reserved "where"
-                    alts <- descend $ many alt
-                    return (name, sig, alts)
-    where alt = constructor
+                    inhabitants <- descend $ many inhabitant
+                    return (name, sig, inhabitants)
+    where inhabitant = constructor -- do c <- constructor; operator "::"; return c
 
 
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
@@ -39,6 +51,16 @@ instance P CharParse where
                        return ((), rest)
   reserved w = CP $ \s -> do guard $ and $ zipWith (==) w s
                              return ((), drop (length w) s)
+
+  identifier = CP $ \s -> do (lead : rest) <- return s
+                             guard $ isLower lead
+                             let (more, rest') = span (liftA2 (||) isLower isUpper) rest
+                             return $ (lead : more, rest')
+
+  constructor = CP $ \s -> do (lead : rest) <- return s
+                              guard $ isUpper lead
+                              let (more, rest') = span (liftA2 (||) isLower isUpper) rest
+                              return $ (lead : more, rest')
 
 instance Monad (CharParse stratum) where
   return a = CP $ return . (a,)
