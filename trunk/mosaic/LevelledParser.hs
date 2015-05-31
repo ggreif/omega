@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections #-}
+{-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns #-}
 
 import Control.Applicative
 import Control.Monad
@@ -42,7 +42,7 @@ instance P CharParse where
 
 instance Monad (CharParse stratum) where
   return a = CP $ return . (a,)
-  (CP f) >>= c = CP $ \s -> do (o, rest) <- f s
-                               _ -- c $ CP $ \s -> do 
+  (CP f) >>= c = CP $ \s -> do (a, rest) <- f s -- do (f -> Just (a, rest)) <- return s -- \do f -> (a, rest)
+                               runCP (c a) rest
 
 runCP (CP f) = f
