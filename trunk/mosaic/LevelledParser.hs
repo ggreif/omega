@@ -56,7 +56,10 @@ dataDefinition = do reserved "data"
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
 
 parseLevel :: Nat' s -> CharParse s ()
-parseLevel (S' (S' Z')) = reserved "0"
+parseLevel (S' (S' l)) = reserved $ show $ lev l
+   where lev :: Nat' n -> Int
+         lev Z' = 0
+         lev (S' l) = 1 + lev l
 
 instance P CharParse where
   star :: forall s . KnownStratum s => CharParse s ()
