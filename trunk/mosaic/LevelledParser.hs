@@ -57,20 +57,21 @@ class P (parser :: Nat -> * -> *) where
 signature :: (P parser, KnownStratum s, Alternative (parser s)) => parser s ()
 signature = star <|> star -- (star >> operator "~>" >> star)
 
-dataDefinition :: forall parser s . (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser (S s))) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
+dataDefinition :: forall parser s . (P parser, KnownStratum (S s)) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
 dataDefinition d
-               = do reserved "data"
+           = case (d :: AMDict (parser (S s)), d :: AMDict (parser s)) of
+               (AMDict, AMDict) ->
+                 do reserved "data"
                     name <- constructor
                     operator "::"
                     sig <- signature
                     reserved "where"
-                    let inhabitant :: parser s (String `Either` DefData s)
+                    let --inhabitant :: parser s (String `Either` DefData s)
                         inhabitant = let str = (stratum :: Nat' (S s)) in
                                        case str of
                                          S' b@(S' (_ :: Nat' s')) -> case canDescend str b of
                                            Nothing -> Left <$> constructor
-                                           Just (Refl, Dict) -> case (d :: AMDict (parser s), d :: AMDict (parser s')) of
-                                                                  (AMDict, AMDict) -> Right <$> dataDefinition d
+                                           Just (Refl, Dict) -> Right <$> dataDefinition d
                                          _ -> Left <$> constructor
                     inhabitants <- descend $ many inhabitant
                     return $ DefData name sig inhabitants
