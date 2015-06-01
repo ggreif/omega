@@ -80,7 +80,7 @@ dataDefinition d
                     --name <- constructor
                     --operator "::"
                     --typ@Star <- typeExpr; error $ show typ
-                    sig <- signature
+                    (sig :: Signature (S s)) <- signature
                     reserved "where"
                     let inhabitant = let str = (stratum :: Nat' (S s)) in
                                        case str of
@@ -89,7 +89,7 @@ dataDefinition d
                                            Just (Refl, Dict) -> Right <$> dataDefinition d
                                          _ -> Left <$> constructor
                     inhabitants <- descend $ many inhabitant
-                    return $ DefData undefined{-(Signature name typ)-} inhabitants
+                    return $ DefData sig{-(Signature name typ)-} inhabitants
 
 data Typ (stratum :: Nat) where
   Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
@@ -103,7 +103,7 @@ data Signature (stratum :: Nat) where
 deriving instance Show (Signature stratum)
 
 data DefData (stratum :: Nat) where
-  DefData :: Signature stratum -> [String `Either` DefData stratum] -> DefData (S stratum)
+  DefData :: Signature (S stratum) -> [String `Either` DefData stratum] -> DefData (S stratum)
 
 deriving instance Show (DefData stratum)
 
