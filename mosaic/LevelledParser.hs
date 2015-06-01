@@ -54,8 +54,8 @@ class P (parser :: Nat -> * -> *) where
   ascend :: parser (S s) a -> parser s a
   descend :: parser s a -> parser (S s) a
 
-signature :: (P parser, KnownStratum s, Alternative (parser s)) => parser s ()
-signature = star <|> star -- (star >> operator "~>" >> star)
+typeExpr :: (P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (Typ s)
+typeExpr = (star >> return Star) -- <|> star -- (star >> operator "~>" >> star)
 
 dataDefinition :: forall parser s . (P parser, KnownStratum (S s)) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
 dataDefinition d
@@ -64,21 +64,26 @@ dataDefinition d
                  do reserved "data"
                     name <- constructor
                     operator "::"
-                    sig <- signature
+                    typ <- typeExpr
                     reserved "where"
-                    let --inhabitant :: parser s (String `Either` DefData s)
-                        inhabitant = let str = (stratum :: Nat' (S s)) in
+                    let inhabitant = let str = (stratum :: Nat' (S s)) in
                                        case str of
                                          S' b@(S' (_ :: Nat' s')) -> case canDescend str b of
                                            Nothing -> Left <$> constructor
                                            Just (Refl, Dict) -> Right <$> dataDefinition d
                                          _ -> Left <$> constructor
                     inhabitants <- descend $ many inhabitant
-                    return $ DefData name sig inhabitants
+                    return $ DefData (Signature name typ) inhabitants
 
+data Typ (stratum :: Nat) where
+  Star :: KnownStratum stratum => Typ stratum
+  --Star :: KnownStratum stratum => Typ (S (S stratum))
+
+data Signature (stratum :: Nat) where
+  Signature :: String -> Typ (S stratum) -> Signature stratum
 
 data DefData (stratum :: Nat) where
-  DefData :: String -> () -> [String `Either` DefData stratum] -> DefData (S stratum)
+  DefData :: Signature stratum -> [String `Either` DefData stratum] -> DefData (S stratum)
 
 
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
