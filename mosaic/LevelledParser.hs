@@ -14,6 +14,9 @@ data Nat' :: Nat -> * where
   Z' :: Nat' Z
   S' :: Nat' n -> Nat' (S n)
 
+sameNat :: Nat' a -> Nat' b -> Maybe (a :~: b)
+Z' `sameNat` Z' = Just Refl
+
 {-
 data Nat' :: level l . Nat -> *(1+l) where
   Z' :: Nat' Z
@@ -34,11 +37,13 @@ data AMDict :: (* -> *) -> * where
 
 class KnownStratum (stratum :: Nat) where
   stratum :: Nat' stratum
-  canDescend :: p stratum -> Maybe (p stratum, stratum :~: S below, Dict KnownStratum below)
+  canDescend :: Nat' stratum -> Nat' below -> Maybe (stratum :~: S below, Dict KnownStratum below)
 
-instance KnownStratum Z where stratum = Z'; canDescend = const Nothing
-instance KnownStratum n => KnownStratum (S n) where stratum = S' stratum; canDescend p = Just (p, Refl, Dict)
-
+instance KnownStratum Z where stratum = Z'; canDescend _ _ = Nothing
+instance KnownStratum n => KnownStratum (S n) where
+  stratum = S' stratum
+  canDescend (S' s) b | Just Refl <- s `sameNat` b = Just (Refl, Dict)
+  canDescend _ _ = Nothing
 
 class P (parser :: Nat -> * -> *) where
   star :: KnownStratum s => parser s ()
@@ -60,9 +65,13 @@ dataDefinition d
                     sig <- signature
                     reserved "where"
                     let inhabitants :: parser s (String, (), [String])
-                        inhabitants = case canDescend (stratum :: Nat' (S s)) of
-                                        --Nothing -> constructor
-                                        Just (S' (S' (_ :: Nat' s')), Refl, Dict) -> case (d :: AMDict (parser s), d :: AMDict (parser s')) of (AMDict, AMDict) -> dataDefinition d
+                        inhabitants = let str = (stratum :: Nat' (S s)) in
+                                       case str of
+                                         S' b@(S' (_ :: Nat' s')) -> case canDescend str b of
+                                           Nothing -> undefined
+                                           Just (Refl, Dict) -> case (d :: AMDict (parser s), d :: AMDict (parser s')) of
+                                                                  (AMDict, AMDict) -> dataDefinition d
+                                         _ -> undefined
                     inhabitants <- descend $ many inhabitant
                     return (name, sig, inhabitants)
     where --inhabitant :: (P parser, KnownStratum s) => parser s String
