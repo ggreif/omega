@@ -93,9 +93,12 @@ deriving instance Show (Typ stratum)
 data Signature (stratum :: Nat) where
   Signature :: String -> Typ (S stratum) -> Signature stratum
 
+deriving instance Show (Signature stratum)
+
 data DefData (stratum :: Nat) where
   DefData :: Signature stratum -> [String `Either` DefData stratum] -> DefData (S stratum)
 
+deriving instance Show (DefData stratum)
 
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
 
