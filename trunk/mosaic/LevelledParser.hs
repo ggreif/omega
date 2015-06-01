@@ -129,6 +129,11 @@ instance Applicative (CharParse stratum) where
   (<*>) = ap
 
 instance Alternative (CharParse stratum) where
+  empty = failure
+  CP l <|> CP r = CP $ \s -> case (l s, r s) of
+                              (l, Nothing) -> l
+                              (l@(Just (_, lrest)), Just (_, rrest)) | length lrest <= length rrest -> l
+                              (_, r) -> r
 
 instance Monad (CharParse stratum) where
   return a = CP $ return . (a,)
