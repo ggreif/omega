@@ -65,15 +65,22 @@ typeExpr = starType <|> arrowType
                        operator "~>"
                        cod <- typeExpr
                        return $ dom `Arr` cod
-                       
+
+signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser s), Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
+signature = do name <- constructor
+               operator "::"
+               typ <- ascend typeExpr
+               return $ Signature name typ
+
 dataDefinition :: forall parser s . (P parser, KnownStratum (S s)) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
 dataDefinition d
-           = case (d :: AMDict (parser (S s)), d :: AMDict (parser s)) of
-               (AMDict, AMDict) ->
+           = case (d :: AMDict (parser (S (S s))), d :: AMDict (parser (S s)), d :: AMDict (parser s)) of
+               (AMDict, AMDict, AMDict) ->
                  do reserved "data"
-                    name <- constructor
-                    operator "::"
-                    typ <- typeExpr
+                    --name <- constructor
+                    --operator "::"
+                    --typ@Star <- typeExpr; error $ show typ
+                    sig <- signature
                     reserved "where"
                     let inhabitant = let str = (stratum :: Nat' (S s)) in
                                        case str of
@@ -82,7 +89,7 @@ dataDefinition d
                                            Just (Refl, Dict) -> Right <$> dataDefinition d
                                          _ -> Left <$> constructor
                     inhabitants <- descend $ many inhabitant
-                    return $ DefData (Signature name typ) inhabitants
+                    return $ DefData undefined{-(Signature name typ)-} inhabitants
 
 data Typ (stratum :: Nat) where
   Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
@@ -133,6 +140,10 @@ instance P CharParse where
                               return $ (lead : more, rest')
 
   failure = CP $ const Nothing
+  ascend (CP f) = CP f
+  descend (CP f) = CP f
+
+
 instance Functor (CharParse stratum) where
   fmap f (CP p) = CP $ fmap (\(a, str) -> (f a, str)) . p
 
