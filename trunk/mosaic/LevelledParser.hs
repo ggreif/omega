@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns
            , FlexibleContexts, InstanceSigs, ScopedTypeVariables
-           , TypeOperators, ConstraintKinds, PolyKinds, RankNTypes #-}
+           , TypeOperators, ConstraintKinds, PolyKinds, RankNTypes
+           , StandaloneDeriving #-}
 
 import Control.Applicative
 import Control.Monad
@@ -53,9 +54,13 @@ class P (parser :: Nat -> * -> *) where
   constructor :: parser s String
   ascend :: parser (S s) a -> parser s a
   descend :: parser s a -> parser (S s) a
+  failure :: parser s a
 
-typeExpr :: (P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (Typ s)
-typeExpr = (star >> return Star) -- <|> star -- (star >> operator "~>" >> star)
+typeExpr :: forall parser s . (P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (Typ s)
+typeExpr = starType
+  where starType = do star
+                      S' (S' _) <- return (stratum :: Nat' s)
+                      return Star
 
 dataDefinition :: forall parser s . (P parser, KnownStratum (S s)) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
 dataDefinition d
@@ -76,8 +81,9 @@ dataDefinition d
                     return $ DefData (Signature name typ) inhabitants
 
 data Typ (stratum :: Nat) where
-  Star :: KnownStratum stratum => Typ stratum
-  --Star :: KnownStratum stratum => Typ (S (S stratum))
+  Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
+
+deriving instance Show (Typ stratum)
 
 data Signature (stratum :: Nat) where
   Signature :: String -> Typ (S stratum) -> Signature stratum
@@ -89,10 +95,11 @@ data DefData (stratum :: Nat) where
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
 
 parseLevel :: Nat' s -> CharParse s ()
-parseLevel (S' (S' l)) = reserved $ show $ lev l
+parseLevel (S' (S' l)) = reserved $ show $ lev l -- FIXME
    where lev :: Nat' n -> Int
          lev Z' = 0
          lev (S' l) = 1 + lev l
+parseLevel _ = failure
 
 instance P CharParse where
   star :: forall s . KnownStratum s => CharParse s ()
@@ -100,6 +107,7 @@ instance P CharParse where
                        runCP (parseLevel (stratum :: Nat' s)) rest
 
   reserved w = CP $ \s -> do guard $ and $ zipWith (==) w s
+                             guard . not . null $ drop (length w - 1) s
                              return ((), drop (length w) s)
 
   identifier = CP $ \s -> do (lead : rest) <- return s
@@ -112,12 +120,15 @@ instance P CharParse where
                               let (more, rest') = span (liftA2 (||) isLower isUpper) rest
                               return $ (lead : more, rest')
 
+  failure = CP $ const Nothing
 instance Functor (CharParse stratum) where
   fmap f (CP p) = CP $ fmap (\(a, str) -> (f a, str)) . p
 
 instance Applicative (CharParse stratum) where
   pure = return
   (<*>) = ap
+
+instance Alternative (CharParse stratum) where
 
 instance Monad (CharParse stratum) where
   return a = CP $ return . (a,)
