@@ -109,6 +109,7 @@ deriving instance Show (DefData stratum)
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
 
 parseLevel :: Nat' s -> CharParse s ()
+parseLevel (S' (S' Z')) = reserved "0" <|> return () -- FIXME
 parseLevel (S' (S' l)) = reserved $ show $ lev l -- FIXME
    where lev :: Nat' n -> Int
          lev Z' = 0
