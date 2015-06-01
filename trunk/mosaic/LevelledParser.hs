@@ -57,11 +57,15 @@ class P (parser :: Nat -> * -> *) where
   failure :: parser s a
 
 typeExpr :: forall parser s . (P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (Typ s)
-typeExpr = starType
+typeExpr = starType <|> arrowType
   where starType = do star
                       S' (S' _) <- return (stratum :: Nat' s)
                       return Star
-
+        arrowType = do dom <- starType
+                       operator "~>"
+                       cod <- typeExpr
+                       return $ dom `Arr` cod
+                       
 dataDefinition :: forall parser s . (P parser, KnownStratum (S s)) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
 dataDefinition d
            = case (d :: AMDict (parser (S s)), d :: AMDict (parser s)) of
@@ -82,6 +86,7 @@ dataDefinition d
 
 data Typ (stratum :: Nat) where
   Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
+  Arr :: Typ stratum -> Typ stratum -> Typ stratum
 
 deriving instance Show (Typ stratum)
 
@@ -109,6 +114,10 @@ instance P CharParse where
   reserved w = CP $ \s -> do guard $ and $ zipWith (==) w s
                              guard . not . null $ drop (length w - 1) s
                              return ((), drop (length w) s)
+
+  operator o = CP $ \s -> do guard $ and $ zipWith (==) o s
+                             guard . not . null $ drop (length o - 1) s
+                             return ((), drop (length o) s)
 
   identifier = CP $ \s -> do (lead : rest) <- return s
                              guard $ isLower lead
