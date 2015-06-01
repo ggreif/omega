@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns
            , FlexibleContexts, InstanceSigs, ScopedTypeVariables
-           , TypeOperators, ConstraintKinds, PolyKinds #-}
+           , TypeOperators, ConstraintKinds, PolyKinds, RankNTypes #-}
 
 import Control.Applicative
 import Control.Monad
@@ -31,7 +31,7 @@ data Dict :: (k -> Constraint) -> k -> * where
 
 class KnownStratum (stratum :: Nat) where
   stratum :: Nat' stratum
-  canDescend :: Maybe (stratum :~: S below, Dict KnownStratum below)
+  canDescend :: p stratum -> Maybe (p stratum, stratum :~: S below, Dict KnownStratum below)
 
 instance KnownStratum Z where stratum = Z'
 instance KnownStratum n => KnownStratum (S n) where stratum = S' stratum
@@ -49,13 +49,18 @@ class P (parser :: Nat -> * -> *) where
 signature :: (P parser, KnownStratum s, Alternative (parser s)) => parser s ()
 signature = star <|> star -- (star >> operator "~>" >> star)
 
-dataDefinition :: forall parser s . (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser (S s))) => parser (S s) (String, (), [String])
-dataDefinition = do reserved "data"
+dataDefinition :: forall parser s . (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser (S s))) => (forall strat . Dict Monad (parser strat)) -> parser (S s) (String, (), [String])
+dataDefinition d
+               = do reserved "data"
                     name <- constructor
                     operator "::"
                     sig <- signature
                     reserved "where"
-                    --let inhabitants :: parser s String
+                    let inhabitants :: parser s (String, (), [String])
+                        inhabitants = case canDescend (stratum :: Nat' (S s)) of
+                                        --Nothing -> constructor
+                                        --Just (S' _, Refl, Dict :: Dict KnownStratum b) -> (dataDefinition :: parser b (String, (), [String])) >> constructor
+                                        Just (S' (S' _), Refl, Dict) -> case d :: Dict Monad (parser s) of Dict -> dataDefinition d
                     inhabitants <- descend $ many inhabitant
                     return (name, sig, inhabitants)
     where --inhabitant :: (P parser, KnownStratum s) => parser s String
@@ -99,5 +104,8 @@ instance Monad (CharParse stratum) where
   return a = CP $ return . (a,)
   (CP f) >>= c = CP $ \s -> do (a, rest) <- f s -- do (f -> Just (a, rest)) <- return s -- \do f -> (a, rest)
                                runCP (c a) rest
+
+allCPDict :: forall stratum . Dict Monad (CharParse stratum)
+allCPDict = Dict
 
 runCP (CP f) = f
