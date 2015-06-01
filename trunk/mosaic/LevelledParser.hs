@@ -57,14 +57,14 @@ class P (parser :: Nat -> * -> *) where
 signature :: (P parser, KnownStratum s, Alternative (parser s)) => parser s ()
 signature = star <|> star -- (star >> operator "~>" >> star)
 
-dataDefinition :: forall parser s . (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser (S s))) => (forall strat . AMDict (parser strat)) -> parser (S s) (String, (), [String])
+dataDefinition :: forall parser s . (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser (S s))) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
 dataDefinition d
                = do reserved "data"
                     name <- constructor
                     operator "::"
                     sig <- signature
                     reserved "where"
-                    let inhabitants :: parser s (String, (), [String])
+                    let inhabitants :: parser s (DefData s)
                         inhabitants = let str = (stratum :: Nat' (S s)) in
                                        case str of
                                          S' b@(S' (_ :: Nat' s')) -> case canDescend str b of
@@ -73,9 +73,13 @@ dataDefinition d
                                                                   (AMDict, AMDict) -> dataDefinition d
                                          _ -> undefined
                     inhabitants <- descend $ many inhabitant
-                    return (name, sig, inhabitants)
+                    return $ DefData name sig inhabitants
     where --inhabitant :: (P parser, KnownStratum s) => parser s String
           inhabitant = {-case canDescend of Nothing -> -}constructor -- dataDefinition >> constructor -- constructor -- do c <- constructor; operator "::"; return c
+
+
+data DefData (stratum :: Nat) where
+  DefData :: String -> () -> [String] -> DefData stratum
 
 
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
