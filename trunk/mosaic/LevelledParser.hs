@@ -64,22 +64,22 @@ dataDefinition d
                     operator "::"
                     sig <- signature
                     reserved "where"
-                    let inhabitants :: parser s (DefData s)
+                    let inhabitants :: parser s (String `Either` DefData s)
                         inhabitants = let str = (stratum :: Nat' (S s)) in
                                        case str of
                                          S' b@(S' (_ :: Nat' s')) -> case canDescend str b of
-                                           Nothing -> undefined
+                                           Nothing -> Left <$> inhabitant
                                            Just (Refl, Dict) -> case (d :: AMDict (parser s), d :: AMDict (parser s')) of
-                                                                  (AMDict, AMDict) -> dataDefinition d
-                                         _ -> undefined
-                    inhabitants <- descend $ many inhabitant
+                                                                  (AMDict, AMDict) -> Right <$> dataDefinition d
+                                         _ -> Left <$> inhabitant
+                    inhabitants <- descend $ many (Left <$> inhabitant)
                     return $ DefData name sig inhabitants
     where --inhabitant :: (P parser, KnownStratum s) => parser s String
           inhabitant = {-case canDescend of Nothing -> -}constructor -- dataDefinition >> constructor -- constructor -- do c <- constructor; operator "::"; return c
 
 
 data DefData (stratum :: Nat) where
-  DefData :: String -> () -> [String] -> DefData stratum
+  DefData :: String -> () -> [String `Either` DefData stratum] -> DefData (S stratum)
 
 
 newtype CharParse (stratum :: Nat) a = CP (String -> Maybe (a, String))
