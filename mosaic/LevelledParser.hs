@@ -29,6 +29,9 @@ Bar :: Foo _::_ Nat' x :: *1
 data Dict :: (k -> Constraint) -> k -> * where
   Dict :: c k => Dict c k
 
+data AMDict :: (* -> *) -> * where
+  AMDict :: (Alternative t, Monad t) => AMDict t
+
 class KnownStratum (stratum :: Nat) where
   stratum :: Nat' stratum
   canDescend :: p stratum -> Maybe (p stratum, stratum :~: S below, Dict KnownStratum below)
@@ -49,7 +52,7 @@ class P (parser :: Nat -> * -> *) where
 signature :: (P parser, KnownStratum s, Alternative (parser s)) => parser s ()
 signature = star <|> star -- (star >> operator "~>" >> star)
 
-dataDefinition :: forall parser s . (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser (S s))) => (forall strat . Dict Monad (parser strat)) -> parser (S s) (String, (), [String])
+dataDefinition :: forall parser s . (P parser, KnownStratum (S s), Monad (parser (S s)), Alternative (parser s), Alternative (parser (S s))) => (forall strat . AMDict (parser strat)) -> parser (S s) (String, (), [String])
 dataDefinition d
                = do reserved "data"
                     name <- constructor
@@ -59,8 +62,7 @@ dataDefinition d
                     let inhabitants :: parser s (String, (), [String])
                         inhabitants = case canDescend (stratum :: Nat' (S s)) of
                                         --Nothing -> constructor
-                                        --Just (S' _, Refl, Dict :: Dict KnownStratum b) -> (dataDefinition :: parser b (String, (), [String])) >> constructor
-                                        Just (S' (S' _), Refl, Dict) -> case d :: Dict Monad (parser s) of Dict -> dataDefinition d
+                                        Just (S' (S' (_ :: Nat' s')), Refl, Dict) -> case (d :: AMDict (parser s), d :: AMDict (parser s')) of (AMDict, AMDict) -> dataDefinition d
                     inhabitants <- descend $ many inhabitant
                     return (name, sig, inhabitants)
     where --inhabitant :: (P parser, KnownStratum s) => parser s String
@@ -104,8 +106,5 @@ instance Monad (CharParse stratum) where
   return a = CP $ return . (a,)
   (CP f) >>= c = CP $ \s -> do (a, rest) <- f s -- do (f -> Just (a, rest)) <- return s -- \do f -> (a, rest)
                                runCP (c a) rest
-
-allCPDict :: forall stratum . Dict Monad (CharParse stratum)
-allCPDict = Dict
 
 runCP (CP f) = f
