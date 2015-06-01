@@ -36,8 +36,8 @@ class KnownStratum (stratum :: Nat) where
   stratum :: Nat' stratum
   canDescend :: p stratum -> Maybe (p stratum, stratum :~: S below, Dict KnownStratum below)
 
-instance KnownStratum Z where stratum = Z'
-instance KnownStratum n => KnownStratum (S n) where stratum = S' stratum
+instance KnownStratum Z where stratum = Z'; canDescend = const Nothing
+instance KnownStratum n => KnownStratum (S n) where stratum = S' stratum; canDescend p = Just (p, Refl, Dict)
 
 
 class P (parser :: Nat -> * -> *) where
