@@ -17,6 +17,8 @@ data Nat' :: Nat -> * where
 
 sameNat :: Nat' a -> Nat' b -> Maybe (a :~: b)
 Z' `sameNat` Z' = Just Refl
+S' a `sameNat` S' b | Just Refl <- a `sameNat` b = Just Refl
+_ `sameNat` _ = Nothing
 
 {-
 data Nat' :: level l . Nat -> *(1+l) where
@@ -77,10 +79,7 @@ dataDefinition d
            = case (d :: AMDict (parser (S (S s))), d :: AMDict (parser (S s)), d :: AMDict (parser s)) of
                (AMDict, AMDict, AMDict) ->
                  do reserved "data"
-                    --name <- constructor
-                    --operator "::"
-                    --typ@Star <- typeExpr; error $ show typ
-                    (sig :: Signature (S s)) <- signature
+                    sig <- signature
                     reserved "where"
                     let inhabitant = let str = (stratum :: Nat' (S s)) in
                                        case str of
@@ -89,7 +88,7 @@ dataDefinition d
                                            Just (Refl, Dict) -> Right <$> dataDefinition d
                                          _ -> Left <$> constructor
                     inhabitants <- descend $ many inhabitant
-                    return $ DefData sig{-(Signature name typ)-} inhabitants
+                    return $ DefData sig inhabitants
 
 data Typ (stratum :: Nat) where
   Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
