@@ -8,6 +8,8 @@ import Control.Monad
 import Data.Char
 import GHC.Exts
 import Data.Type.Equality
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 data Nat = Z | S Nat -- >    data Nat :: level l . *l where Z :: Nat; S :: Nat ~> Nat
 
@@ -57,14 +59,20 @@ class P (parser :: Nat -> * -> *) where
   ascend :: parser (S s) a -> parser s a
   descend :: parser s a -> parser (S s) a
   failure :: parser s a
+  token :: parser s a -> parser s a
 
 -- Precedence climbing expression parser
 --  http://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 
-data Precedence = Parr | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
+data Precedence = Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
-go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
+precedenceClimb :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> Map (Precedence, Associativity) (parser s atom -> parser s (atom -> atom)) -> parser s atom
+precedenceClimb atom ops = go atom' (Map.toList ops)
+  where atom' = atom <|> do operator "("; a <- go atom' (Map.toList ops); operator ")"; return a
+
+
+go :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
 go atom curr = do let done = ((Parr, AssocNone), const $ return id)
                       munchRest = choice $ map (uncurry parse) (done : curr)
                       choice = foldr1 (<|>)
@@ -78,6 +86,7 @@ go atom curr = do let done = ((Parr, AssocNone), const $ return id)
                   rests <- munchRest
                   return $ rests a
 
+expr1 :: (P parser, Alternative (parser (S Z)), Monad (parser (S Z))) => parser (S Z) (Typ (S Z))
 expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))]
 
 expr10 = go atom [((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))]
@@ -129,6 +138,9 @@ data Typ (stratum :: Nat) where
   App :: Typ stratum -> Typ stratum -> Typ stratum
   Named :: String -> Typ (S stratum)
 
+infixr 0 `Arr`
+infixl 9 `App`
+
 deriving instance Show (Typ stratum)
 
 data Signature (stratum :: Nat) where
@@ -150,11 +162,6 @@ parseLevel (S' (S' l)) = reserved $ show $ lev l -- FIXME
          lev Z' = 0
          lev (S' l) = 1 + lev l
 parseLevel _ = failure
-
-token :: CharParse s a -> CharParse s a
-token p = id <$> p <* many space
-  where space = CP $ \s -> do ((isSpace ->True) : rest) <- return s
-                              return ((), rest)
 
 cP = token . CP
 
@@ -187,6 +194,9 @@ instance P CharParse where
   failure = CP $ const Nothing
   ascend (CP f) = CP f
   descend (CP f) = CP f
+  token p = id <$> p <* many space
+    where space = CP $ \s -> do ((isSpace ->True) : rest) <- return s
+                                return ((), rest)
 
 
 instance Functor (CharParse stratum) where
