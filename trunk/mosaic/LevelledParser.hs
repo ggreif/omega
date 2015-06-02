@@ -68,32 +68,33 @@ data Precedence = Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp 
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
 precedenceClimb :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> Map (Precedence, Associativity) (parser s atom -> parser s (atom -> atom)) -> parser s atom
-precedenceClimb atom ops = go atom' (Map.toList ops)
-  where atom' = atom <|> do operator "("; a <- go atom' (Map.toList ops); operator ")"; return a
+precedenceClimb atom ops = go atom' ops'
+  where atom' = atom <|> do operator "("; a <- go atom' ops'; operator ")"; return a
+        ops' = Map.toList ops
+        go :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
+        go atom curr = do let done = ((Parr, AssocNone), const $ return id)
+                              munchRest = choice $ map (uncurry parse) (done : curr)
+                              choice = foldr1 (<|>)
+                              parse (_, AssocNone) p = p atom
+                              parse (_, AssocRight) p = p atom <|> p (go atom curr)
+                              parse (_, AssocLeft) p = p atom <|>
+                                               (do b <- p atom
+                                                   c <- munchRest
+                                                   return $ \a -> c (b a))
+                          a <- atom
+                          rests <- munchRest
+                          return $ rests a
 
+expr1 :: CharParse (S Z) (Typ (S Z))
+expr1 = precedenceClimb (Named <$> constructor) $ Map.fromList [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))]
 
-go :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
-go atom curr = do let done = ((Parr, AssocNone), const $ return id)
-                      munchRest = choice $ map (uncurry parse) (done : curr)
-                      choice = foldr1 (<|>)
-                      parse (_, AssocNone) p = p atom
-                      parse (_, AssocRight) p = p atom <|> p (go atom curr)
-                      parse (_, AssocLeft) p = p atom <|>
-                                       (do b <- p atom
-                                           c <- munchRest
-                                           return $ \a -> c (b a))
-                  a <- atom
-                  rests <- munchRest
-                  return $ rests a
-
-expr1 :: (P parser, Alternative (parser (S Z)), Monad (parser (S Z))) => parser (S Z) (Typ (S Z))
-expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))]
-
-expr10 = go atom [((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))]
+expr10 = precedenceClimb atom $ Map.fromList [((Papp, AssocLeft), \atomp -> do peek atomp; b <- atomp; return (`App`b))]
   where atom = Named <$> constructor
 
-expr11 = go atom [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
-                 , ((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))
+expr11 = precedenceClimb atom $ Map.fromList
+                 [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
+                 , ((Papp, AssocLeft), \atomp -> do peek atomp; b <- atomp; return (`App`b))
+                 -- BETTER: , ((Papp, AssocLeft), \atomp -> do (b, state) <- peek atomp; accept state; return (`App`b))
                  ]
   where atom = Named <$> constructor
 
