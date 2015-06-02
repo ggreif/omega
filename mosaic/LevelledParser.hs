@@ -119,25 +119,32 @@ parseLevel (S' (S' l)) = reserved $ show $ lev l -- FIXME
          lev (S' l) = 1 + lev l
 parseLevel _ = failure
 
+token :: CharParse s a -> CharParse s a
+token p = id <$> p <* many space
+  where space = CP $ \s -> do ((isSpace ->True) : rest) <- return s
+                              return ((), rest)
+
+cP = token . CP
+
 instance P CharParse where
   star :: forall s . KnownStratum s => CharParse s ()
-  star = CP $ \s -> do ('*' : rest) <- return s -- \do ('*' : rest)
+  star = cP $ \s -> do ('*' : rest) <- return s -- \do ('*' : rest)
                        runCP (parseLevel (stratum :: Nat' s)) rest
 
-  reserved w = CP $ \s -> do guard $ and $ zipWith (==) w s
-                             guard . not . null $ drop (length w - 1) s
+  reserved w = cP $ \s -> do guard $ and $ zipWith (==) w s
+                             guard . not . null $ drop (length w - 1) s -- TODO: peek not alnum
                              return ((), drop (length w) s)
 
-  operator o = CP $ \s -> do guard $ and $ zipWith (==) o s
-                             guard . not . null $ drop (length o - 1) s
+  operator o = cP $ \s -> do guard $ and $ zipWith (==) o s
+                             guard . not . null $ drop (length o - 1) s -- TODO: peek not symbol
                              return ((), drop (length o) s)
 
-  identifier = CP $ \s -> do (lead : rest) <- return s
+  identifier = cP $ \s -> do (lead : rest) <- return s
                              guard $ isLower lead
                              let (more, rest') = span (liftA2 (||) isLower isUpper) rest
                              return $ (lead : more, rest')
 
-  constructor = CP $ \s -> do (lead : rest) <- return s
+  constructor = cP $ \s -> do (lead : rest) <- return s
                               guard $ isUpper lead
                               let (more, rest') = span (liftA2 (||) isLower isUpper) rest
                               return $ (lead : more, rest')
