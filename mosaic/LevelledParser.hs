@@ -68,6 +68,7 @@ go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, 
 go atom curr all = do a <- atom
                       let done = ((Parr, AssocRight), const $ return id)
                           choice = foldr1 (<|>)
+                          parse (_, AssocNone) p = p atom
                           parse (_, AssocRight) p = p atom <|> p (go atom curr all)
                           parse (_, AssocLeft) p = p atom <|>
                                        (do b <- p atom
