@@ -64,17 +64,17 @@ class P (parser :: Nat -> * -> *) where
 data Precedence = Parr | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
-go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s (atom -> atom))] -> [((Precedence, Associativity), parser s (atom -> atom))] -> parser s atom
+go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> [((Precedence, Associativity), parser s (atom -> atom))] -> parser s atom
 go atom curr all = do a <- atom
-                      let done = ((Parr, AssocRight), return id)
+                      let done = ((Parr, AssocRight), const $ return id)
                           choice = foldr1 (<|>)
-                          parse (_, AssocRight) p = p <|> go atom curr all
+                          parse (_, AssocRight) p = p atom <|> p (go atom curr all)
                       rests <- choice (flip map (done:curr) $ uncurry parse)
                       --error . show $ length rests
                       return $ rests a
                       --return $ head rests a
 
-expr1 = go (Named <$> constructor) [((Parr, AssocRight), do operator "~>"; b <- (Named <$> constructor); return (`Arr`b))] []
+expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))] []
 
 
 
