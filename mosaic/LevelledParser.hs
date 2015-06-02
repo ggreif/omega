@@ -58,8 +58,9 @@ class P (parser :: Nat -> * -> *) where
   descend :: parser s a -> parser (S s) a
   failure :: parser s a
 
+-- NOTE: Later this will be just expression (which is stratum aware)
 typeExpr :: forall parser s . (P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (Typ s)
-typeExpr = starType <|> arrowType
+typeExpr = starType <|> arrowType <|> simpleType
   where starType = do star
                       S' (S' _) <- return (stratum :: Nat' s)
                       return Star
@@ -67,6 +68,7 @@ typeExpr = starType <|> arrowType
                        operator "~>"
                        cod <- typeExpr
                        return $ dom `Arr` cod
+        simpleType = do S' _ <- return (stratum :: Nat' s); Named <$> (constructor <|> identifier)
 
 signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
 signature = do name <- constructor
@@ -74,25 +76,26 @@ signature = do name <- constructor
                typ <- ascend typeExpr
                return $ Signature name typ
 
-dataDefinition :: forall parser s . (P parser, KnownStratum (S s)) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
+dataDefinition :: forall parser s . (P parser, KnownStratum s) => (forall strat . AMDict (parser strat)) -> parser (S s) (DefData (S s))
 dataDefinition d
            = case (d :: AMDict (parser (S (S s))), d :: AMDict (parser (S s)), d :: AMDict (parser s)) of
                (AMDict, AMDict, AMDict) ->
                  do reserved "data"
                     sig <- signature
                     reserved "where"
-                    let inhabitant = let str = (stratum :: Nat' (S s)) in
+                    let inhabitant = let str = (stratum :: Nat' s) in
                                        case str of
-                                         S' b@(S' (_ :: Nat' s')) -> case canDescend str b of
-                                           Nothing -> Left <$> constructor
+                                         (S' b) -> case canDescend str b of
+                                           Nothing -> Left <$> signature
                                            Just (Refl, Dict) -> Right <$> dataDefinition d
-                                         _ -> Left <$> constructor
+                                         _ -> Left <$> signature
                     inhabitants <- descend $ many inhabitant
                     return $ DefData sig inhabitants
 
 data Typ (stratum :: Nat) where
   Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
   Arr :: Typ stratum -> Typ stratum -> Typ stratum
+  Named :: String -> Typ (S stratum)
 
 deriving instance Show (Typ stratum)
 
@@ -102,7 +105,7 @@ data Signature (stratum :: Nat) where
 deriving instance Show (Signature stratum)
 
 data DefData (stratum :: Nat) where
-  DefData :: Signature (S stratum) -> [String `Either` DefData stratum] -> DefData (S stratum)
+  DefData :: Signature (S stratum) -> [Signature stratum `Either` DefData stratum] -> DefData (S stratum)
 
 deriving instance Show (DefData stratum)
 
