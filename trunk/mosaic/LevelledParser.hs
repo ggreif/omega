@@ -66,7 +66,7 @@ data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
 go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> [((Precedence, Associativity), parser s (atom -> atom))] -> parser s atom
 go atom curr all = do a <- atom
-                      let done = ((Parr, AssocRight), const $ return id)
+                      let done = ((Parr, AssocNone), const $ return id)
                           choice = foldr1 (<|>)
                           parse (_, AssocNone) p = p atom
                           parse (_, AssocRight) p = p atom <|> p (go atom curr all)
@@ -79,7 +79,12 @@ go atom curr all = do a <- atom
 
 expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))] []
 
-expr10 = go atom [((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`Arr`b))] []
+expr10 = go atom [((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))] []
+  where atom = Named <$> constructor
+
+expr11 = go atom [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
+                 , ((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))
+                 ] []
   where atom = Named <$> constructor
 
 
@@ -120,6 +125,7 @@ dataDefinition d
 data Typ (stratum :: Nat) where
   Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
   Arr :: Typ stratum -> Typ stratum -> Typ stratum
+  App :: Typ stratum -> Typ stratum -> Typ stratum
   Named :: String -> Typ (S stratum)
 
 deriving instance Show (Typ stratum)
