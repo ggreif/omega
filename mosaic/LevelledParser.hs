@@ -100,16 +100,17 @@ expr11 = precedenceClimb atom $ Map.fromList
 
 
 -- NOTE: Later this will be just expression (which is stratum aware)
-typeExpr :: forall parser s . (P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (Typ s)
+typeExpr :: forall parser s ty . (Universe ty, P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (ty s)
 typeExpr = starType <|> arrowType <|> simpleType
   where starType = do star
                       S' (S' _) <- return (stratum :: Nat' s)
-                      return Star
+                      return tStar
         arrowType = do dom <- starType
                        operator "~>"
+                       S' _ <- return (stratum :: Nat' s)
                        cod <- typeExpr
-                       return $ dom `Arr` cod
-        simpleType = do S' _ <- return (stratum :: Nat' s); Named <$> (constructor <|> identifier)
+                       return $ dom `tArr` cod
+        simpleType = do S' _ <- return (stratum :: Nat' s); tNamed <$> (constructor <|> identifier)
 
 signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
 signature = do name <- constructor
@@ -133,9 +134,22 @@ dataDefinition d
                     inhabitants <- descend $ many inhabitant
                     return $ DefData sig inhabitants
 
+
+class Universe (ty :: Nat -> *) where
+  tStar :: KnownStratum (S (S stratum)) => ty (S (S stratum))
+  tArr :: ty (S stratum) -> ty (S stratum) -> ty (S stratum)
+  tApp :: ty stratum -> ty stratum -> ty stratum
+  tNamed :: String -> ty (S stratum)
+
+instance Universe Typ where
+  tStar = Star
+  tArr = Arr
+  tApp = App
+  tNamed = Named
+
 data Typ (stratum :: Nat) where
   Star :: KnownStratum (S (S stratum)) => Typ (S (S stratum))
-  Arr :: Typ stratum -> Typ stratum -> Typ stratum
+  Arr :: Typ (S stratum) -> Typ (S stratum) -> Typ (S stratum)
   App :: Typ stratum -> Typ stratum -> Typ stratum
   Named :: String -> Typ (S stratum)
 
