@@ -71,7 +71,6 @@ precedenceClimb :: (P parser, Alternative (parser s), Monad (parser s)) => parse
 precedenceClimb atom ops = go atom' ops'
   where atom' = atom <|> do operator "("; a <- go atom' ops'; operator ")"; return a -- FIXME
         ops' = Map.toList ops
-        --go :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
         go atom curr = do let done = ((Parr, AssocNone), const $ return id)
                               munchRest = choice $ map (uncurry parse) (done : curr)
                               choice = foldr1 (<|>)
@@ -93,6 +92,7 @@ expr10 = precedenceClimb atom $ Map.fromList [((Papp, AssocLeft), \atomp -> do p
 
 expr11 = precedenceClimb atom $ Map.fromList
                  [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
+                 , ((P9, AssocLeft), \atomp -> do operator "`"; i <- identifier; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
                  , ((Papp, AssocLeft), \atomp -> do peek atomp; b <- atomp; return (`App`b))
                  -- BETTER: , ((Papp, AssocLeft), \atomp -> do (b, state) <- peek atomp; accept state; return (`App`b))
                  ]
@@ -184,7 +184,7 @@ instance P CharParse where
 
   identifier = cP $ \s -> do (lead : rest) <- return s
                              guard $ isLower lead
-                             let (more, rest') = span (liftA2 (||) isLower isUpper) rest
+                             let (more, rest') = span isAlphaNum rest
                              return $ (lead : more, rest')
 
   constructor = cP $ \s -> do (lead : rest) <- return s
@@ -196,7 +196,7 @@ instance P CharParse where
   ascend (CP f) = CP f
   descend (CP f) = CP f
   token p = id <$> p <* many space
-    where space = CP $ \s -> do ((isSpace ->True) : rest) <- return s
+    where space = CP $ \s -> do ((isSpace -> True) : rest) <- return s
                                 return ((), rest)
 
 
