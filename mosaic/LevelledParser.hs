@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns
            , FlexibleContexts, InstanceSigs, ScopedTypeVariables
            , TypeOperators, ConstraintKinds, PolyKinds, RankNTypes
-           , StandaloneDeriving #-}
+           , StandaloneDeriving, TypeFamilies #-}
 
 import Control.Applicative
 import Control.Monad
@@ -51,6 +51,7 @@ instance KnownStratum n => KnownStratum (S n) where
   canDescend _ _ = Nothing
 
 class P (parser :: Nat -> * -> *) where
+  type State parser
   star :: KnownStratum s => parser s ()
   reserved :: String -> parser s ()
   operator :: String -> parser s ()
@@ -93,8 +94,8 @@ expr10 = precedenceClimb atom $ Map.fromList [((Papp, AssocLeft), \atomp -> do p
 expr11 = precedenceClimb atom $ Map.fromList
                  [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
                  , ((P9, AssocLeft), \atomp -> do operator "`"; i <- identifier; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
-                 , ((Papp, AssocLeft), \atomp -> do peek atomp; b <- atomp; return (`App`b))
-                 -- BETTER: , ((Papp, AssocLeft), \atomp -> do (b, state) <- peek atomp; accept state; return (`App`b))
+                 --, ((Papp, AssocLeft), \atomp -> do peek atomp; b <- atomp; return (`App`b))
+                 , ((Papp, AssocLeft), \atomp -> do (b, state) <- peek atomp; accept state; return (`App`b))
                  ]
   where atom = Named <$> constructor
 
@@ -180,10 +181,14 @@ parseLevel _ = failure
 
 cP = token . CP
 
-peek :: CharParse s a -> CharParse s a
-peek p = CP $ \s -> case runCP p s of Just (a, _) -> Just (a, s); _ -> Nothing
+peek :: CharParse s a -> CharParse s (a, State CharParse)
+peek p = CP $ \s -> case runCP p s of Just a -> Just (a, s); _ -> Nothing
+
+accept :: State CharParse -> CharParse s ()
+accept state = CP $ const $ return ((), state)
 
 instance P CharParse where
+  type State CharParse = String
   star :: forall s . KnownStratum s => CharParse s ()
   star = cP $ \s -> do ('*' : rest) <- return s -- \do ('*' : rest)
                        runCP (parseLevel (stratum :: Nat' s)) rest
