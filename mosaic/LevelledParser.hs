@@ -53,6 +53,8 @@ instance KnownStratum n => KnownStratum (S n) where
 class P (parser :: Nat -> * -> *) where
   type State parser
   peek :: parser s a -> parser s (a, State parser)
+  accept :: State parser -> parser s ()
+
   star :: KnownStratum s => parser s ()
   reserved :: String -> parser s ()
   operator :: String -> parser s ()
@@ -93,6 +95,7 @@ expr10 :: CharParse (S Z) (Typ (S Z))
 expr10 = precedenceClimb atom $ Map.fromList [((Papp, AssocLeft), \atomp -> do peek atomp; b <- atomp; return (`App`b))]
   where atom = Named <$> constructor
 
+expr11 :: CharParse (S Z) (Typ (S Z))
 expr11 = precedenceClimb atom $ Map.fromList
                  [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
                  , ((P9, AssocLeft), \atomp -> do operator "`"; i <- identifier; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
@@ -182,13 +185,10 @@ parseLevel _ = failure
 
 cP = token . CP
 
-
-accept :: State CharParse -> CharParse s ()
-accept = CP . const . return . ((),)
-
 instance P CharParse where
   type State CharParse = String
   peek p = CP $ \s -> case runCP p s of Just a -> Just (a, s); _ -> Nothing
+  accept = CP . const . return . ((),)
 
   star :: forall s . KnownStratum s => CharParse s ()
   star = cP $ \s -> do ('*' : rest) <- return s -- \do ('*' : rest)
