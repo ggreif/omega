@@ -69,13 +69,13 @@ go atom curr all = do a <- atom
                       let done = ((Parr, AssocRight), const $ return id)
                           choice = foldr1 (<|>)
                           parse (_, AssocRight) p = p atom <|> p (go atom curr all)
-                      rests <- choice (flip map (done:curr) $ uncurry parse)
-                      --error . show $ length rests
+                          parse (_, AssocLeft) p = do b <- p atom; return b
+                      rests <- choice $ map (uncurry parse) (done : curr)
                       return $ rests a
-                      --return $ head rests a
 
 expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))] []
 
+expr10 = go (Named <$> constructor) [((Papp, AssocLeft), \atomp -> do peek (Named <$> constructor); b <- atomp; return (`Arr`b))] []
 
 
 -- NOTE: Later this will be just expression (which is stratum aware)
