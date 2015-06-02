@@ -72,13 +72,14 @@ go atom curr all = do a <- atom
                           parse (_, AssocLeft) p = p atom <|>
                                        (do b <- p atom
                                            c <- choice $ map (uncurry parse) (done : curr)
-                                           return $ const $ c (b a))
+                                           return $ \a -> c (b a))
                       rests <- choice $ map (uncurry parse) (done : curr)
                       return $ rests a
 
 expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))] []
 
-expr10 = go (Named <$> constructor) [((Papp, AssocLeft), \atomp -> do peek (Named <$> constructor); b <- atomp; return (`Arr`b))] []
+expr10 = go atom [((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`Arr`b))] []
+  where atom = Named <$> constructor
 
 
 -- NOTE: Later this will be just expression (which is stratum aware)
