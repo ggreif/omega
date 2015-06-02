@@ -68,7 +68,8 @@ go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, 
 go atom curr all = do a <- atom
                       let done = ((Parr, AssocRight), return id)
                           choice = foldr1 (<|>)
-                      rests <- choice (flip map (done:curr) $ \((prec, ass), p) -> p)
+                          parse (_, AssocRight) p = p <|> go atom curr all
+                      rests <- choice (flip map (done:curr) $ uncurry parse)
                       --error . show $ length rests
                       return $ rests a
                       --return $ head rests a
