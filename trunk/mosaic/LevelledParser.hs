@@ -64,6 +64,14 @@ class P (parser :: Nat -> * -> *) where
 data Precedence = Parr | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
+go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s (atom -> atom))] -> [((Precedence, Associativity), parser s (atom -> atom))] -> parser s atom
+go atom curr all = do a <- atom
+                      rests <- forM curr $ \((prec, ass), p) -> p
+                      error . show $ length rests
+                      --return $ head rests a
+
+expr1 = go (Named <$> constructor) [((Parr, AssocRight), do operator "~>"; b <- (Named <$> constructor); return (`Arr`b))] []
+
 
 
 -- NOTE: Later this will be just expression (which is stratum aware)
@@ -133,6 +141,9 @@ token p = id <$> p <* many space
                               return ((), rest)
 
 cP = token . CP
+
+peek :: CharParse s a -> CharParse s a
+peek p = CP $ \s -> case runCP p s of Just (a, _) -> Just (a, s); _ -> Nothing
 
 instance P CharParse where
   star :: forall s . KnownStratum s => CharParse s ()
