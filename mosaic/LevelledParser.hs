@@ -68,7 +68,7 @@ typeExpr = starType <|> arrowType
                        cod <- typeExpr
                        return $ dom `Arr` cod
 
-signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser s), Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
+signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
 signature = do name <- constructor
                operator "::"
                typ <- ascend typeExpr
