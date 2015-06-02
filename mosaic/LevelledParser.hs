@@ -69,7 +69,10 @@ go atom curr all = do a <- atom
                       let done = ((Parr, AssocRight), const $ return id)
                           choice = foldr1 (<|>)
                           parse (_, AssocRight) p = p atom <|> p (go atom curr all)
-                          parse (_, AssocLeft) p = p atom <|> (do b <- p atom; c <- p atom; return $ const $ c (b a))
+                          parse (_, AssocLeft) p = p atom <|>
+                                       (do b <- p atom
+                                           c <- choice $ map (uncurry parse) (done : curr)
+                                           return $ const $ c (b a))
                       rests <- choice $ map (uncurry parse) (done : curr)
                       return $ rests a
 
