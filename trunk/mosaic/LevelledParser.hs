@@ -67,11 +67,11 @@ class P (parser :: Nat -> * -> *) where
 data Precedence = Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
-precedenceClimb :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> Map (Precedence, Associativity) (parser s atom -> parser s (atom -> atom)) -> parser s atom
+precedenceClimb :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> Map (Precedence, Associativity) (parser s atom -> parser s (atom -> atom)) -> parser s atom
 precedenceClimb atom ops = go atom' ops'
-  where atom' = atom <|> do operator "("; a <- go atom' ops'; operator ")"; return a
+  where atom' = atom <|> do operator "("; a <- go atom' ops'; operator ")"; return a -- FIXME
         ops' = Map.toList ops
-        go :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
+        --go :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
         go atom curr = do let done = ((Parr, AssocNone), const $ return id)
                               munchRest = choice $ map (uncurry parse) (done : curr)
                               choice = foldr1 (<|>)
