@@ -64,27 +64,28 @@ class P (parser :: Nat -> * -> *) where
 data Precedence = Parr | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
-go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> [((Precedence, Associativity), parser s (atom -> atom))] -> parser s atom
-go atom curr all = do a <- atom
-                      let done = ((Parr, AssocNone), const $ return id)
-                          choice = foldr1 (<|>)
-                          parse (_, AssocNone) p = p atom
-                          parse (_, AssocRight) p = p atom <|> p (go atom curr all)
-                          parse (_, AssocLeft) p = p atom <|>
+go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s atom -> parser s (atom -> atom))] -> parser s atom
+go atom curr = do let done = ((Parr, AssocNone), const $ return id)
+                      munchRest = choice $ map (uncurry parse) (done : curr)
+                      choice = foldr1 (<|>)
+                      parse (_, AssocNone) p = p atom
+                      parse (_, AssocRight) p = p atom <|> p (go atom curr)
+                      parse (_, AssocLeft) p = p atom <|>
                                        (do b <- p atom
-                                           c <- choice $ map (uncurry parse) (done : curr)
+                                           c <- munchRest
                                            return $ \a -> c (b a))
-                      rests <- choice $ map (uncurry parse) (done : curr)
-                      return $ rests a
+                  a <- atom
+                  rests <- munchRest
+                  return $ rests a
 
-expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))] []
+expr1 = go (Named <$> constructor) [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))]
 
-expr10 = go atom [((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))] []
+expr10 = go atom [((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))]
   where atom = Named <$> constructor
 
 expr11 = go atom [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
                  , ((Papp, AssocLeft), \atomp -> do peek atom; b <- atomp; return (`App`b))
-                 ] []
+                 ]
   where atom = Named <$> constructor
 
 
