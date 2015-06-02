@@ -66,8 +66,11 @@ data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
 go :: (CharParse ~ parser, Monad (parser s)) => parser s atom -> [((Precedence, Associativity), parser s (atom -> atom))] -> [((Precedence, Associativity), parser s (atom -> atom))] -> parser s atom
 go atom curr all = do a <- atom
-                      rests <- forM curr $ \((prec, ass), p) -> p
-                      error . show $ length rests
+                      let done = ((Parr, AssocRight), return id)
+                          choice = foldr1 (<|>)
+                      rests <- choice (flip map (done:curr) $ \((prec, ass), p) -> p)
+                      --error . show $ length rests
+                      return $ rests a
                       --return $ head rests a
 
 expr1 = go (Named <$> constructor) [((Parr, AssocRight), do operator "~>"; b <- (Named <$> constructor); return (`Arr`b))] []
