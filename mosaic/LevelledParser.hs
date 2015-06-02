@@ -58,6 +58,14 @@ class P (parser :: Nat -> * -> *) where
   descend :: parser s a -> parser (S s) a
   failure :: parser s a
 
+-- Precedence climbing expression parser
+--  http://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
+
+data Precedence = Parr | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
+data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
+
+
+
 -- NOTE: Later this will be just expression (which is stratum aware)
 typeExpr :: forall parser s . (P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (Typ s)
 typeExpr = starType <|> arrowType <|> simpleType
