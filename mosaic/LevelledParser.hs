@@ -248,4 +248,8 @@ instance Monad (CharParse stratum) where
   (CP f) >>= c = CP $ \s -> do (a, rest) <- f s -- do (f -> Just (a, rest)) <- return s -- \do f -> (a, rest)
                                runCP (c a) rest
 
+instance MonadPlus (CharParse stratum) where
+  mzero = failure
+  mplus = (<|>)
+
 runCP (CP f) = f
