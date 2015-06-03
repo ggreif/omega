@@ -77,16 +77,13 @@ precedenceClimb atom ops = go atom' ops'
         ops' = Map.toList ops
         go atom curr = do let done = ((Parr, AssocNone), const $ return id)
                               munchRest = choice $ map (uncurry parse) (done : curr)
+                              munchWith p predicate = do b <- p (go atom $ filter predicate curr)
+                                                         c <- munchRest
+                                                         return $ \a -> c (b a)
                               choice = foldr1 (<|>)
-                              parse (_, AssocNone) p = p atom
-                              parse (x, AssocRight) p = p atom <|> 
-                                               do b <- p (go atom $ filter (\((y,_),_) -> y >= x) curr)
-                                                  c <- munchRest
-                                                  return $ \a -> c (b a)
-                              parse (x, AssocLeft) p = p atom <|>
-                                               do b <- p (go atom $ filter (\((y,_),_) -> y > x) curr)
-                                                  c <- munchRest
-                                                  return $ \a -> c (b a)
+                              parse (_, AssocNone) p = p atom -- TODO?
+                              parse (x, AssocRight) p = p atom <|> munchWith p (\((y,_),_) -> y >= x)
+                              parse (x, AssocLeft) p = p atom <|> munchWith p (\((y,_),_) -> y > x)
                           a <- atom
                           rests <- munchRest
                           return $ rests a
@@ -101,6 +98,7 @@ expr10 = precedenceClimb atom $ Map.fromList [((Papp, AssocLeft), \atomp -> do p
 expr11 :: CharParse (S Z) (Typ (S Z))
 expr11 = precedenceClimb atom $ Map.fromList
                  [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
+                 , ((P7, AssocRight), \atomp -> do operator "°"; b <- atomp; return (`App`b))
                  , ((P8, AssocLeft), \atomp -> do operator "`"; i <- identifier; guard $ i /= "rrr"; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
                  , ((P9, AssocRight), \atomp -> do operator "`"; i <- identifier; guard $ i == "rrr"; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
                  , ((Papp, AssocLeft), \atomp -> do (b, state) <- peek atomp; accept state; return (`App`b))
