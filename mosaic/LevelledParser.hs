@@ -114,6 +114,12 @@ expr11 = precedenceClimb atom $ Map.fromList
 
 -- NOTE: Later this will be just expression (which is stratum aware)
 typeExpr :: forall parser s ty . (Universe ty, P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (ty s)
+typeExpr = precedenceClimb atom $ Map.fromList operators
+  where atom = starType <|> namedType
+        starType = do star; S' S'{} <- return (stratum :: Nat' s); return tStar
+        namedType = do S'{} <- return (stratum :: Nat' s); tNamed <$> (constructor <|> identifier)
+        operators = [ ((Parr, AssocRight), \atom -> do operator "~>"; b <- atom; S'{} <- return (stratum :: Nat' s); return (`tArr`b)) ]
+{-
 typeExpr = starType <|> arrowType <|> simpleType
   where starType = do star
                       S' (S' _) <- return (stratum :: Nat' s)
@@ -124,6 +130,7 @@ typeExpr = starType <|> arrowType <|> simpleType
                        cod <- typeExpr
                        return $ dom `tArr` cod
         simpleType = do S' _ <- return (stratum :: Nat' s); tNamed <$> (constructor <|> identifier)
+-}
 
 signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
 signature = do name <- constructor
@@ -253,3 +260,6 @@ instance MonadPlus (CharParse stratum) where
   mplus = (<|>)
 
 runCP (CP f) = f
+
+runCP' :: proxy stratum -> CharParse stratum (c stratum) -> String -> Maybe ((c stratum), String)
+runCP' _ (CP f) = f
