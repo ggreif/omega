@@ -85,8 +85,8 @@ precedenceClimb atom ops = go atom' ops'
                               parse (x, AssocRight) p = p atom <|> munchWith p (\((y,_),_) -> y >= x)
                               parse (x, AssocLeft) p = p atom <|> munchWith p (\((y,_),_) -> y > x)
                           a <- atom
-                          rests <- munchRest
-                          return $ rests a
+                          rest <- munchRest
+                          return $ rest a
 
 expr1 :: CharParse (S Z) (Typ (S Z))
 expr1 = precedenceClimb (Named <$> constructor) $ Map.fromList [((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))]
