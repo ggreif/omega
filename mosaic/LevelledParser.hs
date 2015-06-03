@@ -80,8 +80,8 @@ precedenceClimb atom ops = go atom' ops'
                               choice = foldr1 (<|>)
                               parse (_, AssocNone) p = p atom
                               parse (_, AssocRight) p = p atom <|> p (go atom curr)
-                              parse (_, AssocLeft) p = p atom <|>
-                                               (do b <- p atom
+                              parse (x, AssocLeft) p = p atom <|>
+                                               (do b <- p (go atom $ filter (\((y,_),_) -> y > x) curr)
                                                    c <- munchRest
                                                    return $ \a -> c (b a))
                           a <- atom
