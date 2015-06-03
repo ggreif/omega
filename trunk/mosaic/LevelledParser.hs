@@ -118,19 +118,8 @@ typeExpr = precedenceClimb atom $ Map.fromList operators
   where atom = starType <|> namedType
         starType = do star; S' S'{} <- return (stratum :: Nat' s); return tStar
         namedType = do S'{} <- return (stratum :: Nat' s); tNamed <$> (constructor <|> identifier)
-        operators = [ ((Parr, AssocRight), \atom -> do operator "~>"; b <- atom; S'{} <- return (stratum :: Nat' s); return (`tArr`b)) ]
-{-
-typeExpr = starType <|> arrowType <|> simpleType
-  where starType = do star
-                      S' (S' _) <- return (stratum :: Nat' s)
-                      return tStar
-        arrowType = do dom <- starType
-                       operator "~>"
-                       S' _ <- return (stratum :: Nat' s)
-                       cod <- typeExpr
-                       return $ dom `tArr` cod
-        simpleType = do S' _ <- return (stratum :: Nat' s); tNamed <$> (constructor <|> identifier)
--}
+        operators = [ ((Parr, AssocRight), \atom -> do operator "~>"; b <- atom; S'{} <- return (stratum :: Nat' s); return (`tArr`b))
+                    , ((Papp, AssocLeft), \atom -> do (b, state) <- peek atom; accept state; return (`tApp`b)) ]
 
 signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
 signature = do name <- constructor
