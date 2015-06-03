@@ -79,7 +79,7 @@ precedenceClimb atom ops = go atom' ops'
                               munchRest = choice $ map (uncurry parse) (done : curr)
                               choice = foldr1 (<|>)
                               parse (_, AssocNone) p = p atom
-                              parse (_, AssocRight) p = p atom <|> p (go atom curr)
+                              parse (x, AssocRight) p = p atom <|> p (go atom $ filter (\((y,_),_) -> y >= x) curr)
                               parse (x, AssocLeft) p = p atom <|>
                                                (do b <- p (go atom $ filter (\((y,_),_) -> y > x) curr)
                                                    c <- munchRest
@@ -98,7 +98,7 @@ expr10 = precedenceClimb atom $ Map.fromList [((Papp, AssocLeft), \atomp -> do p
 expr11 :: CharParse (S Z) (Typ (S Z))
 expr11 = precedenceClimb atom $ Map.fromList
                  [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
-                 , ((P9, AssocLeft), \atomp -> do operator "`"; i <- identifier; guard $ i /= "rrr"; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
+                 , ((P8, AssocLeft), \atomp -> do operator "`"; i <- identifier; guard $ i /= "rrr"; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
                  , ((P9, AssocRight), \atomp -> do operator "`"; i <- identifier; guard $ i == "rrr"; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
                  , ((Papp, AssocLeft), \atomp -> do (b, state) <- peek atomp; accept state; return (`App`b))
                  ]
