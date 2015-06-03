@@ -130,12 +130,11 @@ dataDefinition d
                  do reserved "data"
                     sig <- signature
                     reserved "where"
-                    let inhabitant = let str = (stratum :: Nat' s) in
-                                       case str of
-                                         (S' b) -> case canDescend str b of
-                                           Nothing -> Left <$> signature
-                                           Just (Refl, Dict) -> Right <$> dataDefinition d
-                                         _ -> Left <$> signature
+                    let inhabitant = case stratum :: Nat' s of
+                                       str@(S' b) -> case canDescend str b of
+                                         Nothing -> Left <$> signature
+                                         Just (Refl, Dict) -> Right <$> dataDefinition d
+                                       _ -> Left <$> signature
                     inhabitants <- descend $ many inhabitant
                     return $ DefData sig inhabitants
 
