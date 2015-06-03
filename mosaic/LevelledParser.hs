@@ -98,10 +98,15 @@ expr10 = precedenceClimb atom $ Map.fromList [((Papp, AssocLeft), \atomp -> do p
 expr11 :: CharParse (S Z) (Typ (S Z))
 expr11 = precedenceClimb atom $ Map.fromList
                  [ ((Parr, AssocRight), \atomp -> do operator "~>"; b <- atomp; return (`Arr`b))
-                 , ((P9, AssocLeft), \atomp -> do operator "`"; i <- identifier; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
+                 , ((P9, AssocLeft), \atomp -> do operator "`"; i <- identifier; guard $ i /= "rrr"; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
+                 , ((P9, AssocRight), \atomp -> do operator "`"; i <- identifier; guard $ i == "rrr"; operator "`"; b <- atomp; return (\a -> Named i `App` a `App` b))
                  , ((Papp, AssocLeft), \atomp -> do (b, state) <- peek atomp; accept state; return (`App`b))
                  ]
   where atom = Named <$> constructor
+
+-- NOTE: we need to rule out mixed associativity operators with same precedence in one compound expression
+--    see: http://stackoverflow.com/questions/15964064/left-associative-operators-vs-right-associative-operators
+
 
 
 -- NOTE: Later this will be just expression (which is stratum aware)
