@@ -138,7 +138,9 @@ dataDefinition d
                     inhabitants <- descend $ many inhabitant
                     return $ DefData sig inhabitants
 
-
+-- for now this is a *type* Universe, later it may represent all
+-- expressions (values/types/kinds, etc.)
+--
 class Universe (ty :: Nat -> *) where
   tStar :: KnownStratum (S (S stratum)) => ty (S (S stratum))
   tArr :: ty (S stratum) -> ty (S stratum) -> ty (S stratum)
