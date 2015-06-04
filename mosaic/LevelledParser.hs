@@ -68,7 +68,7 @@ class P (parser :: Nat -> * -> *) where
 -- Precedence climbing expression parser
 --  http://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 
-data Precedence = Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp deriving (Eq, Ord)
+data Precedence = Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp | Pat deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
 precedenceClimb :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> Map (Precedence, Associativity) (parser s atom -> parser s (atom -> atom)) -> parser s atom
@@ -121,6 +121,27 @@ typeExpr = precedenceClimb atom $ Map.fromList operators
                     , ((Papp, AssocLeft), \atom -> do (b, state) <- peek atom; accept state; return (`tApp`b))
                     ]
 
+class Pattern (exp :: Nat -> *) where
+  pStar :: KnownStratum (S (S stratum)) => exp (S (S stratum))
+  pApp :: exp stratum -> exp stratum -> exp stratum
+  pNamed :: String -> exp stratum
+  pAt :: exp stratum {-named! TODO-} -> exp stratum -> exp stratum
+
+instance Pattern Pat where
+  pStar = PStar
+  pApp = PApp
+  pNamed = PNamed
+  pAt = PAt
+
+pattern :: forall parser s exp . (Pattern exp, P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (exp s)
+pattern = precedenceClimb atom $ Map.fromList operators
+  where atom = starPat <|> namedPat
+        starPat = do star; S' S'{} <- return (stratum :: Nat' s); return pStar
+        namedPat = pNamed <$> (constructor <|> identifier)
+        operators = [ ((Pat, AssocRight), \atom -> do operator "@"; b <- atom; return (`pAt`b))
+                    , ((Papp, AssocLeft), \atom -> do (b, state) <- peek atom; accept state; return (`pApp`b))
+                    ]
+
 signature :: forall parser s . (P parser, KnownStratum s, Alternative (parser (S s)), Monad (parser s), Monad (parser (S s))) => parser s (Signature s)
 signature = do name <- constructor
                operator "::"
@@ -167,6 +188,14 @@ infixr 0 `Arr`
 infixl 9 `App`
 
 deriving instance Show (Typ stratum)
+
+data Pat (stratum :: Nat) where
+  PStar :: KnownStratum (S (S stratum)) => Pat (S (S stratum))
+  PApp :: Pat stratum -> Pat stratum -> Pat stratum
+  PNamed :: String -> Pat stratum
+  PAt :: Pat stratum -> Pat stratum -> Pat stratum
+
+deriving instance Show (Pat stratum)
 
 data Signature (stratum :: Nat) where
   Signature :: String -> Typ (S stratum) -> Signature stratum
