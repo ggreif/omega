@@ -210,7 +210,9 @@ instance P CharParse where
   identifier = cP $ \s -> do (lead : rest) <- return s
                              guard $ isLower lead
                              let (more, rest') = span isAlphaNum rest
-                             return $ (lead : more, rest')
+                             let id = lead : more
+                             guard . not $ id `elem` ["data", "where"]
+                             return $ (id, rest')
 
   constructor = cP $ \s -> do (lead : rest) <- return s
                               guard $ isUpper lead
