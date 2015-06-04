@@ -126,18 +126,21 @@ class Pattern (exp :: Nat -> *) where
   pApp :: exp stratum -> exp stratum -> exp stratum
   pNamed :: String -> exp stratum
   pAt :: exp stratum {-named! TODO-} -> exp stratum -> exp stratum
+  pWildcard :: exp stratum
 
 instance Pattern Pat where
   pStar = PStar
   pApp = PApp
   pNamed = PNamed
   pAt = PAt
+  pWildcard = PWildcard
 
 pattern :: forall parser s exp . (Pattern exp, P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (exp s)
 pattern = precedenceClimb atom $ Map.fromList operators
-  where atom = starPat <|> namedPat
+  where atom = starPat <|> namedPat <|> wildcardPat
         starPat = do star; S' S'{} <- return (stratum :: Nat' s); return pStar
         namedPat = pNamed <$> (constructor <|> identifier)
+        wildcardPat = operator "_" >> pure pWildcard
         operators = [ ((Pat, AssocRight), \atom -> do operator "@"; b <- atom; return (`pAt`b))
                     , ((Papp, AssocLeft), \atom -> do (b, state) <- peek atom; accept state; return (`pApp`b))
                     ]
@@ -194,6 +197,7 @@ data Pat (stratum :: Nat) where
   PApp :: Pat stratum -> Pat stratum -> Pat stratum
   PNamed :: String -> Pat stratum
   PAt :: Pat stratum -> Pat stratum -> Pat stratum
+  PWildcard :: Pat stratum
 
 deriving instance Show (Pat stratum)
 
