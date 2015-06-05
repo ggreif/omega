@@ -287,3 +287,10 @@ runCP (CP f) = f
 
 runCP' :: proxy stratum -> CharParse stratum (c stratum) -> String -> Maybe ((c stratum), String)
 runCP' _ (CP f) = f
+
+
+-- TODO: previous-line info encoding with whitespaces
+-- *Main Data.Char> [x|x<-['\0'..'\995000'], isSpace x]
+--    "\t\n\v\f\r \160\5760\8192\8193\8194\8195\8196\8197\8198\8199\8200\8201\8202\8239\8287\12288"
+-- http://en.wikipedia.org/wiki/Whitespace_character
+
