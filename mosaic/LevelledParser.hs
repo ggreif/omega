@@ -10,6 +10,7 @@ import GHC.Exts
 import Data.Type.Equality
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.List
 
 data Nat = Z | S Nat -- >    data Nat :: level l . *l where Z :: Nat; S :: Nat ~> Nat
 
@@ -297,6 +298,7 @@ runCP' _ (CP f) = f
 encode :: String -> String
 encode = go (0 :: Int, 0 :: Int)
   where go (l, c) [] = line l . column c $ []
+        go (l, c) (h:tail) | h < '\5760' = go (l, c + 1) tail
         column c = (colMark:) . encodeNat c
         line l = (lineMark:) . encodeNat l
         colMark = '\12288'
@@ -304,9 +306,14 @@ encode = go (0 :: Int, 0 :: Int)
 
 encodeNat :: Int -> String -> String
 encodeNat 0 = id
-encodeNat n | rest <- n `rem` divisor
-            , more <- n `div` divisor
+encodeNat n | (more, rest) <- n `quotRem` divisor
             = encodeNat more . ((alphabet!!rest):)
 
 alphabet = "\5760\8192\8193\8194\8195\8196\8197\8198\8199\8200\8201\8202\8239"
 divisor = length alphabet
+
+
+decode :: String -> (Int, Int)
+decode = undefined
+
+-- elemIndex
