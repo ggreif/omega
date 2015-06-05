@@ -298,7 +298,7 @@ runCP' _ (CP f) = f
 encode :: String -> String
 encode = go (0 :: Int, 0 :: Int)
   where go (l, c) [] = line l . column c $ []
-        go (l, c) (h:tail) | h < '\5760' = go (l, c + 1) tail
+        go (l, c) (h : tail) | h < '\5760' = h : go (l, c + 1) tail
         column c = (colMark:) . encodeNat c
         line l = (lineMark:) . encodeNat l
         colMark = '\12288'
@@ -325,6 +325,6 @@ divisor = length alphabet
 
 decode :: String -> (Int, Int)
 decode = go (0, 0)
-  where go (l, _) ('\12288' : rest) = (l, decodeNat rest)
-
+  where go (l, c) ('\8287' : rest) = let (l, '\12288' : rest') = decodeNat' rest in (l, decodeNat rest' + c)
+        go (l, c) (_ : rest) = go (l, pred c) rest
 -- elemIndex
