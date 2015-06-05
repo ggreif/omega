@@ -295,14 +295,14 @@ runCP' _ (CP f) = f
 -- http://en.wikipedia.org/wiki/Whitespace_character
 
 encode :: String -> String
-encode = go (0 :: Word, 0 :: Word)
+encode = go (0 :: Int, 0 :: Int)
   where go (l, c) [] = line l . column c $ []
-        column c = (colMark:)
-        line l = (lineMark:)
+        column c = (colMark:) . encodeNat c
+        line l = (lineMark:) . encodeNat l
         colMark = '\12288'
         lineMark = '\8287'
 
-encodeNat :: Word -> String -> String
+encodeNat :: Int -> String -> String
 encodeNat 0 = id
 encodeNat n | rest <- n `rem` divisor
             , more <- n `div` divisor
