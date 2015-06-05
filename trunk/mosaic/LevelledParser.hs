@@ -307,13 +307,24 @@ encode = go (0 :: Int, 0 :: Int)
 encodeNat :: Int -> String -> String
 encodeNat 0 = id
 encodeNat n | (more, rest) <- n `quotRem` divisor
-            = encodeNat more . ((alphabet!!rest):)
+            =  ((alphabet!!rest):) . encodeNat more
+
+
+decodeNat :: String -> Int
+decodeNat (head : tail) | Just digit <- head `elemIndex` alphabet = digit + divisor * decodeNat tail
+decodeNat _ = 0
+
+decodeNat' :: String -> (Int, String)
+decodeNat' (head : tail) | Just digit <- head `elemIndex` alphabet = (digit + divisor * decTail, rest)
+  where (decTail, rest) = decodeNat' tail
+decodeNat' rest = (0, rest)
 
 alphabet = "\5760\8192\8193\8194\8195\8196\8197\8198\8199\8200\8201\8202\8239"
 divisor = length alphabet
 
 
 decode :: String -> (Int, Int)
-decode = undefined
+decode = go (0, 0)
+  where go (l, _) ('\12288' : rest) = (l, decodeNat rest)
 
 -- elemIndex
