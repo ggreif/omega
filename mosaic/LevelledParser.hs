@@ -294,3 +294,19 @@ runCP' _ (CP f) = f
 --    "\t\n\v\f\r \160\5760\8192\8193\8194\8195\8196\8197\8198\8199\8200\8201\8202\8239\8287\12288"
 -- http://en.wikipedia.org/wiki/Whitespace_character
 
+encode :: String -> String
+encode = go (0 :: Word, 0 :: Word)
+  where go (l, c) [] = line l . column c $ []
+        column c = (colMark:)
+        line l = (lineMark:)
+        colMark = '\12288'
+        lineMark = '\8287'
+
+encodeNat :: Word -> String -> String
+encodeNat 0 = id
+encodeNat n | rest <- n `rem` divisor
+            , more <- n `div` divisor
+            = encodeNat more . ((alphabet!!rest):)
+
+alphabet = "\5760\8192\8193\8194\8195\8196\8197\8198\8199\8200\8201\8202\8239"
+divisor = length alphabet
