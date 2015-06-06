@@ -325,7 +325,7 @@ divisor = length alphabet
 
 
 decode :: String -> (Int, Int)
-decode = go (0, 0)
-  where go (l, c) ('\8287' : rest) = let (l, '\12288' : rest') = decodeNat' rest in (l, decodeNat rest' + c)
-        go (l, c) ('\n' : rest) = let (l', c') = go (l, 0) rest in (l', c' + c)
-        go (l, c) (_ : rest) = go (l, pred c) rest
+decode = go 0
+  where go c ('\8287' : rest) = let (l, '\12288' : rest') = decodeNat' rest in (l, decodeNat rest' + c)
+        go c ('\n' : rest) = let (l', c') = go 0 rest in (l', c' + c)
+        go c (_ : rest) = go (pred c) rest
