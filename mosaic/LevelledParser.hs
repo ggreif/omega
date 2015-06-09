@@ -69,7 +69,7 @@ class P (parser :: Nat -> * -> *) where
 -- Precedence climbing expression parser
 --  http://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 
-data Precedence = Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp | Pat deriving (Eq, Ord)
+data Precedence = Peq | Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp | Pat deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
 precedenceClimb :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> Map (Precedence, Associativity) (parser s atom -> parser s (atom -> atom)) -> parser s atom
@@ -128,6 +128,7 @@ class Pattern (exp :: Nat -> *) where
   pNamed :: String -> exp stratum
   pAt :: exp stratum {-named! TODO-} -> exp stratum -> exp stratum
   pWildcard :: exp stratum
+  pEq :: exp stratum -> exp stratum -> exp stratum
 
 instance Pattern Pat where
   pStar = PStar
@@ -135,14 +136,21 @@ instance Pattern Pat where
   pNamed = PNamed
   pAt = PAt
   pWildcard = PWildcard
+  pEq = PEq
 
+-- The pattern language encompasses quite a bit more than what
+-- is classically considered a pattern. We also lump equations
+-- and (later?) signatures into the mix.
+-- In a separate pass we check that all appear in a coherent manner.
+--
 pattern :: forall parser s exp . (Pattern exp, P parser, KnownStratum s, Alternative (parser s), Monad (parser s)) => parser s (exp s)
 pattern = precedenceClimb atom $ Map.fromList operators
   where atom = starPat <|> namedPat <|> wildcardPat
         starPat = do star; S' S'{} <- return (stratum :: Nat' s); return pStar
         namedPat = pNamed <$> (constructor <|> identifier)
         wildcardPat = operator "_" >> pure pWildcard
-        operators = [ ((Pat, AssocRight), \atom -> do operator "@"; b <- atom; return (`pAt`b))
+        operators = [ ((Peq, AssocNone), \atom -> do operator "="; b <- atom; return (`pEq`b))
+                    , ((Pat, AssocRight), \atom -> do operator "@"; b <- atom; return (`pAt`b))
                     , ((Papp, AssocLeft), \atom -> do (b, state) <- peek atom; accept state; return (`pApp`b))
                     ]
 
@@ -199,6 +207,7 @@ data Pat (stratum :: Nat) where
   PNamed :: String -> Pat stratum
   PAt :: Pat stratum -> Pat stratum -> Pat stratum
   PWildcard :: Pat stratum
+  PEq :: Pat stratum -> Pat stratum -> Pat stratum
 
 deriving instance Show (Pat stratum)
 
