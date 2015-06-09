@@ -69,20 +69,21 @@ class P (parser :: Nat -> * -> *) where
 -- Precedence climbing expression parser
 --  http://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 
-data Precedence = Peq | Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp | Pat deriving (Eq, Ord)
+data Precedence = Pdontuse | Peq | Parr | P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | Papp | Pat deriving (Eq, Ord)
 data Associativity = AssocNone | AssocLeft | AssocRight deriving (Eq, Ord)
 
 precedenceClimb :: (P parser, Alternative (parser s), Monad (parser s)) => parser s atom -> Map (Precedence, Associativity) (parser s atom -> parser s (atom -> atom)) -> parser s atom
 precedenceClimb atom ops = go atom' ops'
   where atom' = atom <|> do operator "("; a <- go atom' ops'; operator ")"; return a -- FIXME
         ops' = Map.toList ops
-        go atom curr = do let done = ((Parr, AssocNone), const $ return id)
+        go atom curr = do let done = ((Pdontuse, AssocNone), const $ return id)
                               munchRest = choice $ map (uncurry parse) (done : curr)
                               munchWith p predicate = do b <- p (go atom $ filter predicate curr)
                                                          c <- munchRest
                                                          return $ \a -> c (b a)
                               choice = foldr1 (<|>)
-                              parse (_, AssocNone) p = p atom -- TODO?
+                              parse (Pdontuse, AssocNone) p = p atom
+                              parse (x, AssocNone) p = p atom <|> munchWith p (\((y,_),_) -> y > x)
                               parse (x, AssocRight) p = p atom <|> munchWith p (\((y,_),_) -> y >= x)
                               parse (x, AssocLeft) p = p atom <|> munchWith p (\((y,_),_) -> y > x)
                           a <- atom
