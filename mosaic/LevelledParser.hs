@@ -216,16 +216,16 @@ deriving instance Show (Pat stratum)
 
 -- binds : "Just" --> [], "Just a" --> ["a"]
 -- toplev : Bool -- TODO
-data Patt (binds :: [Symbol]) (stratum :: Nat) where
-  PStarr :: KnownStratum (S (S stratum)) => Patt '[] (S (S stratum))
-  PAppp :: Patt binds stratum -> Patt binds' stratum -> Patt (binds `Append` binds') stratum
-  PConstructor :: String -> Patt '[] stratum
-  PVar :: KnownSymbol v => Patt '[v] stratum
+data Patt (toplev :: Bool) (binds :: [Symbol]) (stratum :: Nat) where
+  PStarr :: KnownStratum (S (S stratum)) => Patt top '[] (S (S stratum))
+  PAppp :: Patt top binds stratum -> Patt top binds' stratum -> Patt top (binds `Append` binds') stratum
+  PConstructor :: String -> Patt False '[] stratum
+  PVar :: KnownSymbol v => Patt top '[v] stratum
   --PAtt :: Pat stratum -> Pat stratum -> Pat stratum
-  PWildcardd :: Patt '[] stratum
-  PEqq :: Patt binds stratum -> Patt nobinds stratum -> Patt binds stratum
+  PWildcardd :: Patt top '[] stratum
+  PEqq :: Patt False binds stratum -> Patt False nobinds stratum -> Patt True binds stratum
 
-deriving instance Show (Patt binds stratum)
+deriving instance Show (Patt top binds stratum)
 
 {-
 type family And (l :: Bool) (r :: Bool) :: Bool where
@@ -240,14 +240,17 @@ type family Append (l :: [Symbol]) (r :: [Symbol]) :: [Symbol] where
   Append '[] r = r
   Append (h ': t) r = h ': Append t r
 
-p1 :: Patt '["a"] Z
-p1 = PAppp (PConstructor "Just") (PVar :: Patt '["a"] Z)
+p1 :: Patt False '["a"] Z
+p1 = PAppp (PConstructor "Just") (PVar :: Patt False '["a"] Z)
 
-p2 :: Patt '[] Z
+p2 :: Patt False '[] Z
 p2 = PAppp (PConstructor "Just") (PConstructor "True")
 
-p3 :: Patt '["foo", "a"] Z
-p3 = PAppp (PVar :: Patt '["foo"] Z) (PVar :: Patt '["a"] Z)
+p3 :: Patt False '["foo", "a"] Z
+p3 = PAppp (PVar :: Patt False '["foo"] Z) (PVar :: Patt False '["a"] Z)
+
+p4 :: Patt True '["foo", "a"] Z
+p4 = PEqq p3 p1
 
 
 data Signature (stratum :: Nat) where
