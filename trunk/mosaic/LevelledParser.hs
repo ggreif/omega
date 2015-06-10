@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds, KindSignatures, GADTs, TupleSections, ViewPatterns
            , FlexibleContexts, InstanceSigs, ScopedTypeVariables
            , TypeOperators, ConstraintKinds, PolyKinds, RankNTypes
-           , StandaloneDeriving, TypeFamilies #-}
+           , StandaloneDeriving, TypeFamilies, MultiParamTypeClasses
+           , FlexibleInstances #-}
 
 import Control.Applicative
 import Control.Monad
@@ -211,6 +212,26 @@ data Pat (stratum :: Nat) where
   PEq :: Pat stratum -> Pat stratum -> Pat stratum
 
 deriving instance Show (Pat stratum)
+
+-- Bool : constructor : "Just"
+-- Bool : toplevel : "Just"
+-- Bool : legal pattern application
+--          - when "Just a"
+--          - when "foo pat", but not "foo (bar pat)"
+data Patt (constructor :: Bool) (tolerance :: Bool -> Bool -> Constraint) (stratum :: Nat) where
+  --PStarr :: KnownStratum (S (S stratum)) => Pat (S (S stratum))
+  PAppp :: tolerance constructor constructor' => Patt constructor tolerance stratum -> Patt constructor' tolerance stratum -> Patt False tolerance stratum
+  PConstructor :: String -> Patt True tolerance stratum
+  PVar :: String -> Patt False tolerance stratum
+  --PAtt :: Pat stratum -> Pat stratum -> Pat stratum
+  --PWildcardd :: Pat stratum
+  --PEqq :: Pat stratum -> Pat stratum -> Pat stratum
+
+class Tolerance (constructor :: Bool) (dunno :: Bool)
+instance Tolerance True egal
+
+p1 :: Patt False Tolerance Z
+p1 = PAppp (PConstructor "Just") (PVar "a")
 
 data Signature (stratum :: Nat) where
   Signature :: String -> Typ (S stratum) -> Signature stratum
