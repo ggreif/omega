@@ -213,25 +213,39 @@ data Pat (stratum :: Nat) where
 
 deriving instance Show (Pat stratum)
 
--- Bool : constructor : "Just"
--- Bool : toplevel : "Just"
+-- Bool : binds : "Just" --> False, "Just a" --> True
+-- Bool : toplevel
 -- Bool : legal pattern application
 --          - when "Just a"
 --          - when "foo pat", but not "foo (bar pat)"
-data Patt (constructor :: Bool) (tolerance :: Bool -> Bool -> Constraint) (stratum :: Nat) where
+data Patt (binds :: Bool) (tolerance :: Bool -> Bool -> Constraint) (stratum :: Nat) where
   --PStarr :: KnownStratum (S (S stratum)) => Pat (S (S stratum))
-  PAppp :: tolerance constructor constructor' => Patt constructor tolerance stratum -> Patt constructor' tolerance stratum -> Patt False tolerance stratum
-  PConstructor :: String -> Patt True tolerance stratum
-  PVar :: String -> Patt False tolerance stratum
+  PAppp :: tolerance binds binds' => Patt binds tolerance stratum -> Patt binds' tolerance stratum -> Patt (binds `Or` binds') tolerance stratum
+  PConstructor :: String -> Patt False tolerance stratum
+  PVar :: String -> Patt True tolerance stratum
   --PAtt :: Pat stratum -> Pat stratum -> Pat stratum
   --PWildcardd :: Pat stratum
   --PEqq :: Pat stratum -> Pat stratum -> Pat stratum
 
-class Tolerance (constructor :: Bool) (dunno :: Bool)
-instance Tolerance True egal
+type family And (l :: Bool) (r :: Bool) :: Bool where
+  And True r = r
+  And l r = False
 
-p1 :: Patt False Tolerance Z
+type family Or (l :: Bool) (r :: Bool) :: Bool where
+  Or False r = r
+  Or l r = True
+
+class Tolerance (bindsf :: Bool) (bindsa :: Bool)
+instance Tolerance False True
+instance Tolerance True False
+instance Tolerance True True
+instance Tolerance False False -- FOR NOW
+
+p1 :: Patt True Tolerance Z
 p1 = PAppp (PConstructor "Just") (PVar "a")
+
+p2 :: Patt False Tolerance Z
+p2 = PAppp (PConstructor "Just") (PConstructor "True")
 
 data Signature (stratum :: Nat) where
   Signature :: String -> Typ (S stratum) -> Signature stratum
