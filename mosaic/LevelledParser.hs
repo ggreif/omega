@@ -12,6 +12,7 @@ import Data.Type.Equality
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.List
+import GHC.TypeLits (Symbol, KnownSymbol)
 
 data Nat = Z | S Nat -- >    data Nat :: level l . *l where Z :: Nat; S :: Nat ~> Nat
 
@@ -213,20 +214,20 @@ data Pat (stratum :: Nat) where
 
 deriving instance Show (Pat stratum)
 
--- Bool : binds : "Just" --> False, "Just a" --> True
--- Bool : toplevel
--- Bool : legal pattern application
---          - when "Just a"
---          - when "foo pat", but not "foo (bar pat)"
-data Patt (binds :: Bool) (tolerance :: Bool -> Bool -> Constraint) (stratum :: Nat) where
-  --PStarr :: KnownStratum (S (S stratum)) => Pat (S (S stratum))
-  PAppp :: tolerance binds binds' => Patt binds tolerance stratum -> Patt binds' tolerance stratum -> Patt (binds `Or` binds') tolerance stratum
-  PConstructor :: String -> Patt False tolerance stratum
-  PVar :: String -> Patt True tolerance stratum
+-- binds : "Just" --> [], "Just a" --> ["a"]
+-- toplev : Bool -- TODO
+data Patt (binds :: [Symbol]) (stratum :: Nat) where
+  PStarr :: KnownStratum (S (S stratum)) => Patt '[] (S (S stratum))
+  PAppp :: Patt binds stratum -> Patt binds' stratum -> Patt (binds `Append` binds') stratum
+  PConstructor :: String -> Patt '[] stratum
+  PVar :: KnownSymbol v => Patt '[v] stratum
   --PAtt :: Pat stratum -> Pat stratum -> Pat stratum
-  --PWildcardd :: Pat stratum
-  --PEqq :: Pat stratum -> Pat stratum -> Pat stratum
+  PWildcardd :: Patt '[] stratum
+  PEqq :: Patt binds stratum -> Patt nobinds stratum -> Patt binds stratum
 
+deriving instance Show (Patt binds stratum)
+
+{-
 type family And (l :: Bool) (r :: Bool) :: Bool where
   And True r = r
   And l r = False
@@ -234,18 +235,20 @@ type family And (l :: Bool) (r :: Bool) :: Bool where
 type family Or (l :: Bool) (r :: Bool) :: Bool where
   Or False r = r
   Or l r = True
+-}
+type family Append (l :: [Symbol]) (r :: [Symbol]) :: [Symbol] where
+  Append '[] r = r
+  Append (h ': t) r = h ': Append t r
 
-class Tolerance (bindsf :: Bool) (bindsa :: Bool)
-instance Tolerance False True
-instance Tolerance True False
-instance Tolerance True True
-instance Tolerance False False -- FOR NOW
+p1 :: Patt '["a"] Z
+p1 = PAppp (PConstructor "Just") (PVar :: Patt '["a"] Z)
 
-p1 :: Patt True Tolerance Z
-p1 = PAppp (PConstructor "Just") (PVar "a")
-
-p2 :: Patt False Tolerance Z
+p2 :: Patt '[] Z
 p2 = PAppp (PConstructor "Just") (PConstructor "True")
+
+p3 :: Patt '["foo", "a"] Z
+p3 = PAppp (PVar :: Patt '["foo"] Z) (PVar :: Patt '["a"] Z)
+
 
 data Signature (stratum :: Nat) where
   Signature :: String -> Typ (S stratum) -> Signature stratum
