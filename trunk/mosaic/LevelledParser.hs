@@ -216,7 +216,9 @@ deriving instance Show (Pat stratum)
 
 -- binds : "Just" --> [], "Just a" --> ["a"]
 -- toplev : Bool -- TODO
-data Patt (toplev :: Bool) (binds :: [Symbol]) (stratum :: Nat) where
+-- how can we rule out the pattern (Just (a b)) statically?
+--  Note: it is a valid expression
+data Patt (toplevel :: Bool) (binds :: [Symbol]) (stratum :: Nat) where
   PStarr :: KnownStratum (S (S stratum)) => Patt top '[] (S (S stratum))
   PAppp :: Patt top binds stratum -> Patt top binds' stratum -> Patt top (binds `Append` binds') stratum
   PConstructor :: String -> Patt False '[] stratum
@@ -226,6 +228,26 @@ data Patt (toplev :: Bool) (binds :: [Symbol]) (stratum :: Nat) where
   PEqq :: Patt False binds stratum -> Patt False nobinds stratum -> Patt True binds stratum
 
 deriving instance Show (Patt top binds stratum)
+
+-- Paths through the "pat/exp" tree
+data Path = Root | Leq Path | Req Path | Lapp Path | Rapp Path
+
+problemVar :: Path -> Maybe String
+problemVar Root = Just "naked expression at top level"
+problemVar (Req Root) = Nothing
+problemVar (leftSpine -> True) = Nothing
+problemVar (Lapp (patternSide -> True)) = Just "pattern var in function position"
+problemVar _ = Nothing
+
+patternSide :: Path -> Bool
+patternSide (Lapp p) = patternSide p
+patternSide (Rapp p) = patternSide p
+patternSide (Leq _) = True
+patternSide _ = False
+
+leftSpine (Leq Root) = True
+leftSpine (Lapp p) = leftSpine p
+leftSpine _ = False
 
 {-
 type family And (l :: Bool) (r :: Bool) :: Bool where
