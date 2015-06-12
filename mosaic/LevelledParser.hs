@@ -245,6 +245,7 @@ patternSide (Rapp p) = patternSide p
 patternSide (Leq _) = True
 patternSide _ = False
 
+leftSpine :: Path -> Bool
 leftSpine (Leq Root) = True
 leftSpine (Lapp p) = leftSpine p
 leftSpine _ = False
