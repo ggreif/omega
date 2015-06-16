@@ -218,14 +218,15 @@ deriving instance Show (Pat stratum)
 -- toplev : Bool -- TODO
 -- how can we rule out the pattern (Just (a b)) statically?
 --  Note: it is a valid expression
-data Patt (toplevel :: Bool) (binds :: [Symbol]) (stratum :: Nat) where
-  PStarr :: KnownStratum (S (S stratum)) => Patt top '[] (S (S stratum))
-  PAppp :: Patt top binds stratum -> Patt top binds' stratum -> Patt top (binds `Append` binds') stratum
-  PConstructor :: String -> Patt False '[] stratum
-  PVar :: KnownSymbol v => Patt top '[v] stratum
+data Patt (path :: Path) (binds :: [Symbol]) (stratum :: Nat) where
+  PStarr :: KnownStratum (S (S stratum)) => Patt path '[] (S (S stratum))
+  PAppp :: Patt (Lapp path) binds stratum -> Patt (Rapp path) binds' stratum -> Patt path (binds `Append` binds') stratum
+  PConstructor :: String -> Patt path '[] stratum
+  -- not yet PVar :: (ValidVarPath path, KnownSymbol v) => Patt path '[v] stratum
+  PVar :: (KnownSymbol v) => Patt path '[v] stratum
   --PAtt :: Pat stratum -> Pat stratum -> Pat stratum
   PWildcardd :: Patt top '[] stratum
-  PEqq :: Patt False binds stratum -> Patt False nobinds stratum -> Patt True binds stratum
+  PEqq :: Patt (Leq path) binds stratum -> Patt (Req path) nobinds stratum -> Patt path binds stratum
 
 deriving instance Show (Patt top binds stratum)
 
@@ -282,16 +283,16 @@ type family Append (l :: [Symbol]) (r :: [Symbol]) :: [Symbol] where
   Append '[] r = r
   Append (h ': t) r = h ': Append t r
 
-p1 :: Patt False '["a"] Z
-p1 = PAppp (PConstructor "Just") (PVar :: Patt False '["a"] Z)
+p1 :: Patt (Req Root) '["a"] Z
+p1 = PAppp (PConstructor "Just") (PVar :: Patt (Rapp (Req Root)) '["a"] Z)
 
-p2 :: Patt False '[] Z
+p2 :: Patt (Leq Root) '[] Z
 p2 = PAppp (PConstructor "Just") (PConstructor "True")
 
-p3 :: Patt False '["foo", "a"] Z
-p3 = PAppp (PVar :: Patt False '["foo"] Z) (PVar :: Patt False '["a"] Z)
+p3 :: Patt (Leq Root) '["foo", "a"] Z
+p3 = PAppp (PVar :: Patt (Lapp (Leq Root)) '["foo"] Z) (PVar :: Patt (Rapp (Leq Root)) '["a"] Z)
 
-p4 :: Patt True '["foo", "a"] Z
+p4 :: Patt Root '["foo", "a"] Z
 p4 = PEqq p3 p1
 
 
