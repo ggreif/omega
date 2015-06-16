@@ -250,6 +250,25 @@ leftSpine (Leq Root) = True
 leftSpine (Lapp p) = leftSpine p
 leftSpine _ = False
 
+class ValidVarPath (varpath :: Path )
+
+--instance ValidVarPath Root
+instance ValidVarPath (Req Root)
+instance (LeftSpine p ~ True) => ValidVarPath p
+instance (PatternSide p ~ False) => ValidVarPath (Lapp p)
+--instance ValidVarPath (Req Root)
+
+type family PatternSide (p :: Path) :: Bool where
+  PatternSide (Lapp p) = PatternSide p
+  PatternSide (Rapp p) = PatternSide p
+  PatternSide (Leq p) = True
+  PatternSide p = False
+
+type family LeftSpine (p :: Path) :: Bool where
+  LeftSpine (Leq Root) = True
+  LeftSpine (Lapp p) = LeftSpine p
+  LeftSpine p = False
+
 {-
 type family And (l :: Bool) (r :: Bool) :: Bool where
   And True r = r
