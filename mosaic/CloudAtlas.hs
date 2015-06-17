@@ -25,7 +25,7 @@ class ApartFrom (t :: k) (ts :: [k])
 instance AlienTo t ts => ApartFrom t ts
 
 instance ApartFrom (ts :: [k]) ('[] :: [[k]])
-instance ((ts `Intersect` us) ~ '[], ts `ApartFrom` uss) => ApartFrom (ts :: [k]) ((us ': uss) :: [[k]])
+instance ((ts `Intersect` us) ~ '[]) => ApartFrom (ts :: [k]) ((us ': uss) :: [[k]])
 
 type family Intersect (ts :: [k]) (us :: [k]) :: [k] where
   Intersect '[] r = '[]
@@ -113,3 +113,10 @@ Arr d c `s` subst = Arr (d `s` subst) (c `s` subst)
 t11 = V (Proxy :: Proxy "a") `s` Extend (Proxy :: Proxy "b") Int (Extend (Proxy :: Proxy "a") (Int `Arr` Int) Empty)
 t12 = (V (Proxy :: Proxy "a") `Arr` V (Proxy :: Proxy "b")) `s` Extend (Proxy :: Proxy "b") Int (Extend (Proxy :: Proxy "a") (Int `Arr` Int) Empty)
 
+-- ### The PLAN ###
+--
+-- o reimplement the functionality from CircularFinal.hs
+--   in terms of strongly typed islands.
+-- o `unify` will get this signature: Term (is :: [k]) -> Term (is' :: [k]) -> Term (is \/ is')
+-- o context lookup will be: Identifier is -> Ctx continents -> Obligations (os :: [(is, conts_n)]
+-- o Can we have Contexts as type classes and terms as type aliases with "value in a context"?
