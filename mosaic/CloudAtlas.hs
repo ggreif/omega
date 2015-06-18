@@ -1,6 +1,6 @@
 {-# LANGUAGE ConstraintKinds, GADTs, TypeFamilies, PolyKinds, KindSignatures
            , TypeOperators, DataKinds, FlexibleInstances, UndecidableInstances
-           , StandaloneDeriving, MultiParamTypeClasses #-}
+           , StandaloneDeriving, MultiParamTypeClasses, ScopedTypeVariables #-}
 
 import Data.Proxy
 import Data.Type.Equality
@@ -122,7 +122,7 @@ t12 = (V (Proxy :: Proxy "a") `Arr` V (Proxy :: Proxy "b")) `s` Extend (Proxy ::
 -- o Can we have Contexts as type classes and terms as type aliases with "value in a context"?
 
 data Tm :: Bool -> [k] -> * where
-  Var :: MoreKnown i => Tm True i
+  Var :: Known i => Tm True i
 
 type TmVar = Tm True -- Term variables
 type TmVal = Tm False -- Term values
@@ -141,3 +141,28 @@ data Obligation :: [([k], [k])] -> * where
 
 lookup :: Cntx is -> TmVar i -> Obligation (Overlaps i is)
 lookup = undefined
+
+
+data Names :: [Symbol] -> * where
+  Nonames :: Names '[]
+  MoreNames :: KnownSymbol n => Proxy n -> Names ns -> Names (n ': ns)
+
+intersect :: forall ms ns . Names ms -> Names ns -> Names (ms `Intersect` ns)
+Nonames `intersect` _ = Nonames
+_ `intersect` Nonames = Nonames
+(MoreNames prox ls) `intersect` r = interAppend (ls `intersect` r) r prox
+  where interAppend :: Names as -> Names ns -> Proxy m -> Names (InterAppend as ns m)
+  --where interAppend :: (KnownSymbol m, ms ~ (m ': ms')) => Names (ms' `Intersect` ns) -> Names ns -> Proxy m -> Names (InterAppend ms' ns m)
+        interAppend = undefined
+{-
+intersect Proxy (ts :: [k]) (us :: [k]) :: [k] where
+  Intersect '[] r = '[]
+  Intersect l '[] = '[]
+  Intersect (l ': ls) r = InterAppend (Intersect ls r) r l
+
+-- helper
+interAppend (l :: [k]) (r :: [k]) (one :: k) :: [k] where
+  InterAppend acc '[] one = acc
+  InterAppend acc (one ': rs) one = one ': acc
+  InterAppend acc (r ': rs) one = InterAppend acc rs one
+-}
