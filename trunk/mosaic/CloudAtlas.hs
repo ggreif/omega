@@ -124,14 +124,18 @@ t12 = (V (Proxy :: Proxy "a") `Arr` V (Proxy :: Proxy "b")) `s` Extend (Proxy ::
 data Tm :: Bool -> [k] -> * where
   Var :: MoreKnown i => Tm True i
 
+type TmVar = Tm True -- Term variables
+type TmVal = Tm False -- Term values
+
 data Cntx :: [[k]] -> * where
-  Binding :: Cntx is -> Tm False i -> Cntx (i ': is)
+  Binding :: Cntx is -> TmVal i -> Cntx (i ': is)
 
 type family Overlaps (i :: [k]) (is :: [[k]]) :: [([k], [k])] where
   Overlaps i '[] = '[]
+  Overlaps i (i' ': is) = ('(i, i') ': Overlaps i is)
 
 data Obligation :: [([k], [k])] -> * where
   
 
-lookup :: Cntx is -> Tm True i -> Obligation (Overlaps i is)
+lookup :: Cntx is -> TmVar i -> Obligation (Overlaps i is)
 lookup = undefined
