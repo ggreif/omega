@@ -120,3 +120,18 @@ t12 = (V (Proxy :: Proxy "a") `Arr` V (Proxy :: Proxy "b")) `s` Extend (Proxy ::
 -- o `unify` will get this signature: Term (is :: [k]) -> Term (is' :: [k]) -> Term (is \/ is')
 -- o context lookup will be: Identifier is -> Ctx continents -> Obligations (os :: [(is, conts_n)]
 -- o Can we have Contexts as type classes and terms as type aliases with "value in a context"?
+
+data Tm :: Bool -> [k] -> * where
+  Var :: MoreKnown i => Tm True i
+
+data Cntx :: [[k]] -> * where
+  Binding :: Cntx is -> Tm False i -> Cntx (i ': is)
+
+type family Overlaps (i :: [k]) (is :: [[k]]) :: [([k], [k])] where
+  Overlaps i '[] = '[]
+
+data Obligation :: [([k], [k])] -> * where
+  
+
+lookup :: Cntx is -> Tm True i -> Obligation (Overlaps i is)
+lookup = undefined
