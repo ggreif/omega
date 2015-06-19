@@ -29,7 +29,6 @@ instance ((ts `Intersect` us) ~ '[]) => ApartFrom (ts :: [k]) ((us ': uss) :: [[
 
 type family Intersect (ts :: [k]) (us :: [k]) :: [k] where
   Intersect '[] r = '[]
---  Intersect l '[] = '[]
   Intersect (l ': ls) r = InterAppend (Intersect ls r) r l
 
 -- helper
@@ -147,13 +146,14 @@ data Names :: [Symbol] -> * where
   Nonames :: Names '[]
   MoreNames :: KnownSymbol n => Proxy n -> Names ns -> Names (n ': ns)
 
-intersect :: forall ms ns . Names ms -> Names ns -> Names (ms `Intersect` ns)
+intersect :: {-forall ms ns . -}Names ms -> Names ns -> Names (ms `Intersect` ns)
 Nonames `intersect` _ = Nonames
---_ `intersect` Nonames = Nonames
 (MoreNames prox ls) `intersect` r = interAppend (ls `intersect` r) r prox
-  where interAppend :: Names as -> Names ns -> Proxy m -> Names (InterAppend as ns m)
+  where interAppend :: KnownSymbol m => Names as -> Names ns -> Proxy m -> Names (InterAppend as ns m)
   --where interAppend :: (KnownSymbol m, ms ~ (m ': ms')) => Names (ms' `Intersect` ns) -> Names ns -> Proxy m -> Names (InterAppend ms' ns m)
-        interAppend = undefined
+        interAppend acc Nonames _ = acc
+        interAppend acc (MoreNames prox rest) one | Just Refl <- prox `sameSymbol` one = MoreNames one acc
+        interAppend acc (MoreNames Proxy rest) one = interAppend acc rest one
 {-
 intersect Proxy (ts :: [k]) (us :: [k]) :: [k] where
   Intersect '[] r = '[]
