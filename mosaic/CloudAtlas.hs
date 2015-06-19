@@ -1,11 +1,12 @@
 {-# LANGUAGE ConstraintKinds, GADTs, TypeFamilies, PolyKinds, KindSignatures
            , TypeOperators, DataKinds, FlexibleInstances, UndecidableInstances
-           , StandaloneDeriving, MultiParamTypeClasses, ScopedTypeVariables #-}
+           , StandaloneDeriving, MultiParamTypeClasses #-}
 
 import Data.Proxy
 import Data.Type.Equality
 import GHC.Exts
 import GHC.TypeLits
+import Unsafe.Coerce (unsafeCoerce)
 
 type family Elem (t :: k) (ts :: [k]) :: Bool where
   Elem a '[] = False
@@ -146,27 +147,15 @@ data Names :: [Symbol] -> * where
   Nonames :: Names '[]
   MoreNames :: KnownSymbol n => Proxy n -> Names ns -> Names (n ': ns)
 
-intersect :: {-forall ms ns . -}Names ms -> Names ns -> Names (ms `Intersect` ns)
+deriving instance Show (Names ns)
+
+intersect :: Names ms -> Names ns -> Names (ms `Intersect` ns)
 Nonames `intersect` _ = Nonames
 (MoreNames prox ls) `intersect` r = interAppend (ls `intersect` r) r prox
   where interAppend :: KnownSymbol m => Names as -> Names ns -> Proxy m -> Names (InterAppend as ns m)
-  --where interAppend :: (KnownSymbol m, ms ~ (m ': ms')) => Names (ms' `Intersect` ns) -> Names ns -> Proxy m -> Names (InterAppend ms' ns m)
         interAppend acc Nonames _ = acc
         interAppend acc (MoreNames prox rest) one | Just Refl <- prox `sameSymbol` one = MoreNames one acc
-        interAppend acc (MoreNames Proxy rest) one = interAppend acc rest one
-{-
-intersect Proxy (ts :: [k]) (us :: [k]) :: [k] where
-  Intersect '[] r = '[]
-  Intersect l '[] = '[]
-  Intersect (l ': ls) r = InterAppend (Intersect ls r) r l
+        interAppend acc (MoreNames Proxy rest) one = unsafeCoerce $ interAppend acc rest one
 
--- helper
-interAppend (l :: [k]) (r :: [k]) (one :: k) :: [k] where
-  InterAppend acc '[] one = acc
-  InterAppend acc (one ': rs) one = one ': acc
-  InterAppend acc (r ': rs) one = InterAppend acc rs one
--}
-
---evidence :: Proxy l -> Proxy r -> Proxy ls -> InterAppend (Intersect ls r) r l :~: Intersect (l : ls) r
-evidence :: Proxy l -> Proxy r -> Proxy ls -> Intersect (l : ls) r :~: InterAppend (Intersect ls r) r l
-evidence _ _ _ = Refl
+i1 = MoreNames (Proxy :: Proxy "hay") $ MoreNames (Proxy :: Proxy "ho") $ Nonames
+i2 = MoreNames (Proxy :: Proxy "wurr") $ MoreNames (Proxy :: Proxy "ho") $ MoreNames (Proxy :: Proxy "kerrduff") $ Nonames
