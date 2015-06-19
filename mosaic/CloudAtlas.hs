@@ -29,7 +29,7 @@ instance ((ts `Intersect` us) ~ '[]) => ApartFrom (ts :: [k]) ((us ': uss) :: [[
 
 type family Intersect (ts :: [k]) (us :: [k]) :: [k] where
   Intersect '[] r = '[]
-  Intersect l '[] = '[]
+--  Intersect l '[] = '[]
   Intersect (l ': ls) r = InterAppend (Intersect ls r) r l
 
 -- helper
@@ -149,7 +149,7 @@ data Names :: [Symbol] -> * where
 
 intersect :: forall ms ns . Names ms -> Names ns -> Names (ms `Intersect` ns)
 Nonames `intersect` _ = Nonames
-_ `intersect` Nonames = Nonames
+--_ `intersect` Nonames = Nonames
 (MoreNames prox ls) `intersect` r = interAppend (ls `intersect` r) r prox
   where interAppend :: Names as -> Names ns -> Proxy m -> Names (InterAppend as ns m)
   --where interAppend :: (KnownSymbol m, ms ~ (m ': ms')) => Names (ms' `Intersect` ns) -> Names ns -> Proxy m -> Names (InterAppend ms' ns m)
@@ -166,3 +166,7 @@ interAppend (l :: [k]) (r :: [k]) (one :: k) :: [k] where
   InterAppend acc (one ': rs) one = one ': acc
   InterAppend acc (r ': rs) one = InterAppend acc rs one
 -}
+
+--evidence :: Proxy l -> Proxy r -> Proxy ls -> InterAppend (Intersect ls r) r l :~: Intersect (l : ls) r
+evidence :: Proxy l -> Proxy r -> Proxy ls -> Intersect (l : ls) r :~: InterAppend (Intersect ls r) r l
+evidence _ _ _ = Refl
