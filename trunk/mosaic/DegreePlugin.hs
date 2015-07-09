@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators #-}
 
 --type family (refin :: k) ° typ
-data (refin :: k) ° typ
+--data (refin :: k) ° typ
+newtype (refin :: k) ° typ = Refined typ
 
 test :: (Just a ° Maybe b) -> b
 test (Just a) = a
