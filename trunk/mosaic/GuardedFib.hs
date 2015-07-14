@@ -50,14 +50,14 @@ ack (S (iter . ack -> result)) = result
 
 iter f Z = f (S Z)
 iter f (f . iter f -> result) = result
+-}
 
 instance Num Nat where
   fromInteger 0 = Z
   fromInteger n = S $ fromInteger $ n - 1
--}
 
 -- From http://rosettacode.org/wiki/Ackermann_function#Haskell
-ack 0 n = n + 1
-ack m 0 = ack (m-1) 1
-ack m n = ack (m-1) (ack m (n-1))
+ack Z n = S n
+ack (S m) Z = ack m (S Z)
+ack m@(S m1) (S n) = ack m1 (ack m n)
 
