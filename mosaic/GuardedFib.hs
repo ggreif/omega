@@ -44,6 +44,7 @@ fib (S (fib&&&id -> (f, S (fib -> g)))) = f `plus` g
 -- Iter f Z = f (S Z)
 -- Iter f (S n) = f (Iter f n)
 
+{-
 ack Z = S
 ack (S (iter . ack -> result)) = result
 
@@ -53,3 +54,10 @@ iter f (f . iter f -> result) = result
 instance Num Nat where
   fromInteger 0 = Z
   fromInteger n = S $ fromInteger $ n - 1
+-}
+
+-- From http://rosettacode.org/wiki/Ackermann_function#Haskell
+ack 0 n = n + 1
+ack m 0 = ack (m-1) 1
+ack m n = ack (m-1) (ack m (n-1))
+
