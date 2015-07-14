@@ -4,6 +4,11 @@ import Control.Arrow
 
 data Nat = Z | S Nat deriving Show
 
+five = S (S (S (S (S Z))))
+six = S five
+eight = fib six
+twentyOne = fib eight
+
 plus m Z = m
 plus m (S (plus m -> sum)) = S sum
 
