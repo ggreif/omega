@@ -33,3 +33,23 @@ fib (S (fib&&&id -> (f, S (fib -> g)))) = f `plus` g
 ---      |                  +--> :: (S (S effective) ° Nat) -> Nat
 ---      |
 ---      +--> :: (S effective ° Nat) -> Nat
+
+
+-- Okay, so how do we write an Ackermann function?
+
+-- The (curried) original:
+
+-- Ack Z = S
+-- Ack (S m) = Iter (Ack m)
+-- Iter f Z = f (S Z)
+-- Iter f (S n) = f (Iter f n)
+
+ack Z = S
+ack (S (iter . ack -> result)) = result
+
+iter f Z = f (S Z)
+iter f (f . iter f -> result) = result
+
+instance Num Nat where
+  fromInteger 0 = Z
+  fromInteger n = S $ fromInteger $ n - 1
