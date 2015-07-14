@@ -57,7 +57,13 @@ instance Num Nat where
   fromInteger n = S $ fromInteger $ n - 1
 
 -- From http://rosettacode.org/wiki/Ackermann_function#Haskell
+{-
 ack Z n = S n
 ack (S m) Z = ack m (S Z)
 ack m@(S m1) (S n) = ack m1 (ack m n)
+-}
+
+ack Z n = S n
+ack (S (ack -> f)) Z = f (S Z)
+ack m@(S (ack -> f)) (S (ack m -> second)) = f second
 
