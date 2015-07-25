@@ -225,3 +225,7 @@ Newer developments: https://plus.google.com/117663015413546257905/posts/icqQ6smt
 = STG Machine =
 
 http://www.reddit.com/r/haskell/comments/2kswnp/the_guts_of_a_spineless_machine/
+
+= Coinductive Reasoning =
+
+http://jozefg.bitbucket.org/posts/2015-07-17-conats-for-cheap.html
