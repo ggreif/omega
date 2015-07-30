@@ -26,7 +26,7 @@ data Exp :: * -> * where
 --instance Applicative Exp where
 lexeme :: Parser a -> Parser a
 lexeme p = do { x <- p; spaces; return x }
-integer = lexeme $ do { ds <- many1 digit; return $ IntLit (read ds) }
+integer = lexeme $ do ds <- many1 digit; return $ IntLit (read ds)
 
 -- TH helpers
 var = TH.varE . TH.mkName
@@ -51,7 +51,6 @@ infix 0 °
 degName = ''(°)
 
 pattern a `Arr` b = TH.ArrowT `TH.AppT` a `TH.AppT` b
---pattern a `Deg` b = (TH.ConT (TH.Name (TH.OccName "°") (TH.NameQ (TH.ModName "Main")))) `TH.AppT` a `TH.AppT` b
 pattern Deg name a b = TH.ConT name `TH.AppT` a `TH.AppT` b
 
 refined :: DecsQ -> DecsQ
@@ -63,6 +62,5 @@ refined q = do decs <- q
         filterType (TH.ForallT univs ctx (filterType -> typ)) = TH.ForallT univs ctx typ
         filterType ((filterType -> a) `Arr` (filterType -> b)) = a `Arr` b
         filterType deg@(Deg ((==degName) -> True) a b) = b
-        --filterType deg@(Deg (show -> "OmegaParser.°") a b) = b
         filterType app@(f `TH.AppT` a) = error $ show app
         filterType (error . show -> bla) = bla
