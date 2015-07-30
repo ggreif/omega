@@ -1,9 +1,10 @@
-{-# LANGUAGE GADTs, StandaloneDeriving, KindSignatures, DeriveFunctor #-}
+{-# LANGUAGE GADTs, StandaloneDeriving, KindSignatures, DeriveFunctor, ViewPatterns #-}
 module OmegaParser where
 
 import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Lib
+import Language.Haskell.TH.Syntax (runQ)
 import Text.Parsec
 --import Text.Parsec.Token
 import Text.Parsec.String
@@ -42,5 +43,6 @@ parseExprExp s = do loc <- TH.location
                         exp = parse integer file s
                     trans exp
 
-refined :: Language.Haskell.TH.Lib.DecsQ -> Int
-refined = undefined
+refined :: DecsQ -> DecsQ
+refined q = do [TH.FamilyD{}] <- q
+               return undefined
