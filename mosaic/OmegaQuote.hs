@@ -32,11 +32,17 @@ type family (narrow :: k) ° (wide :: *)
 infix 0 °
 
 stuff = [d| data Nat = Z | S Nat |]
-data Nat = Z | S Nat
-refinementPlus =
+data Nat = Z | S Nat deriving Show
+
+--refinementPlus =
+refined
   [d| plus :: (a ° Nat) -> (b ° Nat) -> (a `plus` b ° Nat)
       Z `plus` n = n
       (S m) `plus` n = S (m `plus` n)
     |]
 
-foo = refined refinementPlus
+--refined refinementPlus
+
+refined
+  [d| data A where B :: A; C :: B
+    |]
