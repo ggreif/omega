@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs, StandaloneDeriving, KindSignatures, DeriveFunctor, ViewPatterns, PatternSynonyms #-}
+{-# LANGUAGE GADTs, StandaloneDeriving, KindSignatures, DeriveFunctor, ViewPatterns
+           , PatternSynonyms, TypeOperators, PolyKinds #-}
 module OmegaParser where
 
 import qualified Language.Haskell.TH as TH
@@ -43,6 +44,12 @@ parseExprExp s = do loc <- TH.location
                         exp = parse integer file s
                     trans exp
 
+
+type family (narrow :: k) ° (wide :: *)
+infix 0 °
+
+degName = ''(°)
+
 pattern a `Arr` b = TH.ArrowT `TH.AppT` a `TH.AppT` b
 --pattern a `Deg` b = (TH.ConT (TH.Name (TH.OccName "°") (TH.NameQ (TH.ModName "Main")))) `TH.AppT` a `TH.AppT` b
 pattern Deg name a b = TH.ConT name `TH.AppT` a `TH.AppT` b
@@ -55,6 +62,7 @@ refined q = do decs <- q
         go a = a
         filterType (TH.ForallT univs ctx (filterType -> typ)) = TH.ForallT univs ctx typ
         filterType ((filterType -> a) `Arr` (filterType -> b)) = a `Arr` b
-        filterType deg@(Deg (show -> "Main.°") a b) = b
+        filterType deg@(Deg ((==degName) -> True) a b) = b
+        --filterType deg@(Deg (show -> "OmegaParser.°") a b) = b
         filterType app@(f `TH.AppT` a) = error $ show app
         filterType (error . show -> bla) = bla

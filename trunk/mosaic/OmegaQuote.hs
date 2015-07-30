@@ -28,9 +28,6 @@ c = [ω|33|]
 c1 = [e|33|]
 c2 = [e||id 33||]
 
-type family (narrow :: k) ° (wide :: *)
-infix 0 °
-
 stuff = [d| data Nat = Z | S Nat |]
 data Nat = Z | S Nat deriving Show
 
