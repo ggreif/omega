@@ -39,3 +39,4 @@ refinementPlus =
       (S m) `plus` n = S (m `plus` n)
     |]
 
+foo = refined refinementPlus

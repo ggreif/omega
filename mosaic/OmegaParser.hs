@@ -3,6 +3,7 @@ module OmegaParser where
 
 import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Quote
+import Language.Haskell.TH.Lib
 import Text.Parsec
 --import Text.Parsec.Token
 import Text.Parsec.String
@@ -40,3 +41,6 @@ parseExprExp s = do loc <- TH.location
                     let file = TH.loc_filename loc
                         exp = parse integer file s
                     trans exp
+
+refined :: Language.Haskell.TH.Lib.DecsQ -> Int
+refined = undefined
