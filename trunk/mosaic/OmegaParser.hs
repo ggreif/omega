@@ -48,8 +48,6 @@ parseExprExp s = do loc <- TH.location
 type family (narrow :: k) ° (wide :: *)
 infix 0 °
 
-degName = ''(°)
-
 pattern a `Arr` b = TH.ArrowT `TH.AppT` a `TH.AppT` b
 pattern Deg name a b = TH.ConT name `TH.AppT` a `TH.AppT` b
 
@@ -61,6 +59,6 @@ refined q = do decs <- q
         go a = a
         filterType (TH.ForallT univs ctx (filterType -> typ)) = TH.ForallT univs ctx typ
         filterType ((filterType -> a) `Arr` (filterType -> b)) = a `Arr` b
-        filterType deg@(Deg ((==degName) -> True) a b) = b
+        filterType deg@(Deg ((==''(°)) -> True) a b) = b
         filterType app@(f `TH.AppT` a) = error $ show app
         filterType (error . show -> bla) = bla
