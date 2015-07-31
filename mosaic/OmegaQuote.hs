@@ -50,8 +50,18 @@ instance Z °° Nat
 instance S n °° Nat
 
 --instance (Nothing :: Maybe k) °° Maybe a
-instance ((b :: k) °° a) => Just b °° Maybe a
+instance (b °° a) => Just b °° Maybe a
 --instance (k °° a) => Just k °° Maybe a
+
+class (a :: k) °°° (b :: * -> *) | a -> b
+instance Nothing °°° Maybe
+--instance (Nothing :: Maybe k) °°° Maybe
+
+data Stuff a b where
+  Full :: (a °° b) => Stuff a b
+  Part :: (a °°° b) => Stuff a (b c)
+
+deriving instance Show (Stuff a b)
 
 [d|data H|] -- standalone
 id [d|data H'|] -- also works
