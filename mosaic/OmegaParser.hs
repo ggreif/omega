@@ -1,5 +1,7 @@
 {-# LANGUAGE GADTs, StandaloneDeriving, KindSignatures, DeriveFunctor, ViewPatterns
-           , PatternSynonyms, TypeOperators, PolyKinds #-}
+           , PatternSynonyms, TypeOperators, PolyKinds, TemplateHaskell
+           , TypeFamilies #-}
+
 module OmegaParser where
 
 import qualified Language.Haskell.TH as TH
