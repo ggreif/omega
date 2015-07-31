@@ -2,7 +2,7 @@
              StandaloneDeriving, UnicodeSyntax #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies, TypeOperators, PolyKinds
-           , MultiParamTypeClasses, FunctionalDependencies #-}
+           , MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances #-}
 
 import OmegaParser
 
@@ -50,8 +50,11 @@ instance Z °° Nat
 instance S n °° Nat
 
 --instance (Nothing :: Maybe k) °° Maybe a
---instance ((b :: k) °° a) => Just b °° Maybe a
+instance ((b :: k) °° a) => Just b °° Maybe a
 --instance (k °° a) => Just k °° Maybe a
+
+[d|data H|] -- standalone
+id [d|data H'|] -- also works
 
 refined
   [d| data A where B :: A; C :: B
