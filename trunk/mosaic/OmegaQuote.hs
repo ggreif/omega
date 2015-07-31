@@ -68,6 +68,14 @@ deriving instance Show (Stuff a b)
 id [d|data H'|] -- also works
 
 dataRewrite
-  [d| data A where B :: A; C :: B
+  [d| data A :: * -> * where B :: A x; C :: B y; D :: !(A z) -> A Char
+    |]
+
+dataRewrite -- proper GADT
+  [d| data A a where B :: A x; C :: B y; D :: !(A z) -> A Char
+    |]
+
+dataRewrite -- very exotic, (C :: B) is not correctly recorded
+  [d| data A where B :: A; C :: B; D :: !(C :: A) -> (C :: A)
     |]
 
