@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds, KindSignatures, QuasiQuotes, GADTs,
              StandaloneDeriving, UnicodeSyntax #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies, TypeOperators, PolyKinds #-}
+{-# LANGUAGE TypeFamilies, TypeOperators, PolyKinds
+           , MultiParamTypeClasses, FunctionalDependencies #-}
 
 import OmegaParser
 
@@ -39,6 +40,15 @@ refined
     |]
 
 --refined refinementPlus
+
+class (a :: k) °° (b :: *) | a -> b where
+
+instance True °° Bool
+instance False °° Bool
+
+--instance (Nothing :: Maybe k) °° Maybe a
+instance ((b :: k) °° a) => Just b °° Maybe a
+--instance (k °° a) => Just k °° Maybe a
 
 refined
   [d| data A where B :: A; C :: B
