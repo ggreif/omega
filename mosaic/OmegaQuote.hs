@@ -41,13 +41,16 @@ refined
 
 --refined refinementPlus
 
-class (a :: k) °° (b :: *) | a -> b where
+class (a :: k) °° (b :: *) | a -> b
 
 instance True °° Bool
 instance False °° Bool
 
+instance Z °° Nat
+instance S n °° Nat
+
 --instance (Nothing :: Maybe k) °° Maybe a
-instance ((b :: k) °° a) => Just b °° Maybe a
+--instance ((b :: k) °° a) => Just b °° Maybe a
 --instance (k °° a) => Just k °° Maybe a
 
 refined
