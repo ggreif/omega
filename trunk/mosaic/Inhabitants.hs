@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, RebindableSyntax #-}
 
+module Inhabitants where
+
 import qualified Prelude as P
 import Prelude (Show (..), Bool (..), ($), error, undefined, const, (.), flip)
 import Data.List
