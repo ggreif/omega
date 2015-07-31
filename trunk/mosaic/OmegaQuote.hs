@@ -5,6 +5,7 @@
            , MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances #-}
 
 import OmegaParser
+import InhabitantTH
 
 (°) :: Int -> Int -> Int
 a ° b = a + b
@@ -66,6 +67,7 @@ deriving instance Show (Stuff a b)
 [d|data H|] -- standalone
 id [d|data H'|] -- also works
 
-refined
+dataRewrite
   [d| data A where B :: A; C :: B
     |]
+
