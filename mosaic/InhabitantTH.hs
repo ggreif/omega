@@ -16,7 +16,7 @@ dataRewrite :: DecsQ -> DecsQ
 dataRewrite q = do decs <- q
                    return $ map go decs
   where go :: Dec -> Dec
-        go (DataD ctxt name tyvs cons derivs) = let posts :: [(Name, Nameable False (S' Z'))]; posts = map postulateTvs tyvs in error $ "tvs: " ++ concatMap (show . fst) posts
+        go (DataD ctxt name tyvs cons derivs) = let posts = map postulateTvs tyvs in error $ "tvs: " ++ concatMap (show . (\(n, Anon f) -> f name)) posts
         go a = error $ show a
 
         postulateTvs :: Postulatable ent => TyVarBndr -> (Name, ent False (S' Z'))
@@ -26,10 +26,16 @@ dataRewrite q = do decs <- q
 
 
 data Nameable (open :: Bool) (lev :: Nat') where
+  Star :: Nameable True l
   Tyvar :: Nameable o (S' l) -> Name -> Nameable False l
   Anon :: (Name -> Nameable o l) -> Nameable o l
 
+instance Show (Nameable o l) where
+  show Star = "*"
+  show (Anon f) = show $ f $ mkName "_"
+  show (Tyvar isle name) = show name ++ " :: " ++ show isle
 
 instance Inhabitable (Nameable) where
+  starN = Star
 instance Postulatable (Nameable) where
   postulate = Anon . Tyvar
