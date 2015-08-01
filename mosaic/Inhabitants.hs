@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds, GADTs, KindSignatures, RebindableSyntax #-}
 
-module Inhabitants where
+module Inhabitants (Inhabitable(..)) where
 
 import qualified Prelude as P
 import Prelude (Show (..), Bool (..), ($), error, undefined, const, (.), flip)
