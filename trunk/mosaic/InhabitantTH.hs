@@ -13,6 +13,7 @@ class Inhabitable ent => Postulatable ent where
   postulate :: ent o (S' l) -> ent False l -- should be HOAS (like inhabit)
 
 dataRewrite :: DecsQ -> DecsQ
+--dataRewrite q = decize Star
 dataRewrite q = do decs <- q
                    return $ map go decs
   where go :: Dec -> Dec
@@ -24,11 +25,15 @@ dataRewrite q = do decs <- q
         postulateTvs (KindedTV name StarT) = (name, postulate starN)
         postulateTvs (KindedTV name kind) = error $ "Needs reify? " ++ show kind
 
+        dataInh :: Inhabitable ent => ent False (S' (S' Z'))
+        dataInh = inhabit starN (\i -> i)
+
 
 data Nameable (open :: Bool) (lev :: Nat') where
   Star :: Nameable True l
   Tyvar :: Nameable o (S' l) -> Name -> Nameable False l
   Anon :: (Name -> Nameable o l) -> Nameable o l
+  Data :: Nameable True (S' l) -> (Nameable True l -> Nameable o l') -> Nameable False l'
 
 instance Show (Nameable o l) where
   show Star = "*"
@@ -37,5 +42,11 @@ instance Show (Nameable o l) where
 
 instance Inhabitable (Nameable) where
   starN = Star
+  inhabit = Data
 instance Postulatable (Nameable) where
   postulate = Anon . Tyvar
+
+
+decize :: Nameable o l -> DecsQ
+decize Star = (:[]) `fmap` dataD (return []) (mkName "Hey") [] [] []
+--decize _ = (:[]) `fmap` dataD (return []) (mkName "Hey") [] [] []
