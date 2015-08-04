@@ -42,10 +42,17 @@ refined
 
 --refined refinementPlus
 
-class (a :: k) °° (b :: *) | a -> b
+class (a :: k) °° (b :: *) | a -> b where
+  data a <° b
+  refine :: b -> Maybe (a <° b)
 
-instance True °° Bool
-instance False °° Bool
+instance True °° Bool where
+  newtype True <° Bool = True' Bool deriving Show
+  refine t@True = Just $ True' t
+  refine _ = Nothing
+
+instance False °° Bool where
+  newtype False <° Bool = False' Bool
 
 instance Z °° Nat
 instance S n °° Nat
@@ -54,7 +61,9 @@ instance S n °° Nat
 instance (b °° a) => Just b °° Maybe a
 --instance (k °° a) => Just k °° Maybe a
 
-class (a :: k) °°° (b :: * -> *) | a -> b
+class (a :: k) °°° (b :: * -> *) | a -> b where
+  data a <°° b
+
 instance Nothing °°° Maybe
 --instance (Nothing :: Maybe k) °°° Maybe
 
@@ -66,6 +75,7 @@ deriving instance Show (Stuff a b)
 
 [d|data H|] -- standalone
 id [d|data H'|] -- also works
+
 
 dataRewrite
   [d| data A :: * -> * where B :: A x; C :: B y; D :: !(A z) -> A Char
@@ -79,3 +89,5 @@ dataRewrite -- very exotic, (C :: B) is not correctly recorded
   [d| data A where B :: A; C :: B; D :: !(C :: A) -> (C :: A)
     |]
 
+
+-- Things to try: Wire up my equation parser as DecsQ
