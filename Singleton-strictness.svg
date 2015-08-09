@@ -1,0 +1,24 @@
+<svg width="320" height="170" xmlns="http://www.w3.org/2000/svg">
+ <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
+ <title>Singleton strictness</title>
+ <defs>
+  <marker refY="50" refX="50" markerHeight="5" markerWidth="5" viewBox="0 0 100 100" orient="auto" markerUnits="strokeWidth" id="se_marker_end_svg_2">
+   <path stroke-width="10" stroke="#000000" fill="#000000" d="m100,50l-100,40l30,-40l-30,-40l100,40z" id="svg_3"/>
+  </marker>
+  <marker id="se_marker_end_svg_4" markerUnits="strokeWidth" orient="auto" viewBox="0 0 100 100" markerWidth="5" markerHeight="5" refX="50" refY="50">
+   <circle id="svg_5" r="30" cx="50" cy="50" fill="none" stroke="#000000" stroke-width="10"/>
+  </marker>
+ </defs>
+ <g>
+  <title>List</title>
+  <path id="svg_1" d="m2.5,116.95l25.00005,-25l24.99995,25l-24.99995,25.00011l-25.00005,-25.00011z" stroke-width="5" stroke="#000000" fill="#FF0000"/>
+  <line marker-end="url(#se_marker_end_svg_2)" id="svg_2" y2="116.95005" x2="107.12795" y1="116.95005" x1="52.98" stroke-width="5" stroke="#000000" fill="none"/>
+  <line id="svg_4" y2="46.98913" x2="27.98" y1="93" x1="27.98" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="5" stroke="#000000" fill="none" marker-end="url(#se_marker_end_svg_4)"/>
+  <text xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" id="svg_6" y="22" x="26.98" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">4</text>
+  <path opacity="0.25" id="svg_7" d="m122.49999,116.95l25.00007,-25l24.99994,25l-24.99994,25.00011l-25.00007,-25.00011z" stroke-width="5" stroke="#000000" fill="#FF0000"/>
+  <line opacity="0.25" id="svg_8" marker-end="url(#se_marker_end_svg_2)" y2="116.95005" x2="227.12795" y1="116.95005" x1="172.98" stroke-width="5" stroke="#000000" fill="none"/>
+  <line opacity="0.25" id="svg_9" y2="46.98913" x2="147.23" y1="93" x1="147.23" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="5" stroke="#000000" fill="none" marker-end="url(#se_marker_end_svg_4)"/>
+  <text opacity="0.25" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" id="svg_10" y="22" x="147.23" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">2</text>
+  <path opacity="0.25" id="svg_13" d="m272.32626,91.05252c-0.14789,0.00662 -0.29163,0.01926 -0.43985,0.03412c-2.38269,0.23642 -4.48605,1.74899 -5.55441,4.00278l-0.56686,1.70448c0.12262,-0.59052 0.31012,-1.16342 0.56686,-1.70448c-1.9057,-1.97446 -4.58008,-2.88443 -7.22177,-2.45831c-2.64249,0.42831 -4.93771,2.14102 -6.19244,4.6268c-3.54036,-2.18115 -7.95334,-2.047 -11.36807,0.34534c-3.41365,2.3923 -5.23407,6.62933 -4.68123,10.90259l0.36206,1.73804c-0.16275,-0.56854 -0.28535,-1.14804 -0.36206,-1.73804l-0.05527,0.16165c-2.96745,0.32166 -5.40126,2.62436 -6.03413,5.70724c-0.63147,3.0802 0.68289,6.24335 3.25723,7.83678l4.01984,0.97815c-1.40375,0.11494 -2.80444,-0.22375 -4.01984,-0.97815c-1.98541,2.22626 -2.44235,5.51756 -1.13321,8.23817c1.30997,2.71999 4.10808,4.28589 6.99469,3.93236l1.7542,-0.46463c-0.56467,0.23642 -1.15024,0.3898 -1.7542,0.46463c1.6382,3.01416 4.35521,5.21678 7.54532,6.0899c3.18901,0.87592 6.57596,0.35797 9.40073,-1.43118c2.3049,3.63382 6.39398,5.54062 10.49576,4.89952c4.10062,-0.64328 7.48352,-3.72784 8.68481,-7.90985l0.4165,-2.33899c-0.06186,0.79454 -0.19711,1.5764 -0.4165,2.33899c2.8204,1.84906 6.36951,1.95351 9.28253,0.27272c2.91525,-1.68251 4.73361,-4.89076 4.76022,-8.38216l-1.04498,-5.21899l-4.11569,-3.53217c3.18271,1.99368 5.1893,5.03152 5.16068,8.75116c3.78418,0.0401 6.99878,-3.20392 8.44211,-6.92569c1.44226,-3.72128 0.89673,-7.9649 -1.43155,-11.15173c0.96503,-2.37305 0.90759,-5.0722 -0.15778,-7.3985c-1.06613,-2.32417 -3.03232,-4.0517 -5.39688,-4.73129c-0.52948,-3.0802 -2.71057,-5.55775 -5.5939,-6.37149c-2.88226,-0.81152 -5.95197,0.1897 -7.88287,2.57764l-1.17175,1.97714c0.29938,-0.71362 0.69031,-1.38058 1.17175,-1.97714c-1.36145,-1.87659 -3.49478,-2.93555 -5.71997,-2.86739l0,0l-0.00003,-0.00002l-0.00003,0z" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="5" stroke="#000000" fill="#bfbfbf"/>
+ </g>
+</svg>
