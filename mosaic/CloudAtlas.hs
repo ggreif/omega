@@ -135,7 +135,7 @@ type family Overlaps (i :: [k]) (is :: [[k]]) :: [([k], [k])] where
   Overlaps i (i' ': is) = ('(i, i') ': Overlaps i is)
 
 data Obligation :: [([k], [k])] -> * where
-  Vacouus :: Obligation '[]
+  Vacuous :: Obligation '[]
   Hit :: ((i `Intersect` i') ~ (n ': ns)) => Obligation os -> TmVal i' -> Obligation ('(i, i') ': os)
   Miss :: ((i `Intersect` i') ~ '[]) => Obligation os -> TmVal i' -> Obligation ('(i, i') ': os)
 
