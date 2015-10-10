@@ -13,7 +13,7 @@ oneLamBinder (LamE (p:ps) e) = LamE [p] (oneLamBinder (LamE ps e))
 
 example = runQ (oneLamBinder <$> [|\a b -> a|]) >>= print
 
-e1 = (toMy [] <$> [|\a -> a a|]) :: Q Easy
+e1 = (toMy [] <$> [|\a b -> a b|]) :: Q Easy
 
 class Lam repr where
   lam :: (repr -> repr) -> repr
@@ -23,7 +23,9 @@ class Lam repr where
 toMy :: Lam repr => [(Name, repr)] -> Exp -> repr
 toMy env (VarE (flip lookup env -> Just v)) = v
 toMy env (AppE f a) = app (toMy env f) (toMy env a)
+toMy env (LamE [] e) = toMy env e
 toMy env (LamE [VarP nam] e) = lam $ \v -> toMy ((nam, v) : env) e
+toMy env (LamE (p:ps) e) = toMy env (LamE [p] $ LamE ps e)
 
 
 data Easy = It | App Easy Easy | Lam (Easy -> Easy)
