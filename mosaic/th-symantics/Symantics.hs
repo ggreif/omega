@@ -36,10 +36,10 @@ toMy :: forall repr u . Lam repr => [(Name, V repr)] -> Exp -> E repr u
 toMy env (VarE (flip lookup env -> Just (V v))) = E v
 toMy env (AppE f a) = case (toMy env f, toMy env a) of (E f', E a') -> E (app f' a')
 toMy env (LamE [] e) = toMy env e
-toMy env (LamE [VarP nam] e) = E (lam f)
-   where f :: (forall u' . repr (Lef u) u') -> E repr (Rig u)
-         f v = toMy ((nam, V v) : env) e
-         --f v = case toMy ((nam, V v) : env) e of E e' -> defless e'
+toMy env (LamE [VarP nam] e) = E (lam (\v -> toMy ((nam, V v) : env) e))
+   --where f :: (forall u' . repr (Lef u) u') -> E repr (Rig u)
+   --      f v = toMy ((nam, V v) : env) e
+   --      --f v = case toMy ((nam, V v) : env) e of E e' -> defless e'
 toMy env (LamE (p:ps) e) = toMy env (LamE [p] $ LamE ps e)
 
 instance Lam Easy where
