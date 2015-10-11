@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ViewPatterns, KindSignatures, DataKinds, RankNTypes, GADTs #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, KindSignatures, DataKinds, RankNTypes, GADTs, ScopedTypeVariables #-}
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
@@ -18,7 +18,7 @@ e1 = (toMy [] <$> [|\a b -> a b|]) :: Q (E Easy Root)
 data Lo = Root | Lef Lo | Rig Lo -- | Abs Loc
 
 class Lam (repr :: Lo -> Lo -> *) where
-  lam :: (forall u' . repr (Lef u) u' -> repr d' (Rig u)) -> repr u u
+  lam :: ((forall u' . repr (Lef u) u') -> repr d' (Rig u)) -> repr u u
   app :: repr u' (Lef u) -> repr u'' (Rig u) -> repr u u
 
 data V (repr :: Lo -> Lo -> *) where
@@ -27,10 +27,13 @@ data V (repr :: Lo -> Lo -> *) where
 data E (repr :: Lo -> Lo -> *) (use :: Lo) where
   E :: repr d u -> E repr u
 
-toMy :: Lam repr => [(Name, V repr)] -> Exp -> E repr u
+toMy :: forall repr u . Lam repr => [(Name, V repr)] -> Exp -> E repr u
 toMy env (VarE (flip lookup env -> Just (V v))) = E v
 toMy env (AppE f a) = case (toMy env f, toMy env a) of (E f', E a') -> E (app f' a')
-   -- where E f' = toMy env f
+--toMy env (LamE [VarP nam] e) = E (lam (\v -> (case toMy ((nam, V v) : env) e of E e' -> undefined)))
+toMy env (LamE [VarP nam] e) = E (lam f)
+   where f :: (forall u' . repr (Lef u) u') -> repr d' (Rig u)
+         f v = case toMy ((nam, V v) : env) e of E e' -> _
 
 {-
 toMy :: Lam repr => [(Name, repr)] -> Exp -> repr
@@ -49,7 +52,7 @@ instance Lam Easy where
 data Easy :: Lo -> Lo -> * where
   It :: Easy (Lef u) u'
   App :: Easy u' (Lef u) -> Easy u'' (Rig u) -> Easy u u
-  Lam :: (forall u' . Easy (Lef u) u' -> Easy d' (Rig u)) -> Easy u u
+  Lam :: ((forall u' . Easy (Lef u) u') -> Easy d' (Rig u)) -> Easy u u
 
 
 instance Show (Easy d u) where
