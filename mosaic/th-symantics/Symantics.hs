@@ -13,7 +13,7 @@ oneLamBinder (LamE (p:ps) e) = LamE [p] (oneLamBinder (LamE ps e))
 
 example = runQ (oneLamBinder <$> [|\a -> a|]) >>= print
 
-e1 = (toMy [] <$> [|\a b -> a|]) :: Q (E Easy Root)
+e1 = (toMy [] <$> [|\a b -> b a|]) :: Q (E Easy Root)
 
 data Lo = Root | Lef Lo | Rig Lo -- | Abs Loc
 
@@ -39,15 +39,6 @@ toMy env (LamE [VarP nam] e) = E (lam f)
    where f :: (forall u' . repr (Lef u) u') -> repr d' (Rig u)
          f v = case toMy ((nam, V v) : env) e of E e' -> defless e'
 toMy env (LamE (p:ps) e) = toMy env (LamE [p] $ LamE ps e)
-
-{-
-toMy :: Lam repr => [(Name, repr)] -> Exp -> repr
-toMy env (VarE (flip lookup env -> Just v)) = v
-toMy env (AppE f a) = app (toMy env f) (toMy env a)
-toMy env (LamE [] e) = toMy env e
-toMy env (LamE [VarP nam] e) = lam $ \v -> toMy ((nam, v) : env) e
-toMy env (LamE (p:ps) e) = toMy env (LamE [p] $ LamE ps e)
--}
 
 instance Lam Easy where
   lam = Lam
