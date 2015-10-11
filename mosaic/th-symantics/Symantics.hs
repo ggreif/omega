@@ -30,10 +30,9 @@ data E (repr :: Lo -> Lo -> *) (use :: Lo) where
 toMy :: forall repr u . Lam repr => [(Name, V repr)] -> Exp -> E repr u
 toMy env (VarE (flip lookup env -> Just (V v))) = E v
 toMy env (AppE f a) = case (toMy env f, toMy env a) of (E f', E a') -> E (app f' a')
---toMy env (LamE [VarP nam] e) = E (lam (\v -> (case toMy ((nam, V v) : env) e of E e' -> undefined)))
 toMy env (LamE [VarP nam] e) = E (lam f)
    where f :: (forall u' . repr (Lef u) u') -> repr d' (Rig u)
-         f v = case toMy ((nam, V v) : env) e of E e' -> _
+         f v = case toMy ((nam, V v) : env) e of E e' -> e'
 
 {-
 toMy :: Lam repr => [(Name, repr)] -> Exp -> repr
