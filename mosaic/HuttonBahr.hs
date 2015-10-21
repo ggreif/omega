@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ViewPatterns, LambdaCase, RankNTypes #-}
 
 module HuttonBahr where
 
@@ -20,7 +20,11 @@ eval (Add (eval -> l) (eval -> r)) = l + r
 prop_CPS e eval eval' c = eval' c e == c (eval e)
 -- in "left" form
 eval'_ c (eval -> res) = c res
+-- eval'_ c (c . eval -> res) = res  -- equivalent to above!
 
+
+
+{-
 {-
 eval' :: (Int -> Int) -> Exp -> Int
 --eval' c (Lit n) = c n
@@ -49,3 +53,43 @@ Lit n `eval'` c = c n
 Add (eval' -> ex) (eval' -> ey) `eval'` c = ex (\x' -> ey (c . (x' +))) -- eval' only "left" and guarded!
 -- observe: c is used linearly
 -- ... -- what can this buy us??
+
+
+-- can we du a "leftist" derivation too?
+--eval' (Lit n) c = c n
+-- corresponds to
+eval' ((\(Lit a) -> a) -> n) c = c n -- specialization of the
+eval' (eval -> n) c = c n -- characteristic "leftist"
+
+-- OKAY so lets use -XLambdaCase to expand the "leftist" characteristic
+eval' (eval -> res) c = c res
+-- expand eval to lambdacase
+eval' ((\case Lit n -> n; Add a b -> eval a + eval b) -> res) c = c res
+-- leftist eval
+eval' ((\case Lit n -> n; Add (eval -> a) (eval -> b) -> a + b) -> res) c = c res
+-- use       eval'_ c' (eval -> b) = c' b      on the "b" side
+-- prepare to (c' b) form
+eval' ((\case Lit n -> n; Add (eval -> a) (eval -> b) -> (a +) b) -> res) c = c res
+-- jump!   (replace linear     "(eval -> b)   ... (<cont> b)" by "(flip eval' <cont> -> b)   ... (b)", effectively moving <cont>)
+-}
+
+eval' :: Exp -> (forall k . (Int -> k) -> k)
+
+{-
+eval' ((\case Lit n -> n; Add (eval -> a) (flip eval' (a+) -> b) -> b) -> res) c = c res
+
+-- maybe as two steps:
+--   "(eval -> b)   ... (<cont> b)"    ---->      "(<cont> . eval -> b)   ... (b)"
+--   "(<cont> . eval -> b)   ... (b)"    ---->      "(flip eval' <cont> -> b)   ... (b)"
+
+-- tackle side "a"...
+-- step 1: isolate the continuation c'' of "a"
+eval' ((\case Lit n -> n; Add (eval -> a) ((\a' -> flip eval' (a'+)) a -> b) -> b) -> res) c = c res
+-- step 2: chain it
+eval' ((\case Lit n -> n; Add ((\a' -> flip eval' (a'+)) . eval -> a) (a -> b) -> b) -> res) c = c res
+-- step 3: flip it in
+-}
+eval' ((\case Lit n -> n; Add (flip eval' (\a' -> flip eval' (a'+)) -> a) (a -> b) -> b) -> res) c = c res
+
+
+-- VICTORY!
