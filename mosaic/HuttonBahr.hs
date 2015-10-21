@@ -21,6 +21,7 @@ prop_CPS e eval eval' c = eval' c e == c (eval e)
 -- in "left" form
 eval'_ c (eval -> res) = c res
 
+{-
 eval' :: (Int -> Int) -> Exp -> Int
 --eval' c (Lit n) = c n
 eval' c (Lit (c -> res)) = res -- considering c as a hypothesis, only usable on the "left"
@@ -38,6 +39,13 @@ eval' c (Add x y) === c (eval (Add x y)) === c (eval x + eval y)
 -}
 
 eval' c (Add x y) = eval' (\x' -> eval' (c . (x' +)) y) x
+-}
 
 -- can we write this in "left" form?
-
+eval' :: Exp -> (Int -> Int) -> Int
+Lit n `eval'` c = c n
+--Add x y `eval'` c = eval' x (\x' -> eval' y (c . (x' +)))
+-- observe: x, y are used linearly as args to eval'
+Add (eval' -> ex) (eval' -> ey) `eval'` c = ex (\x' -> ey (c . (x' +))) -- eval' only "left" and guarded!
+-- observe: c is used linearly
+-- ... -- what can this buy us??
