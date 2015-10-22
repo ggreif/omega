@@ -2,6 +2,9 @@
 
 module HuttonBahr where
 
+-- See: http://www.diku.dk/~paba/pubs/files/hutton15cpsdefun-preprint.pdf
+-- for the draft paper.
+
 -- Hutton's razor:
 
 data Exp = Lit Int | Add Exp Exp
