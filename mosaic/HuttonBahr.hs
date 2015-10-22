@@ -160,12 +160,10 @@ exec C2 a = a
 -- DONE!
 
 instance Arbitrary Exp where
-  arbitrary = oneof [ Lit <$> arbitrary
-                    , Add <$> arbitrary <*> arbitrary]
+  arbitrary = frequency [ (3, Lit <$> arbitrary)
+                        , (2, Add <$> arbitrary <*> arbitrary) ]
 
 prop_eval'' e = eval e === eval'' C2 e
-
---t1 = quickCheck prop_eval''
 
 return []
 main = $(quickCheckAll)
