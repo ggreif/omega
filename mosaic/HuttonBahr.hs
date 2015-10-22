@@ -139,7 +139,9 @@ eval'' c ((\case Lit n -> exec c n; Add (eval -> a) (exec (C1 c) a -> b') -> b')
 eval'' c ((\case Lit n -> exec c n; Add (exec (C1 c) . eval -> a') (a' -> b') -> b') -> res') = res'
 -- use equation (*) backwards
 -}
-eval'' c ((\case Lit n -> exec c n; Add (eval'' (C1 c) -> a') (a' -> b') -> b') -> res') = res'
+eval'' c (\case Lit (exec c -> n') -> n'
+                Add (eval'' (C1 c) -> a') (a' -> b') -> b'
+          -> res') = res'
 
 
 data CONT k where
