@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, LambdaCase, RankNTypes, TypeFamilies, GADTs #-}
+{-# LANGUAGE ViewPatterns, LambdaCase, RankNTypes, GADTs #-}
 
 module HuttonBahr where
 
@@ -103,6 +103,7 @@ type Eval exp = forall k . CONT k -> exp -> k
 
 eval'' :: Eval Exp
 
+{-
 eval'' c x = exec c (eval x)   -- compose:       eval'' c x = (exec c . eval) x
                                -- ETA reduce:    eval'' c = exec c . eval          (*)
 -- leftise
@@ -137,14 +138,18 @@ eval'' c ((\case Lit n -> exec c n; Add (eval -> a) (exec (C1 c) a -> b') -> b')
 --        eval'' c'' (exec c'' . eval -> a') = a'
 eval'' c ((\case Lit n -> exec c n; Add (exec (C1 c) . eval -> a') (a' -> b') -> b') -> res') = res'
 -- use equation (*) backwards
+-}
 eval'' c ((\case Lit n -> exec c n; Add (eval'' (C1 c) -> a') (a' -> b') -> b') -> res') = res'
 
 
---data CONT k = C0 (CONT k) Int | C1 (CONT k)
 data CONT k where
-  C0 :: CONT k -> Int -> CONT k
-  C1 :: CONT k -> CONT (Exp -> k)
+  C0 :: CONT k -> Int -> CONT k   -- ADD
+  C1 :: CONT k -> CONT (Exp -> k) -- NEXT
+  C2 :: CONT Int                  -- HALT
 
 exec :: CONT k -> Int -> k
-exec c'@(C0 c a) b = exec c (a + b)
-exec c''@(C1 c) a  = eval'' (C0 c a)
+exec (C0 c a) b = exec c (a + b)
+exec (C1 c) a = eval'' (C0 c a)
+exec C2 a = a
+
+-- DONE!
