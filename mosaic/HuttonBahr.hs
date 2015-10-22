@@ -112,10 +112,8 @@ eval'' c x = exec c (eval x)   -- compose:       eval'' c x = (exec c . eval) x
 -- leftise
 eval'' c (eval -> res) = exec c res
 -- inline eval
-eval'' c ((\case Lit n -> n; Add a b -> eval a + eval b) -> res) = exec c res
--- leftise twice
 eval'' c ((\case Lit n -> n; Add (eval -> a) (eval -> b) -> a + b) -> res) = exec c res
--- observe res is used lineraly --> move it's continuation
+-- observe res is used linearly --> move it's continuation
 eval'' c (exec c . (\case Lit n -> n; Add (eval -> a) (eval -> b) -> a + b) -> res') = res'
 -- distribute in the arms:
 eval'' c ((\case Lit n -> exec c n; Add (eval -> a) (eval -> b) -> exec c (a + b)) -> res') = res'
