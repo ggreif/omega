@@ -1,13 +1,15 @@
-{-# LANGUAGE ViewPatterns, LambdaCase, RankNTypes, GADTs #-}
+{-# LANGUAGE ViewPatterns, LambdaCase, RankNTypes, GADTs, TemplateHaskell #-}
 
 module HuttonBahr where
 
 -- See: http://www.diku.dk/~paba/pubs/files/hutton15cpsdefun-preprint.pdf
 -- for the draft paper.
 
+import Test.QuickCheck
+
 -- Hutton's razor:
 
-data Exp = Lit Int | Add Exp Exp
+data Exp = Lit Int | Add Exp Exp deriving Show
 
 -- untransformed evaluator
 
@@ -20,7 +22,7 @@ eval (Add (eval -> l) (eval -> r)) = l + r
 -- CPS transform
 
 -- characteristic equality
-prop_CPS e eval eval' c = eval' c e == c (eval e)
+pro'p_CPS e eval eval' c = eval' c e == c (eval e)
 -- in "left" form
 eval'_ c (eval -> res) = c res
 -- eval'_ c (c . eval -> res) = res  -- equivalent to above!
@@ -156,3 +158,14 @@ exec (C1 c) a = eval'' (C0 c a)
 exec C2 a = a
 
 -- DONE!
+
+instance Arbitrary Exp where
+  arbitrary = oneof [ Lit <$> arbitrary
+                    , Add <$> arbitrary <*> arbitrary]
+
+prop_eval'' e = eval e === eval'' C2 e
+
+--t1 = quickCheck prop_eval''
+
+return []
+main = $(quickCheckAll)
