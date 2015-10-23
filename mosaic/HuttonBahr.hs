@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP, ViewPatterns, LambdaCase, RankNTypes, GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module HuttonBahr where
 
@@ -7,7 +8,6 @@ module HuttonBahr where
 
 
 #ifdef MIN_VERSION_QuickCheck
-{-# LANGUAGE TemplateHaskell #-}
 import Test.QuickCheck
 #endif
 
