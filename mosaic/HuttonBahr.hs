@@ -1,11 +1,15 @@
-{-# LANGUAGE ViewPatterns, LambdaCase, RankNTypes, GADTs, TemplateHaskell #-}
+{-# LANGUAGE CPP, ViewPatterns, LambdaCase, RankNTypes, GADTs #-}
 
 module HuttonBahr where
 
 -- See: http://www.diku.dk/~paba/pubs/files/hutton15cpsdefun-preprint.pdf
 -- for the draft paper.
 
+
+#ifdef MIN_VERSION_quickcheck
+{-# LANGUAGE TemplateHaskell #-}
 import Test.QuickCheck
+#endif
 
 -- Hutton's razor:
 
@@ -153,12 +157,13 @@ data CONT k where
   C2 :: CONT Int                  -- HALT
 
 exec :: CONT k -> Int -> k
-exec (C0 c a) b = exec c (a + b)
-exec (C1 c) a = eval'' (C0 c a)
+exec (C0 c a) (exec c . (a+) -> res) = res
+exec (C1 c) (eval'' . (C0 c) -> res) = res
 exec C2 a = a
 
 -- DONE!
 
+#ifdef MIN_VERSION_quickcheck
 instance Arbitrary Exp where
   arbitrary = frequency [ (3, Lit <$> arbitrary)
                         , (2, Add <$> arbitrary <*> arbitrary) ]
@@ -166,4 +171,5 @@ instance Arbitrary Exp where
 prop_eval'' e = eval e === eval'' C2 e
 
 return []
-main = $(quickCheckAll)
+main = $quickCheckAll
+#endif
