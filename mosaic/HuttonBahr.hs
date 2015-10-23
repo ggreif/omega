@@ -6,7 +6,7 @@ module HuttonBahr where
 -- for the draft paper.
 
 
-#ifdef MIN_VERSION_quickcheck
+#ifdef MIN_VERSION_QuickCheck
 {-# LANGUAGE TemplateHaskell #-}
 import Test.QuickCheck
 #endif
@@ -163,7 +163,7 @@ exec C2 a = a
 
 -- DONE!
 
-#ifdef MIN_VERSION_quickcheck
+#ifdef MIN_VERSION_QuickCheck
 instance Arbitrary Exp where
   arbitrary = frequency [ (3, Lit <$> arbitrary)
                         , (2, Add <$> arbitrary <*> arbitrary) ]
