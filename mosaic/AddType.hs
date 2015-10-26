@@ -1,4 +1,5 @@
 {-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds #-}
+{-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
 
