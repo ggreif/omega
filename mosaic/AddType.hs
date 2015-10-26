@@ -23,7 +23,6 @@ data Id (arg :: k) (coarg :: k) where
   Id :: Id x x
 
 data Compose (a1 :: (b -> c) -> *) (a0 :: (a -> b) -> *) (coarg :: a -> c) where
-  --Compose
-
+  Compose :: g b -> f a -> Compose b a c
 
 --class Constructor (kind :: k) where
