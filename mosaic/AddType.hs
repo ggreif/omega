@@ -9,6 +9,9 @@ plus :: Nat -> Nat -> Nat
 plus Z = id
 plus (S (plus -> f)) = f . S
 
+data Constr0 (coarg :: Nat) where
+  ConstrZ :: Constr0 Z
+
 data Constr1 (coarg :: Nat -> Nat) where
   ConstrS :: Constr1 S
 
@@ -21,3 +24,6 @@ data Id (arg :: k) (coarg :: k) where
 
 data Compose (a1 :: (b -> c) -> *) (a0 :: (a -> b) -> *) (coarg :: a -> c) where
   --Compose
+
+
+--class Constructor (kind :: k) where
