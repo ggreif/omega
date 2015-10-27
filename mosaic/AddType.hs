@@ -42,7 +42,8 @@ instance Value (Constr0 Z) where
 instance Value (Constr1 S) where
   val = ConstrS
 
-class Machine (sig :: k -> *)
+class Machine (sig :: k -> *) where
+  -- have composition, un/tagging, calling (application)
 data Code (res :: k)
 instance Machine (Code)
 
