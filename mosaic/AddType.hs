@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -41,6 +41,23 @@ instance Value (Constr0 Z) where
   val = ConstrZ
 instance Value (Constr1 S) where
   val = ConstrS
+
+class Machine (sig :: k -> *)
+data Code (res :: k)
+instance Machine (Code)
+
+class Smurf (f :: k -> *) where
+  --type Papa f :: k -> *
+  --smurf :: f r -> Papa f r
+  --smurf :: Machine m => f r -> m (Papa f) -- or even : f r -> m r
+  smurf :: Machine m => f r -> m r
+
+instance Smurf Constr0 where
+  smurf ConstrZ = undefined -- Id
+instance Smurf (Plus Z) where
+  smurf (PlusZ _) = undefined -- Id
+--instance Smurf (Plus (S n)) where
+--  smurf (PlusS _) = Id
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
