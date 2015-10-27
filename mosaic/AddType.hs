@@ -44,6 +44,8 @@ instance Value (Constr1 S) where
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
+instance (Show (c0 a), Show (c1 a), Value (c0 a), Value (c1 a)) => Value (Match2 c0 c1 a) where
+  val = Match2 (val :: c0 a) (val :: c1 a)
 
 deriving instance Show (Plus a c)
 
