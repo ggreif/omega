@@ -35,7 +35,14 @@ instance Value (Plus Z f) where
   val = PlusZ Id
 
 instance Value (Plus n f) => Value (Plus (S n) f) where
-  val = PlusS $ (val :: Plus n f) `Compose` ConstrS
+  val = PlusS $ (val :: Plus n f) `Compose` (val :: Constr1 S)
+
+instance Value (Constr0 Z) where
+  val = ConstrZ
+instance Value (Constr1 S) where
+  val = ConstrS
+
+--instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
 
 deriving instance Show (Plus a c)
