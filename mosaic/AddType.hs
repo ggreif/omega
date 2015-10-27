@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleInstances #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -24,6 +24,20 @@ data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
   PlusS :: (Plus n `Compose` Constr1) f -> Plus (S n) f
   --        ^^ should this be value inference?
 
+-- Idea: it should be a purely mechanical process to follow the types and create corresponding values,
+--       so when the algorithm is encoded in the type, then classes should build inhabitants.
+--
+class Value a where
+  val :: a
+  -- val :: Inh a -- <<< better! then PlusS & co become unnecessary (and could be finally tagless)
+
+instance Value (Plus Z f) where
+  val = PlusZ Id
+
+instance Value (Plus n f) => Value (Plus (S n) f) where
+  val = PlusS $ (val :: Plus n f) `Compose` ConstrS
+
+
 deriving instance Show (Plus a c)
 
 data Id (arg :: k) (coarg :: k) where
@@ -43,6 +57,7 @@ data Match2 (c0 :: k -> *) (c1 :: k -> *) (out :: k) where
 
 deriving instance Show (Match2 g f c)
 
--- TODO: Match2 should lift
+-- Match2 lifts
   --      two    Plus :: Nat -> (Nat -> Nat) -> *
-  --      to be  (Match2 Plus) :: (Nat -> *) -> (Nat -> Nat) -> *
+  --      to be  (Match2 (Plus Z)) :: ((Nat -> Nat) -> *) -> (Nat -> Nat) -> *
+  --      to be  (Match2 (Plus Z) (Plus (S Z))) :: (Nat -> Nat) -> *
