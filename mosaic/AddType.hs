@@ -46,6 +46,14 @@ class Machine (sig :: k -> *) where
   -- have composition, un/tagging, calling (application)
   -- this looks wrong
   app :: (Machine (sig' :: (x -> k) -> *), Machine (sig'' :: x -> *)) => sig' f -> sig'' a -> sig (f a)
+  app' :: sig f -> sig a -> sig b
+  --app'' :: (Papa f ~ (Papa a -> Papa b)) => sig f -> sig a -> sig b
+  appC :: Code f -> Code a -> sig (f b)
+
+-- this fails:
+--- *AddType> :t smurf ConstrS `app'` (smurf ConstrZ :: Code Z) :: Code (S Z)
+---
+
 data Code (res :: k)
 instance Machine (Code)
 
@@ -53,11 +61,14 @@ class Smurf (f :: k -> *) where
   --type Papa f :: k -> *
   --smurf :: f r -> Papa f r
   --smurf :: Machine m => f r -> m (Papa f) -- or even : f r -> m r
+  type Papa f :: *
   smurf :: Machine m => f r -> m r
 
 instance Smurf Constr0 where
+  type Papa Constr0 = Nat
   smurf ConstrZ = undefined -- Id
 instance Smurf Constr1 where
+  type Papa Constr1 = Nat -> Nat
   smurf ConstrS = undefined -- Id
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
