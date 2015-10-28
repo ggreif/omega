@@ -67,7 +67,7 @@ instance Machine (Code)
 data Triv a = Triv a
 instance Machine Triv where
   Triv f `app` Triv a = Triv $ f a
-  --entag ConstrS = Triv S
+  entag Constr' = Triv undefined -- Z/S -- TODO: value inference?
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
