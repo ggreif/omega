@@ -42,19 +42,19 @@ instance Value (Constr0 Z) where
 instance Value (Constr1 S) where
   val = ConstrS
 
-class Machine (sig :: k -> *) where
+class Machine (sig :: * -> *) where
   -- have composition, un/tagging, calling (application)
   -- this looks wrong
-  app :: (Machine (sig' :: (x -> k) -> *), Machine (sig'' :: x -> *)) => sig' f -> sig'' a -> sig (f a)
-  app' :: sig f -> sig a -> sig b
+  --app :: (Machine (sig' :: (x -> k) -> *), Machine (sig'' :: x -> *)) => sig' f -> sig'' a -> sig (f a)
+  --app' :: sig f -> sig a -> sig b
   --app'' :: (Papa f ~ (Papa a -> Papa b)) => sig f -> sig a -> sig b
-  appC :: Code f -> Code a -> sig (f b)
+  app :: sig (a -> b) -> sig a -> sig b
 
 -- this fails:
 --- *AddType> :t smurf ConstrS `app'` (smurf ConstrZ :: Code Z) :: Code (S Z)
 ---
 
-data Code (res :: k)
+data Code (tres :: *)
 instance Machine (Code)
 
 class Smurf (f :: k -> *) where
@@ -62,7 +62,7 @@ class Smurf (f :: k -> *) where
   --smurf :: f r -> Papa f r
   --smurf :: Machine m => f r -> m (Papa f) -- or even : f r -> m r
   type Papa f :: *
-  smurf :: Machine m => f r -> m r
+  smurf :: Machine m => f r -> m (Papa f)
 
 instance Smurf Constr0 where
   type Papa Constr0 = Nat
