@@ -70,9 +70,6 @@ instance Machine Triv where
   --entag ConstrS = Triv S
 
 class Smurf (f :: k -> *) where
-  --type Papa f :: k -> *
-  --smurf :: f r -> Papa f r
-  --smurf :: Machine m => f r -> m (Papa f) -- or even : f r -> m r
   type Papa f :: *
   smurf :: Machine m => f r -> m (Papa f)
 
@@ -80,12 +77,6 @@ instance Smurf (Constr' tag typ) where
   type Papa (Constr' tag typ) = typ
   smurf Constr' = undefined -- Id
 
---instance Smurf Constr0 where
---  type Papa Constr0 = Nat
---  smurf ConstrZ = undefined -- Id
---instance Smurf Constr1 where
---  type Papa Constr1 = Nat -> Nat
---  smurf ConstrS = undefined -- Id
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
 --instance Smurf (Plus (S n)) where
