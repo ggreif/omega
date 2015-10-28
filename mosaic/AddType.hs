@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -14,8 +14,12 @@ data Constr0 (coarg :: Nat) where
 
 deriving instance Show (Constr0 Z)
 
-data Constr1 (coarg :: Nat -> Nat) where
-  ConstrS :: Constr1 S
+--data Constr1 (coarg :: Nat -> Nat) where
+--  ConstrS :: Constr1 S
+
+type Constr1 = Constr' (S Z) (Nat->Nat)
+pattern ConstrS :: Constr1 S
+pattern ConstrS = Constr'
 
 data Constr' (tag :: Nat) (typ :: *) (coarg :: Nat -> Nat) where
   Constr' :: Constr' (S Z) (Nat->Nat) S
@@ -52,6 +56,7 @@ class Machine (sig :: * -> *) where
   --app' :: sig f -> sig a -> sig b
   --app'' :: (Papa f ~ (Papa a -> Papa b)) => sig f -> sig a -> sig b
   app :: sig (a -> b) -> sig a -> sig b
+  entag :: Constr' tag typ ca -> sig typ
 
 -- this fails:
 --- *AddType> :t smurf ConstrS `app'` (smurf ConstrZ :: Code Z) :: Code (S Z)
@@ -59,6 +64,11 @@ class Machine (sig :: * -> *) where
 
 data Code (tres :: *)
 instance Machine (Code)
+
+data Triv a = Triv a
+instance Machine Triv where
+  Triv f `app` Triv a = Triv $ f a
+  
 
 class Smurf (f :: k -> *) where
   --type Papa f :: k -> *
@@ -74,9 +84,9 @@ instance Smurf (Constr' tag typ) where
 instance Smurf Constr0 where
   type Papa Constr0 = Nat
   smurf ConstrZ = undefined -- Id
-instance Smurf Constr1 where
-  type Papa Constr1 = Nat -> Nat
-  smurf ConstrS = undefined -- Id
+--instance Smurf Constr1 where
+--  type Papa Constr1 = Nat -> Nat
+--  smurf ConstrS = undefined -- Id
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
 --instance Smurf (Plus (S n)) where
