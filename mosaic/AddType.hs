@@ -21,8 +21,10 @@ type Constr1 = Constr' (S Z) (Nat->Nat)
 pattern ConstrS :: Constr1 S
 pattern ConstrS = Constr'
 
-data Constr' (tag :: Nat) (typ :: *) (coarg :: Nat -> Nat) where
-  Constr' :: Constr' (S Z) (Nat->Nat) S
+--data Constr' (tag :: Nat) (typ :: *) (coarg :: Nat -> Nat) where
+--  Constr' :: Constr' (S Z) (Nat->Nat) S
+data Constr' (tag :: Nat) (typ :: *) (coarg :: k) where
+  Constr' :: Constr' tag typ ca
 
 deriving instance Show (Constr1 S)
 
@@ -51,16 +53,9 @@ instance Value (Constr1 S) where
 
 class Machine (sig :: * -> *) where
   -- have composition, un/tagging, calling (application)
-  -- this looks wrong
-  --app :: (Machine (sig' :: (x -> k) -> *), Machine (sig'' :: x -> *)) => sig' f -> sig'' a -> sig (f a)
-  --app' :: sig f -> sig a -> sig b
-  --app'' :: (Papa f ~ (Papa a -> Papa b)) => sig f -> sig a -> sig b
   app :: sig (a -> b) -> sig a -> sig b
   entag :: Constr' tag typ ca -> sig typ
 
--- this fails:
---- *AddType> :t smurf ConstrS `app'` (smurf ConstrZ :: Code Z) :: Code (S Z)
----
 
 data Code (tres :: *)
 instance Machine (Code)
@@ -68,7 +63,7 @@ instance Machine (Code)
 data Triv a = Triv a
 instance Machine Triv where
   Triv f `app` Triv a = Triv $ f a
-  
+  --entag ConstrS = Triv S
 
 class Smurf (f :: k -> *) where
   --type Papa f :: k -> *
