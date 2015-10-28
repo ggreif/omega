@@ -44,7 +44,8 @@ instance Value (Constr1 S) where
 
 class Machine (sig :: k -> *) where
   -- have composition, un/tagging, calling (application)
-  app :: sig f -> sig a -> sig (f a)
+  -- this looks wrong
+  app :: (Machine (sig' :: (x -> k) -> *), Machine (sig'' :: x -> *)) => sig' f -> sig'' a -> sig (f a)
 data Code (res :: k)
 instance Machine (Code)
 
@@ -56,6 +57,8 @@ class Smurf (f :: k -> *) where
 
 instance Smurf Constr0 where
   smurf ConstrZ = undefined -- Id
+instance Smurf Constr1 where
+  smurf ConstrS = undefined -- Id
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
 --instance Smurf (Plus (S n)) where
