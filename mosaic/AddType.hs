@@ -9,8 +9,12 @@ plus :: Nat -> Nat -> Nat
 plus Z = id
 plus (S (plus -> f)) = f . S
 
-data Constr0 (coarg :: Nat) where
-  ConstrZ :: Constr0 Z
+--data Constr0 (coarg :: Nat) where
+--  ConstrZ :: Constr0 Z
+
+type Constr0 = Constr' Z Nat
+pattern ConstrZ :: Constr0 Z
+pattern ConstrZ = Constr'
 
 deriving instance Show (Constr0 Z)
 
@@ -76,9 +80,9 @@ instance Smurf (Constr' tag typ) where
   type Papa (Constr' tag typ) = typ
   smurf Constr' = undefined -- Id
 
-instance Smurf Constr0 where
-  type Papa Constr0 = Nat
-  smurf ConstrZ = undefined -- Id
+--instance Smurf Constr0 where
+--  type Papa Constr0 = Nat
+--  smurf ConstrZ = undefined -- Id
 --instance Smurf Constr1 where
 --  type Papa Constr1 = Nat -> Nat
 --  smurf ConstrS = undefined -- Id
