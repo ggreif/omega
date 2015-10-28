@@ -17,6 +17,9 @@ deriving instance Show (Constr0 Z)
 data Constr1 (coarg :: Nat -> Nat) where
   ConstrS :: Constr1 S
 
+data Constr' (tag :: Nat) (typ :: *) (coarg :: Nat -> Nat) where
+  Constr' :: Constr' (S Z) (Nat->Nat) S
+
 deriving instance Show (Constr1 S)
 
 data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
@@ -63,6 +66,10 @@ class Smurf (f :: k -> *) where
   --smurf :: Machine m => f r -> m (Papa f) -- or even : f r -> m r
   type Papa f :: *
   smurf :: Machine m => f r -> m (Papa f)
+
+instance Smurf (Constr' tag typ) where
+  type Papa (Constr' tag typ) = typ
+  smurf Constr' = undefined -- Id
 
 instance Smurf Constr0 where
   type Papa Constr0 = Nat
