@@ -20,7 +20,7 @@ pattern ConstrS :: Constr1 S
 pattern ConstrS = Constr'
 
 data Constr' (tag :: Nat) (typ :: *) (coarg :: k) where
-  Constr' :: (Tor ca tag typ, ReTor tag typ ~ ca) => Constr' tag typ ca
+  Constr' :: Tor ca tag typ => Constr' tag typ ca
 
 deriving instance Show (Constr1 S)
 
@@ -57,15 +57,12 @@ data Code (tres :: *)
 instance Machine (Code)
 
 class Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ, tag typ -> ca where
-  type ReTor tag typ :: k
   cfun :: Constr' tag typ ca -> typ
 
 instance Tor Z Z Nat where
-  type ReTor Z Nat = Z
   cfun Constr' = Z
 
 instance Tor S (S Z) (Nat -> Nat) where
-  type ReTor (S Z) (Nat -> Nat) = S
   cfun Constr' = S
 
 data Triv a = Triv a deriving Show -- TODO: Data.Identity!
