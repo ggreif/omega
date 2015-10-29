@@ -1,7 +1,9 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
+
+import Data.Functor.Identity
 
 data Nat = Z | S Nat deriving Show
 
@@ -65,12 +67,12 @@ instance Tor Z Z Nat where
 instance Tor S (S Z) (Nat -> Nat) where
   cfun Constr' = S
 
-data Triv a = Triv a deriving Show -- TODO: Data.Identity!
+--data Triv a = Triv a deriving Show -- TODO: Data.Identity!
 
 
-instance Machine Triv where
-  Triv f `app` Triv a = Triv $ f a
-  entag c@Constr' = Triv (cfun c)
+instance Machine Identity where
+  Identity f `app` Identity a = Identity $ f a
+  entag c@Constr' = Identity (cfun c)
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
@@ -81,7 +83,7 @@ instance Smurf (Constr' tag typ) where
   smurf c@Constr' = entag c
 
 instance Smurf (Plus Z) where
-  smurf (PlusZ _) = undefined -- Id
+  smurf (PlusZ _) = undefined -- TODO
 --instance Smurf (Plus (S n)) where
 --  smurf (PlusS _) = Id
 
