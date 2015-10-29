@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -58,24 +58,33 @@ instance Value (Constr1 S) where
 class Machine (sig :: * -> *) where
   -- have composition, un/tagging, calling (application)
   app :: sig (a -> b) -> sig a -> sig b
-  entag :: Constr' tag typ ca -> sig typ
+  entag :: Tor ca tag typ => Constr' tag typ ca -> sig typ
 
 
 data Code (tres :: *)
 instance Machine (Code)
 
+class Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ where
+  cfun :: Constr' tag typ ca -> typ
+
+instance Tor Z Z Nat where
+  cfun Constr' = Z
+
+instance Tor S (S Z) (Nat -> Nat) where
+  cfun Constr' = S
+
 data Triv a = Triv a
 instance Machine Triv where
   Triv f `app` Triv a = Triv $ f a
-  entag Constr' = Triv undefined -- Z/S -- TODO: value inference?
+  entag c@Constr' = Triv (cfun c) -- Z/S -- TODO: value inference?
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
   smurf :: Machine m => f r -> m (Papa f)
 
-instance Smurf (Constr' tag typ) where
+instance {-Tor ca tag typ =>-} Smurf (Constr' tag typ) where
   type Papa (Constr' tag typ) = typ
-  smurf Constr' = undefined -- Id
+  smurf c@Constr' = undefined -- entag c -- Id
 
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
