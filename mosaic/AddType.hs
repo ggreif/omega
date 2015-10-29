@@ -6,6 +6,7 @@ module AddType where
 import Data.Functor.Identity
 --import Control.Category(Category)
 --import qualified Control.Category as Cat (Category(id, (.)))
+import Control.Applicative (liftA2)
 
 data Nat = Z | S Nat deriving Show
 
@@ -56,6 +57,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   app :: sig (a -> b) -> sig a -> sig b
   entag :: Constr' tag typ ca -> sig typ
   ident :: sig (a -> a)
+  comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
 
 
 data Code (tres :: *)
@@ -75,6 +77,7 @@ instance Machine Identity where
   Identity f `app` Identity a = pure $ f a
   entag c@Constr' = pure (cfun c)
   ident = pure id
+  comp = liftA2 (.)
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
@@ -87,8 +90,10 @@ instance Smurf (Constr' tag typ) where
 instance Smurf (Plus Z) where
   type Papa (Plus Z) = Nat -> Nat
   smurf (PlusZ _) = ident
---instance Smurf (Plus (S n)) where
---  smurf (PlusS _) = Id
+
+instance Smurf (Plus (S n)) where
+  type Papa (Plus (S n)) = Nat -> Nat
+  smurf (PlusS _) = entag ConstrS `comp` entag ConstrS
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
