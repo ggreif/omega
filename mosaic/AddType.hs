@@ -3,6 +3,8 @@
 
 module AddType where
 
+import Data.Type.Equality ((:~:)(..))
+
 data Nat = Z | S Nat deriving Show
 
 plus :: Nat -> Nat -> Nat
@@ -28,7 +30,7 @@ pattern ConstrS = Constr'
 --data Constr' (tag :: Nat) (typ :: *) (coarg :: Nat -> Nat) where
 --  Constr' :: Constr' (S Z) (Nat->Nat) S
 data Constr' (tag :: Nat) (typ :: *) (coarg :: k) where
-  Constr' :: Constr' tag typ ca
+  Constr' :: (Tor ca tag typ, ReTor tag typ ~ ca) => Constr' tag typ ca
 
 deriving instance Show (Constr1 S)
 
@@ -71,6 +73,7 @@ class Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ, tag typ -> ca where
   type ReTor tag typ :: k
   --ReTor tag typ = ca
   cfun :: Constr' tag typ ca -> typ
+  --evid :: Constr' tag typ ca -> (ReTor tag typ :~: ca)
 
 instance Tor Z Z Nat where
   type ReTor Z Nat = Z
@@ -80,7 +83,9 @@ instance Tor S (S Z) (Nat -> Nat) where
   type ReTor (S Z) (Nat -> Nat) = S
   cfun Constr' = S
 
-data Triv a = Triv a
+data Triv a = Triv a deriving Show
+
+
 instance Machine Triv where
   Triv f `app` Triv a = Triv $ f a
   entag c@Constr' = Triv (cfun c) -- Z/S -- TODO: value inference?
@@ -89,9 +94,10 @@ class Smurf (f :: k -> *) where
   type Papa f :: *
   smurf :: Machine m => f r -> m (Papa f)
 
-instance Tor (ReTor tag typ) tag typ => Smurf (Constr' tag typ) where
+instance Smurf (Constr' tag typ) where
   type Papa (Constr' tag typ) = typ
   smurf c@Constr' = entag c -- Id
+  --smurf c@Constr' = case evid c of Refl -> entag c -- Id
 
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
