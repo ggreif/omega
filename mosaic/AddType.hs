@@ -67,8 +67,6 @@ instance Tor Z Z Nat where
 instance Tor S (S Z) (Nat -> Nat) where
   cfun Constr' = S
 
---data Triv a = Triv a deriving Show -- TODO: Data.Identity!
-
 
 instance Machine Identity where
   Identity f `app` Identity a = Identity $ f a
