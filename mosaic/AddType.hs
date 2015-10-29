@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, UndecidableInstances #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -59,18 +59,25 @@ class Machine (sig :: * -> *) where
   -- have composition, un/tagging, calling (application)
   app :: sig (a -> b) -> sig a -> sig b
   entag :: Tor ca tag typ => Constr' tag typ ca -> sig typ
+  --entag :: Tor (ReTor tag typ) tag typ => Constr' tag typ (ReTor tag typ) -> sig typ
+  --entag :: (Tor ca tag typ, ReTor tag typ ~ ca) => Constr' tag typ ca -> sig typ
 
 
 data Code (tres :: *)
 instance Machine (Code)
 
-class Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ where
+--class (ReTor tag typ ~ ca) => Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ, tag typ -> ca where
+class Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ, tag typ -> ca where
+  type ReTor tag typ :: k
+  --ReTor tag typ = ca
   cfun :: Constr' tag typ ca -> typ
 
 instance Tor Z Z Nat where
+  type ReTor Z Nat = Z
   cfun Constr' = Z
 
 instance Tor S (S Z) (Nat -> Nat) where
+  type ReTor (S Z) (Nat -> Nat) = S
   cfun Constr' = S
 
 data Triv a = Triv a
@@ -82,9 +89,9 @@ class Smurf (f :: k -> *) where
   type Papa f :: *
   smurf :: Machine m => f r -> m (Papa f)
 
-instance {-Tor ca tag typ =>-} Smurf (Constr' tag typ) where
+instance Tor (ReTor tag typ) tag typ => Smurf (Constr' tag typ) where
   type Papa (Constr' tag typ) = typ
-  smurf c@Constr' = undefined -- entag c -- Id
+  smurf c@Constr' = entag c -- Id
 
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
