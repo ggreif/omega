@@ -3,16 +3,11 @@
 
 module AddType where
 
-import Data.Type.Equality ((:~:)(..))
-
 data Nat = Z | S Nat deriving Show
 
 plus :: Nat -> Nat -> Nat
 plus Z = id
 plus (S (plus -> f)) = f . S
-
---data Constr0 (coarg :: Nat) where
---  ConstrZ :: Constr0 Z
 
 type Constr0 = Constr' Z Nat
 pattern ConstrZ :: Constr0 Z
@@ -20,15 +15,10 @@ pattern ConstrZ = Constr'
 
 deriving instance Show (Constr0 Z)
 
---data Constr1 (coarg :: Nat -> Nat) where
---  ConstrS :: Constr1 S
-
 type Constr1 = Constr' (S Z) (Nat->Nat)
 pattern ConstrS :: Constr1 S
 pattern ConstrS = Constr'
 
---data Constr' (tag :: Nat) (typ :: *) (coarg :: Nat -> Nat) where
---  Constr' :: Constr' (S Z) (Nat->Nat) S
 data Constr' (tag :: Nat) (typ :: *) (coarg :: k) where
   Constr' :: (Tor ca tag typ, ReTor tag typ ~ ca) => Constr' tag typ ca
 
@@ -60,20 +50,15 @@ instance Value (Constr1 S) where
 class Machine (sig :: * -> *) where
   -- have composition, un/tagging, calling (application)
   app :: sig (a -> b) -> sig a -> sig b
-  entag :: Tor ca tag typ => Constr' tag typ ca -> sig typ
-  --entag :: Tor (ReTor tag typ) tag typ => Constr' tag typ (ReTor tag typ) -> sig typ
-  --entag :: (Tor ca tag typ, ReTor tag typ ~ ca) => Constr' tag typ ca -> sig typ
+  entag :: Constr' tag typ ca -> sig typ
 
 
 data Code (tres :: *)
 instance Machine (Code)
 
---class (ReTor tag typ ~ ca) => Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ, tag typ -> ca where
 class Tor (ca :: k) (tag :: Nat) typ | ca -> tag typ, tag typ -> ca where
   type ReTor tag typ :: k
-  --ReTor tag typ = ca
   cfun :: Constr' tag typ ca -> typ
-  --evid :: Constr' tag typ ca -> (ReTor tag typ :~: ca)
 
 instance Tor Z Z Nat where
   type ReTor Z Nat = Z
@@ -83,12 +68,12 @@ instance Tor S (S Z) (Nat -> Nat) where
   type ReTor (S Z) (Nat -> Nat) = S
   cfun Constr' = S
 
-data Triv a = Triv a deriving Show
+data Triv a = Triv a deriving Show -- TODO: Data.Identity!
 
 
 instance Machine Triv where
   Triv f `app` Triv a = Triv $ f a
-  entag c@Constr' = Triv (cfun c) -- Z/S -- TODO: value inference?
+  entag c@Constr' = Triv (cfun c)
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
@@ -96,8 +81,7 @@ class Smurf (f :: k -> *) where
 
 instance Smurf (Constr' tag typ) where
   type Papa (Constr' tag typ) = typ
-  smurf c@Constr' = entag c -- Id
-  --smurf c@Constr' = case evid c of Refl -> entag c -- Id
+  smurf c@Constr' = entag c
 
 instance Smurf (Plus Z) where
   smurf (PlusZ _) = undefined -- Id
@@ -120,8 +104,6 @@ data Compose (a1 :: (b -> c) -> *) (a0 :: (a -> b) -> *) (coarg :: a -> c) where
   Compose :: (Show (f a), Show (g b)) => g b -> f a -> Compose g f c
 
 deriving instance Show (Compose g f c)
-
---class Constructor (kind :: k) where
 
 data Match2 (c0 :: k -> *) (c1 :: k -> *) (out :: k) where
   Match2 :: (Show (c0 a), Show (c1 a)) => c0 a -> c1 a -> Match2 c0 c1 a
