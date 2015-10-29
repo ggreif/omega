@@ -31,10 +31,10 @@ deriving instance Show (Constr1 S)
 
 data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
   PlusZ :: Id (f Z) (f Z) -> Plus Z f
-  PlusS :: (Plus n `Compose` Constr1) f -> Plus (S n) f
+  --PlusS :: (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
   --        ^^ should this be value inference?
   --PlusS' :: Plus n f -> Plus (S n) f
-  PlusS' :: (Plus Z `Match2` Plus (S m)) f -> Plus (S n) f
+  PlusS :: (Plus Z `Match2` Plus (S m)) f -> Plus (S n) f
 
 -- Idea: it should be a purely mechanical process to follow the types and create corresponding values,
 --       so when the algorithm is encoded in the type, then classes should build inhabitants.
@@ -46,8 +46,8 @@ class Value a where
 instance Value (Plus Z f) where
   val = PlusZ Id
 
-instance Value (Plus n f) => Value (Plus (S n) f) where
-  val = PlusS $ (val :: Plus n f) `Compose` (val :: Constr1 S)
+--instance Value (Plus n f) => Value (Plus (S n) f) where
+--  val = PlusS $ (val :: Plus n f) `Compose` (val :: Constr1 S)
 
 instance Value (Constr0 Z) where
   val = ConstrZ
@@ -96,7 +96,7 @@ instance Smurf (Plus Z) where
 instance Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
   --smurf (PlusS _) = entag ConstrS `comp` entag ConstrS
-  smurf (PlusS' less) = smurf less `comp` entag ConstrS
+  smurf (PlusS less) = smurf less `comp` entag ConstrS
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
@@ -120,9 +120,10 @@ data Match2 (c0 :: k -> *) (c1 :: k -> *) (out :: k) where
 
 deriving instance Show (Match2 g f c)
 
-instance Smurf c0 => Smurf (c0 `Match2` c1) where
+instance (Smurf c0, Smurf c1) => Smurf (c0 `Match2` c1) where
   type Papa (c0 `Match2` c1) = Papa c0
-  smurf = error "implement in terms of detag"
+  --smurf = error "implement in terms of detag"
+  smurf (c0 `Match2` c1) = smurf c0
 
 
 
