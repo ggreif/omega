@@ -58,6 +58,8 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   -- have composition, un/tagging, calling (application)
   app :: sig (a -> b) -> sig a -> sig b
   entag :: Constr' tag typ ca -> sig typ
+  detag :: Tor ca tag typ => expr ca f -> sig typ
+  --detag :: Tor Z tag typ => Plus Z f -> sig typ
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
 
