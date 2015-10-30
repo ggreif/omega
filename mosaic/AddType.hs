@@ -133,3 +133,41 @@ instance (Smurf c0, Smurf c1) => Smurf (c0 `Match2` c1) where
   --      two    Plus :: Nat -> (Nat -> Nat) -> *
   --      to be  (Match2 (Plus Z)) :: ((Nat -> Nat) -> *) -> (Nat -> Nat) -> *
   --      to be  (Match2 (Plus Z) (Plus (S Z))) :: (Nat -> Nat) -> *
+
+-- Suppose we have a (Plus n) assuming n = S m, we want to bind that m *on the type level*
+--  Bind (forall m . (S m ~ n) => something with m)
+-- type-level HOAS?
+
+--foo :: P n -> (forall m . P m
+
+--lam :: forall a . (a -> a) -> a
+
+-- Consider
+--     Plus Z `Match2` Plus (S m)
+
+-- match figures out n == S m, if so calls the lambda.
+-- Clearly no lambdas, so it needs to call a partially-applied type
+
+--     Plus Z `Match2` (Lam (\m -> Plus (S m))
+
+-- the Lam should give us the smurfed thing (value/type) instead of the (type/kind)
+
+--type XXX = Plus Z `Match2` (forall m . Plus (S m))
+
+{-
+How about Match2 expressing a fixpoint smurf-wise?
+
+Write type function:
+
+baz (Constr Z 0 Nat) (Plus Z) -> (Nat->Nat)
+baz (Constr S 1 (Nat->Nat)) (Plus (S m)) -> (Nat*->Nat->Nat)
+
+where Nat* is the extra argument being equal to (Plus m)
+-}
+
+type family Baz con expr where
+  --Baz (Constr' tag typ ca) (hd ca) = typ  -- hd :: typ -> Papa (hd ca)
+  Baz (Constr' tag typ ca) (hd ca) = Papa (hd ca)
+  --Baz (Constr' tag (fro->to) ca) (hd (ca junk)) = fro->to -- hd : to -> Papa (hd (ca junk))
+
+  Baz (Constr' tag (fro->to) ca) (hd (ca arg)) = fro -> Papa (hd (ca arg))
