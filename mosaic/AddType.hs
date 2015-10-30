@@ -39,20 +39,6 @@ data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
 -- Idea: it should be a purely mechanical process to follow the types and create corresponding values,
 --       so when the algorithm is encoded in the type, then classes should build inhabitants.
 --
-class Value a where
-  val :: a
-  -- val :: Inh a -- <<< better! then PlusS & co become unnecessary (and could be finally tagless)
-
-instance Value (Plus Z f) where
-  val = PlusZ Id
-
---instance Value (Plus n f) => Value (Plus (S n) f) where
---  val = PlusS $ (val :: Plus n f) `Compose` (val :: Constr1 S)
-
-instance Value (Constr0 Z) where
-  val = ConstrZ
-instance Value (Constr1 S) where
-  val = ConstrS
 
 class {-Category sig =>-} Machine (sig :: * -> *) where
   -- have composition, un/tagging, calling (application)
