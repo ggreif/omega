@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes, UndecidableInstances #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -31,7 +31,7 @@ data Constr' (tag :: Nat) (typ :: *) (coarg :: k) where
 
 deriving instance Show (Constr1 S)
 
-data Free (var :: k) (coarg :: k)
+--data Free (var :: k) (coarg :: k)
 
 class IdLike (transform :: k -> k -> *)
 
@@ -59,6 +59,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   --detag :: Tor Z tag typ => Plus Z f -> sig typ
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
+  pure' :: a -> sig a
 
 
 data Code (tres :: *)
@@ -79,6 +80,7 @@ instance Machine Identity where
   entag c@Constr' = pure (cfun c)
   ident = pure id
   comp = liftA2 (.)
+  pure' = pure
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
@@ -93,25 +95,25 @@ instance Smurf (Plus Z) where
   smurf (PlusZ _) = ident
 
 -- ####### frobbed from Data.Reflection #########
-class Given (a :: k -> *) where
+class Given typ (a :: k -> *) where
   -- | Recover the value of a given type previously encoded with 'give'.
-  given :: Jokey a
+  given :: forall coarg . Jokey typ a coarg
 
-newtype Jokey (a :: k -> *) = Jokey (Papa a)
+newtype Jokey typ (a :: k -> *) coarg = Jokey typ
 
-newtype Gift a r = Gift (Given a => r)
-give :: forall prox a r. Jokey a -> (Given a => r) -> r
-give a k = unsafeCoerce (Gift k :: Gift a r) a
+newtype Gift typ a = Gift (Given typ a => typ)
+give :: forall a coarg . Jokey (Papa a) a coarg -> (Given (Papa a) a => Papa a) -> Papa a
+give a k = unsafeCoerce (Gift k :: Gift (Papa a) a) a
 -- ################
 
-instance Smurf Jokey where
-  type Papa Jokey = Nat -> Nat
-  smurf (Jokey present) = unsafeCoerce present
+instance Smurf (Jokey typ bla) where
+  type Papa (Jokey typ bla) = typ
+  smurf (Jokey present) = pure' present
 
-instance Given (Plus n) => Smurf (Plus (S n)) where
+instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
   --smurf (PlusS _) = entag ConstrS `comp` entag ConstrS
-  smurf (PlusS _) = smurf (given :: Jokey (Plus n)) `comp` entag ConstrS
+  smurf (PlusS _ :: Plus (S n) f) = smurf (given :: Jokey (Nat->Nat) (Plus n) f) `comp` entag ConstrS
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
