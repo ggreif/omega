@@ -29,12 +29,19 @@ data Constr' (tag :: Nat) (typ :: *) (coarg :: k) where
 
 deriving instance Show (Constr1 S)
 
+data Free (var :: k) (coarg :: k)
+
+class IdLike (transform :: k -> k -> *)
+
 data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
   PlusZ :: Id (f Z) (f Z) -> Plus Z f
-  --PlusS :: (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
+  --PlusS :: Smurf (Free n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
+  --PlusS :: Smurf (Plus n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
+  ---PlusS :: (IdLike eeek, Smurf (eeek n)) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
+  PlusS :: (eeek ~ Free, Smurf ((eeek :: Nat -> Nat -> *) n)) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
   --        ^^ should this be value inference?
   --PlusS' :: Plus n f -> Plus (S n) f
-  PlusS :: (Plus Z `Match2` Plus (S m)) f -> Plus (S n) f
+  --PlusS :: (Plus Z `Match2` Plus (S m)) f -> Plus (S n) f
 
 -- Idea: it should be a purely mechanical process to follow the types and create corresponding values,
 --       so when the algorithm is encoded in the type, then classes should build inhabitants.
@@ -163,6 +170,8 @@ data Alt (coarg :: k -> l) where
   (:=>) :: Constr' tag typ ca -> hd ca f -> Alt f
   (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt f
 
+instance Smurf Alt where
+  -- smurf (Constr' :=> )
 
 a0 = ConstrZ :=> PlusZ Id
 a1 = ConstrS :==> PlusS undefined
