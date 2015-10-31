@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -7,6 +7,8 @@ import Data.Functor.Identity
 --import Control.Category(Category)
 --import qualified Control.Category as Cat (Category(id, (.)))
 import Control.Applicative (liftA2)
+--import Data.Reflection (Given(..))
+import Unsafe.Coerce(unsafeCoerce)
 
 data Nat = Z | S Nat deriving Show
 
@@ -35,10 +37,12 @@ class IdLike (transform :: k -> k -> *)
 
 data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
   PlusZ :: Id (f Z) (f Z) -> Plus Z f
-  --PlusS :: Smurf (Free n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
+  PlusS :: (Plus n `Compose` Constr1) f -> Plus (S n) f
+
+--PlusS :: Smurf (Free n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
   --PlusS :: Smurf (Plus n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
   ---PlusS :: (IdLike eeek, Smurf (eeek n)) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
-  PlusS :: (eeek ~ Free, Smurf ((eeek :: Nat -> Nat -> *) n)) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
+  --PlusS :: (eeek ~ Free, Smurf ((eeek :: Nat -> Nat -> *) n)) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
   --        ^^ should this be value inference?
   --PlusS' :: Plus n f -> Plus (S n) f
   --PlusS :: (Plus Z `Match2` Plus (S m)) f -> Plus (S n) f
@@ -88,10 +92,26 @@ instance Smurf (Plus Z) where
   type Papa (Plus Z) = Nat -> Nat
   smurf (PlusZ _) = ident
 
-instance Smurf (Plus (S n)) where
+-- ####### frobbed from Data.Reflection #########
+class Given (a :: k -> *) where
+  -- | Recover the value of a given type previously encoded with 'give'.
+  given :: Jokey a
+
+newtype Jokey (a :: k -> *) = Jokey (Papa a)
+
+newtype Gift a r = Gift (Given a => r)
+give :: forall prox a r. Jokey a -> (Given a => r) -> r
+give a k = unsafeCoerce (Gift k :: Gift a r) a
+-- ################
+
+instance Smurf Jokey where
+  type Papa Jokey = Nat -> Nat
+  smurf (Jokey present) = unsafeCoerce present
+
+instance Given (Plus n) => Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
   --smurf (PlusS _) = entag ConstrS `comp` entag ConstrS
-  smurf (PlusS less) = smurf less `comp` entag ConstrS
+  smurf (PlusS _) = smurf (given :: Jokey (Plus n)) `comp` entag ConstrS
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
