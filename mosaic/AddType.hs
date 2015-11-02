@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes, UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes, UndecidableInstances, InstanceSigs #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -9,6 +9,7 @@ import Data.Functor.Identity
 import Control.Applicative (liftA2)
 --import Data.Reflection (Given(..))
 import Unsafe.Coerce(unsafeCoerce)
+import Data.Proxy
 
 data Nat = Z | S Nat deriving Show
 
@@ -99,25 +100,27 @@ class Given typ (a :: k -> *) where
   -- | Recover the value of a given type previously encoded with 'give'.
   given :: forall coarg . Jokey typ a coarg
 
-newtype Jokey typ (a :: k -> *) coarg = Jokey typ
+newtype Jokey (typ :: *) (a :: k -> *) coarg = Jokey (forall m . m typ)
 
 newtype Gift m typ a = Gift (Given typ a => m typ)
-give :: forall a coarg m . Jokey (m (Papa a)) a coarg -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
-give a k = unsafeCoerce (Gift k :: Gift m (Papa a) a) a
+--give :: forall a coarg m . Jokey m (Papa a) a coarg -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
+give :: forall a coarg m . Proxy a -> m (Papa a) -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
+give _ a k = unsafeCoerce (Gift k :: Gift m (Papa a) a) a
 -- ################
 
 instance Smurf (Jokey typ bla) where
   type Papa (Jokey typ bla) = typ
   --smurf (Jokey present) = pure' present
-  smurf (Jokey present) = unsafeCoerce present
+  smurf (Jokey present) = present
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
   --smurf (PlusS _) = entag ConstrS `comp` entag ConstrS
+  --smurf :: Machine m => Plus (S n) f -> m (Papa (Plus (S n)))
   smurf (PlusS _ :: Plus (S n) f) = smurf (given :: Jokey (Nat->Nat) (Plus n) f) `comp` entag ConstrS
 
 s0 :: Identity (Nat->Nat)
-s0 = give (Jokey (Identity S) :: Jokey (Identity (Nat->Nat)) (Plus Z) S) (smurf (PlusS undefined :: Plus (S Z) S))
+s0 = give (Proxy :: Proxy (Plus Z)) (Identity S) (smurf (PlusS undefined :: Plus (S Z) S))
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
