@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes, UndecidableInstances, InstanceSigs #-}
+{-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes, UndecidableInstances #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
 
 module AddType where
@@ -7,7 +7,6 @@ import Data.Functor.Identity
 --import Control.Category(Category)
 --import qualified Control.Category as Cat (Category(id, (.)))
 import Control.Applicative (liftA2)
---import Data.Reflection (Given(..))
 import Unsafe.Coerce(unsafeCoerce)
 import Data.Proxy
 
@@ -32,12 +31,8 @@ data Constr' (tag :: Nat) (typ :: *) (coarg :: k) where
 
 deriving instance Show (Constr1 S)
 
---data Free (var :: k) (coarg :: k)
-
-class IdLike (transform :: k -> k -> *)
-
 data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
-  PlusZ :: Id (f Z) (f Z) -> Plus Z f
+  PlusZ :: Plus Z f
   PlusS :: (Plus n `Compose` Constr1) f -> Plus (S n) f
 
 --PlusS :: Smurf (Free n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
@@ -93,7 +88,7 @@ instance Smurf (Constr' tag typ) where
 
 instance Smurf (Plus Z) where
   type Papa (Plus Z) = Nat -> Nat
-  smurf (PlusZ _) = ident
+  smurf PlusZ = ident
 
 -- ####### frobbed from Data.Reflection #########
 class Given typ (a :: k -> *) where
@@ -103,36 +98,23 @@ class Given typ (a :: k -> *) where
 newtype Jokey (typ :: *) (a :: k -> *) coarg = Jokey (forall m . m typ)
 
 newtype Gift m typ a = Gift (Given typ a => m typ)
---give :: forall a coarg m . Jokey m (Papa a) a coarg -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
 give :: forall a coarg m . Proxy a -> m (Papa a) -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
 give _ a k = unsafeCoerce (Gift k :: Gift m (Papa a) a) a
 -- ################
 
 instance Smurf (Jokey typ bla) where
   type Papa (Jokey typ bla) = typ
-  --smurf (Jokey present) = pure' present
   smurf (Jokey present) = present
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
-  --smurf (PlusS _) = entag ConstrS `comp` entag ConstrS
-  --smurf :: Machine m => Plus (S n) f -> m (Papa (Plus (S n)))
-  smurf (PlusS _ :: Plus (S n) f) = smurf (given :: Jokey (Nat->Nat) (Plus n) f) `comp` entag ConstrS
+  smurf (PlusS _ :: Plus (S n) f) = plusN `comp` entag ConstrS
+    where plusN = smurf (given :: Jokey (Papa (Plus (S n))) (Plus n) f)
 
 s0 :: Identity (Nat->Nat)
-s0 = give (Proxy :: Proxy (Plus Z)) (Identity S) (smurf (PlusS undefined :: Plus (S Z) S))
-
---instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
-
---instance (Show (c0 a), Show (c1 a), Value (c0 a), Value (c1 a)) => Value (Match2 c0 c1 a) where
---  val = Match2 (val :: c0 a) (val :: c1 a)
+s0 = give (Proxy :: Proxy (Plus Z)) (Identity id) (smurf (PlusS undefined :: Plus (S Z) S))
 
 deriving instance Show (Plus a c)
-
-data Id (arg :: k) (coarg :: k) where
-  Id :: Id x x
-
-deriving instance Show (Id a c)
 
 data Compose (a1 :: (b -> c) -> *) (a0 :: (a -> b) -> *) (coarg :: a -> c) where
   Compose :: (Show (f a), Show (g b)) => g b -> f a -> Compose g f c
@@ -202,5 +184,5 @@ data Alt (coarg :: k -> l) where
 instance Smurf Alt where
   -- smurf (Constr' :=> )
 
-a0 = ConstrZ :=> PlusZ Id
+a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS undefined
