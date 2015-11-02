@@ -101,19 +101,23 @@ class Given typ (a :: k -> *) where
 
 newtype Jokey typ (a :: k -> *) coarg = Jokey typ
 
-newtype Gift typ a = Gift (Given typ a => typ)
-give :: forall a coarg . Jokey (Papa a) a coarg -> (Given (Papa a) a => Papa a) -> Papa a
-give a k = unsafeCoerce (Gift k :: Gift (Papa a) a) a
+newtype Gift m typ a = Gift (Given typ a => m typ)
+give :: forall a coarg m . Jokey (m (Papa a)) a coarg -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
+give a k = unsafeCoerce (Gift k :: Gift m (Papa a) a) a
 -- ################
 
 instance Smurf (Jokey typ bla) where
   type Papa (Jokey typ bla) = typ
-  smurf (Jokey present) = pure' present
+  --smurf (Jokey present) = pure' present
+  smurf (Jokey present) = unsafeCoerce present
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
   --smurf (PlusS _) = entag ConstrS `comp` entag ConstrS
   smurf (PlusS _ :: Plus (S n) f) = smurf (given :: Jokey (Nat->Nat) (Plus n) f) `comp` entag ConstrS
+
+s0 :: Identity (Nat->Nat)
+s0 = give (Jokey (Identity S) :: Jokey (Identity (Nat->Nat)) (Plus Z) S) (smurf (PlusS undefined :: Plus (S Z) S))
 
 --instance (Value (f a), Value (g b)) => Value ((g b `Compose` f a) c) where
 
