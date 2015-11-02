@@ -33,7 +33,7 @@ deriving instance Show (Constr1 S)
 
 data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
   PlusZ :: Plus Z f
-  PlusS :: (Plus n `Compose` Constr1) f -> Plus (S n) f
+  PlusS :: {-(Plus n `Compose` Constr1) f ->-} Plus (S n) f
 
 --PlusS :: Smurf (Free n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
   --PlusS :: Smurf (Plus n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
@@ -93,12 +93,12 @@ instance Smurf (Plus Z) where
 -- ####### frobbed from Data.Reflection #########
 class Given typ (a :: k -> *) where
   -- | Recover the value of a given type previously encoded with 'give'.
-  given :: forall coarg . Jokey typ a coarg
+  given :: Jokey typ a coarg
 
 newtype Jokey (typ :: *) (a :: k -> *) coarg = Jokey (forall m . m typ)
 
 newtype Gift m typ a = Gift (Given typ a => m typ)
-give :: forall a coarg m . Proxy a -> m (Papa a) -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
+give :: forall a m . Proxy a -> m (Papa a) -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
 give _ a k = unsafeCoerce (Gift k :: Gift m (Papa a) a) a
 -- ################
 
@@ -108,11 +108,11 @@ instance Smurf (Jokey typ bla) where
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
-  smurf (PlusS _ :: Plus (S n) f) = plusN `comp` entag ConstrS
+  smurf (PlusS :: Plus (S n) f) = plusN `comp` entag ConstrS
     where plusN = smurf (given :: Jokey (Papa (Plus (S n))) (Plus n) f)
 
 s0 :: Identity (Nat->Nat)
-s0 = give (Proxy :: Proxy (Plus Z)) (Identity id) (smurf (PlusS undefined :: Plus (S Z) S))
+s0 = give (Proxy :: Proxy (Plus Z)) (Identity id) (smurf (PlusS :: Plus (S Z) S))
 
 deriving instance Show (Plus a c)
 
@@ -185,4 +185,4 @@ instance Smurf Alt where
   -- smurf (Constr' :=> )
 
 a0 = ConstrZ :=> PlusZ
-a1 = ConstrS :==> PlusS undefined
+a1 = ConstrS :==> PlusS
