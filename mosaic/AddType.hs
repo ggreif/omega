@@ -9,6 +9,7 @@ import Data.Functor.Identity
 import Control.Applicative (liftA2)
 import Unsafe.Coerce(unsafeCoerce)
 import Data.Proxy
+import Data.Coerce
 
 data Nat = Z | S Nat deriving Show
 
@@ -56,7 +57,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
-  grab :: sig b -> sig (a -> b)
+  grab :: (sig a -> sig b) -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -78,6 +79,7 @@ instance Machine Identity where
   ident = pure id
   comp = liftA2 (.)
   pure' = pure
+  grab = coerce
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
@@ -139,7 +141,7 @@ data Def (d :: k -> l -> *) (f :: k -> l)
 
 instance Smurf (Def Plus) where
   type Papa (Def Plus) = Nat -> Nat -> Nat
-  smurf _ = grab (smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
+  smurf _ = grab (const $ smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
 
 -- Match2 lifts
   --      two    Plus :: Nat -> (Nat -> Nat) -> *
@@ -193,6 +195,7 @@ data Alt (coarg :: k -> l) where
 
 instance Smurf Alt where
   -- smurf (Constr' :=> )
+  smurf (Tri con fun sm) = undefined
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
