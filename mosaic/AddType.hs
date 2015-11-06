@@ -187,17 +187,17 @@ type family Baz con expr where
   Baz (Constr' tag (fro->to) ca) (hd (ca arg)) = fro -> Papa (hd (ca arg))
 
 
-data Alt (coarg :: k -> l) where
-  (:=>) :: Constr' tag typ ca -> hd ca f -> Alt f
-  (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt f
-  --Tri :: (Papa (hd (ca a)) ~ bla, Machine m) => Constr' tag typ ca -> hd (ca a) f -> (Given bla (hd a) => m bla) -> Alt f
-  Tri :: (Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> hd (ca a) f -> (forall m . Machine m => Given bla (hd a) => hd (ca a) f -> m bla) -> Alt f
+data Alt (hda :: (k -> l) -> *) (coarg :: k -> l) where
+  (:=>) :: Constr' tag typ ca -> hd ca f -> Alt (hd ca) f
+  (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt (hd a) f
+  --Tri :: (Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> hd (ca a) f -> (forall m . (Machine m, Given bla (hd a)) => hd (ca a) f -> m bla) -> Alt f
+  Tri :: (Papa (hd a) ~ bla, Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> Proxy (hd a) -> hd (ca a) f -> (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) f -> m (Papa (hd (ca a)))) -> Alt (hd a) f
 
-instance Smurf Alt where
+instance {-Smurf (Def hda) =>-} Smurf (Alt hda) where
+  type Papa (Alt hda) = Papa (Def hda)
   -- smurf (Constr' :=> )
-  smurf (Tri con fun sm) = undefined
+  smurf (Tri con prox fun sm) = grab (\arg -> give Proxy (smurf (undefined :: Def hda) `app` arg{- -1 -}) (sm fun))
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
---a1' = Tri ConstrS PlusS (smurf PlusS :: Code (Nat -> Nat))
-a1' = Tri ConstrS PlusS smurf
+a1' = Tri ConstrS Proxy PlusS smurf
