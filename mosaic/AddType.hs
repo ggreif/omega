@@ -131,7 +131,14 @@ instance (Smurf c0, Smurf c1) => Smurf (c0 `Match2` c1) where
   --smurf = error "implement in terms of detag"
   smurf (c0 `Match2` c1) = smurf c0
 
+-- can we now define Plus completely?
 
+--data Def (d :: Nat -> (Nat -> Nat) -> *) (f :: Nat -> Nat -> Nat)
+data Def (d :: k -> l -> *) (f :: k -> l)
+
+instance Smurf (Def Plus) where
+  type Papa (Def Plus) = Nat -> Nat -> Nat
+  smurf _ = undefined -- machine needs to give support: grab first arg and pass it to Match2?
 
 -- Match2 lifts
   --      two    Plus :: Nat -> (Nat -> Nat) -> *
