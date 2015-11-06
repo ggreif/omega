@@ -56,6 +56,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
+  grab :: sig b -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -138,7 +139,7 @@ data Def (d :: k -> l -> *) (f :: k -> l)
 
 instance Smurf (Def Plus) where
   type Papa (Def Plus) = Nat -> Nat -> Nat
-  smurf _ = undefined -- machine needs to give support: grab first arg and pass it to Match2?
+  smurf _ = grab (smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
 
 -- Match2 lifts
   --      two    Plus :: Nat -> (Nat -> Nat) -> *
@@ -187,9 +188,13 @@ type family Baz con expr where
 data Alt (coarg :: k -> l) where
   (:=>) :: Constr' tag typ ca -> hd ca f -> Alt f
   (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt f
+  --Tri :: (Papa (hd (ca a)) ~ bla, Machine m) => Constr' tag typ ca -> hd (ca a) f -> (Given bla (hd a) => m bla) -> Alt f
+  Tri :: (Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> hd (ca a) f -> (forall m . Machine m => Given bla (hd a) => hd (ca a) f -> m bla) -> Alt f
 
 instance Smurf Alt where
   -- smurf (Constr' :=> )
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
+--a1' = Tri ConstrS PlusS (smurf PlusS :: Code (Nat -> Nat))
+a1' = Tri ConstrS PlusS smurf
