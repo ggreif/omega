@@ -187,16 +187,20 @@ type family Baz con expr where
   Baz (Constr' tag (fro->to) ca) (hd (ca arg)) = fro -> Papa (hd (ca arg))
 
 
-data Alt (hda :: (k -> l) -> *) (coarg :: k -> l) where
-  (:=>) :: Constr' tag typ ca -> hd ca f -> Alt (hd ca) f
-  (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt (hd a) f
+data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
+  (:=>) :: Constr' tag typ ca -> hd ca f -> Alt hd f'
+  (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt hd f'
   --Tri :: (Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> hd (ca a) f -> (forall m . (Machine m, Given bla (hd a)) => hd (ca a) f -> m bla) -> Alt f
-  Tri :: (Papa (hd a) ~ bla, Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> Proxy (hd a) -> hd (ca a) f -> (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) f -> m (Papa (hd (ca a)))) -> Alt (hd a) f
+  --Tri :: (Papa (hd a) ~ bla) => Constr' tag typ ca -> Proxy (hd a) -> hd (ca a) f -> (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) f -> m (Papa (hd (ca a)))) -> Alt hd f'
+  --Tri :: Constr' tag typ ca -> (forall a . (Papa (hd a) ~ bla) => (Proxy (hd a) -> hd (ca a) (f a) -> (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))))) -> Alt hd f
+  --Tri :: Constr' tag typ ca -> (forall a . (hd (ca a) (f a), (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))))) -> Alt hd f
+  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
 
-instance {-Smurf (Def hda) =>-} Smurf (Alt hda) where
-  type Papa (Alt hda) = Papa (Def hda)
+instance Smurf (Def hd) => Smurf (Alt hd) where
+  type Papa (Alt hd) = Papa (Def hd)
   -- smurf (Constr' :=> )
-  smurf (Tri con prox fun sm) = grab (\arg -> give Proxy (smurf (undefined :: Def hda) `app` arg{- -1 -}) (sm fun))
+  -----smurf (Tri con prox fun sm :: Alt hd f) = grab (\arg -> give Proxy (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
+  --smurf (Tri con prox fun sm) = grab (\arg -> (give Proxy (pure' undefined) (sm fun)))
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
