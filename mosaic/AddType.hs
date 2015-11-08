@@ -11,6 +11,7 @@ import Control.Applicative (liftA2)
 import Unsafe.Coerce(unsafeCoerce)
 import Data.Proxy
 import Data.Coerce
+import Data.Type.Equality
 
 data Nat = Z | S Nat deriving Show
 
@@ -187,11 +188,14 @@ type family Baz con expr where
 
   Baz (Constr' tag (fro->to) ca) (hd (ca arg)) = fro -> Papa (hd (ca arg))
 
+--data SamePapa hd a b where
+--  Same :: (Papa (hd a) ~ Papa (hd b)) => Proxy a -> Proxy b -> SamePapa hd a b
 
 data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
   (:=>) :: Constr' tag typ ca -> hd ca f -> Alt hd f'
   (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt hd f'
   --Tri :: (Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> hd (ca a) f -> (forall m . (Machine m, Given bla (hd a)) => hd (ca a) f -> m bla) -> Alt f
+  --Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a . SamePapa hd (ca a) a) -> (forall a m . (Machine m, Papa (hd (ca a)) ~ Papa (hd a), Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
   Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Papa (hd (ca a)) ~ Papa (hd a), Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
 
 instance Smurf (Def hd) => Smurf (Alt hd) where
@@ -201,9 +205,13 @@ instance Smurf (Def hd) => Smurf (Alt hd) where
   smurf :: Alt hd f -> m (Papa (Def hd))
   --smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
   --     = grab fun (\arg -> (give prox (pure' undefined) (sm fun)))
-  smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
-       = grab fun (\arg -> (give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun)))
+ ---- smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
+ ----      = grab fun (\(arg :: hd arg f') -> (give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (resmurf (Proxy :: Proxy arg) (Proxy :: Proxy ca) (Proxy :: Proxy hd) (sm fun))))
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
+--a1' = Tri ConstrS Proxy PlusS (unsafeCoerce (Same (Proxy Proxy)) smurf
 a1' = Tri ConstrS Proxy PlusS smurf
+
+resmurf :: Proxy a -> Proxy ca -> Proxy hd -> m (Papa (hd (ca a))) -> m (Papa (hd a))
+resmurf = undefined
