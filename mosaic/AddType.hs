@@ -59,7 +59,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
-  grab :: (Papa (Def hd) ~ (a -> b), Papa (hd arg) ~ b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
+  --grab :: (Papa (Def hd) ~ (a -> b), Papa (hd arg) ~ b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -81,20 +81,21 @@ instance Machine Identity where
   ident = pure id
   comp = liftA2 (.)
   pure' = pure
-  grab _ = coerce
+  --grab _ = coerce
 
-class Smurf (f :: k -> *) where
-  type Papa f :: *
-  smurf :: Machine m => f r -> m (Papa f)
+class Smurf (f :: k -> *) (papa :: *) | f -> papa where
+  --type Papa f :: *
+  smurf :: Machine m => f r -> m papa
 
-instance Smurf (Constr' tag typ) where
-  type Papa (Constr' tag typ) = typ
+instance Smurf (Constr' tag typ) typ where
+  --type Papa (Constr' tag typ) = typ
   smurf c@Constr' = entag c
 
-instance Smurf (Plus Z) where
-  type Papa (Plus Z) = Nat -> Nat
+instance Smurf (Plus Z) (Nat -> Nat) where
+  --type Papa (Plus Z) = Nat -> Nat
   smurf PlusZ = ident
 
+{-
 -- ####### frobbed from Data.Reflection #########
 class Given typ (a :: k -> *) where
   -- | Recover the value of a given type previously encoded with 'give'.
@@ -118,6 +119,7 @@ instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
 
 s0 :: Identity (Nat->Nat)
 s0 = give (Proxy :: Proxy (Plus Z)) (Identity id) (smurf (PlusS :: Plus (S Z) S))
+-}
 
 deriving instance Show (Plus a c)
 
@@ -131,8 +133,8 @@ data Match2 (c0 :: k -> *) (c1 :: k -> *) (out :: k) where
 
 deriving instance Show (Match2 g f c)
 
-instance (Smurf c0, Smurf c1) => Smurf (c0 `Match2` c1) where
-  type Papa (c0 `Match2` c1) = Papa c0
+instance (Smurf c0 papa, Smurf c1 papa) => Smurf (c0 `Match2` c1) papa where
+  --type Papa (c0 `Match2` c1) = Papa c0
   --smurf = error "implement in terms of detag"
   smurf (c0 `Match2` c1) = smurf c0
 
@@ -141,8 +143,8 @@ instance (Smurf c0, Smurf c1) => Smurf (c0 `Match2` c1) where
 --data Def (d :: Nat -> (Nat -> Nat) -> *) (f :: Nat -> Nat -> Nat)
 data Def (d :: k -> l -> *) (f :: k -> l)
 
-instance Smurf (Def Plus) where
-  type Papa (Def Plus) = Nat -> Nat -> Nat
+instance Smurf (Def Plus) (Nat -> Nat -> Nat) where
+  --type Papa (Def Plus) = Nat -> Nat -> Nat
   -- smurf _ = grab (const $ smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
 
 -- Match2 lifts
@@ -181,15 +183,19 @@ baz (Constr S 1 (Nat->Nat)) (Plus (S m)) -> (Nat*->Nat->Nat)
 where Nat* is the extra argument being equal to (Plus m)
 -}
 
+{-
 type family Baz con expr where
   --Baz (Constr' tag typ ca) (hd ca) = typ  -- hd :: typ -> Papa (hd ca)
   Baz (Constr' tag typ ca) (hd ca) = Papa (hd ca)
   --Baz (Constr' tag (fro->to) ca) (hd (ca junk)) = fro->to -- hd : to -> Papa (hd (ca junk))
 
   Baz (Constr' tag (fro->to) ca) (hd (ca arg)) = fro -> Papa (hd (ca arg))
+-}
 
 --data SamePapa hd a b where
 --  Same :: (Papa (hd a) ~ Papa (hd b)) => Proxy a -> Proxy b -> SamePapa hd a b
+
+{-
 
 data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
   (:=>) :: Constr' tag typ ca -> hd ca f -> Alt hd f'
@@ -215,3 +221,5 @@ a1' = Tri ConstrS Proxy PlusS smurf
 
 resmurf :: Proxy a -> Proxy ca -> Proxy hd -> m (Papa (hd (ca a))) -> m (Papa (hd a))
 resmurf = undefined
+
+-}
