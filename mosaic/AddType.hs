@@ -1,5 +1,6 @@
 {-# LANGUAGE ViewPatterns, KindSignatures, GADTs, PolyKinds, StandaloneDeriving, FlexibleContexts, FlexibleInstances, ScopedTypeVariables, TypeFamilies, PatternSynonyms, FunctionalDependencies, RankNTypes, UndecidableInstances #-}
 {-# LANGUAGE DataKinds, TypeOperators #-} -- 7.10??
+{-# LANGUAGE InstanceSigs #-}
 
 module AddType where
 
@@ -57,7 +58,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
-  grab :: (sig a -> sig b) -> sig (a -> b)
+  grab :: (Papa (Def hd) ~ (a -> b), Papa (hd arg) ~ b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -79,7 +80,7 @@ instance Machine Identity where
   ident = pure id
   comp = liftA2 (.)
   pure' = pure
-  grab = coerce
+  grab _ = coerce
 
 class Smurf (f :: k -> *) where
   type Papa f :: *
@@ -141,7 +142,7 @@ data Def (d :: k -> l -> *) (f :: k -> l)
 
 instance Smurf (Def Plus) where
   type Papa (Def Plus) = Nat -> Nat -> Nat
-  smurf _ = grab (const $ smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
+  -- smurf _ = grab (const $ smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
 
 -- Match2 lifts
   --      two    Plus :: Nat -> (Nat -> Nat) -> *
@@ -191,16 +192,17 @@ data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
   (:=>) :: Constr' tag typ ca -> hd ca f -> Alt hd f'
   (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt hd f'
   --Tri :: (Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> hd (ca a) f -> (forall m . (Machine m, Given bla (hd a)) => hd (ca a) f -> m bla) -> Alt f
-  --Tri :: (Papa (hd a) ~ bla) => Constr' tag typ ca -> Proxy (hd a) -> hd (ca a) f -> (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) f -> m (Papa (hd (ca a)))) -> Alt hd f'
-  --Tri :: Constr' tag typ ca -> (forall a . (Papa (hd a) ~ bla) => (Proxy (hd a) -> hd (ca a) (f a) -> (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))))) -> Alt hd f
-  --Tri :: Constr' tag typ ca -> (forall a . (hd (ca a) (f a), (forall m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))))) -> Alt hd f
-  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
+  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Papa (hd (ca a)) ~ Papa (hd a), Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
 
 instance Smurf (Def hd) => Smurf (Alt hd) where
   type Papa (Alt hd) = Papa (Def hd)
   -- smurf (Constr' :=> )
-  -----smurf (Tri con prox fun sm :: Alt hd f) = grab (\arg -> give Proxy (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
-  --smurf (Tri con prox fun sm) = grab (\arg -> (give Proxy (pure' undefined) (sm fun)))
+  -----smurf (Tri con prox fun sm :: Alt hd f) = grab (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
+  smurf :: Alt hd f -> m (Papa (Def hd))
+  --smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
+  --     = grab fun (\arg -> (give prox (pure' undefined) (sm fun)))
+  smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
+       = grab fun (\arg -> (give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun)))
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
