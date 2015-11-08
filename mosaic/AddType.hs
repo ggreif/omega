@@ -60,7 +60,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
   --grab :: (Papa (Def hd) ~ (a -> b), Papa (hd arg) ~ b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
-  grab :: (Smurf (Def hd) (a -> b)) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
+  grab :: Smurf (Def hd) (a -> b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -82,7 +82,7 @@ instance Machine Identity where
   ident = pure id
   comp = liftA2 (.)
   pure' = pure
-  --grab _ = coerce
+  grab _ = coerce
 
 class Smurf (f :: k -> *) (papa :: *) | f -> papa where
   --type Papa f :: *
@@ -98,7 +98,7 @@ instance Smurf (Plus Z) (Nat -> Nat) where
 
 
 -- ####### frobbed from Data.Reflection #########
-class Given typ (a :: k -> *) where
+class Given typ (a :: k -> *) | a -> typ where
   -- | Recover the value of a given type previously encoded with 'give'.
   given :: Jokey typ a coarg
 
@@ -110,10 +110,10 @@ newtype Gift m typ a = Gift (Given typ a => m typ)
 give :: forall a m sig . Proxy a -> m sig -> (Given sig a => m sig) -> m sig
 give _ a k = unsafeCoerce (Gift k :: Gift m sig a) a
 -- ################
-{-
-instance Smurf (Jokey typ bla) where
-  type Papa (Jokey typ bla) = typ
+instance Smurf (Jokey typ bla) typ where
+  --type Papa (Jokey typ bla) = typ
   smurf (Jokey present) = present
+{-
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
   type Papa (Plus (S n)) = Nat -> Nat
@@ -228,18 +228,19 @@ resmurf = undefined
 -}
 
 instance Smurf (Def hd) (arg->res) => Smurf (Alt hd) (arg->res) where
-  smurf :: Machine m => Alt hd f -> m (arg->res)
+  --smurf :: Machine m => Alt hd f -> m (arg->res)
   smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
-       = grab fun (\arg -> (give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun)))
+       = grab fun (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
+     --where coer :: Machine m => m x -> m y
+     --      coer = unsafeCoerce
 
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
-  --type Papa (Plus (S n)) = Nat -> Nat
-  ----smurf (PlusS :: Plus (S n) f) = plusN `comp` entag ConstrS
-  ----  where plusN = smurf (given :: Jokey (Papa (Plus (S n))) (Plus n) f)
+  smurf (PlusS :: Plus (S n) f) = plusN `comp` entag ConstrS
+    where plusN = smurf (given :: Jokey (Nat->Nat) (Plus n) f)
 
 
 data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
-  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given (Nat->Nat) (hd a)) => hd (ca a) (f a) -> m (Nat->Nat)) -> Alt hd f
+  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m typ'. (Machine m, Given typ' (hd a){-, Smurf (hd (ca a)) typ'-}) => hd (ca a) (f a) -> m typ') -> Alt hd f
 
 a1' = Tri ConstrS Proxy PlusS smurf
