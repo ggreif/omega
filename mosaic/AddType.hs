@@ -60,6 +60,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
   --grab :: (Papa (Def hd) ~ (a -> b), Papa (hd arg) ~ b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
+  grab :: (Smurf (Def hd) (a -> b)) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -95,7 +96,7 @@ instance Smurf (Plus Z) (Nat -> Nat) where
   --type Papa (Plus Z) = Nat -> Nat
   smurf PlusZ = ident
 
-{-
+
 -- ####### frobbed from Data.Reflection #########
 class Given typ (a :: k -> *) where
   -- | Recover the value of a given type previously encoded with 'give'.
@@ -104,10 +105,12 @@ class Given typ (a :: k -> *) where
 newtype Jokey (typ :: *) (a :: k -> *) coarg = Jokey (forall m . m typ)
 
 newtype Gift m typ a = Gift (Given typ a => m typ)
-give :: forall a m . Proxy a -> m (Papa a) -> (Given (Papa a) a => m (Papa a)) -> m (Papa a)
-give _ a k = unsafeCoerce (Gift k :: Gift m (Papa a) a) a
--- ################
 
+
+give :: forall a m sig . Proxy a -> m sig -> (Given sig a => m sig) -> m sig
+give _ a k = unsafeCoerce (Gift k :: Gift m sig a) a
+-- ################
+{-
 instance Smurf (Jokey typ bla) where
   type Papa (Jokey typ bla) = typ
   smurf (Jokey present) = present
@@ -223,3 +226,20 @@ resmurf :: Proxy a -> Proxy ca -> Proxy hd -> m (Papa (hd (ca a))) -> m (Papa (h
 resmurf = undefined
 
 -}
+
+instance Smurf (Def hd) (arg->res) => Smurf (Alt hd) (arg->res) where
+  smurf :: Machine m => Alt hd f -> m (arg->res)
+  smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
+       = grab fun (\arg -> (give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun)))
+
+
+instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
+  --type Papa (Plus (S n)) = Nat -> Nat
+  ----smurf (PlusS :: Plus (S n) f) = plusN `comp` entag ConstrS
+  ----  where plusN = smurf (given :: Jokey (Papa (Plus (S n))) (Plus n) f)
+
+
+data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
+  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given (Nat->Nat) (hd a)) => hd (ca a) (f a) -> m (Nat->Nat)) -> Alt hd f
+
+a1' = Tri ConstrS Proxy PlusS smurf
