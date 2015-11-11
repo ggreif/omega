@@ -38,14 +38,6 @@ data Plus (arg :: Nat) (coarg :: Nat -> Nat) where
   PlusZ :: Plus Z f
   PlusS :: {-(Plus n `Compose` Constr1) f ->-} Plus (S n) f
 
---PlusS :: Smurf (Free n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
-  --PlusS :: Smurf (Plus n) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
-  ---PlusS :: (IdLike eeek, Smurf (eeek n)) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
-  --PlusS :: (eeek ~ Free, Smurf ((eeek :: Nat -> Nat -> *) n)) => (Plus n `Compose` Constr1) f -> Plus (S n) f -- FIXME
-  --        ^^ should this be value inference?
-  --PlusS' :: Plus n f -> Plus (S n) f
-  --PlusS :: (Plus Z `Match2` Plus (S m)) f -> Plus (S n) f
-
 -- Idea: it should be a purely mechanical process to follow the types and create corresponding values,
 --       so when the algorithm is encoded in the type, then classes should build inhabitants.
 --
@@ -59,8 +51,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
-  --grab :: (Papa (Def hd) ~ (a -> b), Papa (hd arg) ~ b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
-  grab :: Smurf (Def hd) (a -> b) => hd arg f -> (sig a -> sig b) -> sig (a -> b)
+  grab :: hd arg f {-needed?-} -> (sig a -> sig b) -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -85,15 +76,12 @@ instance Machine Identity where
   grab _ = coerce
 
 class Smurf (f :: k -> *) (papa :: *) | f -> papa where
-  --type Papa f :: *
   smurf :: Machine m => f r -> m papa
 
 instance Smurf (Constr' tag typ) typ where
-  --type Papa (Constr' tag typ) = typ
   smurf c@Constr' = entag c
 
 instance Smurf (Plus Z) (Nat -> Nat) where
-  --type Papa (Plus Z) = Nat -> Nat
   smurf PlusZ = ident
 
 
@@ -110,19 +98,9 @@ newtype Gift m typ a = Gift (Given typ a => m typ)
 give :: forall a m sig . Proxy a -> m sig -> (Given sig a => m sig) -> m sig
 give _ a k = unsafeCoerce (Gift k :: Gift m sig a) a
 -- ################
+
 instance Smurf (Jokey typ bla) typ where
-  --type Papa (Jokey typ bla) = typ
   smurf (Jokey present) = present
-{-
-
-instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) where
-  type Papa (Plus (S n)) = Nat -> Nat
-  smurf (PlusS :: Plus (S n) f) = plusN `comp` entag ConstrS
-    where plusN = smurf (given :: Jokey (Papa (Plus (S n))) (Plus n) f)
-
-s0 :: Identity (Nat->Nat)
-s0 = give (Proxy :: Proxy (Plus Z)) (Identity id) (smurf (PlusS :: Plus (S Z) S))
--}
 
 deriving instance Show (Plus a c)
 
@@ -137,7 +115,6 @@ data Match2 (c0 :: k -> *) (c1 :: k -> *) (out :: k) where
 deriving instance Show (Match2 g f c)
 
 instance (Smurf c0 papa, Smurf c1 papa) => Smurf (c0 `Match2` c1) papa where
-  --type Papa (c0 `Match2` c1) = Papa c0
   --smurf = error "implement in terms of detag"
   smurf (c0 `Match2` c1) = smurf c0
 
@@ -147,7 +124,6 @@ instance (Smurf c0 papa, Smurf c1 papa) => Smurf (c0 `Match2` c1) papa where
 data Def (d :: k -> l -> *) (f :: k -> l)
 
 instance Smurf (Def Plus) (Nat -> Nat -> Nat) where
-  --type Papa (Def Plus) = Nat -> Nat -> Nat
   -- smurf _ = grab (const $ smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
 
 -- Match2 lifts
@@ -228,11 +204,8 @@ resmurf = undefined
 -}
 
 instance Smurf (Def hd) (arg->res) => Smurf (Alt res hd) (arg->res) where
-  --smurf :: Machine m => Alt hd f -> m (arg->res)
   smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
        = grab fun (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
-     --where coer :: Machine m => m x -> m y
-     --      coer = unsafeCoerce
 
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
@@ -243,4 +216,4 @@ instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
 data Alt (res :: *) (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
   Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt res hd f
 
-a1' = Tri ConstrS Proxy PlusS smurf
+a1 = Tri ConstrS Proxy PlusS smurf
