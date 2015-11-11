@@ -51,7 +51,7 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
-  grab :: hd arg f {-needed?-} -> (sig a -> sig b) -> sig (a -> b)
+  grab :: (sig a -> sig b) -> sig (a -> b)
 
 
 data Code (tres :: *)
@@ -73,7 +73,7 @@ instance Machine Identity where
   ident = pure id
   comp = liftA2 (.)
   pure' = pure
-  grab _ = coerce
+  grab = coerce
 
 class Smurf (f :: k -> *) (papa :: *) | f -> papa where
   smurf :: Machine m => f r -> m papa
@@ -205,7 +205,7 @@ resmurf = undefined
 
 instance Smurf (Def hd) (arg->res) => Smurf (Alt res hd) (arg->res) where
   smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
-       = grab fun (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
+       = grab (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
 
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
