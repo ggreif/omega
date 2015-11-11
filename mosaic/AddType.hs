@@ -48,6 +48,9 @@ class {-Category sig =>-} Machine (sig :: * -> *) where
   entag :: Constr' tag typ ca -> sig typ
   detag :: Tor ca tag typ => expr ca f -> sig typ
   --detag :: Tor Z tag typ => Plus Z f -> sig typ
+  --detag1 :: Tor S tag typ => Plus (S a) f -> sig typ -- typ ^ -1 ???
+  ---detag1 :: Tor ca tag typ => expr (ca a) f -> sig typ -- typ ^ -1 ???
+  detagWith :: Constr' tag (a->b) (ca :: c -> c) -> sig b -> sig a
   ident :: sig (a -> a)
   comp :: sig (b -> c) -> sig (a -> b) -> sig (a -> c)
   pure' :: a -> sig a
@@ -183,29 +186,17 @@ data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
   --Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a . SamePapa hd (ca a) a) -> (forall a m . (Machine m, Papa (hd (ca a)) ~ Papa (hd a), Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
   Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Papa (hd (ca a)) ~ Papa (hd a), Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
 
-instance Smurf (Def hd) => Smurf (Alt hd) where
-  type Papa (Alt hd) = Papa (Def hd)
-  -- smurf (Constr' :=> )
-  -----smurf (Tri con prox fun sm :: Alt hd f) = grab (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
-  smurf :: Alt hd f -> m (Papa (Def hd))
-  --smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
-  --     = grab fun (\arg -> (give prox (pure' undefined) (sm fun)))
- ---- smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
- ----      = grab fun (\(arg :: hd arg f') -> (give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (resmurf (Proxy :: Proxy arg) (Proxy :: Proxy ca) (Proxy :: Proxy hd) (sm fun))))
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
 --a1' = Tri ConstrS Proxy PlusS (unsafeCoerce (Same (Proxy Proxy)) smurf
 a1' = Tri ConstrS Proxy PlusS smurf
 
-resmurf :: Proxy a -> Proxy ca -> Proxy hd -> m (Papa (hd (ca a))) -> m (Papa (hd a))
-resmurf = undefined
-
 -}
 
-instance Smurf (Def hd) (arg->res) => Smurf (Alt res hd) (arg->res) where
-  smurf (Tri con (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
-       = grab (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
+instance Smurf (Def hd) (arg->res) => Smurf (Alt arg res hd) (arg->res) where
+  smurf (Tri con@Constr' (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
+       = grab (\arg -> give prox (smurf (undefined :: Def hd f) `app` (detagWith con arg)) (sm fun))
 
 
 instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
@@ -213,7 +204,7 @@ instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
     where plusN = smurf (given :: Jokey (Nat->Nat) (Plus n) f)
 
 
-data Alt (res :: *) (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
-  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt res hd f
+data Alt (arg :: *) (res :: *) (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
+  Tri :: Smurf (Def hd) (arg->res) => Constr' tag (arg->arg) ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt arg res hd f
 
 a1 = Tri ConstrS Proxy PlusS smurf
