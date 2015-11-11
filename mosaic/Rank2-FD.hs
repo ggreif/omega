@@ -10,7 +10,7 @@ data Bar where
   B0 :: (forall a . Integral a => f a) -> (forall a b . (Integral a, Hyp (f a) b) => f a -> b) -> Bar
   B0' :: (forall a . Integral a => f a) -> (forall a . (Integral a, Hyp (f a) a) => f a -> a) -> Bar
   B0'' :: (forall a . Integral a => f a) -> (forall a . (Hyp (f Integer) Integer) => f Integer -> Integer) -> Bar
-  B1 :: (forall a . Integral a => f a) -> (forall a b . Integral b => (Foo (f a) b) => f a -> b) -> Bar
+  B1 :: (forall a . Integral a => f a) -> (forall a b . (Foo (f a) b) => f a -> b) -> Bar
 
 
 class Foo a b | a -> b where
@@ -37,6 +37,7 @@ instance Foo Bar Int where
 
 --t0 = B0 (Just 42) foo -- I want this
 t0' = B0' (Just 42) foo
-t0l = B0 ([42]) foo -- and this
+--t0l = B0 ([42]) foo -- and this
 t0'' = B0'' ([42]) foo
-t1 = B1 ([42]) foo
+t1m = B1 (Just 42) foo
+t1 = B1 [42] foo
