@@ -204,7 +204,7 @@ resmurf = undefined
 -}
 
 instance Smurf (Def hd) (arg->res) => Smurf (Alt res hd) (arg->res) where
-  smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
+  smurf (Tri con (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
        = grab (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
 
 
