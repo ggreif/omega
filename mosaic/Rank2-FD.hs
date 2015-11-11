@@ -1,4 +1,4 @@
-{-# LANGUAGE FunctionalDependencies, RankNTypes, GADTs, FlexibleContexts, UndecidableInstances, PolyKinds #-}
+{-# LANGUAGE FunctionalDependencies, RankNTypes, GADTs, FlexibleContexts, UndecidableInstances, PolyKinds, FlexibleInstances #-}
 
 -- THIS FILE IS JUST FOR HUNTING
 --  DOWN A PROBLEM experienced in AddType.hs
@@ -7,8 +7,10 @@
 import Data.Proxy
 
 data Bar where
-  B0 :: Proxy f'{-unneeded-} -> (forall a . Integral a => f a) -> (forall a . (Integral a, Hyp (f a) b) => f a -> b) -> Bar
-
+  B0 :: (forall a . Integral a => f a) -> (forall a b . (Integral a, Hyp (f a) b) => f a -> b) -> Bar
+  B0' :: (forall a . Integral a => f a) -> (forall a . (Integral a, Hyp (f a) a) => f a -> a) -> Bar
+  B0'' :: (forall a . Integral a => f a) -> (forall a . (Hyp (f Integer) Integer) => f Integer -> Integer) -> Bar
+  B1 :: (forall a . Integral a => f a) -> (forall a b . Integral b => (Foo (f a) b) => f a -> b) -> Bar
 
 
 class Foo a b | a -> b where
@@ -16,15 +18,25 @@ class Foo a b | a -> b where
 
 class Hyp a b | a -> b
 
-instance (Integral a, Hyp (Maybe a) Integer) => Foo (Maybe a) Integer where
+instance (Integral a, Hyp (Maybe a) a) => Foo (Maybe a) a where
   foo Nothing = 0
-  foo (Just a) = toInteger a
+  foo (Just a) = a
+
+instance Hyp [Integer] Integer => Foo [Integer] Integer where
+  foo [] = 0
+  foo [a] = a
 
 
-supplyHyp :: (forall a . (Integral a, Hyp (f a) b) => ((f a) -> b, f a)) -> Int
+supplyHyp :: Integral a => (Hyp (f a) b => (f a -> b, f a)) -> b
 supplyHyp = undefined
 
 instance Foo Bar Int where
-  foo (B0 Proxy d fo) = supplyHyp (fo, d)
+  foo (B0 d fo) = supplyHyp (fo, d)
+  foo (B0' d fo) = supplyHyp (fo, d)
+  foo (B0'' d fo) = fromIntegral (supplyHyp (fo, d))
 
-t1 = B0 (Proxy :: Proxy Maybe) (Just 42) foo
+--t0 = B0 (Just 42) foo -- I want this
+t0' = B0' (Just 42) foo
+t0l = B0 ([42]) foo -- and this
+t0'' = B0'' ([42]) foo
+t1 = B1 ([42]) foo
