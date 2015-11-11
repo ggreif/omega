@@ -182,10 +182,6 @@ type family Baz con expr where
 data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
   (:=>) :: Constr' tag typ ca -> hd ca f -> Alt hd f'
   (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt hd f'
-  --Tri :: (Papa (hd (ca a)) ~ bla) => Constr' tag typ ca -> hd (ca a) f -> (forall m . (Machine m, Given bla (hd a)) => hd (ca a) f -> m bla) -> Alt f
-  --Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a . SamePapa hd (ca a) a) -> (forall a m . (Machine m, Papa (hd (ca a)) ~ Papa (hd a), Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
-  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Papa (hd (ca a)) ~ Papa (hd a), Given (Papa (hd (ca a))) (hd a)) => hd (ca a) (f a) -> m (Papa (hd (ca a)))) -> Alt hd f
-
 
 a0 = ConstrZ :=> PlusZ
 a1 = ConstrS :==> PlusS
@@ -205,6 +201,6 @@ instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
 
 
 data Alt (arg :: *) (res :: *) (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
-  Tri :: Smurf (Def hd) (arg->res) => Constr' tag (arg->arg) ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt arg res hd f
+  Tri :: Constr' tag (arg->arg) ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt arg res hd f
 
 a1 = Tri ConstrS Proxy PlusS smurf
