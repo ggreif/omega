@@ -227,7 +227,7 @@ resmurf = undefined
 
 -}
 
-instance Smurf (Def hd) (arg->res) => Smurf (Alt hd) (arg->res) where
+instance Smurf (Def hd) (arg->res) => Smurf (Alt res hd) (arg->res) where
   --smurf :: Machine m => Alt hd f -> m (arg->res)
   smurf (Tri (con :: Constr' tag typ ca) (prox :: Proxy (hd a)) (fun :: hd (ca a) (f a)) sm)
        = grab fun (\arg -> give prox (smurf (undefined :: Def hd f) `app` arg{- -1 -}) (sm fun))
@@ -240,7 +240,7 @@ instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
     where plusN = smurf (given :: Jokey (Nat->Nat) (Plus n) f)
 
 
-data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
-  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m typ'. (Machine m, Given typ' (hd a){-, Smurf (hd (ca a)) typ'-}) => hd (ca a) (f a) -> m typ') -> Alt hd f
+data Alt (res :: *) (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
+  Tri :: Constr' tag typ ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt res hd f
 
 a1' = Tri ConstrS Proxy PlusS smurf
