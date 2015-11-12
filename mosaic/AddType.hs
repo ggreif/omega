@@ -127,7 +127,7 @@ instance (Smurf c0 papa, Smurf c1 papa) => Smurf (c0 `Match2` c1) papa where
 data Def (d :: k -> l -> *) (f :: k -> l)
 
 instance Smurf (Def Plus) (Nat -> Nat -> Nat) where
-  -- smurf _ = grab (const $ smurf (PlusZ `Match2` PlusZ)) -- machine needs to give support: grab first arg and pass it to Match2?
+  smurf _ = smurf aX
 
 -- Match2 lifts
   --      two    Plus :: Nat -> (Nat -> Nat) -> *
@@ -204,5 +204,9 @@ data Alt (arg :: *) (res :: *) (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l)
   (:=>) :: Constr' tag arg ca -> (forall a . hd ca (f a)) -> Alt arg res hd f
   Tri :: Constr' tag (arg->arg) ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt arg res hd f
 
+  Join :: Alt arg res hd f -> Alt arg res hd f -> Alt arg res hd f
+
 a0 = ConstrZ :=> PlusZ
 a1 = Tri ConstrS Proxy PlusS smurf
+
+aX = a0 `Join` a1
