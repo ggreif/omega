@@ -201,6 +201,8 @@ instance Given (Nat->Nat) (Plus n) => Smurf (Plus (S n)) (Nat->Nat) where
 
 
 data Alt (arg :: *) (res :: *) (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
+  (:=>) :: Constr' tag arg ca -> (forall a . hd ca (f a)) -> Alt arg res hd f
   Tri :: Constr' tag (arg->arg) ca -> (forall a . Proxy (hd a)) -> (forall a . hd (ca a) (f a)) -> (forall a m . (Machine m, Given res (hd a)) => hd (ca a) (f a) -> m res) -> Alt arg res hd f
 
+a0 = ConstrZ :=> PlusZ
 a1 = Tri ConstrS Proxy PlusS smurf
