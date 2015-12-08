@@ -174,19 +174,12 @@ type family Baz con expr where
   Baz (Constr' tag (fro->to) ca) (hd (ca arg)) = fro -> Papa (hd (ca arg))
 -}
 
---data SamePapa hd a b where
---  Same :: (Papa (hd a) ~ Papa (hd b)) => Proxy a -> Proxy b -> SamePapa hd a b
 
 {-
 
 data Alt (hd :: k -> (k -> l) -> *) (coarg :: k -> k -> l) where
   (:=>) :: Constr' tag typ ca -> hd ca f -> Alt hd f'
   (:==>) :: Constr' tag typ ca -> hd (ca a) f -> Alt hd f'
-
-a0 = ConstrZ :=> PlusZ
-a1 = ConstrS :==> PlusS
---a1' = Tri ConstrS Proxy PlusS (unsafeCoerce (Same (Proxy Proxy)) smurf
-a1' = Tri ConstrS Proxy PlusS smurf
 
 -}
 
