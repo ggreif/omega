@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators, ViewPatterns, TemplateHaskell #-}
 
 import GHC.Exts
+import Language.Haskell.TH
 
 data family (refin :: k) ° typ
 
@@ -14,11 +15,14 @@ newtype instance (False ° Bool) = RefinedFalse Bool
 test :: (Just a ° Maybe b) -> b
 test (coerce -> (Just a)) = a
 
-[d|
- test1 :: (Just a ° Maybe b) -> b
- -- test1 (Just a) = a -- WE WANT HERE
- test1 (RefinedJust (Just a)) = a
+t1 =
+ [d|
+ test1 :: (Just a ° Maybe b) -> a ° b
+ test1 (Just a) = a -- WE WANT HERE
+ --test1 (RefinedJust (Just a)) = a
   |]
+-- HINT: runQ t1 >>= print
+
 
 -- Plugin's job: test_aww :: (Just a ° Maybe Bool) -> a ° Bool
 test_aww :: (Just True ° Maybe Bool) -> True ° Bool
