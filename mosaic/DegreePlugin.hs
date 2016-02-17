@@ -2,9 +2,6 @@
 
 import GHC.Exts
 
---type family (refin :: k) ° typ
---data (refin :: k) ° typ
---newtype (refin :: k) ° typ = Refined typ
 data family (refin :: k) ° typ
 
 newtype instance (Just a ° Maybe b) = RefinedJust (Maybe b)
