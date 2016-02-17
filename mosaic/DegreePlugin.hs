@@ -1,17 +1,17 @@
 {-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators #-}
 
---type family (refin :: k)  typ
---data (refin :: k)  typ
---newtype (refin :: k)  typ = Refined typ
-data family (refin :: k)  typ --  = Refined typ
+--type family (refin :: k) ° typ
+--data (refin :: k) ° typ
+--newtype (refin :: k) ° typ = Refined typ
+data family (refin :: k) ° typ --  = Refined typ
 
-newtype instance (Just a  Maybe b) = RefinedJust (Maybe b)
-newtype instance (Nothing  Maybe b) = RefinedNothing (Maybe b)
+newtype instance (Just a ° Maybe b) = RefinedJust (Maybe b)
+newtype instance (Nothing ° Maybe b) = RefinedNothing (Maybe b)
 
-test :: (Just a  Maybe b) -> b
+test :: (Just a ° Maybe b) -> b
 test (RefinedJust (Just a)) = a
 
-test_aww :: (Just a  Maybe b) -> (a  b)
+test_aww :: (Just a ° Maybe b) -> (a ° b)
 test_aww (RefinedJust (Just a)) = undefined -- a
 
 
