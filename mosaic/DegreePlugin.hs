@@ -1,4 +1,6 @@
-{-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators, ViewPatterns, TemplateHaskell #-}
+
+import GHC.Exts
 
 --type family (refin :: k) ° typ
 --data (refin :: k) ° typ
@@ -8,11 +10,23 @@ data family (refin :: k) ° typ
 newtype instance (Just a ° Maybe b) = RefinedJust (Maybe b)
 newtype instance (Nothing ° Maybe b) = RefinedNothing (Maybe b)
 
-test :: (Just a ° Maybe b) -> b
-test (RefinedJust (Just a)) = a
+newtype instance (True ° Bool) = RefinedTrue Bool
+newtype instance (False ° Bool) = RefinedFalse Bool
 
-test_aww :: (Just a ° Maybe b) -> (a ° b)
-test_aww (RefinedJust (Just a)) = undefined -- a
+
+test :: (Just a ° Maybe b) -> b
+test (coerce -> (Just a)) = a
+
+[d|
+ test1 :: (Just a ° Maybe b) -> b
+ -- test1 (Just a) = a -- WE WANT HERE
+ test1 (RefinedJust (Just a)) = a
+  |]
+
+-- Plugin's job: test_aww :: (Just a ° Maybe Bool) -> a ° Bool
+test_aww :: (Just True ° Maybe Bool) -> True ° Bool
+test_aww (RefinedJust (Just a)) = coerce a
+--test_aww (coerce -> (Just a)) = coerce a -- BUG?? Couldn't match representation of type ‘a0’ with that of ‘Bool’
 
 
 -- PLAN: can we outsource the type checking of this to a plugin
