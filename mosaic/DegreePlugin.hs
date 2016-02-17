@@ -5,11 +5,11 @@ import Language.Haskell.TH
 
 data family (refin :: k) ° typ
 
-newtype instance (Just a ° Maybe b) = RefinedJust (Maybe b)
-newtype instance (Nothing ° Maybe b) = RefinedNothing (Maybe b)
+newtype instance (Just a ° Maybe b) = ΘJust (Maybe b)
+newtype instance (Nothing ° Maybe b) = ΘNothing (Maybe b)
 
-newtype instance (True ° Bool) = RefinedTrue Bool
-newtype instance (False ° Bool) = RefinedFalse Bool
+newtype instance (True ° Bool) = ΘTrue Bool
+newtype instance (False ° Bool) = ΘFalse Bool
 
 
 test :: (Just a ° Maybe b) -> b
@@ -19,14 +19,13 @@ t1 =
  [d|
  test1 :: (Just a ° Maybe b) -> a ° b
  test1 (Just a) = a -- WE WANT HERE
- --test1 (RefinedJust (Just a)) = a
   |]
 -- HINT: runQ t1 >>= print
 
 
 -- Plugin's job: test_aww :: (Just a ° Maybe Bool) -> a ° Bool
 test_aww :: (Just True ° Maybe Bool) -> True ° Bool
-test_aww (RefinedJust (Just a)) = coerce a
+test_aww (ΘJust (Just a)) = coerce a
 --test_aww (coerce -> (Just a)) = coerce a -- BUG?? Couldn't match representation of type ‘a0’ with that of ‘Bool’
 
 
