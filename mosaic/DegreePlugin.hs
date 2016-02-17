@@ -18,7 +18,7 @@ test_aww (RefinedJust (Just a)) = undefined -- a
 -- PLAN: can we outsource the type checking of this to a plugin
 --       in the style of http://adam.gundry.co.uk/pub/typechecker-plugins/
 
--- () must be injective in the second arg
+-- (°) must be injective in the second arg
 -- implement the right refinement semantics
 
 -- Can a plugin see
