@@ -16,13 +16,13 @@ newtype instance False ° Bool = ΘFalse Bool
 test :: Just a ° Maybe b -> b
 test (coerce -> Just a) = a
 
-type family (l :: k) .| (r :: k) :: k
-infixl 2 .|
+type family (l :: k) ? (r :: k) :: k
+infixl 2 ?
 
 t1 =
  [d|
  test1 :: Just a ° Maybe b -> a ° b
- test2 :: Just a .| Nothing ° Maybe b -> Maybe (a ° b)
+ test2 :: Just a ? Nothing ° Maybe b -> Maybe (a ° b)
  test1 (Just a) = a -- WE WANT HERE
  test2 (Just a) = Just a -- WE WANT HERE
  test2 Nothing = Nothing -- WE WANT HERE
