@@ -4,27 +4,34 @@ import GHC.Exts
 import Language.Haskell.TH
 
 data family (refin :: k) ° typ
+infix 1 °
 
-newtype instance (Just a ° Maybe b) = ΘJust (Maybe b)
-newtype instance (Nothing ° Maybe b) = ΘNothing (Maybe b)
+newtype instance Just a ° Maybe b = ΘJust (Maybe b)
+newtype instance Nothing ° Maybe b = ΘNothing (Maybe b)
 
-newtype instance (True ° Bool) = ΘTrue Bool
-newtype instance (False ° Bool) = ΘFalse Bool
+newtype instance True ° Bool = ΘTrue Bool
+newtype instance False ° Bool = ΘFalse Bool
 
 
-test :: (Just a ° Maybe b) -> b
-test (coerce -> (Just a)) = a
+test :: Just a ° Maybe b -> b
+test (coerce -> Just a) = a
+
+type family (l :: k) .| (r :: k) :: k
+infixl 2 .|
 
 t1 =
  [d|
- test1 :: (Just a ° Maybe b) -> a ° b
+ test1 :: Just a ° Maybe b -> a ° b
+ test2 :: Just a .| Nothing ° Maybe b -> Maybe (a ° b)
  test1 (Just a) = a -- WE WANT HERE
+ test2 (Just a) = Just a -- WE WANT HERE
+ test2 Nothing = Nothing -- WE WANT HERE
   |]
 -- HINT: runQ t1 >>= print
 
 
--- Plugin's job: test_aww :: (Just a ° Maybe Bool) -> a ° Bool
-test_aww :: (Just True ° Maybe Bool) -> True ° Bool
+-- Plugin's job: test_aww :: Just a ° Maybe Bool -> a ° Bool
+test_aww :: Just True ° Maybe Bool -> True ° Bool
 test_aww (ΘJust (Just a)) = coerce a
 --test_aww (coerce -> (Just a)) = coerce a -- BUG?? Couldn't match representation of type ‘a0’ with that of ‘Bool’
 
