@@ -28,6 +28,7 @@ t1 =
  test2 Nothing = Nothing -- WE WANT HERE
  test3 :: forall a b . Just a ° Maybe b -> a ° b -- hint that /a/ comes from outside (i.e. not an existential/pi type)
  test3 (Just a) = a -- WE WANT HERE
+ test4 :: Just a ° Maybe b -> Maybe b -- /a/ is considered to be existentially bound by a pi
   |]
 -- HINT: runQ t1 >>= print
 
