@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators, ViewPatterns, TemplateHaskell #-}
+{-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators, ViewPatterns, TemplateHaskell, RankNTypes #-}
 
 import GHC.Exts
 import Language.Haskell.TH
@@ -26,6 +26,8 @@ t1 =
  test1 (Just a) = a -- WE WANT HERE
  test2 (Just a) = Just a -- WE WANT HERE
  test2 Nothing = Nothing -- WE WANT HERE
+ test3 :: forall a b . Just a ° Maybe b -> a ° b -- hint that /a/ comes from outside (i.e. not an existential/pi type)
+ test3 (Just a) = a -- WE WANT HERE
   |]
 -- HINT: runQ t1 >>= print
 
