@@ -49,3 +49,11 @@ test_aww (ΘJust (Just a)) = coerce a
 --      test_aww (Just a) = a
 -- at all?
 -- Or do we need Template haskell for that to massage it first?
+
+-- * Todos
+
+-- - add a Servant-style typeclass (fundep?) to create (pattern-matching?) wrapper
+--   around a degree-typed function, eliminating the degrees in the process.
+-- - in TH consider universally qualified tyvars coming from a degree as
+--   /scope-extended/ tyvars (a.k.a. pi-binders)
+
