@@ -1,7 +1,9 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators, ViewPatterns, TemplateHaskell, RankNTypes #-}
 
-import Data.Bool
-import Data.Maybe
+import Prelude
 import GHC.Exts
 import Language.Haskell.TH
 
@@ -35,6 +37,13 @@ t1 =
   |]
 -- HINT: runQ t1 >>= print
 
+
+class Wrappable a b | a -> b where
+  wrap :: a -> b
+
+
+instance Wrappable (Just a ° Maybe b -> c) (Maybe b -> c) where
+  wrap f = f . coerce
 
 -- Plugin's job: test_aww :: Just a ° Maybe Bool -> a ° Bool
 test_aww :: Just True ° Maybe Bool -> True ° Bool
