@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds, KindSignatures, PolyKinds, TypeFamilies, TypeOperators, ViewPatterns, TemplateHaskell, RankNTypes #-}
 
+import Data.Bool
+import Data.Maybe
 import GHC.Exts
 import Language.Haskell.TH
 
@@ -29,6 +31,7 @@ t1 =
  test3 :: forall a b . Just a ° Maybe b -> a ° b -- hint that /a/ comes from outside (i.e. not an existential/pi type)
  test3 (Just a) = a -- WE WANT HERE
  test4 :: Just a ° Maybe b -> Maybe b -- /a/ is considered to be existentially bound by a pi
+ test4 it@Just{} = it
   |]
 -- HINT: runQ t1 >>= print
 
