@@ -31,3 +31,7 @@ The above image represents the dynamic value of the argument as passed to `start
 ```
 starts4 (Cons 4 $ Cons 2 $ something)
 ```
+
+# Connection to _termination_ #
+
+Both strictness and termination can hopefully be treated on equal grounds by tracking [!_refinement coeffects_](https://github.com/ggreif/omega/blob/wiki/Coeffects.svg)
