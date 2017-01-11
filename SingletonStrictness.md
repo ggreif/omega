@@ -34,4 +34,4 @@ starts4 (Cons 4 $ Cons 2 $ something)
 
 # Connection to _termination_ #
 
-Both strictness and termination can hopefully be treated on equal grounds by tracking [_refinement coeffects_](https://github.com/ggreif/omega/blob/wiki/Coeffects.svg). There is also a proposed notation for [such coeffects](RefinementCoeffectNotation.svg).
+Both strictness and termination can hopefully be treated on equal grounds by tracking [_refinement coeffects_](Coeffects.svg). There is also a proposed notation for [such coeffects](RefinementCoeffectNotation.svg).
