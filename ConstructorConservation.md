@@ -6,6 +6,16 @@ data Peano = Z | S Peano
 plus Z n = n
 plus (S m) n = plus m (S n) -- tail recursive
 ```
+alternatively
+``` haskell
+plus Z = id
+plus (S m) = plus m . S
+```
+using _view patterns_
+``` haskell
+plus Z = id
+plus (S (plus -> fn)) = fn . S
+```
 
 # Introduction #
 
