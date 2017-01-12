@@ -13,7 +13,7 @@ plus (S m) = plus m . S
 ```
 using _view patterns_
 ``` haskell
-{-# language ViewPatterns #-}
+{-# LANGUAGE ViewPatterns #-}
 plus Z = id
 plus (S (plus -> fn)) = fn . S
 ```
