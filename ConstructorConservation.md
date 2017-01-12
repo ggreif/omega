@@ -1,3 +1,12 @@
+# Example #
+
+``` haskell
+data Peano = Z | S Peano
+
+plus Z n = n
+plus (S m) n = plus m (S n) -- tail recursive
+```
+
 # Introduction #
 
 When looking at all equality proofs dealing with `Nat`s there is a common principle: each line mentions the same number of `S` and `Z` in the patterns as on the RHS.
