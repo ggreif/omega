@@ -35,3 +35,7 @@ starts4 (Cons 4 $ Cons 2 $ something)
 # Connection to _termination_ #
 
 Both strictness and termination can hopefully be treated on equal grounds by tracking [_refinement coeffects_](Coeffects.svg). There is also a proposed notation for [such coeffects](RefinementCoeffectNotation.svg).
+
+# Function types #
+
+In order to run analyses on arrow types, these also need to be refined to obtain precise results from application. The idea is to [tensor the refined cases](FunctionRefinements.svg). Function definitions become intensional by refinement.
