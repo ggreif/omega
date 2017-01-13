@@ -28,7 +28,7 @@ We can also consider this a the _pattern matching is evidence creation_ principl
 
 The above image represents the dynamic value of the argument as passed to `starts4`. The opaque part is not demanded, the cloud represents a thunk (unevaluated value).
 
-```
+``` haskell
 starts4 (Cons 4 $ Cons 2 $ something)
 ```
 
