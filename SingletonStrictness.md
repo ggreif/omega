@@ -34,7 +34,7 @@ starts4 (Cons 4 $ Cons 2 $ something)
 
 # Connection to _termination_ #
 
-Both strictness and termination can hopefully be treated on equal grounds by tracking [_refinement coeffects_](Coeffects.svg). When performing a pattern match under a constructor, equality constraints are created on _refinenement types_ the same way as equality constraints arise from proper GADT pattern matches (e.g. `Refl`). There is also a proposed notation for [such coeffects](RefinementCoeffectNotation.svg).
+Both strictness and termination can hopefully be treated on equal grounds by tracking [_refinement coeffects_](Coeffects.svg). When performing a pattern match under a constructor, equality constraints are created on _refinenement types_ the same way as equality constraints (on _usual types_) already arise from proper GADT pattern matches (e.g. `Refl`). There is also a proposed notation for [such coeffects](RefinementCoeffectNotation.svg).
 
 # Function types #
 
