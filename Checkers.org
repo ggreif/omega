@@ -47,3 +47,17 @@ _Open question_: Are there joker fillers? What happens when these get passed? Wh
 
 * Combining checkers
 
+A checker corresponding to @ (the application AST node) combines the checkers of its legs below to a new compound checker.
+
+<image>
+
+* Locations
+
+Things live in the /source code space/ (AST) and each node has an implicitly assigned location.
+
+We should have the notion of /argument location/ (in abstraction) proxying the /definition location/ of things, which is opaque from the abstraction's body's perspective.
+
+** Inlining
+
+The process of inlining (i.e. replacing a left leg below and @ node with the reference pointee) relates these locations, eliminating a layer of opacity.
+
