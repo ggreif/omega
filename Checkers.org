@@ -1,0 +1,7 @@
+# Introduction
+
+We are inspired by http://bentnib.org 's idea of equational theories for type checking. There he derives type checker objects.
+At the same time adding the idea of located trees and references (into the same subtree or even outside, c.f. =letrec=).
+
+# Stuff and checkers
+
