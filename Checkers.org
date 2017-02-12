@@ -61,3 +61,24 @@ We should have the notion of /argument location/ (in abstraction) proxying the /
 
 The process of inlining (i.e. replacing a left leg below and @ node with the reference pointee) relates these locations, eliminating a layer of opacity.
 
+* The levelled groupoid
+
+Starting with level 0 (the values) we have a groupoid.
+
+** Transformers, function-typed things have the same drain and source locations
+
+type a       OOOOO    loc f (drain oriented)
+with loc at level 1
+  <image>
+type b              OOOOOOOOOO    loc f (source oriented)
+with loc at level 1
+
+/Oriented locations/ are the objects of the groupoid.
+
+@-AST-nodes connect argument source locations with transformer drain locations. This is an identification (path) in the HIT sense on level 0.
+
+On level 1, @-nodes effectively identify the (locations of) types. Which gives rise to the classical /type checking constraints/.
+
+
+
+
