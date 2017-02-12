@@ -1,9 +1,9 @@
-# Introduction
+* Introduction
 
 We are inspired by http://bentnib.org 's idea of equational theories for type checking. There he derives type checker objects.
 At the same time adding the idea of located trees and references (into the same subtree or even outside, c.f. =letrec=).
 
-# Stuff and checkers
+* Stuff and checkers
 
 
 Profunctor? <image>
@@ -16,3 +16,34 @@ Profunctor? <image>
 int.0 translates into a typechecker <image>
 
 int-2 translates into a type checker <image>
+
+** Stuff
+
+So any thing arranged in a hierarchical scheme with implicitly assigned locations is the stuff
+
+** Checkers
+
+Stuff has types (at level 1) and that has types again (at level 2) which correspond to the kinds. These also want to be checked. So checkers will live at any level. Even checkers at level 0 make sense for some stuff like (saturated) constructors.
+
+<image> will pass.
+
+We will need this for refinemennt etc. or pattern matching.
+
+So we have /things/ and /checkers/ and we can /pass/ the former to the latter (at the corresponding levels).
+
+> Analogy to QFT (quantum field theory) where particles are excitations of fields.
+
+* Universality
+
+There is a /joker/ thing at every level, which is accepted by every checker. Passing a /joker context/ one gets the real thing that can fill teh context.
+
+<image> (*): wildcard.
+
+We get the precise filler.
+
+This embeds things into the checkers.
+
+_Open question_: Are there joker fillers? What happens when these get passed? What is returned?
+
+* Combining checkers
+
