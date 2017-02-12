@@ -5,3 +5,14 @@ At the same time adding the idea of located trees and references (into the same 
 
 # Stuff and checkers
 
+
+Profunctor? <image>
+
+<image> (a hole in a context)
+<image> l, l.0, l.1 are compositional type checkers (Atkey)
+
+<image> =Z= is a reference to a constructor defined elsewhere under int.0 Similarly =succ= under int.0
+
+int.0 translates into a typechecker <image>
+
+int-2 translates into a type checker <image>
