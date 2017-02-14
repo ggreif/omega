@@ -85,9 +85,9 @@ On level 1, @-nodes effectively identify the (locations of) types. Which gives r
 |.| *|
 |.| *|
 |3| *|
-|2| *| ∏
-|1| *| π | Λ
-|0|  |   | λ
+|2| *| ∏||
+|1|  | π | Λ|
+|0|  |   | λ|
 |level | 0 | 1|2 |3 | distance
 
 We have a grid of abstractors, where λ is at (2,0) and π is at (1,1).
@@ -103,3 +103,11 @@ Of course we want dependencies (as in π) aequi-levelled, so we use refinement t
 <image>
 
 where a, a', a'' etc. are isomorphic but on higher levels.
+
+* Quantifiers and the groupoid
+
+The left leg of a λ-node is a portal for other (sometimes unknown-location) things.
+
+AST: @ and λ-nodes connect sources with drains.
+
+Checkers: ensure that values travel type-safe.
