@@ -79,6 +79,27 @@ with loc at level 1
 
 On level 1, @-nodes effectively identify the (locations of) types. Which gives rise to the classical /type checking constraints/.
 
+* Lambdas and quantifiers
 
+|level | star | | | | ...
+|.| *|
+|.| *|
+|3| *|
+|2| *| ∏
+|1| *| π | Λ
+|0|  |   | λ
+|level | 0 | 1|2 |3 | distance
 
+We have a grid of abstractors, where λ is at (2,0) and π is at (1,1).
 
+Images to fill in here...
+
+** Quantifiers
+
+<image> at some level
+
+Of course we want dependencies (as in π) aequi-levelled, so we use refinement types for λ, Λ. There is no problem,
+
+<image>
+
+where a, a', a'' etc. are isomorphic but on higher levels.
