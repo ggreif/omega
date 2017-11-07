@@ -27,14 +27,17 @@ import Data.Kind
 -- - express =data Foo :: *=, i.e. inhabitance
 -- - express that /star/ is nullary
 -- - express that =(->)= is binary
+-- - check sameness of foci
 
 class Univ u where
   constr :: (forall t . u f (t:ctx)) -> u f ctx
   use :: u (Just t) (t:ctx)
   up :: u (Just t) (t:ctx) -> u f (s:t:ctx)
   star'arr :: (forall star arr . u Nothing '[arr, star]) -> u Nothing '[]
+  gather :: u (Just t) ctx -> u Nothing '[t] -> u f ctx
 
 t1 :: forall u . Univ u => u Nothing '[]
-t1 = star'arr $ constr (constr $ up $ up $ up (use :: u (Just _) _))
+--t1 = star'arr $ constr (constr $ up $ up $ up (use :: u (Just _) _))
+t1 = star'arr $ constr (constr $ gather (up $ up $ up use) (undefined :: u Nothing _))
 
 --sameness :: a -> a 
