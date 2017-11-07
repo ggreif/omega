@@ -28,15 +28,13 @@ import Data.Kind
 -- - express that /star/ is nullary
 -- - express that =(->)= is binary
 
-class u ~ v t => Univ u where
-  --type Focus u f (ctx :: [*]) -- :: f -> u ctx
-  constr :: (forall t . u (t:ctx)) -> u ctx
-  --use :: Focus u t (t:ctx)
-  use :: u (t:ctx)
-  up :: u (t:ctx) -> u (s:t:ctx)
-  star'arr :: (forall star arr . u '[arr, star]) -> u '[]
+class Univ u where
+  constr :: (forall t . u f (t:ctx)) -> u f ctx
+  use :: u (Just t) (t:ctx)
+  up :: u f' (t:ctx) -> u f (s:t:ctx)
+  star'arr :: (forall star arr . u Nothing '[arr, star]) -> u Nothing '[]
 
-t1 :: Univ u => u '[]
-t1 = constr (constr $ up use)
+t1 :: Univ u => u Nothing '[]
+t1 = star'arr $ constr (constr $ up $ up use)
 
 --sameness :: a -> a 
