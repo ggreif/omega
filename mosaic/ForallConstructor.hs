@@ -12,6 +12,7 @@
 -- - Disregard levels for now
 -- - let's have one (open) kind and create type constructors
 -- - only have linear places (hrm, no places at all in the beginning)
+-- - places follow cons, not snoc order
 
 -- ** Task
 -- define in Univ something like
@@ -21,6 +22,7 @@
 class Univ u where
   constr :: (forall t . u (t:ctx)) -> u ctx
   use :: u (t:ctx)
+  up :: u (t:ctx) -> u (s:t:ctx)
 
 t1 :: Univ u => u '[]
-t1 = constr (constr use)
+t1 = constr (constr $ up use)
