@@ -18,11 +18,20 @@
 -- define in Univ something like
 --     data Foo
 --     data Bar
+--     fb :: Foo -> Bar
+--     data Quux a
+--     Refl :: a :~: a
+
+-- ** Open Problems
+-- - express =data Foo :: *=, i.e. inhabitance
+-- - express that /star/ is nullary
+-- - express that =(->)= is binary
 
 class Univ u where
   constr :: (forall t . u (t:ctx)) -> u ctx
   use :: u (t:ctx)
   up :: u (t:ctx) -> u (s:t:ctx)
+  star'arr :: (forall star arr . u '[arr, star]) -> u '[]
 
 t1 :: Univ u => u '[]
 t1 = constr (constr $ up use)
