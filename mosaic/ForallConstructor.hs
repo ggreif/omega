@@ -1,5 +1,6 @@
-{-# language DataKinds, RankNTypes, TypeOperators, TypeInType #-}
+{-# language DataKinds, RankNTypes, TypeOperators, TypeFamilies, TypeInType #-}
 
+import Data.Kind
 
 -- * Idea
 -- Every rank-N forall gives rise to a type that only unifies with itself
@@ -22,16 +23,20 @@
 --     data Quux a
 --     Refl :: a :~: a
 
--- ** Open Problems
+-- ** Open problems
 -- - express =data Foo :: *=, i.e. inhabitance
 -- - express that /star/ is nullary
 -- - express that =(->)= is binary
 
-class Univ u where
+class u ~ v t => Univ u where
+  --type Focus u f (ctx :: [*]) -- :: f -> u ctx
   constr :: (forall t . u (t:ctx)) -> u ctx
+  --use :: Focus u t (t:ctx)
   use :: u (t:ctx)
   up :: u (t:ctx) -> u (s:t:ctx)
   star'arr :: (forall star arr . u '[arr, star]) -> u '[]
 
 t1 :: Univ u => u '[]
 t1 = constr (constr $ up use)
+
+--sameness :: a -> a 
