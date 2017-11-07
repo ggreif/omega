@@ -1,4 +1,4 @@
-{-# language DataKinds, RankNTypes, TypeInType #-}
+{-# language DataKinds, RankNTypes, TypeOperators, TypeInType #-}
 
 
 -- * Idea
@@ -19,5 +19,8 @@
 --     data Bar
 
 class Univ u where
-  constr :: (forall t . u '[t]) -> u '[]
+  constr :: (forall t . u (t:ctx)) -> u ctx
+  use :: u (t:ctx)
 
+t1 :: Univ u => u '[]
+t1 = constr (constr use)
