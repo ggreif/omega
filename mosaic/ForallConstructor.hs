@@ -1,4 +1,4 @@
-{-# language DataKinds, RankNTypes, TypeOperators, TypeFamilies, TypeInType #-}
+{-# language ScopedTypeVariables, DataKinds, RankNTypes, TypeOperators, TypeFamilies, TypeInType #-}
 
 import Data.Kind
 
@@ -31,10 +31,10 @@ import Data.Kind
 class Univ u where
   constr :: (forall t . u f (t:ctx)) -> u f ctx
   use :: u (Just t) (t:ctx)
-  up :: u f' (t:ctx) -> u f (s:t:ctx)
+  up :: u (Just t) (t:ctx) -> u f (s:t:ctx)
   star'arr :: (forall star arr . u Nothing '[arr, star]) -> u Nothing '[]
 
-t1 :: Univ u => u Nothing '[]
-t1 = star'arr $ constr (constr $ up $ up use)
+t1 :: forall u . Univ u => u Nothing '[]
+t1 = star'arr $ constr (constr $ up $ up $ up (use :: u (Just _) _))
 
 --sameness :: a -> a 
