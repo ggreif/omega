@@ -29,13 +29,18 @@ import Data.Kind
 -- - express that =(->)= is binary
 -- - check sameness of foci
 
--- ** Modeling inhabitance
+-- ** Modeling inhabitation
 -- we want something like (0: Just 'l', 1: Maybe Char, 2: *)
 -- which we could type as '[(0, App just ell), (1, App maybe char), (2, star)]
 -- or possibly '[App just ell, App maybe char, star 2]
 -- anyway sticking an inhabitant under a RankN-bound name is tricky
 -- Plan a)
 -- can we use a constraint and say (forall just . TypeOf just ~ '[(->) `App` fresh `App` (maybe `App` fresh), star 2])
+
+foo :: b -> (forall a. a ~ b => a -> a) -> b
+foo b f = head (f $ pure b)
+--foo b f = f b
+
 
 class Univ u where
   constr :: (forall t . u f (t:ctx)) -> u f ctx
@@ -48,6 +53,6 @@ class Univ u where
 t1,t2 :: forall u . Univ u => u Nothing '[]
 --t1 = star'arr $ constr (constr $ up $ up $ up (use :: u (Just _) _))
 t1 = star'arr $ constr (constr $ gather (up $ up $ up use) (undefined {-:: u Nothing _-}))
-t2 = star'arr $ constr (constr $ gather2 (up $ up $ up use) (up $ up use) (undefined))
+t2 = star'arr $ constr (constr $ gather2 (up $ up $ up use) (up $ up $ up use) (undefined))
 
 --sameness :: a -> a 
