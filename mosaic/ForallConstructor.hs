@@ -32,7 +32,7 @@ import Data.Kind
 class Univ u where
   constr :: (forall t . u f (t:ctx)) -> u f ctx
   use :: u (Just t) (t:ctx)
-  up :: u (Just t) (t:ctx) -> u (Just t) (s:t:ctx)
+  up :: u (Just f) ctx -> u (Just f) (s:ctx)
   star'arr :: (forall star arr . u Nothing '[arr, star]) -> u Nothing '[]
   gather :: u (Just t) ctx -> u Nothing '[t] -> u f ctx
   gather2 :: u (Just t) ctx -> u (Just t) ctx -> u Nothing '[t] -> u f ctx
@@ -40,6 +40,6 @@ class Univ u where
 t1,t2 :: forall u . Univ u => u Nothing '[]
 --t1 = star'arr $ constr (constr $ up $ up $ up (use :: u (Just _) _))
 t1 = star'arr $ constr (constr $ gather (up $ up $ up use) (undefined {-:: u Nothing _-}))
-t2 = star'arr $ constr (constr $ gather2 (up $ up $ up use) (up $ up $ up use) (undefined))
+t2 = star'arr $ constr (constr $ gather2 (up $ up $ up use) (up $ up use) (undefined))
 
 --sameness :: a -> a 
