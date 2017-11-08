@@ -37,7 +37,7 @@ import Data.Kind
 -- Plan a)
 -- can we use a constraint and say (forall just . TypeOf just ~ '[(->) `App` fresh `App` (maybe `App` fresh), star 2])
 
-foo :: b -> (forall a. a ~ b => a -> a) -> b
+foo :: b -> (forall a. a ~ [b] => a -> a) -> b
 foo b f = head (f $ pure b)
 --foo b f = f b
 
