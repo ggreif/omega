@@ -36,10 +36,13 @@ import Data.Kind
 -- anyway sticking an inhabitant under a RankN-bound name is tricky
 -- Plan a)
 -- can we use a constraint and say (forall just . TypeOf just ~ '[(->) `App` fresh `App` (maybe `App` fresh), star 2])
+-- Plan b)
+-- employ TypeInType and ornament the kind
+-- (forall just :: With '[(->) `App` fresh `App` (maybe `App` fresh), star 2]).
 
-foo :: b -> (forall a. a ~ [b] => a -> a) -> b
-foo b f = head (f $ pure b)
---foo b f = f b
+foo :: b -> (forall a. a ~ [b] => a -> b) -> b
+foo b f = f $ pure b
+bar = foo 'a' head
 
 
 class Univ u where
