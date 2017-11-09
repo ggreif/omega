@@ -45,7 +45,9 @@ foo :: b -> (forall a. a ~ [b] => a -> b) -> b
 foo b f = f $ pure b
 bar = foo 'a' head
 
-planb :: (forall a. forall (b :: a) . a -> Proxy b)
+data Below t
+
+planb :: (forall a. forall (b :: Below a) . forall (c :: Below b) . a -> Proxy c)
 planb = \_ -> Proxy
 
 
