@@ -1,4 +1,4 @@
-{-# language ScopedTypeVariables, DataKinds, RankNTypes, TypeOperators, TypeFamilies, TypeInType #-}
+{-# language ScopedTypeVariables, DataKinds, RankNTypes, TypeOperators, TypeFamilies, TypeInType, FlexibleInstances #-}
 
 import Data.Kind
 import Data.Proxy
@@ -47,9 +47,16 @@ bar = foo 'a' head
 
 data Below t
 
-planb :: (forall a. forall (b :: Below a) . forall (c :: Below b) . a -> Proxy c)
-planb = \_ -> Proxy
+planb :: (forall a. forall (b :: Below a) . forall (c :: Below b) . a -> (Proxy c, Tower c))
+planb = \_ -> (Proxy, [[()]])
 
+class Strata a where
+  type Tower a :: *
+
+instance Strata (a :: *) where
+  type Tower a = ()
+instance Strata b => Strata (a :: Below b) where
+  type Tower (a :: Below b) = [Tower b]
 
 class Univ u where
   constr :: (forall t . u f (t:ctx)) -> u f ctx
