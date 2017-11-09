@@ -1,6 +1,7 @@
 {-# language ScopedTypeVariables, DataKinds, RankNTypes, TypeOperators, TypeFamilies, TypeInType #-}
 
 import Data.Kind
+import Data.Proxy
 
 -- * Idea
 -- Every rank-N forall gives rise to a type that only unifies with itself
@@ -43,6 +44,9 @@ import Data.Kind
 foo :: b -> (forall a. a ~ [b] => a -> b) -> b
 foo b f = f $ pure b
 bar = foo 'a' head
+
+planb :: (forall a. forall (b :: a) . a -> Proxy b)
+planb = \_ -> Proxy
 
 
 class Univ u where
