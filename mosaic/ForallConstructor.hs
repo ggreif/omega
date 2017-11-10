@@ -42,6 +42,10 @@ infixl 5 :.
 class UnivX u where
   star'arrX :: (forall (star :: ()) (arr :: Below star -> Below star -> Below star) . u (N :. star :. arr)) -> u N
 
+-- ** Modelling pattern matching
+-- something like data Peano = Z | S Peano
+-- and plus Z n = n; plus (S m) n = S (plus m n)
+
 
 -- ** Modelling inhabitation
 -- we want something like (0: Just 'l', 1: Maybe Char, 2: *)
