@@ -39,8 +39,8 @@ data C where
 
 infixl 5 :.
 
-class Univ' u where
-  star'arrX :: (forall (star :: ()) arr . u Nothing (N :. star :. arr)) -> u Nothing N
+class UnivX u where
+  star'arrX :: (forall (star :: ()) (arr :: Below star -> Below star -> Below star) . u (N :. star :. arr)) -> u N
 
 
 -- ** Modelling inhabitation
