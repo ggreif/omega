@@ -1,4 +1,4 @@
-{-# language ScopedTypeVariables, DataKinds, RankNTypes, TypeOperators, TypeFamilies, TypeInType, FlexibleInstances #-}
+{-# language ScopedTypeVariables, DataKinds, GADTs, RankNTypes, TypeOperators, TypeFamilies, TypeInType, FlexibleInstances #-}
 
 import Data.Kind
 import Data.Proxy
@@ -30,7 +30,20 @@ import Data.Proxy
 -- - express that =(->)= is binary
 -- - check sameness of foci
 
--- ** Modeling inhabitation
+-- ** Modelling arities
+-- have a snoc list with existentials
+
+data C where
+  N :: C
+  (:.) :: C -> a -> C
+
+infixl 5 :.
+
+class Univ' u where
+  star'arrX :: (forall (star :: ()) arr . u Nothing (N :. star :. arr)) -> u Nothing N
+
+
+-- ** Modelling inhabitation
 -- we want something like (0: Just 'l', 1: Maybe Char, 2: *)
 -- which we could type as '[(0, App just ell), (1, App maybe char), (2, star)]
 -- or possibly '[App just ell, App maybe char, star 2]
