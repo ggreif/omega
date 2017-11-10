@@ -63,6 +63,7 @@ class Univ u where
   use :: u (Just t) (t:ctx)
   up :: u (Just f) ctx -> u (Just f) (s:ctx)
   star'arr :: (forall star arr . u Nothing '[arr, star]) -> u Nothing '[]
+  --star'arrX :: (forall (star :: ()) arr . u Nothing '[arr, star]) -> u Nothing '[]
   gather :: u (Just t) ctx -> u Nothing '[t] -> u f ctx
   gather2 :: u (Just t) ctx -> u (Just t) ctx -> u Nothing '[t] -> u f ctx
 
