@@ -1,4 +1,4 @@
-{-# language ScopedTypeVariables, DataKinds, GADTs, RankNTypes, TypeOperators, TypeFamilies, TypeInType, FlexibleInstances #-}
+{-# language ScopedTypeVariables, DataKinds, GADTs, RankNTypes, TypeOperators, TypeFamilies, TypeInType, FlexibleInstances, MultiParamTypeClasses, FunctionalDependencies, FlexibleContexts #-}
 
 import Data.Kind
 import Data.Proxy
@@ -90,3 +90,20 @@ t1 = star'arr $ constr (constr $ gather (up $ up $ up use) (undefined {-:: u Not
 t2 = star'arr $ constr (constr $ gather2 (up $ up $ up use) (up $ up $ up use) (undefined))
 
 --sameness :: a -> a 
+
+
+-- * Can we have a mapping form a Loc to a rank-2 type?
+
+-- say, Loc is the Bool kind, can True map to one forall and False to the other?
+
+data Expr a
+
+class Localised (l :: Bool) a | l -> a, a -> l where
+
+
+lam :: (forall a . Localised True a => Expr a) -> Expr Int
+lam e = undefined
+
+-- can we use reflection to create instance on the fly?
+-- http://www.tweag.io/posts/2017-12-21-reflection-tutorial.html
+
