@@ -2,6 +2,7 @@
 
 import Data.Kind
 import Data.Proxy
+import Data.Reflection
 
 -- * Idea
 -- Every rank-N forall gives rise to a type that only unifies with itself
@@ -107,3 +108,4 @@ lam e = undefined
 -- can we use reflection to create instance on the fly?
 -- http://www.tweag.io/posts/2017-12-21-reflection-tutorial.html
 
+fortyTwo = reifyMonoid (+) (-2) (foldMap ReflectedMonoid) [2,3,4,5,6,7,8,9]
