@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 744.09448819 1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="Refinement.svg">
+  <defs
+     id="defs4">
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mend"
+       style="overflow:visible;"
+       inkscape:isstock="true">
+      <path
+         id="path4155"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1;fill:#000000;fill-opacity:1"
+         transform="scale(0.4) rotate(180) translate(10,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="323.7854"
+     inkscape:cy="667.95841"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1178"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <ellipse
+       style="opacity:1;fill:#cccccc;fill-opacity:1;stroke:#008000;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path4422"
+       cx="330.31985"
+       cy="146.76044"
+       rx="274.76151"
+       ry="102.53049" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="137.38074"
+       y="116.96094"
+       id="text4136"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4138"
+         x="137.38074"
+         y="116.96094">True°Bool</tspan></text>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:4;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#Arrow1Mend)"
+       d="m 264.65997,262.42291 c 0,202.03051 0,202.03051 0,202.03051"
+       id="path4140"
+       inkscape:connector-curvature="0" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="201.04924"
+       y="363.43817"
+       id="text4430"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4432"
+         x="201.04924"
+         y="363.43817"
+         style="text-align:center;text-anchor:middle">U</tspan><tspan
+         sodipodi:role="line"
+         x="201.04924"
+         y="391.56317"
+         id="tspan4448"
+         style="text-align:center;text-anchor:middle">(forgetful)</tspan></text>
+    <ellipse
+       style="opacity:1;fill:#e6e6e6;fill-opacity:1;stroke:#ff0000;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path4434"
+       cx="327.79449"
+       cy="621.0271"
+       rx="247.99245"
+       ry="92.934036" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="569.72601"
+       y="552.33667"
+       id="text4436"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4438"
+         x="569.72601"
+         y="552.33667">à la Church</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text4440"
+       y="42.209633"
+       x="554.57373"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         y="42.209633"
+         x="554.57373"
+         sodipodi:role="line"
+         id="tspan4444">à la Curry</tspan></text>
+    <use
+       x="0"
+       y="0"
+       xlink:href="#path4140"
+       id="use4456"
+       transform="matrix(-1,0,0,-1,684.88343,734.51638)"
+       width="100%"
+       height="100%" />
+    <text
+       sodipodi:linespacing="125%"
+       id="text4458"
+       y="363.43817"
+       x="483.89197"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         style="text-align:center;text-anchor:middle"
+         y="363.43817"
+         x="483.89197"
+         id="tspan4460"
+         sodipodi:role="line">F</tspan><tspan
+         style="text-align:center;text-anchor:middle"
+         id="tspan4462"
+         y="391.56317"
+         x="483.89197"
+         sodipodi:role="line">(free)</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text4464"
+       y="609.91541"
+       x="148.49242"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         y="609.91541"
+         x="148.49242"
+         id="tspan4466"
+         sodipodi:role="line">Bool</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#008000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="61.64978"
+       y="19.986305"
+       id="text4468"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4470"
+         x="61.64978"
+         y="19.986305"
+         style="text-align:center;text-anchor:middle;fill:#008000">Refinements</tspan><tspan
+         sodipodi:role="line"
+         x="61.64978"
+         y="48.111301"
+         id="tspan4474"
+         style="text-align:center;text-anchor:middle;fill:#008000">/</tspan><tspan
+         sodipodi:role="line"
+         x="61.64978"
+         y="76.236305"
+         id="tspan4472"
+         style="text-align:center;text-anchor:middle;fill:#008000">Derivations</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text4476"
+       y="503.84937"
+       x="81.852829"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22.5px;line-height:125%;font-family:Tahoma;-inkscape-font-specification:'Tahoma, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;"
+       xml:space="preserve"><tspan
+         style="text-align:center;text-anchor:middle;fill:#ff0000;"
+         y="503.84937"
+         x="81.852829"
+         id="tspan4478"
+         sodipodi:role="line">Types</tspan><tspan
+         style="text-align:center;text-anchor:middle;fill:#ff0000;"
+         id="tspan4480"
+         y="531.97437"
+         x="81.852829"
+         sodipodi:role="line">/</tspan><tspan
+         style="text-align:center;text-anchor:middle;fill:#ff0000;"
+         id="tspan4482"
+         y="560.09937"
+         x="81.852829"
+         sodipodi:role="line">Terms</tspan></text>
+  </g>
+</svg>
